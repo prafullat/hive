@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hive.ql.parse;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -39,9 +40,24 @@ import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
 import org.apache.hadoop.hive.metastore.MetaStoreUtils;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.Order;
+import org.apache.hadoop.hive.ql.exec.ExecDriver;
 import org.apache.hadoop.hive.ql.exec.FetchTask;
+import org.apache.hadoop.hive.ql.exec.ForwardOperator;
+import org.apache.hadoop.hive.ql.exec.Operator;
+import org.apache.hadoop.hive.ql.exec.Task;
 import org.apache.hadoop.hive.ql.exec.TaskFactory;
+import org.apache.hadoop.hive.ql.exec.Utilities;
+import org.apache.hadoop.hive.ql.index.HiveIndex;
+import org.apache.hadoop.hive.ql.index.IndexEntryValueCell;
+import org.apache.hadoop.hive.ql.index.HiveIndex.IndexType;
+import org.apache.hadoop.hive.ql.io.HiveKey;
 import org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat;
+import org.apache.hadoop.hive.ql.io.RCFileOutputFormat;
+import org.apache.hadoop.hive.ql.lib.Node;
+import org.apache.hadoop.hive.ql.metadata.HiveException;
+import org.apache.hadoop.hive.ql.metadata.Partition;
+import org.apache.hadoop.hive.ql.metadata.Table;
+import org.apache.hadoop.hive.ql.parse.SemanticException;
 import org.apache.hadoop.hive.ql.plan.AddPartitionDesc;
 import org.apache.hadoop.hive.ql.plan.AlterTableDesc;
 import org.apache.hadoop.hive.ql.plan.AlterTableSimpleDesc;
@@ -60,6 +76,10 @@ import org.apache.hadoop.hive.ql.plan.AlterTableDesc.AlterTableTypes;
 import org.apache.hadoop.hive.serde.Constants;
 import org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe;
 import org.apache.hadoop.mapred.TextInputFormat;
+import org.apache.hadoop.hive.ql.plan.MapredWork;
+import org.apache.hadoop.hive.ql.plan.PartitionDesc;
+import org.apache.hadoop.hive.ql.plan.createIndexDesc;
+import org.apache.hadoop.mapred.OutputFormat;
 
 /**
  * DDLSemanticAnalyzer.
@@ -107,6 +127,10 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
   public void analyzeInternal(ASTNode ast) throws SemanticException {
     if (ast.getToken().getType() == HiveParser.TOK_DROPTABLE) {
       analyzeDropTable(ast, false);
+    } else if (ast.getToken().getType() == HiveParser.TOK_CREATEINDEX) {
+      analyzeCreateIndex(ast);
+    } else if (ast.getToken().getType() == HiveParser.TOK_UPDATEINDEX) {
+      analyzeUpdateIndex(ast);
     } else if (ast.getToken().getType() == HiveParser.TOK_DESCTABLE) {
       ctx.setResFile(new Path(ctx.getLocalTmpFileURI()));
       analyzeDescribeTable(ast);
@@ -171,6 +195,210 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
     DropTableDesc dropTblDesc = new DropTableDesc(tableName, expectView);
     rootTasks.add(TaskFactory.get(new DDLWork(getInputs(), getOutputs(),
         dropTblDesc), conf));
+  }
+  
+  private HashMap<String, String> extractPartitionSpecs(Tree partspec)
+    throws SemanticException {
+    HashMap<String, String> partSpec = new LinkedHashMap<String, String>();
+    for (int i = 0; i < partspec.getChildCount(); ++i) {
+      CommonTree partspec_val = (CommonTree) partspec.getChild(i);
+      String val = stripQuotes(partspec_val.getChild(1).getText());
+      partSpec.put(partspec_val.getChild(0).getText().toLowerCase(), val);
+    }
+    return partSpec;
+  }
+  
+  
+  private void analyzeCreateIndex(ASTNode ast) throws SemanticException {
+    String indexName = unescapeIdentifier(ast.getChild(0).getText());
+    String typeName = unescapeIdentifier(ast.getChild(1).getText());
+    String tableName = unescapeIdentifier(ast.getChild(2).getText());
+    List<String> indexedCols = getColumnNames((ASTNode) ast.getChild(3));
+    ASTNode fileFormat = (ASTNode) ast.getChild(4);
+    String serde = null;
+    String inputFormat = null;
+    String outputFormat = null;
+    if (fileFormat != null) {
+      switch (fileFormat.getToken().getType()) {
+      case HiveParser.TOK_TBLSEQUENCEFILE:
+        inputFormat = SEQUENCEFILE_INPUT;
+        outputFormat = SEQUENCEFILE_OUTPUT;
+        break;
+      case HiveParser.TOK_TBLTEXTFILE:
+        inputFormat = TEXTFILE_INPUT;
+        outputFormat = TEXTFILE_OUTPUT;
+        break;
+      case HiveParser.TOK_TABLEFILEFORMAT:
+        inputFormat = unescapeSQLString(fileFormat.getChild(0).getText());
+        outputFormat = unescapeSQLString(fileFormat.getChild(1).getText());
+        break;
+      case HiveParser.TOK_TBLRCFILE:
+      default:
+        inputFormat = RCFILE_INPUT;
+        outputFormat = RCFILE_OUTPUT;
+        serde = COLUMNAR_SERDE;
+        break;
+      }
+    }
+    try {
+      HiveIndex.getIndexType(typeName);
+    } catch (Exception e) {
+      throw new SemanticException(e);
+    }
+    createIndexDesc crtIndexDesc = new createIndexDesc(tableName, indexName,
+        indexedCols,inputFormat, outputFormat, serde, typeName);
+    Task<?> createIndex = TaskFactory.get(new DDLWork(crtIndexDesc), conf);
+    rootTasks.add(createIndex);
+  }
+      
+  private void analyzeUpdateIndex(ASTNode ast) throws SemanticException {
+    String indexName = unescapeIdentifier(ast.getChild(0).getText());
+    HashMap<String, String> partSpec = null;
+    Tree part = ast.getChild(1);
+    if (part != null)
+      partSpec = extractPartitionSpecs(part);
+    List<Task<?>> indexBuilder = getIndexBuilderMapRed(indexName, partSpec);
+    rootTasks.addAll(indexBuilder);
+  }
+    
+  private List<Task<?>> getIndexBuilderMapRed(String indexTableName,
+      HashMap<String, String> partSpec) throws SemanticException {
+    try {
+      Table tbl = db.getTable(MetaStoreUtils.DEFAULT_DATABASE_NAME,
+          indexTableName);
+      String baseTblName = MetaStoreUtils.getBaseTableNameOfIndexTable(tbl
+          .getTTable());
+      Table baseTbl = db.getTable(MetaStoreUtils.DEFAULT_DATABASE_NAME,
+          baseTblName);
+      TableDesc desc = Utilities.getTableDesc(tbl);
+      IndexType indexType = HiveIndex.getIndexType(MetaStoreUtils
+          .getIndexType(tbl.getTTable()));
+      boolean compact = false;
+      boolean projection = false;
+      if (indexType.equals(IndexType.COMPACT_SUMMARY_TABLE)) {
+        compact = true;
+      } else if (indexType.equals(IndexType.PROJECTION)) {
+        projection = true;
+      }
+      List<Partition> baseTblPartitions = new ArrayList<Partition>();
+      List<Partition> indexTblPartitions = new ArrayList<Partition>();
+      List<Partition> newBaseTblPartitions = new ArrayList<Partition>();
+      if (partSpec != null) {
+        // if partspec is specified, then only producing index for that
+        // partition
+        Partition part = db.getPartition(baseTbl, partSpec, false);
+        Partition indexPart = db.getPartition(tbl, partSpec, false);
+        baseTblPartitions.add(part);
+        indexTblPartitions.add(indexPart);
+      } else if (baseTbl.isPartitioned()) {
+        // if no partition is specified, create indexes for all partitions one
+        // by one.
+        baseTblPartitions = db.getPartitions(baseTbl);
+        indexTblPartitions = db.getPartitions(tbl);
+      }
+      List<Task<?>> indexBuilderTasks = new ArrayList<Task<?>>();
+      String indexCols = MetaStoreUtils.getColumnNamesFromFieldSchema(tbl
+          .getCols());
+
+      if (!baseTbl.isPartitioned()) {
+        // the table does not have any partition, then create index for the
+        // whole table
+        Task<?> indexBuilder = getIndexBuilderMapRedTask(indexCols, tbl
+            .getDataLocation().toString(), new PartitionDesc(desc, null),
+            new PartitionDesc(Utilities.getTableDesc(baseTbl), null),
+            baseTbl.getDataLocation().toString(), compact, projection, null);
+        indexBuilderTasks.add(indexBuilder);
+      } else {
+
+        // check whether the index table partitions are still exists in base
+        // table
+        for (int i = 0; i < indexTblPartitions.size(); i++) {
+          Partition indexPart = indexTblPartitions.get(i);
+          Partition basePart = null;
+          for (int j = 0; j < baseTblPartitions.size(); j++) {
+            if (baseTblPartitions.get(j).getName().equals(indexPart.getName())) {
+              basePart = baseTblPartitions.get(j);
+              newBaseTblPartitions.add(baseTblPartitions.get(j));
+              break;
+            }
+          }
+          if (basePart == null)
+            throw new RuntimeException(
+                "Partitions of base table and index table are inconsistent.");
+          // for each partition, spawn a map reduce task?
+          Task<?> indexBuilder = getIndexBuilderMapRedTask(indexCols,
+              indexTblPartitions.get(i).getDataLocation().toString(),
+              new PartitionDesc(desc, indexTblPartitions.get(i).getSpec()),
+              new PartitionDesc(basePart),
+              newBaseTblPartitions.get(i).getDataLocation().toString(),
+              compact, projection, null);
+          indexBuilderTasks.add(indexBuilder);
+        }
+        
+      }
+      return indexBuilderTasks;
+    } catch (HiveException e) {
+      throw new SemanticException(e);
+    }
+  }
+  
+  private Task<? extends Serializable> getIndexBuilderMapRedTask(
+      String indexCols, String destOutputPath, PartitionDesc indexPartDesc,
+      PartitionDesc basePartDesc, String inputPath, boolean compact,
+      boolean projection, Class<? extends OutputFormat> outputFormat) {
+    MapredWork work = new MapredWork();
+    work.setIndexTableDesc(indexPartDesc.getTableDesc());
+    work.setKeyDesc(basePartDesc.getTableDesc());
+    String aliasString = "building-index";
+    LinkedHashMap<String, ArrayList<String>> pathToAliases = new LinkedHashMap<String, ArrayList<String>>();
+    ArrayList<String> alias = new ArrayList<String>();
+    alias.add(aliasString);
+    pathToAliases.put(inputPath, alias);
+    work.setPathToAliases(pathToAliases);
+    LinkedHashMap<String, PartitionDesc> aliasToPartnInfo = new LinkedHashMap<String, PartitionDesc>();
+    aliasToPartnInfo.put(aliasString, basePartDesc);
+    work.setAliasToPartnInfo(aliasToPartnInfo);
+    LinkedHashMap<String, Operator<? extends Serializable>> aliasToWork = new LinkedHashMap<String, Operator<? extends Serializable>>();
+    aliasToWork.put(aliasString, new ForwardOperator());
+    work.setAliasToWork(aliasToWork);
+    LinkedHashMap<String, PartitionDesc> pathToPart = new LinkedHashMap<String, PartitionDesc>();
+    pathToPart.put(inputPath, basePartDesc);
+    work.setPathToPartitionInfo(pathToPart);
+    work.setIndexCols(indexCols);
+    work.setNumReduceTasks(-1);
+    ExecDriver exec = new ExecDriver();
+    if (!projection) {
+      work
+          .setMapperClass(org.apache.hadoop.hive.ql.index.IndexBuilderSummaryMapper.class);
+      if (compact)
+        work
+            .setReducerClass(org.apache.hadoop.hive.ql.index.IndexBuilderCompactSumReducer.class);
+      else
+        work
+            .setReducerClass(org.apache.hadoop.hive.ql.index.IndexBuilderSummaryReducer.class);
+    } else {
+      work
+          .setMapperClass(org.apache.hadoop.hive.ql.index.IndexBuilderProjectMapper.class);
+      work.setNumReduceTasks(0);
+    }
+
+    work.setMapOutputKeyClass(HiveKey.class);
+    work.setMapOutputValueClass(IndexEntryValueCell.class);
+    work.setCompressed(this.conf.getBoolVar(HiveConf.ConfVars.COMPRESSRESULT));
+    work.setCompressCodec(this.conf
+        .getVar(HiveConf.ConfVars.COMPRESSINTERMEDIATECODEC));
+    work.setOutputPath(destOutputPath);
+    
+    exec.setDelOutputIfExists(true);
+    work
+        .setInputFormatCls(org.apache.hadoop.hive.ql.index.IndexBuilderFileFormat.class);
+    if (outputFormat == null) {
+      outputFormat = RCFileOutputFormat.class;
+    }
+    work.setOutputFormatCls(outputFormat);
+    exec.setWork(work);
+    exec.setId("Stage-0");
+    return exec;
   }
 
   private void analyzeAlterTableProps(ASTNode ast, boolean expectView)

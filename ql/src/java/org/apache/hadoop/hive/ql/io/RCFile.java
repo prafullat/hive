@@ -432,6 +432,7 @@ public class RCFile {
 
         NonSyncDataOutputBuffer valBuf = loadedColumnsValueBuffer[addIndex];
         valBuf.reset();
+        
         valBuf.write(in, vaRowsLen);
         if (codec != null) {
           decompressedFlag[addIndex] = false;
@@ -1485,6 +1486,10 @@ public class RCFile {
     @Override
     public String toString() {
       return file.toString();
+    }
+    
+    public boolean isCompressedRCFile() {
+      return this.decompress;
     }
 
     /** Close the reader. */

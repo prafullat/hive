@@ -84,6 +84,8 @@ public class ThriftHiveMetastore {
     public List<String> partition_name_to_vals(String part_name) throws MetaException, TException;
 
     public Map<String,String> partition_name_to_spec(String part_name) throws MetaException, TException;
+    
+    public void create_index(Index index) throws AlreadyExistsException, InvalidObjectException, MetaException, NoSuchObjectException, TException;
 
   }
 
@@ -1275,6 +1277,48 @@ public class ThriftHiveMetastore {
       }
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "partition_name_to_spec failed: unknown result");
     }
+    
+    public void create_index(Index index) throws AlreadyExistsException, InvalidObjectException, MetaException, NoSuchObjectException, TException
+    {
+      send_create_index(index);
+      recv_create_index();
+    }
+
+    public void send_create_index(Index index) throws TException
+    {
+      oprot_.writeMessageBegin(new TMessage("create_index", TMessageType.CALL, seqid_));
+      create_index_args args = new create_index_args();
+      args.index = index;
+      args.write(oprot_);
+      oprot_.writeMessageEnd();
+      oprot_.getTransport().flush();
+    }
+
+    public void recv_create_index() throws AlreadyExistsException, InvalidObjectException, MetaException, NoSuchObjectException, TException
+    {
+      TMessage msg = iprot_.readMessageBegin();
+      if (msg.type == TMessageType.EXCEPTION) {
+        TApplicationException x = TApplicationException.read(iprot_);
+        iprot_.readMessageEnd();
+        throw x;
+      }
+      create_index_result result = new create_index_result();
+      result.read(iprot_);
+      iprot_.readMessageEnd();
+      if (result.o1 != null) {
+        throw result.o1;
+      }
+      if (result.o2 != null) {
+        throw result.o2;
+      }
+      if (result.o3 != null) {
+        throw result.o3;
+      }
+      if (result.o4 != null) {
+        throw result.o4;
+      }
+      return;
+    }
 
   }
   public static class Processor extends com.facebook.fb303.FacebookService.Processor implements TProcessor {
@@ -1313,6 +1357,7 @@ public class ThriftHiveMetastore {
       processMap_.put("get_config_value", new get_config_value());
       processMap_.put("partition_name_to_vals", new partition_name_to_vals());
       processMap_.put("partition_name_to_spec", new partition_name_to_spec());
+      processMap_.put("create_index", new create_index());
     }
 
     private Iface iface_;
@@ -1784,7 +1829,6 @@ public class ThriftHiveMetastore {
         oprot.writeMessageEnd();
         oprot.getTransport().flush();
       }
-
     }
 
     private class add_partition implements ProcessFunction {
@@ -1816,7 +1860,6 @@ public class ThriftHiveMetastore {
         oprot.writeMessageEnd();
         oprot.getTransport().flush();
       }
-
     }
 
     private class append_partition implements ProcessFunction {
@@ -1849,6 +1892,39 @@ public class ThriftHiveMetastore {
         oprot.getTransport().flush();
       }
 
+    }
+    
+    private class create_index implements ProcessFunction {
+      public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
+      {
+        create_index_args args = new create_index_args();
+        args.read(iprot);
+        iprot.readMessageEnd();
+        create_index_result result = new create_index_result();
+        try {
+          iface_.create_index(args.index);
+        } catch (AlreadyExistsException o1) {
+          result.o1 = o1;
+        } catch (InvalidObjectException o2) {
+          result.o2 = o2;
+        } catch (MetaException o3) {
+          result.o3 = o3;
+        } catch (NoSuchObjectException o4) {
+          result.o4 = o4;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing create_index", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing create_index");
+          oprot.writeMessageBegin(new TMessage("create_index", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
+        }
+        oprot.writeMessageBegin(new TMessage("create_index", TMessageType.REPLY, seqid));
+        result.write(oprot);
+        oprot.writeMessageEnd();
+        oprot.getTransport().flush();
+      }
     }
 
     private class append_partition_by_name implements ProcessFunction {
@@ -20182,5 +20258,596 @@ public class ThriftHiveMetastore {
     }
 
   }
+  
+  
+  public static class create_index_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final TStruct STRUCT_DESC = new TStruct("create_index_args");
+    private static final TField INDEX_FIELD_DESC = new TField("index", TType.STRUCT, (short)1);
+
+    private Index index;
+    public static final int INDEX = 1;
+
+    private final Isset __isset = new Isset();
+    private static final class Isset implements java.io.Serializable {
+    }
+
+    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+      put(INDEX, new FieldMetaData("index", TFieldRequirementType.DEFAULT, 
+          new StructMetaData(TType.STRUCT, Index.class)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(create_index_args.class, metaDataMap);
+    }
+
+    public create_index_args() {
+    }
+
+    public create_index_args(
+      Index index)
+    {
+      this();
+      this.index = index;
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public create_index_args(create_index_args other) {
+      if (other.isSetIndex()) {
+        this.index = new Index(other.index);
+      }
+    }
+
+    @Override
+    public create_index_args clone() {
+      return new create_index_args(this);
+    }
+
+    public Index getIndex() {
+      return this.index;
+    }
+
+    public void setIndex(Index index) {
+      this.index = index;
+    }
+
+    public void unsetIndex() {
+      this.index = null;
+    }
+
+    // Returns true if field index is set (has been asigned a value) and false otherwise
+    public boolean isSetIndex() {
+      return this.index != null;
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      switch (fieldID) {
+      case INDEX:
+        if (value == null) {
+          unsetIndex();
+        } else {
+          setIndex((Index)value);
+        }
+        break;
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    public Object getFieldValue(int fieldID) {
+      switch (fieldID) {
+      case INDEX:
+        return getIndex();
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+    public boolean isSet(int fieldID) {
+      switch (fieldID) {
+      case INDEX:
+        return isSetIndex();
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof create_index_args)
+        return this.equals((create_index_args)that);
+      return false;
+    }
+
+    public boolean equals(create_index_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_index = true && this.isSetIndex();
+      boolean that_present_index = true && that.isSetIndex();
+      if (this_present_index || that_present_index) {
+        if (!(this_present_index && that_present_index))
+          return false;
+        if (!this.index.equals(that.index))
+          return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          case INDEX:
+            if (field.type == TType.STRUCT) {
+              this.index = new Index();
+              this.index.read(iprot);
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+
+      validate();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      validate();
+
+      oprot.writeStructBegin(STRUCT_DESC);
+      if (this.index != null) {
+        oprot.writeFieldBegin(INDEX_FIELD_DESC);
+        this.index.write(oprot);
+        oprot.writeFieldEnd();
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("create_index_args(");
+      boolean first = true;
+
+      sb.append("index:");
+      if (this.index == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.index);
+      }
+      first = false;
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws TException {
+      // check for required fields
+      // check that fields of type enum have valid values
+    }
+
+    }
+
+    public static class create_index_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final TStruct STRUCT_DESC = new TStruct("create_index_result");
+    private static final TField O1_FIELD_DESC = new TField("o1", TType.STRUCT, (short)1);
+    private static final TField O2_FIELD_DESC = new TField("o2", TType.STRUCT, (short)2);
+    private static final TField O3_FIELD_DESC = new TField("o3", TType.STRUCT, (short)3);
+    private static final TField O4_FIELD_DESC = new TField("o4", TType.STRUCT, (short)4);
+
+    private AlreadyExistsException o1;
+    public static final int O1 = 1;
+    private InvalidObjectException o2;
+    public static final int O2 = 2;
+    private MetaException o3;
+    public static final int O3 = 3;
+    private NoSuchObjectException o4;
+    public static final int O4 = 4;
+
+    private final Isset __isset = new Isset();
+    private static final class Isset implements java.io.Serializable {
+    }
+
+    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+      put(O1, new FieldMetaData("o1", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRUCT)));
+      put(O2, new FieldMetaData("o2", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRUCT)));
+      put(O3, new FieldMetaData("o3", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRUCT)));
+      put(O4, new FieldMetaData("o4", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRUCT)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(create_index_result.class, metaDataMap);
+    }
+
+    public create_index_result() {
+    }
+
+    public create_index_result(
+      AlreadyExistsException o1,
+      InvalidObjectException o2,
+      MetaException o3,
+      NoSuchObjectException o4)
+    {
+      this();
+      this.o1 = o1;
+      this.o2 = o2;
+      this.o3 = o3;
+      this.o4 = o4;
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public create_index_result(create_index_result other) {
+      if (other.isSetO1()) {
+        this.o1 = new AlreadyExistsException(other.o1);
+      }
+      if (other.isSetO2()) {
+        this.o2 = new InvalidObjectException(other.o2);
+      }
+      if (other.isSetO3()) {
+        this.o3 = new MetaException(other.o3);
+      }
+      if (other.isSetO4()) {
+        this.o4 = new NoSuchObjectException(other.o4);
+      }
+    }
+
+    @Override
+    public create_index_result clone() {
+      return new create_index_result(this);
+    }
+
+    public AlreadyExistsException getO1() {
+      return this.o1;
+    }
+
+    public void setO1(AlreadyExistsException o1) {
+      this.o1 = o1;
+    }
+
+    public void unsetO1() {
+      this.o1 = null;
+    }
+
+    // Returns true if field o1 is set (has been asigned a value) and false otherwise
+    public boolean isSetO1() {
+      return this.o1 != null;
+    }
+
+    public InvalidObjectException getO2() {
+      return this.o2;
+    }
+
+    public void setO2(InvalidObjectException o2) {
+      this.o2 = o2;
+    }
+
+    public void unsetO2() {
+      this.o2 = null;
+    }
+
+    // Returns true if field o2 is set (has been asigned a value) and false otherwise
+    public boolean isSetO2() {
+      return this.o2 != null;
+    }
+
+    public MetaException getO3() {
+      return this.o3;
+    }
+
+    public void setO3(MetaException o3) {
+      this.o3 = o3;
+    }
+
+    public void unsetO3() {
+      this.o3 = null;
+    }
+
+    // Returns true if field o3 is set (has been asigned a value) and false otherwise
+    public boolean isSetO3() {
+      return this.o3 != null;
+    }
+
+    public NoSuchObjectException getO4() {
+      return this.o4;
+    }
+
+    public void setO4(NoSuchObjectException o4) {
+      this.o4 = o4;
+    }
+
+    public void unsetO4() {
+      this.o4 = null;
+    }
+
+    // Returns true if field o4 is set (has been asigned a value) and false otherwise
+    public boolean isSetO4() {
+      return this.o4 != null;
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      switch (fieldID) {
+      case O1:
+        if (value == null) {
+          unsetO1();
+        } else {
+          setO1((AlreadyExistsException)value);
+        }
+        break;
+
+      case O2:
+        if (value == null) {
+          unsetO2();
+        } else {
+          setO2((InvalidObjectException)value);
+        }
+        break;
+
+      case O3:
+        if (value == null) {
+          unsetO3();
+        } else {
+          setO3((MetaException)value);
+        }
+        break;
+
+      case O4:
+        if (value == null) {
+          unsetO4();
+        } else {
+          setO4((NoSuchObjectException)value);
+        }
+        break;
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    public Object getFieldValue(int fieldID) {
+      switch (fieldID) {
+      case O1:
+        return getO1();
+
+      case O2:
+        return getO2();
+
+      case O3:
+        return getO3();
+
+      case O4:
+        return getO4();
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+    public boolean isSet(int fieldID) {
+      switch (fieldID) {
+      case O1:
+        return isSetO1();
+      case O2:
+        return isSetO2();
+      case O3:
+        return isSetO3();
+      case O4:
+        return isSetO4();
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+    
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof create_index_result)
+        return this.equals((create_index_result)that);
+      return false;
+    }
+
+    public boolean equals(create_index_result that) {
+      if (that == null)
+        return false;
+      boolean this_present_o1 = true && this.isSetO1();
+      boolean that_present_o1 = true && that.isSetO1();
+      if (this_present_o1 || that_present_o1) {
+        if (!(this_present_o1 && that_present_o1))
+          return false;
+        if (!this.o1.equals(that.o1))
+          return false;
+      }
+
+      boolean this_present_o2 = true && this.isSetO2();
+      boolean that_present_o2 = true && that.isSetO2();
+      if (this_present_o2 || that_present_o2) {
+        if (!(this_present_o2 && that_present_o2))
+          return false;
+        if (!this.o2.equals(that.o2))
+          return false;
+      }
+
+      boolean this_present_o3 = true && this.isSetO3();
+      boolean that_present_o3 = true && that.isSetO3();
+      if (this_present_o3 || that_present_o3) {
+        if (!(this_present_o3 && that_present_o3))
+          return false;
+        if (!this.o3.equals(that.o3))
+          return false;
+      }
+
+      boolean this_present_o4 = true && this.isSetO4();
+      boolean that_present_o4 = true && that.isSetO4();
+      if (this_present_o4 || that_present_o4) {
+        if (!(this_present_o4 && that_present_o4))
+          return false;
+        if (!this.o4.equals(that.o4))
+          return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          case O1:
+            if (field.type == TType.STRUCT) {
+              this.o1 = new AlreadyExistsException();
+              this.o1.read(iprot);
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case O2:
+            if (field.type == TType.STRUCT) {
+              this.o2 = new InvalidObjectException();
+              this.o2.read(iprot);
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case O3:
+            if (field.type == TType.STRUCT) {
+              this.o3 = new MetaException();
+              this.o3.read(iprot);
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case O4:
+            if (field.type == TType.STRUCT) {
+              this.o4 = new NoSuchObjectException();
+              this.o4.read(iprot);
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+
+      validate();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      oprot.writeStructBegin(STRUCT_DESC);
+
+      if (this.isSetO1()) {
+        oprot.writeFieldBegin(O1_FIELD_DESC);
+        this.o1.write(oprot);
+        oprot.writeFieldEnd();
+      } else if (this.isSetO2()) {
+        oprot.writeFieldBegin(O2_FIELD_DESC);
+        this.o2.write(oprot);
+        oprot.writeFieldEnd();
+      } else if (this.isSetO3()) {
+        oprot.writeFieldBegin(O3_FIELD_DESC);
+        this.o3.write(oprot);
+        oprot.writeFieldEnd();
+      } else if (this.isSetO4()) {
+        oprot.writeFieldBegin(O4_FIELD_DESC);
+        this.o4.write(oprot);
+        oprot.writeFieldEnd();
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("create_index_result(");
+      boolean first = true;
+
+      sb.append("o1:");
+      if (this.o1 == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.o1);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("o2:");
+      if (this.o2 == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.o2);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("o3:");
+      if (this.o3 == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.o3);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("o4:");
+      if (this.o4 == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.o4);
+      }
+      first = false;
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws TException {
+      // check for required fields
+      // check that fields of type enum have valid values
+    }
+
+  }
+
 
 }

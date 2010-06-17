@@ -1699,7 +1699,6 @@ class metastore_Index {
   public $tableName = null;
   public $dbName = null;
   public $colNames = null;
-  public $partName = null;
 
   public function __construct($vals=null) {
     if (!isset(self::$_TSPEC)) {
@@ -1710,7 +1709,7 @@ class metastore_Index {
           ),
         2 => array(
           'var' => 'indexType',
-          'type' => TType::I32,
+          'type' => TType::STRING,
           ),
         3 => array(
           'var' => 'tableName',
@@ -1727,10 +1726,6 @@ class metastore_Index {
           'elem' => array(
             'type' => TType::STRING,
             ),
-          ),
-        6 => array(
-          'var' => 'partName',
-          'type' => TType::STRING,
           ),
         );
     }
@@ -1749,9 +1744,6 @@ class metastore_Index {
       }
       if (isset($vals['colNames'])) {
         $this->colNames = $vals['colNames'];
-      }
-      if (isset($vals['partName'])) {
-        $this->partName = $vals['partName'];
       }
     }
   }
@@ -1783,8 +1775,8 @@ class metastore_Index {
           }
           break;
         case 2:
-          if ($ftype == TType::I32) {
-            $xfer += $input->readI32($this->indexType);
+          if ($ftype == TType::STRING) {
+            $xfer += $input->readString($this->indexType);
           } else {
             $xfer += $input->skip($ftype);
           }
@@ -1820,13 +1812,6 @@ class metastore_Index {
             $xfer += $input->skip($ftype);
           }
           break;
-        case 6:
-          if ($ftype == TType::STRING) {
-            $xfer += $input->readString($this->partName);
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
         default:
           $xfer += $input->skip($ftype);
           break;
@@ -1846,8 +1831,8 @@ class metastore_Index {
       $xfer += $output->writeFieldEnd();
     }
     if ($this->indexType !== null) {
-      $xfer += $output->writeFieldBegin('indexType', TType::I32, 2);
-      $xfer += $output->writeI32($this->indexType);
+      $xfer += $output->writeFieldBegin('indexType', TType::STRING, 2);
+      $xfer += $output->writeString($this->indexType);
       $xfer += $output->writeFieldEnd();
     }
     if ($this->tableName !== null) {
@@ -1875,11 +1860,6 @@ class metastore_Index {
         }
         $output->writeListEnd();
       }
-      $xfer += $output->writeFieldEnd();
-    }
-    if ($this->partName !== null) {
-      $xfer += $output->writeFieldBegin('partName', TType::STRING, 6);
-      $xfer += $output->writeString($this->partName);
       $xfer += $output->writeFieldEnd();
     }
     $xfer += $output->writeFieldStop();

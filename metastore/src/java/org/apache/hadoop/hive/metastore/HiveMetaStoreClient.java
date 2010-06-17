@@ -30,6 +30,8 @@ import org.apache.hadoop.hive.metastore.api.AlreadyExistsException;
 import org.apache.hadoop.hive.metastore.api.ConfigValSecurityException;
 import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
+import org.apache.hadoop.hive.metastore.api.Index;
+import org.apache.hadoop.hive.metastore.api.IndexAlreadyExistsException;
 import org.apache.hadoop.hive.metastore.api.InvalidObjectException;
 import org.apache.hadoop.hive.metastore.api.InvalidOperationException;
 import org.apache.hadoop.hive.metastore.api.MetaException;
@@ -589,6 +591,11 @@ public class HiveMetaStoreClient implements IMetaStoreClient {
     return client.get_fields(db, tableName);
   }
 
+  @Override
+  public void createIndex(Index index) throws AlreadyExistsException, InvalidObjectException, MetaException, NoSuchObjectException, TException {
+    client.create_index(index);
+  }
+  
   /**
    * @param db
    * @param tableName
@@ -638,7 +645,7 @@ public class HiveMetaStoreClient implements IMetaStoreClient {
   }
 
   @Override
-  public Map<String, String> partitionNameToSpec(String name) throws MetaException, TException {
+  public Map<String, String> partitionNameToSpec(String name) throws MetaException, TException{
     return client.partition_name_to_spec(name);
   }
 }

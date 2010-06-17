@@ -603,6 +603,7 @@ public class HiveMetaStore extends ThriftHiveMetastore {
         assert(e instanceof RuntimeException);
         throw (RuntimeException)e;
       }
+      
       return ret;
     }
 
@@ -651,24 +652,14 @@ public class HiveMetaStore extends ThriftHiveMetastore {
       try {
         ms.openTransaction();
         if (!TableType.VIRTUAL_VIEW.toString().equals(tbl.getTableType())) {
-          if (tbl.getSd().getLocation() == null
-            || tbl.getSd().getLocation().isEmpty()) {
-            tblPath = wh.getDefaultTablePath(
-              tbl.getDbName(), tbl.getTableName());
-          } else {
-            if (!isExternal(tbl) && !MetaStoreUtils.isNonNativeTable(tbl)) {
-              LOG.warn("Location: " + tbl.getSd().getLocation()
-                + " specified for non-external table:" + tbl.getTableName());
-            }
-            tblPath = wh.getDnsPath(new Path(tbl.getSd().getLocation()));
-          }
+          tblPath = getTableLocation(tbl);
           tbl.getSd().setLocation(tblPath.toString());
         }
 
         // get_table checks whether database exists, it should be moved here
         if (is_table_exists(tbl.getDbName(), tbl.getTableName())) {
-          throw new AlreadyExistsException("Table " + tbl.getTableName()
-              + " already exists");
+          throw new AlreadyExistsException(
+              "The name is already used by an existing table or index, please choose another one");
         }
 
         if (tblPath != null) {
@@ -697,6 +688,21 @@ public class HiveMetaStore extends ThriftHiveMetastore {
           }
         }
       }
+    }
+
+    private Path getTableLocation(Table tbl) throws MetaException {
+      Path tblPath;
+      if (tbl.getSd().getLocation() == null
+          || tbl.getSd().getLocation().isEmpty()) {
+        tblPath = wh.getDefaultTablePath(tbl.getDbName(), tbl.getTableName());
+      } else {
+        if (!isExternal(tbl)) {
+          LOG.warn("Location: " + tbl.getSd().getLocation()
+              + "specified for non-external table:" + tbl.getTableName());
+        }
+        tblPath = wh.getDnsPath(new Path(tbl.getSd().getLocation()));
+      }
+      return tblPath;
     }
 
     public void create_table(final Table tbl) throws AlreadyExistsException,
@@ -1260,11 +1266,123 @@ public class HiveMetaStore extends ThriftHiveMetastore {
       return;
     }
 
-    public boolean create_index(Index index_def)
-        throws IndexAlreadyExistsException, MetaException {
-      incrementCounter("create_index");
-      // TODO Auto-generated method stub
-      throw new MetaException("Not yet implemented");
+    
+    public void create_index(Index index_def) throws AlreadyExistsException,
+      MetaException, NoSuchObjectException, InvalidObjectException, AlreadyExistsException {
+      this.incrementCounter("create_index");
+      validateCreateIndex(index_def);
+      createIndexTableEntry(index_def);
+      
+      List<Partition> partitions = new ArrayList<Partition>();
+      if (index_def.getPartName() != null) {
+        Partition part = get_partition(index_def.getDbName(), index_def
+          .getTableName(), Warehouse.getPartValuesFromPartName(index_def
+          .getPartName()));
+        partitions.add(part);
+      }else{
+        partitions = get_partitions(index_def.getDbName(), index_def.getTableName(), Short.MAX_VALUE);
+      }
+      
+      if(partitions.size()>0){
+        for(Partition part : partitions){
+          part.setTableName(index_def.getIndexName());
+          part.setCreateTime(getCurrentTime());
+          part.setLastAccessTime(getCurrentTime());
+          part.getSd().setBucketCols(null);
+          part.getSd().setLocation(null);
+          part.getSd().setNumBuckets(1);
+          add_partition(part);
+        }
+      }
+    }
+
+    private void createIndexTableEntry(Index index_def) throws MetaException,
+        NoSuchObjectException, InvalidObjectException {
+      if (!is_table_exists(index_def.getDbName(), index_def.getIndexName())) {
+        // we need to first create one table entry for the index table
+        Table tbl = get_table(index_def.getDbName(), index_def.getTableName()).clone();
+        tbl.setCreateTime(getCurrentTime());
+        tbl.setParameters(null);
+        MetaStoreUtils.setIndexTable(tbl);
+        MetaStoreUtils.setBaseTableOfIndexTable(tbl, index_def.getTableName());
+        MetaStoreUtils.setIndexType(tbl, index_def.getIndexType());
+        tbl.setTableName(index_def.getIndexName());
+        tbl.setLastAccessTime(getCurrentTime());
+        tbl.getSd().setBucketCols(null);
+        List<FieldSchema> indexedCols = new ArrayList<FieldSchema>();
+        List<String> indexColumns = index_def.getColNames();
+        int k =0;
+        for (int i = 0; i < tbl.getSd().getCols().size(); i++) {
+          FieldSchema col = tbl.getSd().getCols().get(i);
+          if (indexColumns.contains(col.getName())) {
+            indexedCols.add(col);
+            k++;
+          }
+        }
+        if(k!=indexColumns.size())
+          throw new RuntimeException(
+            "Check the index columns, they should appear in the table being indexed.");
+        tbl.getSd().setCols(indexedCols);
+        tbl.getSd().setLocation(null);
+        Path tblPath = getTableLocation(tbl);
+        tbl.getSd().setLocation(tblPath.toString());
+        tbl.getSd().setNumBuckets(1);
+        tbl.getSd().setInputFormat("org.apache.hadoop.mapred.TextInputFormat");
+        tbl.getSd().setOutputFormat("org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat");
+        getMS(false).createTable(tbl);
+      }
+    }
+
+    private int getCurrentTime() {
+      return (int) (System.currentTimeMillis() / 1000);
+    }
+
+    private void validateCreateIndex(Index index_def) throws MetaException, AlreadyExistsException {
+      Index index = null;
+      try {
+        index = get_index(index_def.getDbName(), index_def.getTableName(), index_def.getIndexName(), index_def.getPartName());
+      } catch (NoSuchObjectException e) {
+      }
+
+    /*
+     * will throw exception either when there already is a table with the same
+     * name as index_def's index name, or when index is already there but no
+     * partition specified in the index_def
+     */
+      if ((index == null && is_table_exists(index_def.getDbName(), index_def
+        .getIndexName()))
+        || (index != null && index_def.getPartName() == null)) {
+        throw new AlreadyExistsException(
+          "The name is already used by an existing table or index, please choose another one");
+      }
+      
+    }
+
+    public Index get_index(String dbName, String tableName, String indexName,
+      String partName) throws MetaException, NoSuchObjectException {
+      this.incrementCounter("get_index");
+      Table t = get_table(dbName, indexName);
+      boolean isIndexTable = MetaStoreUtils.isIndexTable(t);
+      if (isIndexTable
+        && MetaStoreUtils.getBaseTableNameOfIndexTable(t).equals(tableName)) {
+        if(partName != null) {
+          Partition part = get_partition(dbName, tableName, Warehouse.getPartValuesFromPartName(partName));
+          if(part == null)
+            throw new NoSuchObjectException("index not found");
+        }
+        
+        String indexType = MetaStoreUtils.getIndexType(t);
+        List<String> cols = new ArrayList<String>();
+        List<FieldSchema> fieldSchemas = t.getSd().getCols();
+        for (int i = 0; i < fieldSchemas.size(); i++) {
+          cols.add(fieldSchemas.get(i).getName());
+        }
+
+        Index index = new Index(indexName, indexType, tableName, dbName, cols,
+            partName);
+        return index;
+      }
+      throw new NoSuchObjectException("index not found");
     }
 
     public String getVersion() throws TException {

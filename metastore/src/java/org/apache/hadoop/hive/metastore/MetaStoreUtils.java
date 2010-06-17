@@ -883,4 +883,27 @@ public class MetaStoreUtils {
     }
     return true;
   }
+  public static String INDEX_TABLE_PROPERTY="INDEX_TABLE"; 
+  public static String INDEX_BASE_TABLE_PROPERTY="INDEX_ORIGIN_TABLE"; 
+  public static String INDEX_TYPE_PROPERTY="INDEX_TYPE";
+  
+  public static String getBaseTableNameOfIndexTable(Table indextbl) {
+    return indextbl.getParameters().get(INDEX_BASE_TABLE_PROPERTY);
+  }
+  public static boolean isIndexTable(Table t) {
+    return t.getParameters().get(INDEX_TABLE_PROPERTY).equalsIgnoreCase("true");
+  }
+  public static String getIndexType(Table t) {
+    return t.getParameters().get(INDEX_TYPE_PROPERTY);
+  }
+  public static void setIndexTable(Table tbl) {
+    tbl.putToParameters(INDEX_TABLE_PROPERTY, "true");
+  }
+  public static void setBaseTableOfIndexTable(Table tbl, String tableName) {
+    tbl.putToParameters(INDEX_BASE_TABLE_PROPERTY, tableName);    
+  }
+  public static void setIndexType(Table tbl, String indexType) {
+    tbl.putToParameters(INDEX_TYPE_PROPERTY, indexType);    
+  }
+  
 }

@@ -88,15 +88,15 @@ struct Partition {
   7: map<string, string> parameters
 }
 
-// index on a hive table is also another table whose columns are the subset of the base table columns along with the offset
-// this will automatically generate table (table_name_index_name)
+// index on a hive table is also another table whose columns are the subset 
+// of the base table columns along with the offset this will automatically 
+// generate table (table_name_index_name)
 struct Index {
   1: string       indexName, // unique with in the whole database namespace
-  2: i32          indexType, // reserved
+  2: string       indexType, // index type
   3: string       tableName,
   4: string       dbName,
   5: list<string> colNames,  // for now columns will be sorted in the ascending order
-  6: string       partName   // partition name
 }
 
 // schema of the table/query results etc.
@@ -243,7 +243,9 @@ service ThriftHiveMetastore extends fb303.FacebookService
   // converts a partition name into a partition specification (a mapping from
   // the partition cols to the values)
   map<string, string> partition_name_to_spec(1: string part_name)
-                          throws(1: MetaException o1)                     
+                          throws(1: MetaException o1)
+  void create_index(1:Index index) 
+                     throws(1:AlreadyExistsException o1, 2:InvalidObjectException o2, 3:MetaException o3, 4:NoSuchObjectException o4)
 }
 
 // For storing info about archived partitions in parameters
