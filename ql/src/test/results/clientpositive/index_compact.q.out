@@ -1,0 +1,70 @@
+PREHOOK: query: EXPLAIN
+CREATE INDEX srcpart_index_proj TYPE COMPACT ON TABLE srcpart(key)
+PREHOOK: type: null
+POSTHOOK: query: EXPLAIN
+CREATE INDEX srcpart_index_proj TYPE COMPACT ON TABLE srcpart(key)
+POSTHOOK: type: null
+ABSTRACT SYNTAX TREE:
+  (TOK_CREATEINDEX srcpart_index_proj COMPACT srcpart (TOK_TABCOLNAME key))
+
+STAGE DEPENDENCIES:
+  Stage-0 is a root stage
+
+STAGE PLANS:
+  Stage: Stage-0
+
+
+PREHOOK: query: CREATE INDEX srcpart_index_proj TYPE COMPACT ON TABLE srcpart(key)
+PREHOOK: type: null
+POSTHOOK: query: CREATE INDEX srcpart_index_proj TYPE COMPACT ON TABLE srcpart(key)
+POSTHOOK: type: null
+PREHOOK: query: UPDATE INDEX srcpart_index_proj
+PREHOOK: type: null
+POSTHOOK: query: UPDATE INDEX srcpart_index_proj
+POSTHOOK: type: null
+PREHOOK: query: SELECT x.* FROM srcpart_index_proj x WHERE x.ds = '2008-04-08' and x.hr = 11
+PREHOOK: type: QUERY
+PREHOOK: Output: file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/scratchdir/hive_2010-06-01_18-59-55_156_2360593265979076422/10000
+POSTHOOK: query: SELECT x.* FROM srcpart_index_proj x WHERE x.ds = '2008-04-08' and x.hr = 11
+POSTHOOK: type: QUERY
+POSTHOOK: Output: file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/scratchdir/hive_2010-06-01_18-59-55_156_2360593265979076422/10000
+PREHOOK: query: DROP TABLE srcpart_index_proj
+PREHOOK: type: DROPTABLE
+POSTHOOK: query: DROP TABLE srcpart_index_proj
+POSTHOOK: type: DROPTABLE
+POSTHOOK: Output: default@srcpart_index_proj
+PREHOOK: query: EXPLAIN
+CREATE INDEX srcpart_index_proj TYPE COMPACT ON TABLE srcpart(key)
+PREHOOK: type: null
+POSTHOOK: query: EXPLAIN
+CREATE INDEX srcpart_index_proj TYPE COMPACT ON TABLE srcpart(key)
+POSTHOOK: type: null
+ABSTRACT SYNTAX TREE:
+  (TOK_CREATEINDEX srcpart_index_proj COMPACT srcpart (TOK_TABCOLNAME key))
+
+STAGE DEPENDENCIES:
+  Stage-0 is a root stage
+
+STAGE PLANS:
+  Stage: Stage-0
+
+
+PREHOOK: query: CREATE INDEX srcpart_index_proj TYPE COMPACT ON TABLE srcpart(key)
+PREHOOK: type: null
+POSTHOOK: query: CREATE INDEX srcpart_index_proj TYPE COMPACT ON TABLE srcpart(key)
+POSTHOOK: type: null
+PREHOOK: query: UPDATE INDEX srcpart_index_proj
+PREHOOK: type: null
+POSTHOOK: query: UPDATE INDEX srcpart_index_proj
+POSTHOOK: type: null
+PREHOOK: query: SELECT x.* FROM srcpart_index_proj x
+PREHOOK: type: QUERY
+PREHOOK: Output: file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/scratchdir/hive_2010-06-01_18-59-55_681_5703964119870136891/10000
+POSTHOOK: query: SELECT x.* FROM srcpart_index_proj x
+POSTHOOK: type: QUERY
+POSTHOOK: Output: file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/scratchdir/hive_2010-06-01_18-59-55_681_5703964119870136891/10000
+PREHOOK: query: DROP TABLE srcpart_index_proj
+PREHOOK: type: DROPTABLE
+POSTHOOK: query: DROP TABLE srcpart_index_proj
+POSTHOOK: type: DROPTABLE
+POSTHOOK: Output: default@srcpart_index_proj

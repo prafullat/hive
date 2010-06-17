@@ -1,0 +1,1 @@
+CREATE INDEX srcpart TYPE PROJECTION ON TABLE src(key);
