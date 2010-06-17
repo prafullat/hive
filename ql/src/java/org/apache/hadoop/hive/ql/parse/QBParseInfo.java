@@ -31,7 +31,7 @@ import org.apache.commons.logging.LogFactory;
 
 /**
  * Implementation of the parse information related to a query block.
- * 
+ *
  **/
 
 public class QBParseInfo {
@@ -76,6 +76,11 @@ public class QBParseInfo {
   private final LinkedHashMap<String, LinkedHashMap<String, ASTNode>> destToAggregationExprs;
   private final HashMap<String, ASTNode> destToDistinctFuncExpr;
 
+  /**
+   * Insert clause to ASTNode mapping
+   */
+  private final HashMap<String, ASTNode> insClauseToAstNode;
+
   @SuppressWarnings("unused")
   private static final Log LOG = LogFactory.getLog(QBParseInfo.class.getName());
 
@@ -91,6 +96,7 @@ public class QBParseInfo {
     destToSortby = new HashMap<String, ASTNode>();
     destToOrderby = new HashMap<String, ASTNode>();
     destToLimit = new HashMap<String, Integer>();
+    insClauseToAstNode = new HashMap<String, ASTNode>();
 
     destToAggregationExprs = new LinkedHashMap<String, LinkedHashMap<String, ASTNode>>();
     destToDistinctFuncExpr = new HashMap<String, ASTNode>();
@@ -131,13 +137,32 @@ public class QBParseInfo {
     destToGroupby.put(clause, ast);
   }
 
+  public void clearGroupBy(String sClauseName)  {
+
+    destToGroupby.clear();
+
+    ASTNode astInsertNode = getInsertNodeForClause(sClauseName);
+    List<Integer> gbNodeToBeDeleted = new ArrayList<Integer>();
+    for( int i = 0;i < astInsertNode.getChildCount(); i++) {
+      if( astInsertNode.getChild(i).getType() == HiveParser.TOK_GROUPBY) {
+        gbNodeToBeDeleted.add(i);
+      }
+    }
+
+    for( int i = gbNodeToBeDeleted.size() - 1 ; i >= 0; i--)  {
+      int iChildToBeDeleted = gbNodeToBeDeleted.get(i);
+      astInsertNode.deleteChild(iChildToBeDeleted);
+    }
+
+  }
+
   public void setDestForClause(String clause, ASTNode ast) {
     nameToDest.put(clause, ast);
   }
 
   /**
    * Set the Cluster By AST for the clause.
-   * 
+   *
    * @param clause
    *          the name of the clause
    * @param ast
@@ -149,7 +174,7 @@ public class QBParseInfo {
 
   /**
    * Set the Distribute By AST for the clause.
-   * 
+   *
    * @param clause
    *          the name of the clause
    * @param ast
@@ -161,7 +186,7 @@ public class QBParseInfo {
 
   /**
    * Set the Sort By AST for the clause.
-   * 
+   *
    * @param clause
    *          the name of the clause
    * @param ast
@@ -213,7 +238,7 @@ public class QBParseInfo {
 
   /**
    * Get the Cluster By AST for the clause.
-   * 
+   *
    * @param clause
    *          the name of the clause
    * @return the abstract syntax tree
@@ -228,7 +253,7 @@ public class QBParseInfo {
 
   /**
    * Get the Distribute By AST for the clause.
-   * 
+   *
    * @param clause
    *          the name of the clause
    * @return the abstract syntax tree
@@ -243,7 +268,7 @@ public class QBParseInfo {
 
   /**
    * Get the Sort By AST for the clause.
-   * 
+   *
    * @param clause
    *          the name of the clause
    * @return the abstract syntax tree
@@ -298,6 +323,14 @@ public class QBParseInfo {
 
   public Integer getDestLimit(String dest) {
     return destToLimit.get(dest);
+  }
+
+  public void setInsertNode(String clauseName, ASTNode ast) {
+    insClauseToAstNode.put(clauseName, ast);
+  }
+
+  public ASTNode getInsertNodeForClause(String clauseName)  {
+    return insClauseToAstNode.get(clauseName);
   }
 
   /**
@@ -397,4 +430,20 @@ public class QBParseInfo {
     }
     lateralViews.add(lateralView);
   }
+
+  public void replaceTable(String sOrigBaseTableAliase, String sNewTableName, String sClauseName) {
+    ASTNode astNode = getSrcForAlias(sOrigBaseTableAliase);
+    if( astNode == null ) {
+      return;
+    }
+    astNode.getToken().setText(sNewTableName);
+  }
+
+  public void clearDistinctFlag(String sClauseName) {
+    ASTNode rootSelExpr = getSelForClause(sClauseName);
+    rootSelExpr.getToken().setType(HiveParser.TOK_SELECT);
+    rootSelExpr.getToken().setText("TOK_SELECT");
+  }
+
+
 }
