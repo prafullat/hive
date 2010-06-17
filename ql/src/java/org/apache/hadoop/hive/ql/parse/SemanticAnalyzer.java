@@ -138,6 +138,7 @@ import org.apache.hadoop.hive.ql.plan.TableScanDesc;
 import org.apache.hadoop.hive.ql.plan.UDTFDesc;
 import org.apache.hadoop.hive.ql.plan.UnionDesc;
 import org.apache.hadoop.hive.ql.plan.FilterDesc.sampleDesc;
+import org.apache.hadoop.hive.ql.rewrite.HiveRewriteEngine;
 import org.apache.hadoop.hive.ql.session.SessionState;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFEvaluator;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDFHash;
@@ -570,6 +571,12 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     if (ast.getToken() != null) {
       skipRecursion = true;
       switch (ast.getToken().getType()) {
+      case HiveParser.TOK_INSERT:
+        ctx_1.dest = "insclause-" + ctx_1.nextNum;
+        ctx_1.nextNum++;
+        qbp.setInsertNode(ctx_1.dest, ast);
+        skipRecursion = false;
+        break;
       case HiveParser.TOK_SELECTDI:
         qb.countSelDi();
         // fall through
@@ -592,8 +599,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         break;
 
       case HiveParser.TOK_DESTINATION:
-        ctx_1.dest = "insclause-" + ctx_1.nextNum;
-        ctx_1.nextNum++;
 
         // is there a insert in the subquery
         if (qbp.getIsSubQ()) {
@@ -6047,6 +6052,14 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
 
     getMetaData(qb);
     LOG.info("Completed getting MetaData in Semantic Analysis");
+
+    if( ast.getToken().getType() == HiveParser.TOK_QUERY ) {
+      //If we have query input invoke query rewrites on it.
+      HiveRewriteEngine rwEngine = HiveRewriteEngine.getInstance(db);
+      QB newRewrittenQb = rwEngine.invokeRewrites(qb);
+      qb = newRewrittenQb;
+      LOG.info("Abstract syntax tree after rewrites : " + ast.toStringTree());
+    }
 
     // Save the result schema derived from the sink operator produced
     // by genPlan.  This has the correct column names, which clients

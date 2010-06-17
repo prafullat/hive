@@ -626,6 +626,7 @@ public class HiveMetaStore extends ThriftHiveMetastore {
         assert(e instanceof RuntimeException);
         throw (RuntimeException)e;
       }
+      
       return ret;
     }
 
@@ -688,6 +689,21 @@ public class HiveMetaStore extends ThriftHiveMetastore {
           }
         }
       }
+    }
+
+    private Path getTableLocation(Table tbl) throws MetaException {
+      Path tblPath;
+      if (tbl.getSd().getLocation() == null
+          || tbl.getSd().getLocation().isEmpty()) {
+        tblPath = wh.getDefaultTablePath(tbl.getDbName(), tbl.getTableName());
+      } else {
+        if (!isExternal(tbl)) {
+          LOG.warn("Location: " + tbl.getSd().getLocation()
+              + "specified for non-external table:" + tbl.getTableName());
+        }
+        tblPath = wh.getDnsPath(new Path(tbl.getSd().getLocation()));
+      }
+      return tblPath;
     }
 
     private Path getTableLocation(Table tbl) throws MetaException {

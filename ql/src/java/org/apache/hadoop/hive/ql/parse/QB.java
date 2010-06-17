@@ -27,7 +27,7 @@ import org.apache.hadoop.hive.ql.plan.CreateTableDesc;
 
 /**
  * Implementation of the query block.
- * 
+ *
  **/
 
 public class QB {
@@ -186,5 +186,16 @@ public class QB {
    */
   public boolean isCTAS() {
     return tblDesc != null;
+  }
+
+  public void removeTable(String sAliaseName)  {
+    aliasToTabs.remove(sAliaseName);
+  }
+
+  public void replaceTableAlias(String sOrigBaseTableAliase, String sAlias,
+      String sTableName) {
+    removeTable(sOrigBaseTableAliase);
+    setTabAlias(sAlias, sTableName);
+
   }
 }

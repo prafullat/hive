@@ -58,7 +58,7 @@ import org.apache.hadoop.mapred.SequenceFileInputFormat;
 
 /**
  * A Hive Table: is a fundamental unit of data in Hive that shares a common schema/DDL.
- * 
+ *
  * Please note that the ql code should always go through methods of this class to access the
  * metadata, instead of directly accessing org.apache.hadoop.hive.metastore.api.Table.  This
  * helps to isolate the metastore code and the ql code.
@@ -79,7 +79,7 @@ public class Table implements Serializable {
   private Class<? extends InputFormat> inputFormatClass;
   private URI uri;
   private HiveStorageHandler storageHandler;
-  
+
   /**
    * Used only for serialization.
    */
@@ -108,14 +108,14 @@ public class Table implements Serializable {
   public org.apache.hadoop.hive.metastore.api.Table getTTable() {
     return tTable;
   }
-  
+
   /**
    * This function should only be called by Java serialization.
    */
   public void setTTable(org.apache.hadoop.hive.metastore.api.Table tTable) {
     this.tTable = tTable;
   }
-  
+
   /**
    * Initialize an emtpy table.
    */
@@ -136,7 +136,7 @@ public class Table implements Serializable {
       sd.setInputFormat(SequenceFileInputFormat.class.getName());
       sd.setOutputFormat(HiveSequenceFileOutputFormat.class.getName());
     }
-    
+
     org.apache.hadoop.hive.metastore.api.Table t = new org.apache.hadoop.hive.metastore.api.Table();
     {
       t.setSd(sd);
@@ -179,7 +179,7 @@ public class Table implements Serializable {
       assert(getViewOriginalText() == null);
       assert(getViewExpandedText() == null);
     }
-    
+
     Iterator<FieldSchema> iterCols = getCols().iterator();
     List<String> colNames = new ArrayList<String>();
     while (iterCols.hasNext()) {
@@ -246,7 +246,7 @@ public class Table implements Serializable {
   }
 
   final public Deserializer getDeserializer() {
-    if (deserializer == null) { 
+    if (deserializer == null) {
       try {
         deserializer = MetaStoreUtils.getDeserializer(Hive.get().getConf(), tTable);
       } catch (MetaException e) {
@@ -290,12 +290,12 @@ public class Table implements Serializable {
         throw new RuntimeException(e);
       }
     }
-    return inputFormatClass; 
+    return inputFormatClass;
   }
 
   final public Class<? extends HiveOutputFormat> getOutputFormatClass() {
     // Replace FileOutputFormat for backward compatibility
-    
+
     if (outputFormatClass == null) {
       try {
         String className = tTable.getSd().getOutputFormat();
@@ -490,7 +490,7 @@ public class Table implements Serializable {
   /**
    * Returns a list of all the columns of the table (data columns + partition
    * columns in that order.
-   * 
+   *
    * @return List<FieldSchema>
    */
   public List<FieldSchema> getAllCols() {
@@ -515,7 +515,7 @@ public class Table implements Serializable {
   /**
    * Replaces files in the partition with new data set specified by srcf. Works
    * by moving files
-   * 
+   *
    * @param srcf
    *          Files to be replaced. Leaf directories or globbed file paths
    * @param tmpd
@@ -533,7 +533,7 @@ public class Table implements Serializable {
 
   /**
    * Inserts files specified into the partition. Works by moving files
-   * 
+   *
    * @param srcf
    *          Files to be moved. Leaf directories or globbed file paths
    */
@@ -662,15 +662,15 @@ public class Table implements Serializable {
   public void setTableName(String tableName) {
     tTable.setTableName(tableName);
   }
-  
+
   public void setDbName(String databaseName) {
     tTable.setDbName(databaseName);
   }
-  
+
   public List<FieldSchema> getPartitionKeys() {
     return tTable.getPartitionKeys();
   }
-  
+
   /**
    * @return the original view text, or null if this table is not a view
    */
@@ -713,7 +713,7 @@ public class Table implements Serializable {
 
   /**
    * Creates a partition name -> value spec map object
-   * 
+   *
    * @param tp
    *          Use the information from this partition.
    * @return Partition name to value mapping.
@@ -735,7 +735,7 @@ public class Table implements Serializable {
   public Table copy() throws HiveException {
     return new Table(tTable.clone());
   }
-  
+
   public void setCreateTime(int createTime) {
     tTable.setCreateTime(createTime);
   }
@@ -744,5 +744,17 @@ public class Table implements Serializable {
     return getProperty(
       org.apache.hadoop.hive.metastore.api.Constants.META_TABLE_STORAGE)
       != null;
+  }
+
+  public boolean hasIndex() {
+    String sIndexName = getIndexTableName();
+    if( sIndexName != null ) {
+      return true;
+    }
+    return false;
+  }
+
+  public String getIndexTableName() {
+    return MetaStoreUtils.getIndexTableName(getTTable());
   }
 };

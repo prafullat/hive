@@ -255,6 +255,7 @@ public class HiveConf extends Configuration {
     // For har files
     HIVEARCHIVEENABLED("hive.archive.enabled", false),
     HIVEHARPARENTDIRSETTABLE("hive.archive.har.parentdir.settable", false),
+    HIVE_RW_GB_TO_IDX("hive.rw.gb_to_idx", false)
     ;
 
     public final String varname;
