@@ -755,6 +755,8 @@ public class Table implements Serializable {
   }
 
   public String getIndexTableName() {
-    return MetaStoreUtils.getIndexTableName(getTTable());
+    return null;
+    //FIXME: Add such method
+    //return MetaStoreUtils.getIndexTableName(getTTable());
   }
 };
