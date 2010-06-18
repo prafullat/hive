@@ -706,21 +706,6 @@ public class HiveMetaStore extends ThriftHiveMetastore {
       return tblPath;
     }
 
-    private Path getTableLocation(Table tbl) throws MetaException {
-      Path tblPath;
-      if (tbl.getSd().getLocation() == null
-          || tbl.getSd().getLocation().isEmpty()) {
-        tblPath = wh.getDefaultTablePath(tbl.getDbName(), tbl.getTableName());
-      } else {
-        if (!isExternal(tbl)) {
-          LOG.warn("Location: " + tbl.getSd().getLocation()
-              + "specified for non-external table:" + tbl.getTableName());
-        }
-        tblPath = wh.getDnsPath(new Path(tbl.getSd().getLocation()));
-      }
-      return tblPath;
-    }
-
     public void create_table(final Table tbl) throws AlreadyExistsException,
         MetaException, InvalidObjectException {
       incrementCounter("create_table");
