@@ -151,6 +151,18 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
         return false;
     }
 
+    /* FIXME: These metadata methods do not work.
+    if( MetaStoreUtils.getIndexType(indexTable.getTTable())
+        != HiveIndex.IndexType.COMPACT_SUMMARY_TABLE.getName() )  {
+      return false;
+    }
+
+    if( MetaStoreUtils.getBaseTableNameOfIndexTable(indexTable.getTTable())
+        != sTableName ) {
+      return false;
+    }
+    */
+
     String sIndexTableName = tableQlMetaData.getIndexTableName();
     List<FieldSchema> vCols = indexTable.getCols();
     Set<String> idxKeyColsNames = new TreeSet<String>();
