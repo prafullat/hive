@@ -193,9 +193,9 @@ public class QB {
   }
 
   public void replaceTableAlias(String sOrigBaseTableAliase, String sAlias,
-      String sTableName) {
+      String sTableName, String sClauseName) {
     removeTable(sOrigBaseTableAliase);
     setTabAlias(sAlias, sTableName);
-
+    qbp.replaceTable(sOrigBaseTableAliase, sAlias, sClauseName);
   }
 }

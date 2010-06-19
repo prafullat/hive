@@ -38,7 +38,7 @@ public class HiveRewriteEngine {
 
   private static final Log LOG = LogFactory.getLog("hive.ql.rewrite");
   private final LinkedList<HiveRwRule> m_rwRules;
-  private Hive m_hiveDb;
+  private Hive m_hiveInstance;
   private static HiveRewriteEngine stc_Instance;
 
   public static HiveRewriteEngine getInstance(Hive hiveDb)  {
@@ -58,12 +58,11 @@ public class HiveRewriteEngine {
 
       if( m_rwRules.get(iIdx).canApplyThisRule(topQueryBlock) ) {
         LOG.debug("Applying " + m_rwRules.get(iIdx).getName() + " rewrite");
-        //LOG.debug("Query block before rewrite : " + topQueryBlock.print(msg))
         QB newRewrittenQb = m_rwRules.get(iIdx).rewriteQb(topQueryBlock);
         //If rewrites have modified qb,replace our local variable
+        LOG.debug("Done with rewrite " + m_rwRules.get(iIdx).getName());
         if( null != newRewrittenQb ) {
           topQueryBlock = newRewrittenQb;
-        //LOG.debug("Query block after rewrite : " + topQueryBlock.print(msg))
         }
       }
     }
@@ -76,18 +75,18 @@ public class HiveRewriteEngine {
    * Adds rewrite rules to m_rwRules
    */
   private void init()  {
-    GbToCompactSumIdxRewrite gbToSumIdxRw = new GbToCompactSumIdxRewrite(m_hiveDb);
+    GbToCompactSumIdxRewrite gbToSumIdxRw = new GbToCompactSumIdxRewrite(m_hiveInstance, LOG);
     m_rwRules.add(gbToSumIdxRw);
   }
 
-  private HiveRewriteEngine(Hive hiveDb)  {
+  private HiveRewriteEngine(Hive hiveInstance)  {
     m_rwRules = new LinkedList<HiveRwRule>();
-    m_hiveDb = hiveDb;
+    m_hiveInstance = hiveInstance;
   }
 
 
-  public void setHiveDb(Hive db) {
-    m_hiveDb = db;
+  public void setHiveDb(Hive hiveInstance) {
+    m_hiveInstance = hiveInstance;
 
   }
 }

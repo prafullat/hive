@@ -883,10 +883,11 @@ public class MetaStoreUtils {
     }
     return true;
   }
-  public static String INDEX_TABLE_PROPERTY="INDEX_TABLE"; 
-  public static String INDEX_BASE_TABLE_PROPERTY="INDEX_ORIGIN_TABLE"; 
+  public static String INDEX_TABLE_PROPERTY="INDEX_TABLE";
+  public static String INDEX_BASE_TABLE_PROPERTY="INDEX_ORIGIN_TABLE";
   public static String INDEX_TYPE_PROPERTY="INDEX_TYPE";
-  
+  public static String INDEX_TABLE_NAME = "INDEX_TABLE_NAME";
+
   public static String getBaseTableNameOfIndexTable(Table indextbl) {
     return indextbl.getParameters().get(INDEX_BASE_TABLE_PROPERTY);
   }
@@ -900,10 +901,17 @@ public class MetaStoreUtils {
     tbl.putToParameters(INDEX_TABLE_PROPERTY, "true");
   }
   public static void setBaseTableOfIndexTable(Table tbl, String tableName) {
-    tbl.putToParameters(INDEX_BASE_TABLE_PROPERTY, tableName);    
+    tbl.putToParameters(INDEX_BASE_TABLE_PROPERTY, tableName);
   }
   public static void setIndexType(Table tbl, String indexType) {
-    tbl.putToParameters(INDEX_TYPE_PROPERTY, indexType);    
+    tbl.putToParameters(INDEX_TYPE_PROPERTY, indexType);
   }
-  
+
+  public static void setIndexTableName(Table baseTable, String sIndexTableName)  {
+    baseTable.putToParameters(INDEX_TABLE_NAME, sIndexTableName);
+  }
+
+  public static String getIndexTableName(Table baseTable)  {
+    return baseTable.getParameters().get(INDEX_TABLE_NAME);
+  }
 }
