@@ -6053,12 +6053,14 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     getMetaData(qb);
     LOG.info("Completed getting MetaData in Semantic Analysis");
 
-    if( ast.getToken().getType() == HiveParser.TOK_QUERY ) {
-      //If we have query input invoke query rewrites on it.
-      HiveRewriteEngine rwEngine = HiveRewriteEngine.getInstance(db);
-      QB newRewrittenQb = rwEngine.invokeRewrites(qb);
-      qb = newRewrittenQb;
-      LOG.info("Abstract syntax tree after rewrites : " + ast.toStringTree());
+    if( HiveConf.getBoolVar(conf, HiveConf.ConfVars.HIVE_QL_REWRITE) ) {
+      if( ast.getToken().getType() == HiveParser.TOK_QUERY ) {
+        //If we have query input invoke query rewrites on it.
+        HiveRewriteEngine rwEngine = HiveRewriteEngine.getInstance(db);
+        QB newRewrittenQb = rwEngine.invokeRewrites(qb);
+        qb = newRewrittenQb;
+        LOG.info("Abstract syntax tree after rewrites : " + ast.toStringTree());
+      }
     }
 
     // Save the result schema derived from the sink operator produced

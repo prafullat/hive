@@ -258,6 +258,11 @@ public class HiveConf extends Configuration {
     // For har files
     HIVEARCHIVEENABLED("hive.archive.enabled", false),
     HIVEHARPARENTDIRSETTABLE("hive.archive.har.parentdir.settable", false),
+
+    //QL rewrites related flags.
+    //Enable/Disable rewrites
+    HIVE_QL_REWRITE("hive.ql.rewrites", true),
+    //Enable/Disable gbToIdx rewrite rule
     HIVE_QL_RW_GB_TO_IDX("hive.ql.rw.gb_to_idx", false)
     ;
 

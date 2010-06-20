@@ -78,27 +78,6 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
 
   }
 
-  private Table getIndexTable(String sBaseTableName)  {
-    List<String> indexSuffixList = new ArrayList<String>();
-    Table indexTable = null;
-    indexSuffixList.add("_proj_idx");
-    indexSuffixList.add("_sum_idx");
-    indexSuffixList.add("_cmpt_sum_idx");
-    for(int i = 0; i < indexSuffixList.size(); i++)  {
-      String sIndexTableName = sBaseTableName + indexSuffixList.get(i);
-      try {
-        indexTable =
-          m_hiveInstance.getTable(MetaStoreUtils.DEFAULT_DATABASE_NAME,
-                                  sIndexTableName,
-                                  false/*bThrowException*/);
-      }
-      catch (HiveException e) {
-          //Table not found ?
-      }
-    }
-    return indexTable;
-  }
-
   private List<Table> getIndexTable(Table baseTableMetaData, IndexType indexType)  {
     List<String> vIndexTableName = baseTableMetaData.getIndexTableName();
     List<Table> vIndexTable = new ArrayList<Table>();
