@@ -603,7 +603,6 @@ public class HiveMetaStore extends ThriftHiveMetastore {
         assert(e instanceof RuntimeException);
         throw (RuntimeException)e;
       }
-      
       return ret;
     }
 
@@ -626,7 +625,6 @@ public class HiveMetaStore extends ThriftHiveMetastore {
         assert(e instanceof RuntimeException);
         throw (RuntimeException)e;
       }
-      
       return ret;
     }
 

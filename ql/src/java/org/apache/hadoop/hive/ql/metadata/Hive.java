@@ -46,6 +46,7 @@ import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.NoSuchObjectException;
 import org.apache.hadoop.hive.metastore.api.Order;
 import org.apache.hadoop.hive.ql.exec.Utilities;
+import org.apache.hadoop.hive.ql.index.HiveIndex;
 import org.apache.hadoop.hive.serde2.Deserializer;
 import org.apache.hadoop.hive.serde2.SerDeException;
 import org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe;
@@ -349,7 +350,7 @@ public class Hive {
     try {
       String dbName = MetaStoreUtils.DEFAULT_DATABASE_NAME;
       org.apache.hadoop.hive.metastore.api.Table baseTable = getMSC().getTable(dbName, tableName);
-      MetaStoreUtils.setIndexTableName(baseTable, indexName);
+      MetaStoreUtils.addIndexTableName(baseTable, indexName);
       getMSC().alter_table(dbName, tableName, baseTable);
       org.apache.hadoop.hive.metastore.api.Table indexTable = baseTable.clone();
       indexTable.setParameters(null);
@@ -373,10 +374,9 @@ public class Hive {
         throw new RuntimeException(
             "Check the index columns, they should appear in the table being indexed.");
       }
-
-      FieldSchema bucketFileName = new FieldSchema("_bucketname", "string", "");
+      FieldSchema bucketFileName = new FieldSchema(HiveIndex.IDX_BUCKET_COL_NAME, "string", "");
       indexTblCols.add(bucketFileName);
-      FieldSchema offSets = new FieldSchema("_offsets", "array<string>", "");
+      FieldSchema offSets = new FieldSchema(HiveIndex.IDX_OFFSET_COL_NAME, "array<string>", "");
       indexTblCols.add(offSets);
       indexTable.getSd().setCols(indexTblCols);
       indexTable.getSd().setLocation(null);

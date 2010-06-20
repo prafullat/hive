@@ -99,10 +99,11 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
     return indexTable;
   }
 
-  private Table getIndexTable(Table baseTableMetaData, IndexType indexType)  {
-    Table indexTable = null;
+  private List<Table> getIndexTable(Table baseTableMetaData, IndexType indexType)  {
     List<String> vIndexTableName = baseTableMetaData.getIndexTableName();
+    List<Table> vIndexTable = new ArrayList<Table>();
     for( int i = 0; i < vIndexTableName.size(); i++) {
+      Table indexTable = null;
       try {
         indexTable =
           m_hiveInstance.getTable(MetaStoreUtils.DEFAULT_DATABASE_NAME,
@@ -116,11 +117,11 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
         if( !sIndexType.equalsIgnoreCase(HiveIndex.IndexType.COMPACT_SUMMARY_TABLE.getName()) )  {
           continue;
         }
-        return indexTable;
+        vIndexTable.add(indexTable);
       } catch (HiveException e) {
       }
     }
-    return null;
+    return vIndexTable;
   }
 
 
@@ -164,6 +165,22 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
       return false;
     }
 
+    //--------------------------------------------
+    //Get clause information.
+    QBParseInfo qbParseInfo = qb.getParseInfo();
+    Set<String> clauseNameSet = qbParseInfo.getClauseNames();
+    if( clauseNameSet.size() != 1 ) {
+      return false;
+    }
+    Iterator<String> itrClauseName = clauseNameSet.iterator();
+    String sClauseName = itrClauseName.next();
+
+    //--------------------------------------------
+    //Getting select list column names
+    ASTNode rootSelExpr = qbParseInfo.getSelForClause(sClauseName);
+    boolean bIsDistinct = (rootSelExpr.getType() == HiveParser.TOK_SELECTDI);
+    List<String> selColNameList = getChildColNames(rootSelExpr);
+
 
     //--------------------------------------------
     //Get Index information.
@@ -178,74 +195,85 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
       return false;
     }
 
-    Table indexTable = getIndexTable(tableQlMetaData, IndexType.COMPACT_SUMMARY_TABLE);
-    if( indexTable == null ) {
+    List<Table> vIndexTable = getIndexTable(tableQlMetaData, IndexType.COMPACT_SUMMARY_TABLE);
+    if( vIndexTable.size() == 0 ) {
       getLogger().debug("Table " + sTableName + " does not have compat summary index. Cannot apply rewrite " + getName());
       return false;
     }
 
-    List<FieldSchema> vCols = indexTable.getCols();
-    Set<String> idxKeyColsNames = new TreeSet<String>();
-    for( int i = 0;i < vCols.size(); i++) {
-      //TODO: Skip index-specific columns eg. __bucketName __offsets etc.
-      idxKeyColsNames.add(vCols.get(i).getName());
-    }
+    Table indexTable = null;
+    for( int iIdxTbl = 0;iIdxTbl < vIndexTable.size(); iIdxTbl++)  {
+      indexTable = vIndexTable.get(iIdxTbl);
 
-
-    //--------------------------------------------
-    //Get clause information.
-    QBParseInfo qbParseInfo = qb.getParseInfo();
-    Set<String> clauseNameSet = qbParseInfo.getClauseNames();
-    if( clauseNameSet.size() != 1 ) {
-      return false;
-    }
-
-    Iterator<String> itrClauseName = clauseNameSet.iterator();
-    String sClauseName = itrClauseName.next();
-
-
-    //--------------------------------------------
-    //Getting select list column names
-    ASTNode rootSelExpr = qbParseInfo.getSelForClause(sClauseName);
-    boolean bIsDistinct = (rootSelExpr.getType() == HiveParser.TOK_SELECTDI);
-    List<String> selColNameList = getChildColNames(rootSelExpr);
-
-    //--------------------------------------------
-    //Check if all columns in select list are part of index key columns
-    for( int i = 0; i < selColNameList.size(); i++)  {
-      if( idxKeyColsNames.contains(selColNameList.get(i)) == false ) {
-        getLogger().debug("Select list has non index key column : " + selColNameList.get(i) +"" +
-        		" Cannot apply rewrite " + getName());
-          return false;
+      //-----------------------------------------
+      //Getting index key columns
+      List<FieldSchema> vCols = indexTable.getCols();
+      Set<String> idxKeyColsNames = new TreeSet<String>();
+      for( int i = 0;i < vCols.size(); i++) {
+        //Skipping index metadata columns
+        if ( vCols.get(i).getName().equals(HiveIndex.IDX_BUCKET_COL_NAME) ) {
+          continue;
         }
-    }
-
-    if( bIsDistinct == false )  {
-      //--------------------------------------------
-      //For group by, we need to check if all keys are from index columns
-      //itself. Here gb key order can be different than index columns but that does
-      //not really matter for final result.
-      //Eg. select c1, c2 from src group by c2, c1;
-      //we can rewrite this one to s
-      //select c1, c2 from src_cmpt_sum_idx;
-      ASTNode groupByNode = qbParseInfo.getGroupByForClause(sClauseName);
-      List<String> gbKeyNameList = getChildColNames(groupByNode);
-      for( int i = 0; i < gbKeyNameList.size(); i++)  {
-        if( idxKeyColsNames.contains(gbKeyNameList.get(i)) == false ) {
-          getLogger().debug("Groupby key-list has non index key column : " + selColNameList.get(i) +"" +
-              " Cannot apply rewrite " + getName());
-            return false;
-          }
+        //Skipping index metadata columns
+        if ( vCols.get(i).getName().equals(HiveIndex.IDX_OFFSET_COL_NAME) ) {
+          continue;
+        }
+        idxKeyColsNames.add(vCols.get(i).getName());
       }
-    }
 
-    GbToCompactSumIdxRewriteContext rwContext = new GbToCompactSumIdxRewriteContext();
-    rwContext.m_indexTableMetaData = indexTable;
-    rwContext.m_sClauseName = sClauseName;
-    rwContext.m_bIsDistinct = bIsDistinct;
-    rwContext.m_sOrigBaseTableAliase = sTableAlias;
-    setContext(rwContext);
-    return true;
+      //--------------------------------------------
+      //Check if all columns in select list are part of index key columns
+      if( idxKeyColsNames.containsAll(selColNameList) == false ) {
+        getLogger().debug("Select list has non index key column : " +
+        		" Cannot use this index  " + indexTable.getTableName());
+        continue;
+      }
+
+      //We need to check if all columns from index appear in select list only
+      //in case of DISTINCT queries, In case group by queries, it is okay as long
+      //as all columns from index appear in group-by-key list.
+      if( bIsDistinct ) {
+        //Check if all columns from index are part of select list too
+        if( selColNameList.containsAll(idxKeyColsNames) == false )  {
+          getLogger().debug("Index has non select list columns " +
+              " Cannot use this index  " + indexTable.getTableName());
+          continue;
+        }
+      }
+
+
+      if( bIsDistinct == false )  {
+        //--------------------------------------------
+        //For group by, we need to check if all keys are from index columns
+        //itself. Here gb key order can be different than index columns but that does
+        //not really matter for final result.
+        //Eg. select c1, c2 from src group by c2, c1;
+        //we can rewrite this one to s
+        //select c1, c2 from src_cmpt_sum_idx;
+        ASTNode groupByNode = qbParseInfo.getGroupByForClause(sClauseName);
+        List<String> gbKeyNameList = getChildColNames(groupByNode);
+        if( idxKeyColsNames.containsAll(gbKeyNameList) == false ) {
+            getLogger().debug("Groupby key-list has non index key column  " +
+                " Cannot use this index  " + indexTable.getTableName());
+              continue;
+        }
+
+        if( gbKeyNameList.containsAll(idxKeyColsNames) == false )  {
+          getLogger().debug("Index has some columns which do not appear in gb key columns " +
+              " Cannot use this index  " + indexTable.getTableName());
+          continue;
+        }
+
+      }
+      GbToCompactSumIdxRewriteContext rwContext = new GbToCompactSumIdxRewriteContext();
+      rwContext.m_indexTableMetaData = indexTable;
+      rwContext.m_sClauseName = sClauseName;
+      rwContext.m_bIsDistinct = bIsDistinct;
+      rwContext.m_sOrigBaseTableAliase = sTableAlias;
+      setContext(rwContext);
+      return true;
+    }
+    return false;
   }
 
 

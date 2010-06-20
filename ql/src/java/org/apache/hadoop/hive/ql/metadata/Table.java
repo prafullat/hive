@@ -746,23 +746,25 @@ public class Table implements Serializable {
       != null;
   }
 
+  /**
+   *
+   * @return Returns true if there is any index available on this basetable
+   */
   public boolean hasIndex() {
-    return getIndexTableName().size() > 0;
+     return getNumIndexes() > 0;
   }
   /**
-   * Currently MetaStore has an API just to support one indexes,
-   * This needs to be fixed to support multiple indexes.
+   *
    * @return Returns number of indexes on this table
    */
   public int getNumIndexes()  {
-    return 1;
+    return getIndexTableName().size();
   }
   /**
    * @return List containing Index Table names if there is exists indexes on this table
    **/
   public List<String> getIndexTableName() {
-    List<String> vIndexNames = new ArrayList<String>();
-    vIndexNames.add(MetaStoreUtils.getIndexTableName(getTTable()));
+    List<String> vIndexNames = MetaStoreUtils.getIndexTableNames(getTTable());
     return vIndexNames;
   }
 };

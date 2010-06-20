@@ -886,7 +886,9 @@ public class MetaStoreUtils {
   public static String INDEX_TABLE_PROPERTY="INDEX_TABLE";
   public static String INDEX_BASE_TABLE_PROPERTY="INDEX_ORIGIN_TABLE";
   public static String INDEX_TYPE_PROPERTY="INDEX_TYPE";
-  public static String INDEX_TABLE_NAME = "INDEX_TABLE_NAME";
+  //Comma delimited list of name indexes in Base table
+  //Used for establishing reverse mapping between basetable and indextable.
+  public static String INDEX_TABLE_NAME_LIST = "INDEX_TABLE_NAME_LIST";
 
   public static String getBaseTableNameOfIndexTable(Table indextbl) {
     return indextbl.getParameters().get(INDEX_BASE_TABLE_PROPERTY);
@@ -907,11 +909,31 @@ public class MetaStoreUtils {
     tbl.putToParameters(INDEX_TYPE_PROPERTY, indexType);
   }
 
-  public static void setIndexTableName(Table baseTable, String sIndexTableName)  {
-    baseTable.putToParameters(INDEX_TABLE_NAME, sIndexTableName);
+  public static void addIndexTableName(Table baseTable, String sIndexTableName)  {
+    List<String> vIndexes = getIndexTableNames(baseTable);
+    vIndexes.add(sIndexTableName);
+    StringBuffer stringBuffer = new StringBuffer();
+    int i = 0;
+    for(; i < vIndexes.size() - 1; i++)  {
+      stringBuffer.append(vIndexes.get(i));
+      stringBuffer.append(",");
+    }
+    stringBuffer.append(vIndexes.get(i));
+    baseTable.putToParameters(INDEX_TABLE_NAME_LIST, stringBuffer.toString());
   }
 
-  public static String getIndexTableName(Table baseTable)  {
-    return baseTable.getParameters().get(INDEX_TABLE_NAME);
+  public static List<String> getIndexTableNames(Table baseTable)  {
+    String sIndexNameList = baseTable.getParameters().get(INDEX_TABLE_NAME_LIST);
+    List<String> vIndexes = new ArrayList<String>();
+    if( sIndexNameList == null ) {
+      return vIndexes;
+    }
+    else  {
+      String aIndexNames[] = sIndexNameList.split(",");
+      for(String sIndexName : aIndexNames)  {
+        vIndexes.add(sIndexName);
+    }
+   }
+   return vIndexes;
   }
 }

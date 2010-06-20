@@ -41,7 +41,6 @@
   <property name="javadoc.link.java"
             value="http://java.sun.com/javase/6/docs/api/"/>
   <property name="final.name" value="${name}-${version}"/>
-  <property name="is-offline" value="false"/> 
   <property name="dev.final.name" value="${final.name}-dev"/>
   <property name="bin.final.name" value="${final.name}-bin"/>
   <property name="checkstyle.conf.dir" location="${hive.root}/checkstyle"/>

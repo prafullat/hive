@@ -670,7 +670,6 @@ public class ExecDriver extends Task<MapredWork> implements Serializable {
       HiveConf.setVar(job, HiveConf.ConfVars.HADOOPJOBNAME, "JOB"
           + randGen.nextInt());
     }
-    
     try {
       addInputPaths(job, work, emptyScratchDirStr);
 
