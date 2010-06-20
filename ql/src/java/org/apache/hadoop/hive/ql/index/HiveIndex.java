@@ -71,7 +71,7 @@ public class HiveIndex {
       indexTypeName = indexType;
     }
 
-    private final String indexTypeName;
+    private String indexTypeName;
 
     public String getName() {
       return indexTypeName;
@@ -81,9 +81,8 @@ public class HiveIndex {
   public static IndexType getIndexType(String name) {
     IndexType[] types = IndexType.values();
     for (IndexType type : types) {
-      if(type.getName().equals(name.toLowerCase())) {
+      if(type.getName().equals(name.toLowerCase())) 
         return type;
-      }
     }
     throw new IllegalArgumentException(name + " is not a valid index type.");
   }
@@ -93,9 +92,9 @@ public class HiveIndex {
   public static class IndexSequenceFileRecordReader<K extends WritableComparable, V extends Writable>
       implements RecordReader<K, V> {
 
-    private final SequenceFile.Reader in;
+    private SequenceFile.Reader in;
     private long start;
-    private final long end;
+    private long end;
     private boolean more = true;
     protected Configuration conf;
 
@@ -151,9 +150,8 @@ public class HiveIndex {
     }
 
     public synchronized boolean next(K key, V value) throws IOException {
-      if (!more) {
-        return false;
-      }
+      if (!more) 
+        return false;      
       long pos = in.getPosition();
       boolean eof = in.next(key, value);
       if (pos >= end && in.syncSeen()) {
@@ -165,9 +163,8 @@ public class HiveIndex {
     }
 
     public synchronized boolean next(K key) throws IOException {
-      if (!more) {
-        return false;
-      }
+      if (!more) 
+        return false;      
       long pos = in.getPosition();
       boolean eof = in.next(key);
       if (pos >= end && in.syncSeen()) {
@@ -239,7 +236,7 @@ public class HiveIndex {
   }
 
   public static class HiveIndexResult {
-    private final HashMap<String, TreeMap<Date, Vector<IBucket>>> indexResult = new HashMap<String, TreeMap<Date, Vector<IBucket>>>();
+    private HashMap<String, TreeMap<Date, Vector<IBucket>>> indexResult = new HashMap<String, TreeMap<Date, Vector<IBucket>>>();
     JobConf job = null;
 
     BytesRefWritable[] bytesRef = new BytesRefWritable[2];
