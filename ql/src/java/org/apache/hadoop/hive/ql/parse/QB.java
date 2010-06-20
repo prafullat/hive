@@ -192,10 +192,10 @@ public class QB {
     aliasToTabs.remove(sAliaseName);
   }
 
-  public void replaceTableAlias(String sOrigBaseTableAliase, String sAlias,
+  public void replaceTableAlias(String sOrigBaseTableAlias, String sAlias,
       String sTableName, String sClauseName) {
-    removeTable(sOrigBaseTableAliase);
+    removeTable(sOrigBaseTableAlias);
     setTabAlias(sAlias, sTableName);
-    qbp.replaceTable(sOrigBaseTableAliase, sAlias, sClauseName);
+    qbp.replaceTable(sOrigBaseTableAlias, sAlias, sClauseName);
   }
 }
