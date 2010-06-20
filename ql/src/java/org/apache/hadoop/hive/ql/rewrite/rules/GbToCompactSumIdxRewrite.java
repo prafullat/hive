@@ -161,7 +161,12 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
         (qb.getSubqAliases().size() != 0) ) {
       getLogger().debug("Query has more than one table or subqueries, " +
       		"that is not supported with rewrite " + getName());
+      return false;
+    }
 
+    if( qb.getQbJoinTree() != null )  {
+      getLogger().debug("Query has joins, " +
+          "that is not supported with rewrite " + getName());
       return false;
     }
 
@@ -174,6 +179,16 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
     }
     Iterator<String> itrClauseName = clauseNameSet.iterator();
     String sClauseName = itrClauseName.next();
+
+    //--------------------------------------------
+    //Check if we have where clause, if yes that's not yet supported
+    if( qbParseInfo.getWhrForClause(sClauseName) != null )  {
+      getLogger().debug("Query has where clause that is not " +
+      		"yet supported in rewrite " + getName());
+      return false;
+    }
+
+
 
     //--------------------------------------------
     //Getting select list column names
