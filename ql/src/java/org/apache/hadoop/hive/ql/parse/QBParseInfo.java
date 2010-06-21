@@ -236,6 +236,10 @@ public class QBParseInfo {
     return destToSelExpr.get(clause);
   }
 
+  public ASTNode getInsertForClause(String sClause)  {
+    return insClauseToAstNode.get(sClause);
+  }
+
   /**
    * Get the Cluster By AST for the clause.
    *

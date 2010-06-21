@@ -19,9 +19,12 @@
 package org.apache.hadoop.hive.ql.rewrite.rules;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.Stack;
 import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
@@ -30,6 +33,12 @@ import org.apache.hadoop.hive.metastore.MetaStoreUtils;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.ql.index.HiveIndex;
 import org.apache.hadoop.hive.ql.index.HiveIndex.IndexType;
+import org.apache.hadoop.hive.ql.lib.DefaultGraphWalker;
+import org.apache.hadoop.hive.ql.lib.DefaultRuleDispatcher;
+import org.apache.hadoop.hive.ql.lib.Node;
+import org.apache.hadoop.hive.ql.lib.NodeProcessor;
+import org.apache.hadoop.hive.ql.lib.NodeProcessorCtx;
+import org.apache.hadoop.hive.ql.lib.Rule;
 import org.apache.hadoop.hive.ql.metadata.Hive;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.metadata.Table;
@@ -38,6 +47,7 @@ import org.apache.hadoop.hive.ql.parse.HiveParser;
 import org.apache.hadoop.hive.ql.parse.QB;
 import org.apache.hadoop.hive.ql.parse.QBMetaData;
 import org.apache.hadoop.hive.ql.parse.QBParseInfo;
+import org.apache.hadoop.hive.ql.parse.SemanticException;
 
 /**
  * GbToCompactSumIdxRewrite.
@@ -70,13 +80,82 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
     super(log);
     m_hiveInstance = hiveInstance;
   }
+
   class GbToCompactSumIdxRewriteContext extends  HiveRwRuleContext {
     public Table m_indexTableMetaData;
     public String m_sClauseName;
     public boolean m_bIsDistinct;
     public String m_sOrigBaseTableAlias;
-
   }
+
+  class CollectColRefNames implements NodeProcessor  {
+    /**
+     *     Column names of column references found in root ast node
+     *     passed in constructor
+     */
+    private final List<String> m_vColNames;
+    /**
+     * If true, Do not return column references which are children of functions
+     * Just return column references which are direct children of passed
+     * rootNode
+     */
+    private boolean m_bOnlyDirectChildren;
+    public CollectColRefNames(ASTNode rootNode)  {
+      m_vColNames = new ArrayList<String>();
+      init(rootNode, false);
+    }
+    public CollectColRefNames(ASTNode rootNode, boolean bOnlyDirectChildren)  {
+      m_vColNames = new ArrayList<String>();
+      init(rootNode, bOnlyDirectChildren);
+    }
+
+    private void init(ASTNode rootNode, boolean bOnlyDirectChildren)  {
+      if( rootNode != null )  {
+        ArrayList<Node> alStartNode = new ArrayList<Node>();
+        m_bOnlyDirectChildren = bOnlyDirectChildren;
+        alStartNode.add(rootNode);
+        Map<Rule, NodeProcessor> noSpecialRule = new HashMap<Rule, NodeProcessor>();
+        DefaultRuleDispatcher ruleDispatcher = new DefaultRuleDispatcher(this, noSpecialRule  , null);
+        DefaultGraphWalker graphWalker = new DefaultGraphWalker(ruleDispatcher);
+        try {
+          graphWalker.startWalking(alStartNode, null);
+        } catch (SemanticException e)  {
+          getLogger().warn("Problem while traversing tree");
+          //TODO: Rethrow exception ?
+        }
+      }
+    }
+
+    public List<String> getColRefs()  {
+        return m_vColNames;
+    }
+
+    @Override
+    public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx procCtx,
+        Object... nodeOutputs) throws SemanticException {
+      ASTNode astNode = (ASTNode) nd;
+      if( astNode.getType() == HiveParser.TOK_TABLE_OR_COL )  {
+        if( m_bOnlyDirectChildren == true )  {
+          //If we want only direct children, It must have at 3 prev nodes in
+	  //stack in case of select expr and 2 in case of others (rootnode and
+	  //tok_table_or_col node)
+	  //Eg. For select-list , stack would normaly look like
+	  //ROOT_NODE, TOK_SELEXPR, TOK_TABLE_OR_COL i.e. 3 nodes
+          if( !(( stack.size() == 3 &&
+                ((ASTNode)stack.get(1)).getType() ==  HiveParser.TOK_SELEXPR ) ||
+                ( stack.size() == 2 )) ) {
+            return null;
+          }
+        }
+        //COLNAME or COLNAME AS COL_ALIAS
+        ASTNode internalNode = (ASTNode) astNode.getChild(0);
+        m_vColNames.add(internalNode.getText());
+      }
+
+      return null;
+    }
+  }
+
 
   private List<Table> getIndexTable(Table baseTableMetaData, IndexType indexType)  {
     List<String> vIndexTableName = baseTableMetaData.getIndexTableName();
@@ -104,29 +183,14 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
   }
 
 
-  private List<String> getChildColNames(ASTNode rootSelExpr)  {
-    List<String> selList = new ArrayList<String>();
-    for( int iChldIdx = 0; iChldIdx < rootSelExpr.getChildCount(); iChldIdx++)  {
-      ASTNode childNode = (ASTNode) rootSelExpr.getChild(iChldIdx);
-      if( childNode.getType() == HiveParser.TOK_SELEXPR ) {
-        childNode = (ASTNode) childNode.getChild(0);
-
-      }
-      switch( childNode.getType() )  {
-      case HiveParser.TOK_TABLE_OR_COL:
-      {
-        //COLNAME or COLNAME AS COL_ALIAS
-        ASTNode internalNode = (ASTNode) childNode.getChild(0);
-        selList.add(internalNode.getText());
-        break;
-      }
-      default:
-          break;
-      }
-
-    }
-    return selList;
+  private List<String> getChildColRefNames(ASTNode rootExpr, boolean bOnlyDirectChildren)  {
+    return new CollectColRefNames(rootExpr, bOnlyDirectChildren).getColRefs();
   }
+
+  private List<String> getChildColRefNames(ASTNode rootExpr)  {
+    return new CollectColRefNames(rootExpr).getColRefs();
+  }
+
 
   @Override
   public boolean canApplyThisRule(QB qb) {
@@ -148,7 +212,6 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
           "that is not supported with rewrite " + getName());
       return false;
     }
-
     //--------------------------------------------
     //Get clause information.
     QBParseInfo qbParseInfo = qb.getParseInfo();
@@ -159,28 +222,54 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
     Iterator<String> itrClauseName = clauseNameSet.iterator();
     String sClauseName = itrClauseName.next();
 
-    //--------------------------------------------
-    //Check if we have where clause, if yes that's not yet supported
-    if( qbParseInfo.getWhrForClause(sClauseName) != null )  {
-      getLogger().debug("Query has where clause that is not " +
-      		"yet supported in rewrite " + getName());
+    //Check if we have sort-by clause, not yet supported
+    if( qbParseInfo.getSortByForClause(sClauseName) != null )  {
+      getLogger().debug("Query has sortby clause, " +
+          "that is not supported with rewrite " + getName());
+      return false;
+    }
+    //Check if we have distributed-by clause, not yet supported
+    if( qbParseInfo.getDistributeByForClause(sClauseName) != null)  {
+      getLogger().debug("Query has distributeby clause, " +
+          "that is not supported with rewrite " + getName());
       return false;
     }
 
+    //--------------------------------------------
+    //Getting where clause information
+    ASTNode whereClause = qbParseInfo.getWhrForClause(sClauseName);
+    /*
+    if( whereClause != null )  {
+      getLogger().debug("Query has where clause, " +
+          "that is not supported with rewrite " + getName());
+      return false;
+    }
+    */
+    List<String> predColRefs = getChildColRefNames(whereClause);
 
 
     //--------------------------------------------
     //Getting select list column names
     ASTNode rootSelExpr = qbParseInfo.getSelForClause(sClauseName);
     boolean bIsDistinct = (rootSelExpr.getType() == HiveParser.TOK_SELECTDI);
-    List<String> selColNameList = getChildColNames(rootSelExpr);
-    if( selColNameList.size() != rootSelExpr.getChildCount() )  {
-      getLogger().debug("Select list has some non column-reference " +
-      		"expression. Cannot apply rewrite " + getName());
+    List<String> selColRefNameList = getChildColRefNames(rootSelExpr, bIsDistinct/*bOnlyDirectChildren*/);
+    if( bIsDistinct == true &&
+        selColRefNameList.size() != rootSelExpr.getChildCount() )  {
+      getLogger().debug("Select-list has distinct and it also has some non-col-ref expression. " +
+      		"Cannot apply the rewrite " + getName());
       return false;
     }
 
+    //Getting groupby key information
+    ASTNode groupByNode = qbParseInfo.getGroupByForClause(sClauseName);
 
+    List<String> gbKeyNameList = getChildColRefNames(groupByNode, true/*bOnlyDirectChildren*/);
+    if( (groupByNode != null) &&
+        (gbKeyNameList.size() != groupByNode.getChildCount()) )  {
+      getLogger().debug("Group-by-key-list has some non-col-ref expression. " +
+          "Cannot apply the rewrite " + getName());
+      return false;
+    }
 
     //--------------------------------------------
     //Get Index information.
@@ -206,7 +295,6 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
     for( int iIdxTbl = 0;iIdxTbl < vIndexTable.size(); iIdxTbl++)  {
       indexTable = vIndexTable.get(iIdxTbl);
 
-      //-----------------------------------------
       //Getting index key columns
       List<FieldSchema> vCols = indexTable.getCols();
       Set<String> idxKeyColsNames = new TreeSet<String>();
@@ -224,7 +312,7 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
 
       //--------------------------------------------
       //Check if all columns in select list are part of index key columns
-      if( idxKeyColsNames.containsAll(selColNameList) == false ) {
+      if( idxKeyColsNames.containsAll(selColRefNameList) == false ) {
         getLogger().debug("Select list has non index key column : " +
         		" Cannot use this index  " + indexTable.getTableName());
         continue;
@@ -235,13 +323,22 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
       //as all columns from index appear in group-by-key list.
       if( bIsDistinct ) {
         //Check if all columns from index are part of select list too
-        if( selColNameList.containsAll(idxKeyColsNames) == false )  {
+        if( selColRefNameList.containsAll(idxKeyColsNames) == false )  {
           getLogger().debug("Index has non select list columns " +
               " Cannot use this index  " + indexTable.getTableName());
           continue;
         }
       }
 
+      //--------------------------------------------
+      //Check if all columns in where predicate are part of index key columns
+      //TODO: Currently we allow all predicates , would it be more efficient (or at least not worse)
+      //to read from index_table and not from baseTable ?
+      if( idxKeyColsNames.containsAll(predColRefs) == false ) {
+        getLogger().debug("Predicate column ref list has non index key column : " +
+            " Cannot use this index  " + indexTable.getTableName());
+        continue;
+      }
 
       if( bIsDistinct == false )  {
         //--------------------------------------------
@@ -251,14 +348,6 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
         //Eg. select c1, c2 from src group by c2, c1;
         //we can rewrite this one to s
         //select c1, c2 from src_cmpt_sum_idx;
-        ASTNode groupByNode = qbParseInfo.getGroupByForClause(sClauseName);
-        List<String> gbKeyNameList = getChildColNames(groupByNode);
-        if( gbKeyNameList.size() != groupByNode.getChildCount() ) {
-          getLogger().debug("Groupby key-list has non column reference expression, " +
-          		"that is not supported in the rewrite " + getName());
-
-          continue;
-        }
         if( idxKeyColsNames.containsAll(gbKeyNameList) == false ) {
             getLogger().debug("Groupby key-list has non index key column  " +
                 " Cannot use this index  " + indexTable.getTableName());
@@ -270,7 +359,6 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
               " Cannot use this index  " + indexTable.getTableName());
           continue;
         }
-
       }
       GbToCompactSumIdxRewriteContext rwContext = new GbToCompactSumIdxRewriteContext();
       rwContext.m_indexTableMetaData = indexTable;
