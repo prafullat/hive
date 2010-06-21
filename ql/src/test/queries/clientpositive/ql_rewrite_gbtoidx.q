@@ -9,7 +9,7 @@ EXPLAIN SELECT DISTINCT key FROM src;
 EXPLAIN SELECT key FROM src GROUP BY key;
 
 set hive.ql.rw.gb_to_idx=true;
-
+EXPLAIN SELECT DISTINCT key, value FROM src WHERE value = 2   ;
 EXPLAIN SELECT DISTINCT key FROM src;
 EXPLAIN SELECT DISTINCT key, value FROM src;
 
@@ -22,9 +22,14 @@ EXPLAIN SELECT DISTINCT key, value FROM src WHERE value = 2 AND key = 3;
 EXPLAIN SELECT DISTINCT key, value FROM src WHERE value = key;
 
 
+EXPLAIN SELECT key FROM src WHERE key = 3 GROUP BY key;
+EXPLAIN SELECT key, value FROM src WHERE value = 1 GROUP BY key, value;
+
+
+EXPLAIN SELECT key FROM src WHERE value = 2 GROUP BY key;
 EXPLAIN SELECT DISTINCT key, substr(value,2,3) FROM src WHERE value = key;
 EXPLAIN SELECT DISTINCT key, substr(value,2,3) FROM src;
-EXPLAIN SELECT key FROM src group by key, substr(key,2,3);
+EXPLAIN SELECT key FROM src GROUP BY key, substr(key,2,3);
 
 
 
