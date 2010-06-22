@@ -15,7 +15,24 @@ public abstract class HiveRwRule {
 
   abstract public String getName();
   abstract public boolean canApplyThisRule(QB qb);
+  /**
+   * Code that rewrites Qb to something new.
+   * If this method returns NULL, that particular QB is removed from
+   * QueryBlock tree, it must return non-null QB unless we want to
+   * delete QB. If it return non-null QB which is not same as input QB,
+   * we replace the input QB with it.   *
+   *
+   * @param oldQb Query block to rewrite.
+   * @return
+   */
   abstract public QB rewriteQb(QB oldQb);
+  /**
+   * If this method returns true, this rule needs to be
+   * applied in top-down manner for QB
+   * Other wise apply this in bottom-up.
+   * @return
+   */
+  abstract public boolean applyTopDown();
 
   public void setContext(HiveRwRuleContext rwContext)  {
     m_rwContext = rwContext;

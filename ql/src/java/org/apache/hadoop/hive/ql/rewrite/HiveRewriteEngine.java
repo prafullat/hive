@@ -24,9 +24,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.ql.metadata.Hive;
 import org.apache.hadoop.hive.ql.parse.QB;
+import org.apache.hadoop.hive.ql.parse.QBExpr;
 import org.apache.hadoop.hive.ql.rewrite.rules.GbToCompactSumIdxRewrite;
 import org.apache.hadoop.hive.ql.rewrite.rules.HiveRwRule;
-import org.apache.hadoop.hive.ql.rewrite.rules.HiveRwRuleContext;
 
 /**
  *
@@ -53,20 +53,72 @@ public class HiveRewriteEngine {
   public QB invokeRewrites(QB topQueryBlock)  {
     LOG.debug("Invoking rewrites on QB(Id "+topQueryBlock.getId()+")");
     for(int iIdx = 0; iIdx < m_rwRules.size(); iIdx++) {
-      HiveRwRuleContext rwContext = null;
-      LOG.debug("Trying " + m_rwRules.get(iIdx).getName() + " rewrite");
-
-      if( m_rwRules.get(iIdx).canApplyThisRule(topQueryBlock) ) {
-        LOG.debug("Applying " + m_rwRules.get(iIdx).getName() + " rewrite");
-        QB newRewrittenQb = m_rwRules.get(iIdx).rewriteQb(topQueryBlock);
-        //If rewrites have modified qb,replace our local variable
-        LOG.debug("Done with rewrite " + m_rwRules.get(iIdx).getName());
-        if( null != newRewrittenQb ) {
-          topQueryBlock = newRewrittenQb;
-        }
+      QB newRewrittenQb = null;
+      if( m_rwRules.get(iIdx).applyTopDown() == false )  {
+        newRewrittenQb = invokeRewriteInBottomUpWay(topQueryBlock, m_rwRules.get(iIdx));
+      }
+      else  {
+        newRewrittenQb = invokeRewriteInTopDownWay(topQueryBlock, m_rwRules.get(iIdx));
+      }
+      if( null != newRewrittenQb ) {
+        topQueryBlock = newRewrittenQb;
       }
     }
     return topQueryBlock;
+  }
+
+  public QB invokeRewriteInTopDownWay(QB inputQb, HiveRwRule hiveRwRule)  {
+    //Apply the rewrite on top QB
+    QB newRewrittenQb = applyRewrite(hiveRwRule, inputQb);
+    if( null != newRewrittenQb )  {
+      inputQb = newRewrittenQb;
+    }
+    if( newRewrittenQb == null  )  {
+      inputQb = null;
+      return inputQb;
+    }
+
+    for( String sSubQueryAlias : inputQb.getSubqAliases() )  {
+      QB childSubQueryQb = inputQb.getSubqForAlias(sSubQueryAlias).getQB();
+      QB newQb = invokeRewriteInTopDownWay(childSubQueryQb, hiveRwRule);
+      if( newQb == null )  {
+        inputQb.removeSubQuery(sSubQueryAlias);
+      }
+      else if( newQb != childSubQueryQb ) {
+        QBExpr qbExpr = new QBExpr(newQb);
+        inputQb.replaceSubQuery(sSubQueryAlias, sSubQueryAlias, qbExpr);
+      }
+
+    }
+    return inputQb;
+  }
+
+
+  public QB invokeRewriteInBottomUpWay(QB inputQb, HiveRwRule hiveRwRule)  {
+    for( String sSubQueryAlias : inputQb.getSubqAliases() )  {
+      QB childSubQueryQb = inputQb.getSubqForAlias(sSubQueryAlias).getQB();
+      QB newQb = invokeRewriteInBottomUpWay(childSubQueryQb, hiveRwRule);
+      if( newQb == null )  {
+        inputQb.removeSubQuery(sSubQueryAlias);
+      }
+      else if( newQb != childSubQueryQb ) {
+        QBExpr qbExpr = new QBExpr(newQb);
+        inputQb.replaceSubQuery(sSubQueryAlias, sSubQueryAlias, qbExpr);
+      }
+    }
+    return applyRewrite(hiveRwRule, inputQb);
+  }
+
+  public QB applyRewrite(HiveRwRule hiveRwRule, QB inputQb)  {
+    LOG.debug("Trying " + hiveRwRule.getName() + " rewrite");
+    QB newRewrittenQb = null;
+    if( hiveRwRule.canApplyThisRule(inputQb) ) {
+      LOG.debug("Applying " + hiveRwRule.getName() + " rewrite");
+      newRewrittenQb = hiveRwRule.rewriteQb(inputQb);
+      //If rewrites have modified qb,replace our local variable
+      LOG.debug("Done with rewrite " + hiveRwRule.getName());
+    }
+    return newRewrittenQb;
   }
 
 

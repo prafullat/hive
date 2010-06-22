@@ -188,8 +188,8 @@ public class QB {
     return tblDesc != null;
   }
 
-  public void removeTable(String sAliaseName)  {
-    aliasToTabs.remove(sAliaseName);
+  public void removeTable(String sAliasName)  {
+    aliasToTabs.remove(sAliasName);
   }
 
   public void replaceTableAlias(String sOrigBaseTableAlias, String sAlias,
@@ -197,5 +197,14 @@ public class QB {
     removeTable(sOrigBaseTableAlias);
     setTabAlias(sAlias, sTableName);
     qbp.replaceTable(sOrigBaseTableAlias, sAlias, sClauseName);
+  }
+
+  public void removeSubQuery(String sAliasName)  {
+    aliasToSubq.remove(sAliasName);
+  }
+
+  public void replaceSubQuery(String sOrigSubQAlias, String sNewAlias, QBExpr newQbExpr)  {
+    removeSubQuery(sOrigSubQAlias);
+    setSubqAlias(sNewAlias, newQbExpr);
   }
 }

@@ -137,10 +137,10 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
       if( astNode.getType() == HiveParser.TOK_TABLE_OR_COL )  {
         if( m_bOnlyDirectChildren == true )  {
           //If we want only direct children, It must have at 3 prev nodes in
-	  //stack in case of select expr and 2 in case of others (rootnode and
-	  //tok_table_or_col node)
-	  //Eg. For select-list , stack would normaly look like
-	  //ROOT_NODE, TOK_SELEXPR, TOK_TABLE_OR_COL i.e. 3 nodes
+          //stack in case of select expr and 2 in case of others (rootnode and
+          //tok_table_or_col node)
+          //Eg. For select-list , stack would normaly look like
+          //ROOT_NODE, TOK_SELEXPR, TOK_TABLE_OR_COL i.e. 3 nodes
           if( !(( stack.size() == 3 &&
                 ((ASTNode)stack.get(1)).getType() ==  HiveParser.TOK_SELEXPR ) ||
                 ( stack.size() == 2 )) ) {
@@ -402,7 +402,14 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
       //Remove groupby
       qbParseInfo.clearGroupBy(sClauseName);
     }
+    //We aint changing qb here, what we change is ind
     return oldQb;
+  }
+
+  @Override
+  public boolean applyTopDown() {
+    //This rewrite needs to be applied bottom up
+    return false;
   }
 
 }
