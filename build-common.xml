@@ -52,7 +52,8 @@
   <property name="test.junit.output.usefile" value="true"/>
   <property name="minimr.query.files" value="join1.q,groupby1.q"/>
   <property name="test.silent" value="true"/>
-  <property name="test.serialize.qplan" value="true"/>
+  <property name="hadoopVersion" value="${hadoop.version.ant-internal}"/>
+  <property name="test.serialize.qplan" value="false"/>
 
   <path id="test.classpath">
     <pathelement location="${test.build.classes}" />
@@ -176,6 +177,14 @@
     description="Retrieve Ivy-managed Hadoop source artifacts" unless="ivy.skip">
     <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
       pattern="${build.dir.hadoop}/[artifact]-[revision].[ext]"/>
+  </target>
+
+  <target name="ivy-docs" depends="ivy-init"
+    description="Resolve, Retrieve Ivy-managed artifacts for docs configuration">
+    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="docs"/>
+    <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
+                  pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}" conf="docs"/>
+    <ivy:cachepath pathid="docs-classpath" conf="docs"/> 		
   </target>
 
   <available property="hadoopcore.${hadoop.version.ant-internal}.install.done"

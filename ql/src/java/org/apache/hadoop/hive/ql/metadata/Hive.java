@@ -620,7 +620,8 @@ public class Hive {
    *          The temporary directory.
    */
   public void loadPartition(Path loadPath, String tableName,
-      Map<String, String> partSpec, boolean replace, Path tmpDirPath)
+      Map<String, String> partSpec, boolean replace, Path tmpDirPath,
+      boolean holdDDLTime)
       throws HiveException {
     Table tbl = getTable(MetaStoreUtils.DEFAULT_DATABASE_NAME, tableName);
     try {
@@ -658,7 +659,9 @@ public class Hive {
       }
 
       // recreate the partition if it existed before
-      part = getPartition(tbl, partSpec, true);
+      if (!holdDDLTime) {
+        part = getPartition(tbl, partSpec, true);
+      }
     } catch (IOException e) {
       LOG.error(StringUtils.stringifyException(e));
       throw new HiveException(e);
@@ -684,7 +687,7 @@ public class Hive {
    */
   public ArrayList<LinkedHashMap<String, String>> loadDynamicPartitions(Path loadPath,
       String tableName, Map<String, String> partSpec, boolean replace,
-      Path tmpDirPath, int numDP)
+      Path tmpDirPath, int numDP, boolean holdDDLTime)
       throws HiveException {
 
     try {
@@ -716,7 +719,7 @@ public class Hive {
       	fullPartSpecs.add(fullPartSpec);
 
         // finally load the partition -- move the file to the final table address
-      	loadPartition(partPath, tableName, fullPartSpec, replace, tmpDirPath);
+      	loadPartition(partPath, tableName, fullPartSpec, replace, tmpDirPath, holdDDLTime);
       	LOG.info("New loading path = " + partPath + " with partSpec " + fullPartSpec);
     	}
       return fullPartSpecs;
@@ -741,7 +744,7 @@ public class Hive {
    *          The temporary directory.
    */
   public void loadTable(Path loadPath, String tableName, boolean replace,
-      Path tmpDirPath) throws HiveException {
+      Path tmpDirPath, boolean holdDDLTime) throws HiveException {
     Table tbl = getTable(MetaStoreUtils.DEFAULT_DATABASE_NAME, tableName);
 
     if (replace) {
@@ -749,9 +752,17 @@ public class Hive {
     } else {
       tbl.copyFiles(loadPath);
     }
+
+    if (!holdDDLTime) {
+      try {
+        alterTable(tableName, tbl);
+      } catch (InvalidOperationException e) {
+        throw new HiveException(e);
+      }
+    }
   }
 
-  /**
+ /**
    * Creates a partition.
    *
    * @param tbl
