@@ -19,6 +19,7 @@
 package org.apache.hadoop.hive.ql.rewrite.rules;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -86,6 +87,7 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
     public String m_sClauseName;
     public boolean m_bIsDistinct;
     public String m_sOrigBaseTableAlias;
+    public boolean m_bRemoveGroupBy;
   }
 
   class CollectColRefNames implements NodeProcessor  {
@@ -157,7 +159,7 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
   }
 
 
-  private List<Table> getIndexTable(Table baseTableMetaData, IndexType indexType)  {
+  private List<Table> getIndexTable(Table baseTableMetaData, List<IndexType> vIndexType)  {
     List<String> vIndexTableName = baseTableMetaData.getIndexTableName();
     List<Table> vIndexTable = new ArrayList<Table>();
     for( int i = 0; i < vIndexTableName.size(); i++) {
@@ -172,7 +174,13 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
           continue;
         }
         String sIndexType = MetaStoreUtils.getIndexType(indexTable.getTTable());
-        if( !sIndexType.equalsIgnoreCase(HiveIndex.IndexType.COMPACT_SUMMARY_TABLE.getName()) )  {
+        boolean bIsValidIndex = false;
+        for( int iIdxType = 0; iIdxType < vIndexType.size(); iIdxType++) {
+          if( sIndexType.equalsIgnoreCase(vIndexType.get(iIdxType).getName()) ) {
+            bIsValidIndex |= true;
+          }
+        }
+        if( bIsValidIndex == false ) {
           continue;
         }
         vIndexTable.add(indexTable);
@@ -235,6 +243,33 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
       return false;
     }
 
+    //-------------------------------------------
+    //Getting agg func information.
+    HashMap<String, ASTNode> mapAggrNodes = qbParseInfo.getAggregationExprsForClause(sClauseName);
+    List< List<String> > vvColRefAggFuncInput = new ArrayList<List<String>>();
+    if( mapAggrNodes != null )  {
+      Collection<ASTNode> listAggrNodes = mapAggrNodes.values();
+      Iterator<ASTNode> it = listAggrNodes.iterator();
+      while( it.hasNext() )  {
+        ASTNode curNode = it.next();
+        int iChldCnt = curNode.getChildCount();
+        if( iChldCnt != 2 ) {
+          continue;
+        }
+
+        ASTNode funcNameNode = (ASTNode) curNode.getChild(0);
+        String sFuncName = funcNameNode.getText();
+        if( sFuncName.equalsIgnoreCase("count") == false ) {
+          getLogger().debug("Agg func other than count is not supported by rewrite " + getName());
+          return false;
+        }
+        List<String> vAggFuncInp = getChildColRefNames(curNode);
+        vvColRefAggFuncInput.add(vAggFuncInp);
+      }
+    }
+
+
+
     //--------------------------------------------
     //Getting where clause information
     ASTNode whereClause = qbParseInfo.getWhrForClause(sClauseName);
@@ -284,7 +319,10 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
       return false;
     }
 
-    List<Table> vIndexTable = getIndexTable(tableQlMetaData, IndexType.COMPACT_SUMMARY_TABLE);
+    List<IndexType> vValidIndexToBeUsed = new ArrayList<IndexType>();
+    vValidIndexToBeUsed.add(IndexType.COMPACT_SUMMARY_TABLE);
+    vValidIndexToBeUsed.add(IndexType.SUMMARY_TABLE);
+    List<Table> vIndexTable = getIndexTable(tableQlMetaData,vValidIndexToBeUsed);
     if( vIndexTable.size() == 0 ) {
       getLogger().debug("Table " + sTableName + " does not have compat summary " +
       		"index. Cannot apply rewrite " + getName());
@@ -295,6 +333,13 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
     for( int iIdxTbl = 0;iIdxTbl < vIndexTable.size(); iIdxTbl++)  {
       indexTable = vIndexTable.get(iIdxTbl);
 
+      //If we have agg function, check if we have SUMMARY table, we currently only support that.
+      if( vvColRefAggFuncInput.size() > 0 )  {
+        String sIndexType = MetaStoreUtils.getIndexType(indexTable.getTTable());
+        if( sIndexType.equalsIgnoreCase(HiveIndex.IndexType.SUMMARY_TABLE.getName()) == false ) {
+          continue;
+        }
+      }
       //Getting index key columns
       List<FieldSchema> vCols = indexTable.getCols();
       Set<String> idxKeyColsNames = new TreeSet<String>();
@@ -359,12 +404,29 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
               " Cannot use this index  " + indexTable.getTableName());
           continue;
         }
+
+        //If we have agg function (currently only COUNT is supported), check if its input are
+        //from index. we currently only support that.
+        if( vvColRefAggFuncInput.size() > 0 )  {
+          for( int iAggFuncIdx = 0; iAggFuncIdx < vvColRefAggFuncInput.size(); iAggFuncIdx++)  {
+            if( idxKeyColsNames.containsAll(vvColRefAggFuncInput.get(iAggFuncIdx)) == false ) {
+              getLogger().debug("Agg Func input is not present in index key columns. " +
+              		"Currently only agg func on index columns are supported");
+              continue;
+            }
+
+          }
+
+        }
+
       }
       GbToCompactSumIdxRewriteContext rwContext = new GbToCompactSumIdxRewriteContext();
       rwContext.m_indexTableMetaData = indexTable;
       rwContext.m_sClauseName = sClauseName;
       rwContext.m_bIsDistinct = bIsDistinct;
+      String sIndexType = MetaStoreUtils.getIndexType(indexTable.getTTable());
       rwContext.m_sOrigBaseTableAlias = sTableAlias;
+      rwContext.m_bRemoveGroupBy = (sIndexType.equalsIgnoreCase(HiveIndex.IndexType.COMPACT_SUMMARY_TABLE.getName()) == true);
       setContext(rwContext);
       return true;
     }
@@ -399,8 +461,10 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
       qbParseInfo.clearDistinctFlag(sClauseName);
     }
     else  {
-      //Remove groupby
-      qbParseInfo.clearGroupBy(sClauseName);
+      if( rwContext.m_bRemoveGroupBy == true ) {
+        //Remove groupby
+        qbParseInfo.clearGroupBy(sClauseName);
+      }
     }
     //We aint changing qb here, what we change is ind
     return oldQb;
