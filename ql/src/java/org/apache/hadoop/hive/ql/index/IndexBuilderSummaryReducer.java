@@ -19,9 +19,7 @@ package org.apache.hadoop.hive.ql.index;
 
 import java.io.IOException;
 import java.util.Iterator;
-import java.util.List;
 
-import org.apache.hadoop.hive.ql.io.HiveKey;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.Reporter;
@@ -37,20 +35,6 @@ public class IndexBuilderSummaryReducer extends IndexBuilderBaseReducer {
   }
 
   public void doReduce(Object[] keys, Iterator values, Reporter reporter) throws IOException {
-//    reporter.progress();
-//    while (values.hasNext()) {
-//      bl = new StringBuilder();
-//      // would toString() change the byte order?
-//      String keyPart = Text.decode(((HiveKey) key).getBytes());
-//      bl.append(keyPart);
-//      bl.append(HiveIndex.KEY_VAL_LIST_SEPARATOR);
-//      IndexEntryValueCell value = (IndexEntryValueCell) values.next();
-//      String bucketName = value.getBucketName();
-//      bl.append(bucketName);
-//      bl.append(HiveIndex.BUCKET_POS_VAL_SEPARATOR);
-//      bl.append(value.getPosition());
-//      outVal.set(bl.toString());
-//      this.outWriter.write(outVal);
-//    }
+    throw new RuntimeException("Not supported.");
   }
 }

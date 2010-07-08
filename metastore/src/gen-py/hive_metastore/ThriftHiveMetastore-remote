@@ -51,6 +51,7 @@ if len(sys.argv) <= 1 or sys.argv[1] == '--help':
   print '  string get_config_value(string name, string defaultValue)'
   print '   partition_name_to_vals(string part_name)'
   print '   partition_name_to_spec(string part_name)'
+  print '  void create_index(Index index)'
   print ''
   sys.exit(0)
 
@@ -278,5 +279,11 @@ elif cmd == 'partition_name_to_spec':
     print 'partition_name_to_spec requires 1 args'
     sys.exit(1)
   pp.pprint(client.partition_name_to_spec(args[0],))
+
+elif cmd == 'create_index':
+  if len(args) != 1:
+    print 'create_index requires 1 args'
+    sys.exit(1)
+  pp.pprint(client.create_index(eval(args[0]),))
 
 transport.close()

@@ -20,6 +20,7 @@ package org.apache.hadoop.hive.ql.metadata;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,7 +47,7 @@ import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.NoSuchObjectException;
 import org.apache.hadoop.hive.metastore.api.Order;
 import org.apache.hadoop.hive.ql.exec.Utilities;
-import org.apache.hadoop.hive.ql.index.HiveIndex;
+import org.apache.hadoop.hive.ql.io.RCFileInputFormat;
 import org.apache.hadoop.hive.serde2.Deserializer;
 import org.apache.hadoop.hive.serde2.SerDeException;
 import org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe;
@@ -330,7 +331,7 @@ public class Hive {
 
   /**
    * Creates the index with the given objects
-   *
+   * 
    * @param indexName
    *          the index name
    * @param tableName
@@ -349,61 +350,62 @@ public class Hive {
       throws HiveException {
     try {
       String dbName = MetaStoreUtils.DEFAULT_DATABASE_NAME;
-      org.apache.hadoop.hive.metastore.api.Table baseTable = getMSC().getTable(dbName, tableName);
-      MetaStoreUtils.addIndexTableName(baseTable, indexName);
-      getMSC().alter_table(dbName, tableName, baseTable);
-      org.apache.hadoop.hive.metastore.api.Table indexTable = baseTable.clone();
-      indexTable.setParameters(null);
-      MetaStoreUtils.setIndexTable(indexTable);
-      MetaStoreUtils.setBaseTableOfIndexTable(indexTable, tableName);
-      MetaStoreUtils.setIndexType(indexTable, indexType);
-      indexTable.setTableName(indexName);
+      org.apache.hadoop.hive.metastore.api.Table baseTbl = getMSC().getTable(dbName, tableName);
+      org.apache.hadoop.hive.metastore.api.Table tbl = baseTbl.clone();
+      tbl.setParameters(null);
+      MetaStoreUtils.setIndexTable(tbl);
+      MetaStoreUtils.setBaseTableOfIndexTable(tbl, tableName);
+      MetaStoreUtils.setIndexType(tbl, indexType);
+      tbl.setTableName(indexName);
       List<FieldSchema> indexTblCols = new ArrayList<FieldSchema>();
       List<Order> sortCols = new ArrayList<Order>();
-      indexTable.getSd().setBucketCols(null);
+      tbl.getSd().setBucketCols(null);
       int k = 0;
-      for (int i = 0; i < indexTable.getSd().getCols().size(); i++) {
-        FieldSchema col = indexTable.getSd().getCols().get(i);
+      for (int i = 0; i < tbl.getSd().getCols().size(); i++) {
+        FieldSchema col = tbl.getSd().getCols().get(i);
         if (indexedCols.contains(col.getName())) {
           indexTblCols.add(col);
           sortCols.add(new Order(col.getName(), 1));
           k++;
         }
       }
-      if (k != indexedCols.size()) {
+      if (k != indexedCols.size())
         throw new RuntimeException(
             "Check the index columns, they should appear in the table being indexed.");
-      }
-      FieldSchema bucketFileName = new FieldSchema(HiveIndex.IDX_BUCKET_COL_NAME, "string", "");
+      
+      FieldSchema bucketFileName = new FieldSchema("_bucketname", "string", "");
       indexTblCols.add(bucketFileName);
-      FieldSchema offSets = new FieldSchema(HiveIndex.IDX_OFFSET_COL_NAME, "array<string>", "");
+      FieldSchema offSets = new FieldSchema("_offsets", "array<string>", "");
       indexTblCols.add(offSets);
-      indexTable.getSd().setCols(indexTblCols);
-      indexTable.getSd().setLocation(null);
-      indexTable.getSd().setNumBuckets(1);
-      indexTable.getSd().setSortCols(sortCols);
+      tbl.getSd().setCols(indexTblCols);
+      tbl.getSd().setLocation(null);
+      tbl.getSd().setNumBuckets(1);
+      tbl.getSd().setSortCols(sortCols);
       if(inputFormat == null) {
         inputFormat = "org.apache.hadoop.mapred.TextInputFormat";
       }
-      indexTable.getSd().setInputFormat(inputFormat);
-
+      tbl.getSd().setInputFormat(inputFormat);
+      
       if(outputFormat == null) {
-        outputFormat =
+        outputFormat = 
           "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat";
       }
-      indexTable.getSd().setOutputFormat(outputFormat);
-
+      tbl.getSd().setOutputFormat(outputFormat);
+      
       if(serde == null) {
         serde = org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe.class.getName();
       }
-
-      indexTable.getSd().getSerdeInfo().setSerializationLib(serde);
-      getMSC().createTable(indexTable);
+      
+      tbl.getSd().getSerdeInfo().setSerializationLib(serde);
+      getMSC().createTable(tbl);
+      
+      MetaStoreUtils.appendIndexTable(baseTbl, indexName);
+      getMSC().alter_table(MetaStoreUtils.DEFAULT_DATABASE_NAME, baseTbl.getTableName(), baseTbl);
     } catch (Exception e) {
       throw new HiveException(e);
     }
   }
-
+  
   /**
    * Drops table along with the data in it. If the table doesn't exist
    * then it is a no-op

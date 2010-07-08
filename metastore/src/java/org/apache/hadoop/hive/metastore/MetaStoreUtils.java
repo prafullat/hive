@@ -60,7 +60,7 @@ public class MetaStoreUtils {
   protected static final Log LOG = LogFactory.getLog("hive.log");
 
   public static final String DEFAULT_DATABASE_NAME = "default";
-
+  
   /**
    * printStackTrace
    *
@@ -883,13 +883,25 @@ public class MetaStoreUtils {
     }
     return true;
   }
-  public static String INDEX_TABLE_PROPERTY="INDEX_TABLE";
-  public static String INDEX_BASE_TABLE_PROPERTY="INDEX_ORIGIN_TABLE";
-  public static String INDEX_TYPE_PROPERTY="INDEX_TYPE";
-  //Comma delimited list of name indexes in Base table
-  //Used for establishing reverse mapping between basetable and indextable.
-  public static String INDEX_TABLE_NAME_LIST = "INDEX_TABLE_NAME_LIST";
+  
+  //used in base table to record index tables
+  public static final String INDEX_TABLES = "hive.index.tables";
 
+  //used in index tables to record index types, the base table.
+  public static String INDEX_TABLE_PROPERTY="INDEX_TABLE"; 
+  public static String INDEX_BASE_TABLE_PROPERTY="INDEX_ORIGIN_TABLE"; 
+  public static String INDEX_TYPE_PROPERTY="INDEX_TYPE";
+  
+  public static void appendIndexTable(Table baseTbl, String indexTblName) {
+    String listOfIndexTbls = baseTbl.getParameters().get(INDEX_TABLES);
+    if (listOfIndexTbls == null || listOfIndexTbls.trim().equals("")) {
+      listOfIndexTbls = indexTblName;
+    } else {
+      listOfIndexTbls = listOfIndexTbls + "," + indexTblName;
+    }
+    baseTbl.getParameters().put(INDEX_TABLES, listOfIndexTbls);
+  }
+  
   public static String getBaseTableNameOfIndexTable(Table indextbl) {
     return indextbl.getParameters().get(INDEX_BASE_TABLE_PROPERTY);
   }
@@ -903,27 +915,14 @@ public class MetaStoreUtils {
     tbl.putToParameters(INDEX_TABLE_PROPERTY, "true");
   }
   public static void setBaseTableOfIndexTable(Table tbl, String tableName) {
-    tbl.putToParameters(INDEX_BASE_TABLE_PROPERTY, tableName);
+    tbl.putToParameters(INDEX_BASE_TABLE_PROPERTY, tableName);    
   }
   public static void setIndexType(Table tbl, String indexType) {
-    tbl.putToParameters(INDEX_TYPE_PROPERTY, indexType);
-  }
-
-  public static void addIndexTableName(Table baseTable, String sIndexTableName)  {
-    List<String> vIndexes = getIndexTableNames(baseTable);
-    vIndexes.add(sIndexTableName);
-    StringBuffer stringBuffer = new StringBuffer();
-    int i = 0;
-    for(; i < vIndexes.size() - 1; i++)  {
-      stringBuffer.append(vIndexes.get(i));
-      stringBuffer.append(",");
-    }
-    stringBuffer.append(vIndexes.get(i));
-    baseTable.putToParameters(INDEX_TABLE_NAME_LIST, stringBuffer.toString());
+    tbl.putToParameters(INDEX_TYPE_PROPERTY, indexType);    
   }
 
   public static List<String> getIndexTableNames(Table baseTable)  {
-    String sIndexNameList = baseTable.getParameters().get(INDEX_TABLE_NAME_LIST);
+    String sIndexNameList = baseTable.getParameters().get(INDEX_TABLES);
     List<String> vIndexes = new ArrayList<String>();
     if( sIndexNameList == null ) {
       return vIndexes;
@@ -932,8 +931,8 @@ public class MetaStoreUtils {
       String aIndexNames[] = sIndexNameList.split(",");
       for(String sIndexName : aIndexNames)  {
         vIndexes.add(sIndexName);
+      }
     }
-   }
-   return vIndexes;
-  }
+    return vIndexes;
+  }  
 }

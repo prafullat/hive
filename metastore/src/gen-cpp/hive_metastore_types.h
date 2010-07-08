@@ -483,29 +483,27 @@ class Partition {
 class Index {
  public:
 
-  static const char* ascii_fingerprint; // = "3163EDEDA2214D868610157908B1AB7A";
-  static const uint8_t binary_fingerprint[16]; // = {0x31,0x63,0xED,0xED,0xA2,0x21,0x4D,0x86,0x86,0x10,0x15,0x79,0x08,0xB1,0xAB,0x7A};
+  static const char* ascii_fingerprint; // = "E372B7F5FC9673FD276367227B6C378D";
+  static const uint8_t binary_fingerprint[16]; // = {0xE3,0x72,0xB7,0xF5,0xFC,0x96,0x73,0xFD,0x27,0x63,0x67,0x22,0x7B,0x6C,0x37,0x8D};
 
-  Index() : indexName(""), indexType(0), tableName(""), dbName(""), partName("") {
+  Index() : indexName(""), indexType(""), tableName(""), dbName("") {
   }
 
   virtual ~Index() throw() {}
 
   std::string indexName;
-  int32_t indexType;
+  std::string indexType;
   std::string tableName;
   std::string dbName;
   std::vector<std::string>  colNames;
-  std::string partName;
 
   struct __isset {
-    __isset() : indexName(false), indexType(false), tableName(false), dbName(false), colNames(false), partName(false) {}
+    __isset() : indexName(false), indexType(false), tableName(false), dbName(false), colNames(false) {}
     bool indexName;
     bool indexType;
     bool tableName;
     bool dbName;
     bool colNames;
-    bool partName;
   } __isset;
 
   bool operator == (const Index & rhs) const
@@ -519,8 +517,6 @@ class Index {
     if (!(dbName == rhs.dbName))
       return false;
     if (!(colNames == rhs.colNames))
-      return false;
-    if (!(partName == rhs.partName))
       return false;
     return true;
   }

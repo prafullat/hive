@@ -45,6 +45,7 @@ class ThriftHiveMetastoreIf : virtual public facebook::fb303::FacebookServiceIf 
   virtual void get_config_value(std::string& _return, const std::string& name, const std::string& defaultValue) = 0;
   virtual void partition_name_to_vals(std::vector<std::string> & _return, const std::string& part_name) = 0;
   virtual void partition_name_to_spec(std::map<std::string, std::string> & _return, const std::string& part_name) = 0;
+  virtual void create_index(const Index& index) = 0;
 };
 
 class ThriftHiveMetastoreNull : virtual public ThriftHiveMetastoreIf , virtual public facebook::fb303::FacebookServiceNull {
@@ -144,6 +145,9 @@ class ThriftHiveMetastoreNull : virtual public ThriftHiveMetastoreIf , virtual p
     return;
   }
   void partition_name_to_spec(std::map<std::string, std::string> & /* _return */, const std::string& /* part_name */) {
+    return;
+  }
+  void create_index(const Index& /* index */) {
     return;
   }
 };
@@ -3415,6 +3419,117 @@ class ThriftHiveMetastore_partition_name_to_spec_presult {
 
 };
 
+class ThriftHiveMetastore_create_index_args {
+ public:
+
+  ThriftHiveMetastore_create_index_args() {
+  }
+
+  virtual ~ThriftHiveMetastore_create_index_args() throw() {}
+
+  Index index;
+
+  struct __isset {
+    __isset() : index(false) {}
+    bool index;
+  } __isset;
+
+  bool operator == (const ThriftHiveMetastore_create_index_args & rhs) const
+  {
+    if (!(index == rhs.index))
+      return false;
+    return true;
+  }
+  bool operator != (const ThriftHiveMetastore_create_index_args &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const ThriftHiveMetastore_create_index_args & ) const;
+
+  uint32_t read(apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+class ThriftHiveMetastore_create_index_pargs {
+ public:
+
+
+  virtual ~ThriftHiveMetastore_create_index_pargs() throw() {}
+
+  const Index* index;
+
+  uint32_t write(apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+class ThriftHiveMetastore_create_index_result {
+ public:
+
+  ThriftHiveMetastore_create_index_result() {
+  }
+
+  virtual ~ThriftHiveMetastore_create_index_result() throw() {}
+
+  AlreadyExistsException o1;
+  InvalidObjectException o2;
+  MetaException o3;
+  NoSuchObjectException o4;
+
+  struct __isset {
+    __isset() : o1(false), o2(false), o3(false), o4(false) {}
+    bool o1;
+    bool o2;
+    bool o3;
+    bool o4;
+  } __isset;
+
+  bool operator == (const ThriftHiveMetastore_create_index_result & rhs) const
+  {
+    if (!(o1 == rhs.o1))
+      return false;
+    if (!(o2 == rhs.o2))
+      return false;
+    if (!(o3 == rhs.o3))
+      return false;
+    if (!(o4 == rhs.o4))
+      return false;
+    return true;
+  }
+  bool operator != (const ThriftHiveMetastore_create_index_result &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const ThriftHiveMetastore_create_index_result & ) const;
+
+  uint32_t read(apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+class ThriftHiveMetastore_create_index_presult {
+ public:
+
+
+  virtual ~ThriftHiveMetastore_create_index_presult() throw() {}
+
+  AlreadyExistsException o1;
+  InvalidObjectException o2;
+  MetaException o3;
+  NoSuchObjectException o4;
+
+  struct __isset {
+    __isset() : o1(false), o2(false), o3(false), o4(false) {}
+    bool o1;
+    bool o2;
+    bool o3;
+    bool o4;
+  } __isset;
+
+  uint32_t read(apache::thrift::protocol::TProtocol* iprot);
+
+};
+
 class ThriftHiveMetastoreClient : virtual public ThriftHiveMetastoreIf, public facebook::fb303::FacebookServiceClient {
  public:
   ThriftHiveMetastoreClient(boost::shared_ptr<apache::thrift::protocol::TProtocol> prot) :
@@ -3517,6 +3632,9 @@ class ThriftHiveMetastoreClient : virtual public ThriftHiveMetastoreIf, public f
   void partition_name_to_spec(std::map<std::string, std::string> & _return, const std::string& part_name);
   void send_partition_name_to_spec(const std::string& part_name);
   void recv_partition_name_to_spec(std::map<std::string, std::string> & _return);
+  void create_index(const Index& index);
+  void send_create_index(const Index& index);
+  void recv_create_index();
 };
 
 class ThriftHiveMetastoreProcessor : virtual public apache::thrift::TProcessor, public facebook::fb303::FacebookServiceProcessor {
@@ -3555,6 +3673,7 @@ class ThriftHiveMetastoreProcessor : virtual public apache::thrift::TProcessor, 
   void process_get_config_value(int32_t seqid, apache::thrift::protocol::TProtocol* iprot, apache::thrift::protocol::TProtocol* oprot);
   void process_partition_name_to_vals(int32_t seqid, apache::thrift::protocol::TProtocol* iprot, apache::thrift::protocol::TProtocol* oprot);
   void process_partition_name_to_spec(int32_t seqid, apache::thrift::protocol::TProtocol* iprot, apache::thrift::protocol::TProtocol* oprot);
+  void process_create_index(int32_t seqid, apache::thrift::protocol::TProtocol* iprot, apache::thrift::protocol::TProtocol* oprot);
  public:
   ThriftHiveMetastoreProcessor(boost::shared_ptr<ThriftHiveMetastoreIf> iface) :
     facebook::fb303::FacebookServiceProcessor(iface),
@@ -3589,6 +3708,7 @@ class ThriftHiveMetastoreProcessor : virtual public apache::thrift::TProcessor, 
     processMap_["get_config_value"] = &ThriftHiveMetastoreProcessor::process_get_config_value;
     processMap_["partition_name_to_vals"] = &ThriftHiveMetastoreProcessor::process_partition_name_to_vals;
     processMap_["partition_name_to_spec"] = &ThriftHiveMetastoreProcessor::process_partition_name_to_spec;
+    processMap_["create_index"] = &ThriftHiveMetastoreProcessor::process_create_index;
   }
 
   virtual bool process(boost::shared_ptr<apache::thrift::protocol::TProtocol> piprot, boost::shared_ptr<apache::thrift::protocol::TProtocol> poprot);
@@ -3943,6 +4063,13 @@ class ThriftHiveMetastoreMultiface : virtual public ThriftHiveMetastoreIf, publi
       } else {
         ifaces_[i]->partition_name_to_spec(_return, part_name);
       }
+    }
+  }
+
+  void create_index(const Index& index) {
+    uint32_t sz = ifaces_.size();
+    for (uint32_t i = 0; i < sz; ++i) {
+      ifaces_[i]->create_index(index);
     }
   }
 

@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hive.ql.io.RCFile;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.serde2.columnar.BytesRefWritable;
 import org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe;
@@ -51,17 +52,16 @@ import org.apache.hadoop.util.ReflectionUtils;
 /**
  * Holds index related constants
  * Actual logic is spread in HiveStreamingRecordReder and IndexReducer classes.
- *
+ * 
  */
 public class HiveIndex {
 
   public static final Log l4j = LogFactory.getLog("HiveIndex");
-
+  
   public static final Class INDEX_MAPRED_BOUN_SERDE = LazySimpleSerDe.class;
-
   public static final String IDX_BUCKET_COL_NAME = "_bucketname";
   public static final String IDX_OFFSET_COL_NAME = "_offsets";
-
+  
   public static enum IndexType {
     COMPACT_SUMMARY_TABLE("compact"),
     SUMMARY_TABLE("summary"),
@@ -77,17 +77,17 @@ public class HiveIndex {
       return indexTypeName;
     }
   }
-
+  
   public static IndexType getIndexType(String name) {
     IndexType[] types = IndexType.values();
     for (IndexType type : types) {
-      if(type.getName().equals(name.toLowerCase())) 
+      if(type.getName().equals(name.toLowerCase()))
         return type;
     }
     throw new IllegalArgumentException(name + " is not a valid index type.");
   }
-
-
+  
+  
   // modeled on sequence file record reader
   public static class IndexSequenceFileRecordReader<K extends WritableComparable, V extends Writable>
       implements RecordReader<K, V> {
@@ -106,9 +106,8 @@ public class HiveIndex {
       this.end = split.getStart() + split.getLength();
       this.conf = conf;
 
-      if (split.getStart() > in.getPosition()) {
-        in.sync(split.getStart());
-      } // sync to start
+      if (split.getStart() > in.getPosition())
+        in.sync(split.getStart()); // sync to start
 
       this.start = in.getPosition();
       more = start < end;
@@ -150,8 +149,8 @@ public class HiveIndex {
     }
 
     public synchronized boolean next(K key, V value) throws IOException {
-      if (!more) 
-        return false;      
+      if (!more)
+        return false;
       long pos = in.getPosition();
       boolean eof = in.next(key, value);
       if (pos >= end && in.syncSeen()) {
@@ -163,8 +162,8 @@ public class HiveIndex {
     }
 
     public synchronized boolean next(K key) throws IOException {
-      if (!more) 
-        return false;      
+      if (!more)
+        return false;
       long pos = in.getPosition();
       boolean eof = in.next(key);
       if (pos >= end && in.syncSeen()) {
@@ -181,7 +180,7 @@ public class HiveIndex {
 
     /**
      * Return the progress within the input split
-     *
+     * 
      * @return 0.0 to 1.0 of the input byte range
      */
     public float getProgress() throws IOException {
@@ -209,11 +208,11 @@ public class HiveIndex {
       return in.syncSeen();
     }
   }
-
+  
   //IndexBucket
   public static class IBucket {
     private String name = null;
-    private final SortedSet<Long> offsets = new TreeSet<Long>();
+    private SortedSet<Long> offsets = new TreeSet<Long>();
     public IBucket(String n) {
       name = n;
     }
@@ -226,7 +225,6 @@ public class HiveIndex {
     public SortedSet<Long> getOffsets() {
       return offsets;
     }
-    @Override
     public boolean equals(Object obj) {
       if(obj.getClass() != this.getClass()) {
         return false;
@@ -234,19 +232,19 @@ public class HiveIndex {
       return (((IBucket)obj).name.compareToIgnoreCase(this.name) == 0);
     }
   }
-
+  
   public static class HiveIndexResult {
     private HashMap<String, TreeMap<Date, Vector<IBucket>>> indexResult = new HashMap<String, TreeMap<Date, Vector<IBucket>>>();
     JobConf job = null;
-
+    
     BytesRefWritable[] bytesRef = new BytesRefWritable[2];
-
+    
     public HiveIndexResult(String indexFile, JobConf conf) throws IOException, HiveException {
       job = conf;
-
+      
       bytesRef[0] = new BytesRefWritable();
       bytesRef[1] = new BytesRefWritable();
-
+      
       if(indexFile != null) {
         Path indexFilePath = new Path(indexFile);
         FileSystem fs = FileSystem.get(conf);
@@ -260,7 +258,7 @@ public class HiveIndex {
         } else {
           paths.add(indexFilePath);
         }
-
+        
         for(Path indexFinalPath : paths) {
           FSDataInputStream ifile = fs.open(indexFinalPath);
           LineReader lr = new LineReader(ifile, conf);
@@ -299,7 +297,7 @@ public class HiveIndex {
         bucket = new IBucket(bucketFileName);
         buckets.put(bucketFileName, bucket);
       }
-
+      
       int currentStart = firstEnd + 1;
       int currentEnd = firstEnd + 1;
       for (; currentEnd < bytes.length; currentEnd++) {
@@ -314,10 +312,10 @@ public class HiveIndex {
           - currentStart);
       bucket.getOffsets().add(Long.parseLong(one_offset));
     }
-
+    
 
     public boolean contains(FileSplit split) throws HiveException {
-
+      
       if(buckets == null) {
         return false;
       }
@@ -327,10 +325,10 @@ public class HiveIndex {
         bucketName = split.getPath().toUri().getPath();
         bucket = buckets.get(bucketName);
         if(bucket == null) {
-          return false;
+          return false;          
         }
       }
-
+      
       for (Long offset : bucket.getOffsets()) {
         if ( (offset >= split.getStart()) && (offset <= split.getStart() + split.getLength())) {
           return true;
@@ -339,5 +337,5 @@ public class HiveIndex {
       return false;
     }
   }
-
+  
 }
