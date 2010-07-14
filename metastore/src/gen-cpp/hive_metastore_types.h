@@ -483,35 +483,29 @@ class Partition {
 class Index {
  public:
 
-  static const char* ascii_fingerprint; // = "A4E842FF5A6136E0F82B26551E846244";
-  static const uint8_t binary_fingerprint[16]; // = {0xA4,0xE8,0x42,0xFF,0x5A,0x61,0x36,0xE0,0xF8,0x2B,0x26,0x55,0x1E,0x84,0x62,0x44};
+  static const char* ascii_fingerprint; // = "3163EDEDA2214D868610157908B1AB7A";
+  static const uint8_t binary_fingerprint[16]; // = {0x31,0x63,0xED,0xED,0xA2,0x21,0x4D,0x86,0x86,0x10,0x15,0x79,0x08,0xB1,0xAB,0x7A};
 
-  Index() : indexName(""), indexType(""), dbName(""), origTableName(""), createTime(0), lastAccessTime(0), indexTableName("") {
+  Index() : indexName(""), indexType(0), tableName(""), dbName(""), partName("") {
   }
 
   virtual ~Index() throw() {}
 
   std::string indexName;
-  std::string indexType;
+  int32_t indexType;
+  std::string tableName;
   std::string dbName;
-  std::string origTableName;
-  int32_t createTime;
-  int32_t lastAccessTime;
-  std::string indexTableName;
-  StorageDescriptor sd;
-  std::map<std::string, std::string>  parameters;
+  std::vector<std::string>  colNames;
+  std::string partName;
 
   struct __isset {
-    __isset() : indexName(false), indexType(false), dbName(false), origTableName(false), createTime(false), lastAccessTime(false), indexTableName(false), sd(false), parameters(false) {}
+    __isset() : indexName(false), indexType(false), tableName(false), dbName(false), colNames(false), partName(false) {}
     bool indexName;
     bool indexType;
+    bool tableName;
     bool dbName;
-    bool origTableName;
-    bool createTime;
-    bool lastAccessTime;
-    bool indexTableName;
-    bool sd;
-    bool parameters;
+    bool colNames;
+    bool partName;
   } __isset;
 
   bool operator == (const Index & rhs) const
@@ -520,19 +514,13 @@ class Index {
       return false;
     if (!(indexType == rhs.indexType))
       return false;
+    if (!(tableName == rhs.tableName))
+      return false;
     if (!(dbName == rhs.dbName))
       return false;
-    if (!(origTableName == rhs.origTableName))
+    if (!(colNames == rhs.colNames))
       return false;
-    if (!(createTime == rhs.createTime))
-      return false;
-    if (!(lastAccessTime == rhs.lastAccessTime))
-      return false;
-    if (!(indexTableName == rhs.indexTableName))
-      return false;
-    if (!(sd == rhs.sd))
-      return false;
-    if (!(parameters == rhs.parameters))
+    if (!(partName == rhs.partName))
       return false;
     return true;
   }

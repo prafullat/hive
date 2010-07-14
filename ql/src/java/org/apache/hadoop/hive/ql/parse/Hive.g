@@ -86,8 +86,6 @@ TOK_LIST;
 TOK_STRUCT;
 TOK_MAP;
 TOK_CREATETABLE;
-TOK_CREATEINDEX;
-TOK_DROPINDEX;
 TOK_LIKETABLE;
 TOK_DESCTABLE;
 TOK_DESCFUNCTION;
@@ -105,7 +103,6 @@ TOK_ALTERTABLE_SERIALIZER;
 TOK_ALTERTABLE_FILEFORMAT;
 TOK_ALTERTABLE_PROPERTIES;
 TOK_ALTERTABLE_CHANGECOL_AFTER_POSITION;
-TOK_ALTERINDEX_REBUILD;
 TOK_MSCK;
 TOK_SHOWTABLES;
 TOK_SHOWFUNCTIONS;
@@ -222,9 +219,6 @@ ddlStatement
     | createViewStatement
     | dropViewStatement
     | createFunctionStatement
-    | createIndexStatement
-    | dropIndexStatement
-    | alterIndexRebuild
     | dropFunctionStatement
     ;
 
@@ -263,20 +257,6 @@ createTableStatement
          tablePropertiesPrefixed?
          selectStatement?
         )
-    ;
-
-createIndexStatement
-@init { msgs.push("create index statement");}
-@after {msgs.pop();}
-    : KW_CREATE KW_INDEX indexName=Identifier KW_TYPE typeName=Identifier KW_ON KW_TABLE tab=Identifier LPAREN indexedCols=columnNameList RPAREN tableFileFormat?
-    ->^(TOK_CREATEINDEX $indexName $typeName $tab $indexedCols tableFileFormat?)
-    ;
-
-dropIndexStatement
-@init { msgs.push("drop index statement");}
-@after {msgs.pop();}
-    : KW_DROP KW_INDEX indexName=Identifier KW_ON tab=Identifier
-    ->^(TOK_DROPINDEX $indexName $tab)
     ;
 
 dropTableStatement
@@ -428,13 +408,6 @@ alterStatementSuffixClusterbySortby
 	name=Identifier KW_NOT KW_CLUSTERED
 	->^(TOK_ALTERTABLE_CLUSTER_SORT $name)
 	;
-
-alterIndexRebuild
-@init { msgs.push("update index statement");}
-@after {msgs.pop();}
-    : KW_ALTER KW_INDEX indexName=Identifier KW_ON base_table_name=Identifier partitionSpec? KW_REBUILD
-    ->^(TOK_ALTERINDEX_REBUILD $ base_table_name $indexName partitionSpec?)
-    ;
 
 fileFormat
 @init { msgs.push("file format specification"); }
@@ -1540,9 +1513,6 @@ KW_PARTITION : 'PARTITION';
 KW_PARTITIONS : 'PARTITIONS';
 KW_TABLE: 'TABLE';
 KW_TABLES: 'TABLES';
-KW_INDEX: 'INDEX';
-KW_REBUILD: 'REBUILD';
-KW_TYPE: 'TYPE';
 KW_FUNCTIONS: 'FUNCTIONS';
 KW_SHOW: 'SHOW';
 KW_MSCK: 'MSCK';
@@ -1561,7 +1531,6 @@ KW_INPATH: 'INPATH';
 KW_IS: 'IS';
 KW_NULL: 'NULL';
 KW_CREATE: 'CREATE';
-KW_UPDATE: 'UPDATE';
 KW_EXTERNAL: 'EXTERNAL';
 KW_ALTER: 'ALTER';
 KW_CHANGE: 'CHANGE';

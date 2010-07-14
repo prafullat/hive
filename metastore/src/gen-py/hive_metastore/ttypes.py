@@ -1052,38 +1052,29 @@ class Index:
   Attributes:
    - indexName
    - indexType
+   - tableName
    - dbName
-   - origTableName
-   - createTime
-   - lastAccessTime
-   - indexTableName
-   - sd
-   - parameters
+   - colNames
+   - partName
   """
 
   thrift_spec = (
     None, # 0
     (1, TType.STRING, 'indexName', None, None, ), # 1
-    (2, TType.STRING, 'indexType', None, None, ), # 2
-    (3, TType.STRING, 'dbName', None, None, ), # 3
-    (4, TType.STRING, 'origTableName', None, None, ), # 4
-    (5, TType.I32, 'createTime', None, None, ), # 5
-    (6, TType.I32, 'lastAccessTime', None, None, ), # 6
-    (7, TType.STRING, 'indexTableName', None, None, ), # 7
-    (8, TType.STRUCT, 'sd', (StorageDescriptor, StorageDescriptor.thrift_spec), None, ), # 8
-    (9, TType.MAP, 'parameters', (TType.STRING,None,TType.STRING,None), None, ), # 9
+    (2, TType.I32, 'indexType', None, None, ), # 2
+    (3, TType.STRING, 'tableName', None, None, ), # 3
+    (4, TType.STRING, 'dbName', None, None, ), # 4
+    (5, TType.LIST, 'colNames', (TType.STRING,None), None, ), # 5
+    (6, TType.STRING, 'partName', None, None, ), # 6
   )
 
-  def __init__(self, indexName=None, indexType=None, dbName=None, origTableName=None, createTime=None, lastAccessTime=None, indexTableName=None, sd=None, parameters=None,):
+  def __init__(self, indexName=None, indexType=None, tableName=None, dbName=None, colNames=None, partName=None,):
     self.indexName = indexName
     self.indexType = indexType
+    self.tableName = tableName
     self.dbName = dbName
-    self.origTableName = origTableName
-    self.createTime = createTime
-    self.lastAccessTime = lastAccessTime
-    self.indexTableName = indexTableName
-    self.sd = sd
-    self.parameters = parameters
+    self.colNames = colNames
+    self.partName = partName
 
   def read(self, iprot):
     if iprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None and fastbinary is not None:
@@ -1100,50 +1091,33 @@ class Index:
         else:
           iprot.skip(ftype)
       elif fid == 2:
-        if ftype == TType.STRING:
-          self.indexType = iprot.readString();
+        if ftype == TType.I32:
+          self.indexType = iprot.readI32();
         else:
           iprot.skip(ftype)
       elif fid == 3:
         if ftype == TType.STRING:
-          self.dbName = iprot.readString();
+          self.tableName = iprot.readString();
         else:
           iprot.skip(ftype)
       elif fid == 4:
         if ftype == TType.STRING:
-          self.origTableName = iprot.readString();
+          self.dbName = iprot.readString();
         else:
           iprot.skip(ftype)
       elif fid == 5:
-        if ftype == TType.I32:
-          self.createTime = iprot.readI32();
+        if ftype == TType.LIST:
+          self.colNames = []
+          (_etype81, _size78) = iprot.readListBegin()
+          for _i82 in xrange(_size78):
+            _elem83 = iprot.readString();
+            self.colNames.append(_elem83)
+          iprot.readListEnd()
         else:
           iprot.skip(ftype)
       elif fid == 6:
-        if ftype == TType.I32:
-          self.lastAccessTime = iprot.readI32();
-        else:
-          iprot.skip(ftype)
-      elif fid == 7:
         if ftype == TType.STRING:
-          self.indexTableName = iprot.readString();
-        else:
-          iprot.skip(ftype)
-      elif fid == 8:
-        if ftype == TType.STRUCT:
-          self.sd = StorageDescriptor()
-          self.sd.read(iprot)
-        else:
-          iprot.skip(ftype)
-      elif fid == 9:
-        if ftype == TType.MAP:
-          self.parameters = {}
-          (_ktype79, _vtype80, _size78 ) = iprot.readMapBegin() 
-          for _i82 in xrange(_size78):
-            _key83 = iprot.readString();
-            _val84 = iprot.readString();
-            self.parameters[_key83] = _val84
-          iprot.readMapEnd()
+          self.partName = iprot.readString();
         else:
           iprot.skip(ftype)
       else:
@@ -1161,40 +1135,27 @@ class Index:
       oprot.writeString(self.indexName)
       oprot.writeFieldEnd()
     if self.indexType != None:
-      oprot.writeFieldBegin('indexType', TType.STRING, 2)
-      oprot.writeString(self.indexType)
+      oprot.writeFieldBegin('indexType', TType.I32, 2)
+      oprot.writeI32(self.indexType)
+      oprot.writeFieldEnd()
+    if self.tableName != None:
+      oprot.writeFieldBegin('tableName', TType.STRING, 3)
+      oprot.writeString(self.tableName)
       oprot.writeFieldEnd()
     if self.dbName != None:
-      oprot.writeFieldBegin('dbName', TType.STRING, 3)
+      oprot.writeFieldBegin('dbName', TType.STRING, 4)
       oprot.writeString(self.dbName)
       oprot.writeFieldEnd()
-    if self.origTableName != None:
-      oprot.writeFieldBegin('origTableName', TType.STRING, 4)
-      oprot.writeString(self.origTableName)
+    if self.colNames != None:
+      oprot.writeFieldBegin('colNames', TType.LIST, 5)
+      oprot.writeListBegin(TType.STRING, len(self.colNames))
+      for iter84 in self.colNames:
+        oprot.writeString(iter84)
+      oprot.writeListEnd()
       oprot.writeFieldEnd()
-    if self.createTime != None:
-      oprot.writeFieldBegin('createTime', TType.I32, 5)
-      oprot.writeI32(self.createTime)
-      oprot.writeFieldEnd()
-    if self.lastAccessTime != None:
-      oprot.writeFieldBegin('lastAccessTime', TType.I32, 6)
-      oprot.writeI32(self.lastAccessTime)
-      oprot.writeFieldEnd()
-    if self.indexTableName != None:
-      oprot.writeFieldBegin('indexTableName', TType.STRING, 7)
-      oprot.writeString(self.indexTableName)
-      oprot.writeFieldEnd()
-    if self.sd != None:
-      oprot.writeFieldBegin('sd', TType.STRUCT, 8)
-      self.sd.write(oprot)
-      oprot.writeFieldEnd()
-    if self.parameters != None:
-      oprot.writeFieldBegin('parameters', TType.MAP, 9)
-      oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.parameters))
-      for kiter85,viter86 in self.parameters.items():
-        oprot.writeString(kiter85)
-        oprot.writeString(viter86)
-      oprot.writeMapEnd()
+    if self.partName != None:
+      oprot.writeFieldBegin('partName', TType.STRING, 6)
+      oprot.writeString(self.partName)
       oprot.writeFieldEnd()
     oprot.writeFieldStop()
     oprot.writeStructEnd()
@@ -1239,22 +1200,22 @@ class Schema:
       if fid == 1:
         if ftype == TType.LIST:
           self.fieldSchemas = []
-          (_etype90, _size87) = iprot.readListBegin()
-          for _i91 in xrange(_size87):
-            _elem92 = FieldSchema()
-            _elem92.read(iprot)
-            self.fieldSchemas.append(_elem92)
+          (_etype88, _size85) = iprot.readListBegin()
+          for _i89 in xrange(_size85):
+            _elem90 = FieldSchema()
+            _elem90.read(iprot)
+            self.fieldSchemas.append(_elem90)
           iprot.readListEnd()
         else:
           iprot.skip(ftype)
       elif fid == 2:
         if ftype == TType.MAP:
           self.properties = {}
-          (_ktype94, _vtype95, _size93 ) = iprot.readMapBegin() 
-          for _i97 in xrange(_size93):
-            _key98 = iprot.readString();
-            _val99 = iprot.readString();
-            self.properties[_key98] = _val99
+          (_ktype92, _vtype93, _size91 ) = iprot.readMapBegin() 
+          for _i95 in xrange(_size91):
+            _key96 = iprot.readString();
+            _val97 = iprot.readString();
+            self.properties[_key96] = _val97
           iprot.readMapEnd()
         else:
           iprot.skip(ftype)
@@ -1271,16 +1232,16 @@ class Schema:
     if self.fieldSchemas != None:
       oprot.writeFieldBegin('fieldSchemas', TType.LIST, 1)
       oprot.writeListBegin(TType.STRUCT, len(self.fieldSchemas))
-      for iter100 in self.fieldSchemas:
-        iter100.write(oprot)
+      for iter98 in self.fieldSchemas:
+        iter98.write(oprot)
       oprot.writeListEnd()
       oprot.writeFieldEnd()
     if self.properties != None:
       oprot.writeFieldBegin('properties', TType.MAP, 2)
       oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.properties))
-      for kiter101,viter102 in self.properties.items():
-        oprot.writeString(kiter101)
-        oprot.writeString(viter102)
+      for kiter99,viter100 in self.properties.items():
+        oprot.writeString(kiter99)
+        oprot.writeString(viter100)
       oprot.writeMapEnd()
       oprot.writeFieldEnd()
     oprot.writeFieldStop()
