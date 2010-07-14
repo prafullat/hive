@@ -21,10 +21,11 @@ import org.apache.thrift.protocol.*;
 public class Index implements TBase, java.io.Serializable, Cloneable {
   private static final TStruct STRUCT_DESC = new TStruct("Index");
   private static final TField INDEX_NAME_FIELD_DESC = new TField("indexName", TType.STRING, (short)1);
-  private static final TField INDEX_TYPE_FIELD_DESC = new TField("indexType", TType.STRING, (short)2);
+  private static final TField INDEX_TYPE_FIELD_DESC = new TField("indexType", TType.I32, (short)2);
   private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)3);
   private static final TField DB_NAME_FIELD_DESC = new TField("dbName", TType.STRING, (short)4);
   private static final TField COL_NAMES_FIELD_DESC = new TField("colNames", TType.LIST, (short)5);
+  private static final TField PART_NAME_FIELD_DESC = new TField("partName", TType.STRING, (short)6);
 
   private String indexName;
   public static final int INDEXNAME = 1;
@@ -41,13 +42,14 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
 
   private final Isset __isset = new Isset();
   private static final class Isset implements java.io.Serializable {
+    public boolean indexType = false;
   }
 
   public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
     put(INDEXNAME, new FieldMetaData("indexName", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.STRING)));
     put(INDEXTYPE, new FieldMetaData("indexType", TFieldRequirementType.DEFAULT, 
-        new FieldValueMetaData(TType.STRING)));
+        new FieldValueMetaData(TType.I32)));
     put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.STRING)));
     put(DBNAME, new FieldMetaData("dbName", TFieldRequirementType.DEFAULT, 
@@ -55,8 +57,8 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
     put(COLNAMES, new FieldMetaData("colNames", TFieldRequirementType.DEFAULT, 
         new ListMetaData(TType.LIST, 
             new FieldValueMetaData(TType.STRING))));
-     put(PARTNAME, new FieldMetaData("partName", TFieldRequirementType.DEFAULT, 
-				     new FieldValueMetaData(TType.STRING)));
+    put(PARTNAME, new FieldMetaData("partName", TFieldRequirementType.DEFAULT, 
+        new FieldValueMetaData(TType.STRING)));
   }});
 
   static {
@@ -77,6 +79,7 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
     this();
     this.indexName = indexName;
     this.indexType = indexType;
+    this.__isset.indexType = true;
     this.tableName = tableName;
     this.dbName = dbName;
     this.colNames = colNames;
@@ -90,9 +93,8 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
     if (other.isSetIndexName()) {
       this.indexName = other.indexName;
     }
-    if (other.isSetIndexType()) {
-      this.indexType = other.indexType;
-    }
+    __isset.indexType = other.__isset.indexType;
+    this.indexType = other.indexType;
     if (other.isSetTableName()) {
       this.tableName = other.tableName;
     }
@@ -139,15 +141,16 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
 
   public void setIndexType(String indexType) {
     this.indexType = indexType;
+    this.__isset.indexType = true;
   }
 
   public void unsetIndexType() {
-    this.indexType = null;
+    this.__isset.indexType = false;
   }
 
   // Returns true if field indexType is set (has been asigned a value) and false otherwise
   public boolean isSetIndexType() {
-    return this.indexType != null;
+    return this.__isset.indexType;
   }
 
   public String getTableName() {
@@ -233,7 +236,6 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
     return this.partName != null;
   }
 
-
   public void setFieldValue(int fieldID, Object value) {
     switch (fieldID) {
     case INDEXNAME:
@@ -275,6 +277,7 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
         setColNames((List<String>)value);
       }
       break;
+
     case PARTNAME:
       if (value == null) {
         unsetPartName();
@@ -294,7 +297,7 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
       return getIndexName();
 
     case INDEXTYPE:
-      return getIndexType();
+      return new Integer(getIndexType());
 
     case TABLENAME:
       return getTableName();
@@ -304,9 +307,9 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
 
     case COLNAMES:
       return getColNames();
+
     case PARTNAME:
       return getPartName();
-
 
     default:
       throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
@@ -355,12 +358,12 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
         return false;
     }
 
-    boolean this_present_indexType = true && this.isSetIndexType();
-    boolean that_present_indexType = true && that.isSetIndexType();
+    boolean this_present_indexType = true;
+    boolean that_present_indexType = true;
     if (this_present_indexType || that_present_indexType) {
       if (!(this_present_indexType && that_present_indexType))
         return false;
-      if (!this.indexType.equals(that.indexType))
+      if (this.indexType != that.indexType)
         return false;
     }
 
@@ -391,6 +394,15 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
         return false;
     }
 
+    boolean this_present_partName = true && this.isSetPartName();
+    boolean that_present_partName = true && that.isSetPartName();
+    if (this_present_partName || that_present_partName) {
+      if (!(this_present_partName && that_present_partName))
+        return false;
+      if (!this.partName.equals(that.partName))
+        return false;
+    }
+
     return true;
   }
 
@@ -418,8 +430,9 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
           }
           break;
         case INDEXTYPE:
-          if (field.type == TType.STRING) {
+          if (field.type == TType.I32) {
             this.indexType = iprot.readString();
+            this.__isset.indexType = true;
           } else { 
             TProtocolUtil.skip(iprot, field.type);
           }
@@ -456,13 +469,12 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
           }
           break;
         case PARTNAME:
-	  if (field.type == TType.STRING) {
-	    this.partName = iprot.readString();
-	  } else { 
-	    TProtocolUtil.skip(iprot, field.type);
-	  }
-	  break;
-	
+          if (field.type == TType.STRING) {
+            this.partName = iprot.readString();
+          } else { 
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
         default:
           TProtocolUtil.skip(iprot, field.type);
           break;
@@ -481,11 +493,6 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
     if (this.indexName != null) {
       oprot.writeFieldBegin(INDEX_NAME_FIELD_DESC);
       oprot.writeString(this.indexName);
-      oprot.writeFieldEnd();
-    }
-    if (this.indexType != null) {
-      oprot.writeFieldBegin(INDEX_TYPE_FIELD_DESC);
-      oprot.writeString(this.indexType);
       oprot.writeFieldEnd();
     }
     if (this.tableName != null) {
@@ -509,6 +516,11 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
       }
       oprot.writeFieldEnd();
     }
+    if (this.partName != null) {
+      oprot.writeFieldBegin(PART_NAME_FIELD_DESC);
+      oprot.writeString(this.partName);
+      oprot.writeFieldEnd();
+    }
     oprot.writeFieldStop();
     oprot.writeStructEnd();
   }
@@ -527,11 +539,7 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
     first = false;
     if (!first) sb.append(", ");
     sb.append("indexType:");
-    if (this.indexType == null) {
-      sb.append("null");
-    } else {
-      sb.append(this.indexType);
-    }
+    sb.append(this.indexType);
     first = false;
     if (!first) sb.append(", ");
     sb.append("tableName:");
@@ -555,6 +563,14 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
       sb.append("null");
     } else {
       sb.append(this.colNames);
+    }
+    first = false;
+    if (!first) sb.append(", ");
+    sb.append("partName:");
+    if (this.partName == null) {
+      sb.append("null");
+    } else {
+      sb.append(this.partName);
     }
     first = false;
     sb.append(")");

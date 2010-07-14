@@ -1055,23 +1055,26 @@ class Index:
    - tableName
    - dbName
    - colNames
+   - partName
   """
 
   thrift_spec = (
     None, # 0
     (1, TType.STRING, 'indexName', None, None, ), # 1
-    (2, TType.STRING, 'indexType', None, None, ), # 2
+    (2, TType.I32, 'indexType', None, None, ), # 2
     (3, TType.STRING, 'tableName', None, None, ), # 3
     (4, TType.STRING, 'dbName', None, None, ), # 4
     (5, TType.LIST, 'colNames', (TType.STRING,None), None, ), # 5
+    (6, TType.STRING, 'partName', None, None, ), # 6
   )
 
-  def __init__(self, indexName=None, indexType=None, tableName=None, dbName=None, colNames=None,):
+  def __init__(self, indexName=None, indexType=None, tableName=None, dbName=None, colNames=None, partName=None,):
     self.indexName = indexName
     self.indexType = indexType
     self.tableName = tableName
     self.dbName = dbName
     self.colNames = colNames
+    self.partName = partName
 
   def read(self, iprot):
     if iprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None and fastbinary is not None:
@@ -1088,8 +1091,8 @@ class Index:
         else:
           iprot.skip(ftype)
       elif fid == 2:
-        if ftype == TType.STRING:
-          self.indexType = iprot.readString();
+        if ftype == TType.I32:
+          self.indexType = iprot.readI32();
         else:
           iprot.skip(ftype)
       elif fid == 3:
@@ -1112,6 +1115,11 @@ class Index:
           iprot.readListEnd()
         else:
           iprot.skip(ftype)
+      elif fid == 6:
+        if ftype == TType.STRING:
+          self.partName = iprot.readString();
+        else:
+          iprot.skip(ftype)
       else:
         iprot.skip(ftype)
       iprot.readFieldEnd()
@@ -1127,8 +1135,8 @@ class Index:
       oprot.writeString(self.indexName)
       oprot.writeFieldEnd()
     if self.indexType != None:
-      oprot.writeFieldBegin('indexType', TType.STRING, 2)
-      oprot.writeString(self.indexType)
+      oprot.writeFieldBegin('indexType', TType.I32, 2)
+      oprot.writeI32(self.indexType)
       oprot.writeFieldEnd()
     if self.tableName != None:
       oprot.writeFieldBegin('tableName', TType.STRING, 3)
@@ -1144,6 +1152,10 @@ class Index:
       for iter84 in self.colNames:
         oprot.writeString(iter84)
       oprot.writeListEnd()
+      oprot.writeFieldEnd()
+    if self.partName != None:
+      oprot.writeFieldBegin('partName', TType.STRING, 6)
+      oprot.writeString(self.partName)
       oprot.writeFieldEnd()
     oprot.writeFieldStop()
     oprot.writeStructEnd()

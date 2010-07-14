@@ -72,20 +72,21 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.FileInputFormat;
-import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.Mapper;
-import org.apache.hadoop.mapred.OutputFormat;
+import org.apache.hadoop.mapred.JobStatus;
 import org.apache.hadoop.mapred.Partitioner;
-import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.varia.NullAppender;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.PropertyConfigurator;
+import org.apache.hadoop.mapred.Mapper;
+import org.apache.hadoop.mapred.OutputFormat;
+import org.apache.hadoop.mapred.Reducer;
+import org.apache.hadoop.mapred.FileOutputFormat;
 
 /**
  * ExecDriver.
@@ -563,13 +564,12 @@ public class ExecDriver extends Task<MapredWork> implements Serializable {
     }
 
     String hiveScratchDir = getScratchDir(driverContext);
-    
+
     String jobScratchDirStr = hiveScratchDir + File.separator
-        + Utilities.randGen.nextInt();
+      + Utilities.randGen.nextInt();
     Path jobScratchDir = new Path(jobScratchDirStr);
-    FileOutputFormat.setOutputPath(job, jobScratchDir);
-
-
+    FileOutputFormat.setOutputPath(job, jobScratchDir);   
+    
     String emptyScratchDirStr = null;
     Path emptyScratchDir = null;
 
@@ -581,7 +581,7 @@ public class ExecDriver extends Task<MapredWork> implements Serializable {
 
       try {
         FileSystem fs = emptyScratchDir.getFileSystem(job);
-        fs.mkdirs(emptyScratchDir);
+	fs.mkdirs(emptyScratchDir);
         break;
       } catch (Exception e) {
         if (numTries > 0) {
@@ -592,17 +592,13 @@ public class ExecDriver extends Task<MapredWork> implements Serializable {
         }
       }
     }
-    
-    job.setMapperClass(getMapperClass());
 
+    ShimLoader.getHadoopShims().setNullOutputFormat(job);
+    job.setMapperClass(getMapperClass());
+  
     job.setMapOutputKeyClass(getMapOutputKeyClass());
     job.setMapOutputValueClass(getMapOutputValueClass());
-    Class<? extends OutputFormat> output = getOutputFormatCls();
-    if (output != null) {
-      job.setOutputFormat(output);      
-    } else {
-      ShimLoader.getHadoopShims().setNullOutputFormat(job);      
-    }
+
 
     try {
       job.setPartitionerClass((Class<? extends Partitioner>)
@@ -643,6 +639,10 @@ public class ExecDriver extends Task<MapredWork> implements Serializable {
     job.setOutputKeyClass(getOutputKeyClass());
     job.setOutputValueClass(getOutputValueClass());
     
+    Class<? extends OutputFormat> output = getOutputFormatCls();
+    if (output != null)
+      job.setOutputFormat(output);
+    
     // Transfer HIVEAUXJARS and HIVEADDEDJARS to "tmpjars" so hadoop understands
     // it
     String auxJars = HiveConf.getVar(job, HiveConf.ConfVars.HIVEAUXJARS);
@@ -678,7 +678,6 @@ public class ExecDriver extends Task<MapredWork> implements Serializable {
       HiveConf.setVar(job, HiveConf.ConfVars.HADOOPJOBNAME, "JOB"
           + randGen.nextInt());
     }
-    
     try {
       addInputPaths(job, work, emptyScratchDirStr);
 

@@ -172,11 +172,6 @@ class ThriftHiveMetastoreHandler : virtual public ThriftHiveMetastoreIf {
     printf("partition_name_to_spec\n");
   }
 
-  void create_index(const Index& index) {
-    // Your implementation goes here
-    printf("create_index\n");
-  }
-
 };
 
 int main(int argc, char **argv) {

@@ -84,7 +84,7 @@ public class ThriftHiveMetastore {
     public List<String> partition_name_to_vals(String part_name) throws MetaException, TException;
 
     public Map<String,String> partition_name_to_spec(String part_name) throws MetaException, TException;
-
+    
     public void create_index(Index index) throws AlreadyExistsException, InvalidObjectException, MetaException, NoSuchObjectException, TException;
 
   }
@@ -1277,7 +1277,7 @@ public class ThriftHiveMetastore {
       }
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "partition_name_to_spec failed: unknown result");
     }
-
+    
     public void create_index(Index index) throws AlreadyExistsException, InvalidObjectException, MetaException, NoSuchObjectException, TException
     {
       send_create_index(index);
@@ -1829,7 +1829,6 @@ public class ThriftHiveMetastore {
         oprot.writeMessageEnd();
         oprot.getTransport().flush();
       }
-
     }
 
     private class add_partition implements ProcessFunction {
@@ -1861,7 +1860,6 @@ public class ThriftHiveMetastore {
         oprot.writeMessageEnd();
         oprot.getTransport().flush();
       }
-
     }
 
     private class append_partition implements ProcessFunction {
@@ -1894,6 +1892,39 @@ public class ThriftHiveMetastore {
         oprot.getTransport().flush();
       }
 
+    }
+    
+    private class create_index implements ProcessFunction {
+      public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
+      {
+        create_index_args args = new create_index_args();
+        args.read(iprot);
+        iprot.readMessageEnd();
+        create_index_result result = new create_index_result();
+        try {
+          iface_.create_index(args.index);
+        } catch (AlreadyExistsException o1) {
+          result.o1 = o1;
+        } catch (InvalidObjectException o2) {
+          result.o2 = o2;
+        } catch (MetaException o3) {
+          result.o3 = o3;
+        } catch (NoSuchObjectException o4) {
+          result.o4 = o4;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing create_index", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing create_index");
+          oprot.writeMessageBegin(new TMessage("create_index", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
+        }
+        oprot.writeMessageBegin(new TMessage("create_index", TMessageType.REPLY, seqid));
+        result.write(oprot);
+        oprot.writeMessageEnd();
+        oprot.getTransport().flush();
+      }
     }
 
     private class append_partition_by_name implements ProcessFunction {
@@ -2269,40 +2300,6 @@ public class ThriftHiveMetastore {
           return;
         }
         oprot.writeMessageBegin(new TMessage("partition_name_to_spec", TMessageType.REPLY, seqid));
-        result.write(oprot);
-        oprot.writeMessageEnd();
-        oprot.getTransport().flush();
-      }
-
-    }
-
-    private class create_index implements ProcessFunction {
-      public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
-      {
-        create_index_args args = new create_index_args();
-        args.read(iprot);
-        iprot.readMessageEnd();
-        create_index_result result = new create_index_result();
-        try {
-          iface_.create_index(args.index);
-        } catch (AlreadyExistsException o1) {
-          result.o1 = o1;
-        } catch (InvalidObjectException o2) {
-          result.o2 = o2;
-        } catch (MetaException o3) {
-          result.o3 = o3;
-        } catch (NoSuchObjectException o4) {
-          result.o4 = o4;
-        } catch (Throwable th) {
-          LOGGER.error("Internal error processing create_index", th);
-          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing create_index");
-          oprot.writeMessageBegin(new TMessage("create_index", TMessageType.EXCEPTION, seqid));
-          x.write(oprot);
-          oprot.writeMessageEnd();
-          oprot.getTransport().flush();
-          return;
-        }
-        oprot.writeMessageBegin(new TMessage("create_index", TMessageType.REPLY, seqid));
         result.write(oprot);
         oprot.writeMessageEnd();
         oprot.getTransport().flush();
@@ -20261,7 +20258,8 @@ public class ThriftHiveMetastore {
     }
 
   }
-
+  
+  
   public static class create_index_args implements TBase, java.io.Serializable, Cloneable   {
     private static final TStruct STRUCT_DESC = new TStruct("create_index_args");
     private static final TField INDEX_FIELD_DESC = new TField("index", TType.STRUCT, (short)1);
@@ -20452,9 +20450,9 @@ public class ThriftHiveMetastore {
       // check that fields of type enum have valid values
     }
 
-  }
+    }
 
-  public static class create_index_result implements TBase, java.io.Serializable, Cloneable   {
+    public static class create_index_result implements TBase, java.io.Serializable, Cloneable   {
     private static final TStruct STRUCT_DESC = new TStruct("create_index_result");
     private static final TField O1_FIELD_DESC = new TField("o1", TType.STRUCT, (short)1);
     private static final TField O2_FIELD_DESC = new TField("o2", TType.STRUCT, (short)2);
@@ -20669,7 +20667,7 @@ public class ThriftHiveMetastore {
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
-
+    
     @Override
     public boolean equals(Object that) {
       if (that == null)
@@ -20682,7 +20680,6 @@ public class ThriftHiveMetastore {
     public boolean equals(create_index_result that) {
       if (that == null)
         return false;
-
       boolean this_present_o1 = true && this.isSetO1();
       boolean that_present_o1 = true && that.isSetO1();
       if (this_present_o1 || that_present_o1) {
@@ -20851,5 +20848,6 @@ public class ThriftHiveMetastore {
     }
 
   }
+
 
 }

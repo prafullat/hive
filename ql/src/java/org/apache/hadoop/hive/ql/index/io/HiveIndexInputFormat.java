@@ -25,6 +25,7 @@ public class HiveIndexInputFormat extends HiveInputFormat {
   public InputSplit[] getSplits(JobConf job, int numSplits) throws IOException {
     String indexFileStr = job.get("hive.exec.index_file");
     l4j.info("index_file is " + indexFileStr);
+    System.out.println("HiveIndexInputFormat::getSplits,index_file is " + indexFileStr);
     if (indexFileStr == null) {
       // ok it is not index accessed plan, what can we do?
       // return super.getSplits(job, numSplits);

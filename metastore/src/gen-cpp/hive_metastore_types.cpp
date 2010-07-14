@@ -1111,8 +1111,8 @@ uint32_t Partition::write(apache::thrift::protocol::TProtocol* oprot) const {
   return xfer;
 }
 
-const char* Index::ascii_fingerprint = "E372B7F5FC9673FD276367227B6C378D";
-const uint8_t Index::binary_fingerprint[16] = {0xE3,0x72,0xB7,0xF5,0xFC,0x96,0x73,0xFD,0x27,0x63,0x67,0x22,0x7B,0x6C,0x37,0x8D};
+const char* Index::ascii_fingerprint = "3163EDEDA2214D868610157908B1AB7A";
+const uint8_t Index::binary_fingerprint[16] = {0x31,0x63,0xED,0xED,0xA2,0x21,0x4D,0x86,0x86,0x10,0x15,0x79,0x08,0xB1,0xAB,0x7A};
 
 uint32_t Index::read(apache::thrift::protocol::TProtocol* iprot) {
 
@@ -1143,8 +1143,8 @@ uint32_t Index::read(apache::thrift::protocol::TProtocol* iprot) {
         }
         break;
       case 2:
-        if (ftype == apache::thrift::protocol::T_STRING) {
-          xfer += iprot->readString(this->indexType);
+        if (ftype == apache::thrift::protocol::T_I32) {
+          xfer += iprot->readI32(this->indexType);
           this->__isset.indexType = true;
         } else {
           xfer += iprot->skip(ftype);
@@ -1186,6 +1186,14 @@ uint32_t Index::read(apache::thrift::protocol::TProtocol* iprot) {
           xfer += iprot->skip(ftype);
         }
         break;
+      case 6:
+        if (ftype == apache::thrift::protocol::T_STRING) {
+          xfer += iprot->readString(this->partName);
+          this->__isset.partName = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
       default:
         xfer += iprot->skip(ftype);
         break;
@@ -1204,8 +1212,8 @@ uint32_t Index::write(apache::thrift::protocol::TProtocol* oprot) const {
   xfer += oprot->writeFieldBegin("indexName", apache::thrift::protocol::T_STRING, 1);
   xfer += oprot->writeString(this->indexName);
   xfer += oprot->writeFieldEnd();
-  xfer += oprot->writeFieldBegin("indexType", apache::thrift::protocol::T_STRING, 2);
-  xfer += oprot->writeString(this->indexType);
+  xfer += oprot->writeFieldBegin("indexType", apache::thrift::protocol::T_I32, 2);
+  xfer += oprot->writeI32(this->indexType);
   xfer += oprot->writeFieldEnd();
   xfer += oprot->writeFieldBegin("tableName", apache::thrift::protocol::T_STRING, 3);
   xfer += oprot->writeString(this->tableName);
@@ -1223,6 +1231,9 @@ uint32_t Index::write(apache::thrift::protocol::TProtocol* oprot) const {
     }
     xfer += oprot->writeListEnd();
   }
+  xfer += oprot->writeFieldEnd();
+  xfer += oprot->writeFieldBegin("partName", apache::thrift::protocol::T_STRING, 6);
+  xfer += oprot->writeString(this->partName);
   xfer += oprot->writeFieldEnd();
   xfer += oprot->writeFieldStop();
   xfer += oprot->writeStructEnd();
