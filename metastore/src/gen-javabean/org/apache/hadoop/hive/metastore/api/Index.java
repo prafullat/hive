@@ -29,7 +29,7 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
 
   private String indexName;
   public static final int INDEXNAME = 1;
-  private String indexType;
+  private int indexType;
   public static final int INDEXTYPE = 2;
   private String tableName;
   public static final int TABLENAME = 3;
@@ -70,7 +70,7 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
 
   public Index(
     String indexName,
-    String indexType,
+    int indexType,
     String tableName,
     String dbName,
     List<String> colNames,
@@ -135,11 +135,11 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
     return this.indexName != null;
   }
 
-  public String getIndexType() {
+  public int getIndexType() {
     return this.indexType;
   }
 
-  public void setIndexType(String indexType) {
+  public void setIndexType(int indexType) {
     this.indexType = indexType;
     this.__isset.indexType = true;
   }
@@ -250,7 +250,7 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
       if (value == null) {
         unsetIndexType();
       } else {
-        setIndexType((String)value);
+        setIndexType((Integer)value);
       }
       break;
 
@@ -431,7 +431,7 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
           break;
         case INDEXTYPE:
           if (field.type == TType.I32) {
-            this.indexType = iprot.readString();
+            this.indexType = iprot.readI32();
             this.__isset.indexType = true;
           } else { 
             TProtocolUtil.skip(iprot, field.type);
@@ -495,6 +495,9 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
       oprot.writeString(this.indexName);
       oprot.writeFieldEnd();
     }
+    oprot.writeFieldBegin(INDEX_TYPE_FIELD_DESC);
+    oprot.writeI32(this.indexType);
+    oprot.writeFieldEnd();
     if (this.tableName != null) {
       oprot.writeFieldBegin(TABLE_NAME_FIELD_DESC);
       oprot.writeString(this.tableName);
