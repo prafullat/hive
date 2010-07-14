@@ -1,0 +1,5 @@
+PREHOOK: query: CREATE INDEX srcpart_index_proj TYPE COMPACT ON TABLE srcpart(key)
+PREHOOK: type: CREATEINDEX
+POSTHOOK: query: CREATE INDEX srcpart_index_proj TYPE COMPACT ON TABLE srcpart(key)
+POSTHOOK: type: CREATEINDEX
+FAILED: Error in semantic analysis: org.apache.hadoop.hive.ql.metadata.HiveException: Partition ds=2018-04-08/hr=12/ does not exist in table srcpart

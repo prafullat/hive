@@ -57,6 +57,7 @@ import org.apache.hadoop.hive.ql.exec.FileSinkOperator.RecordWriter;
 import org.apache.hadoop.hive.ql.exec.errors.ErrorAndSolution;
 import org.apache.hadoop.hive.ql.exec.errors.TaskLogProcessor;
 import org.apache.hadoop.hive.ql.history.HiveHistory.Keys;
+import org.apache.hadoop.hive.ql.index.IndexBuilderBaseReducer;
 import org.apache.hadoop.hive.ql.io.HiveKey;
 import org.apache.hadoop.hive.ql.io.HiveOutputFormat;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
@@ -71,11 +72,14 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.FileInputFormat;
+import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.JobStatus;
+import org.apache.hadoop.mapred.Mapper;
+import org.apache.hadoop.mapred.OutputFormat;
 import org.apache.hadoop.mapred.Partitioner;
+import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
 import org.apache.log4j.BasicConfigurator;
@@ -434,7 +438,7 @@ public class ExecDriver extends Task<MapredWork> implements Serializable {
     // this is a temporary hack to fix things that are not fixed in the compiler
     Integer numReducersFromWork = work.getNumReduceTasks();
 
-    if (work.getReducer() == null) {
+    if (work.getReducer() == null && work.getIndexCols() == null) {
       console
           .printInfo("Number of reduce tasks is set to 0 since there's no reduce operator");
       work.setNumReduceTasks(Integer.valueOf(0));
@@ -557,13 +561,16 @@ public class ExecDriver extends Task<MapredWork> implements Serializable {
     if (invalidReason != null) {
       throw new RuntimeException("Plan invalid, Reason: " + invalidReason);
     }
+    
+    job.setInt("io.sort.mb", 10);
 
-    String hiveScratchDir;
-    if (driverContext.getCtx() != null && driverContext.getCtx().getQueryPath() != null) {
-      hiveScratchDir = driverContext.getCtx().getQueryPath().toString();
-    } else {
-      hiveScratchDir = HiveConf.getVar(job, HiveConf.ConfVars.SCRATCHDIR);
-    }
+    String hiveScratchDir = getScratchDir(driverContext);
+    
+    String jobScratchDirStr = hiveScratchDir + File.separator
+        + Utilities.randGen.nextInt();
+    Path jobScratchDir = new Path(jobScratchDirStr);
+    FileOutputFormat.setOutputPath(job, jobScratchDir);
+
 
     String emptyScratchDirStr = null;
     Path emptyScratchDir = null;
@@ -587,12 +594,17 @@ public class ExecDriver extends Task<MapredWork> implements Serializable {
         }
       }
     }
+    
+    job.setMapperClass(getMapperClass());
 
-    ShimLoader.getHadoopShims().setNullOutputFormat(job);
-    job.setMapperClass(ExecMapper.class);
-
-    job.setMapOutputKeyClass(HiveKey.class);
-    job.setMapOutputValueClass(BytesWritable.class);
+    job.setMapOutputKeyClass(getMapOutputKeyClass());
+    job.setMapOutputValueClass(getMapOutputValueClass());
+    Class<? extends OutputFormat> output = getOutputFormatCls();
+    if (output != null) {
+      job.setOutputFormat(output);      
+    } else {
+      ShimLoader.getHadoopShims().setNullOutputFormat(job);      
+    }
 
     try {
       job.setPartitionerClass((Class<? extends Partitioner>)
@@ -609,7 +621,7 @@ public class ExecDriver extends Task<MapredWork> implements Serializable {
           work.getMinSplitSize().intValue());
     }
     job.setNumReduceTasks(work.getNumReduceTasks().intValue());
-    job.setReducerClass(ExecReducer.class);
+    job.setReducerClass(getReducerClass());
 
     if (work.getInputformat() != null) {
       HiveConf.setVar(job, HiveConf.ConfVars.HIVEINPUTFORMAT, work.getInputformat());
@@ -623,24 +635,16 @@ public class ExecDriver extends Task<MapredWork> implements Serializable {
       HiveConf.ConfVars.HADOOPSPECULATIVEEXECREDUCERS,
       useSpeculativeExecReducers);
 
-    String inpFormat = HiveConf.getVar(job, HiveConf.ConfVars.HIVEINPUTFORMAT);
-    if ((inpFormat == null) || (!StringUtils.isNotBlank(inpFormat))) {
-      inpFormat = ShimLoader.getHadoopShims().getInputFormatClassName();
-    }
-
-    LOG.info("Using " + inpFormat);
-
     try {
-      job.setInputFormat((Class<? extends InputFormat>) (Class
-          .forName(inpFormat)));
+      job.setInputFormat(getInputFormatCls());
     } catch (ClassNotFoundException e) {
-      throw new RuntimeException(e.getMessage());
+      throw new RuntimeException(e);
     }
 
     // No-Op - we don't really write anything here ..
-    job.setOutputKeyClass(Text.class);
-    job.setOutputValueClass(Text.class);
-
+    job.setOutputKeyClass(getOutputKeyClass());
+    job.setOutputValueClass(getOutputValueClass());
+    
     // Transfer HIVEAUXJARS and HIVEADDEDJARS to "tmpjars" so hadoop understands
     // it
     String auxJars = HiveConf.getVar(job, HiveConf.ConfVars.HIVEAUXJARS);
@@ -773,6 +777,11 @@ public class ExecDriver extends Task<MapredWork> implements Serializable {
         if (work.getReducer() != null) {
           work.getReducer().jobClose(job, success, feedBack);
         }
+        
+        if (IndexBuilderBaseReducer.class.isAssignableFrom(this
+            .getReducerClass())) {
+          this.closeIndexBuilder(job, success);
+        }
       }
     } catch (Exception e) {
       // jobClose needs to execute successfully otherwise fail task
@@ -787,6 +796,26 @@ public class ExecDriver extends Task<MapredWork> implements Serializable {
     }
 
     return (returnVal);
+  }
+  
+  private void closeIndexBuilder(JobConf job, boolean success)
+      throws HiveException, IOException {
+    String outputPath = this.work.getOutputPath();
+    if (outputPath == null) {
+      outputPath = getScratchDir(driverContext) + Utilities.randGen.nextInt();
+    }
+    console.printInfo("Closing Index builder job. Output path is " + outputPath);
+    IndexBuilderBaseReducer.indexBuilderJobClose(outputPath, success, job, console);
+  }
+
+  private String getScratchDir(DriverContext driverContext) {
+    String hiveScratchDir;
+    if (driverContext.getCtx() != null && driverContext.getCtx().getQueryPath() != null) {
+      hiveScratchDir = driverContext.getCtx().getQueryPath().toString();
+    } else {
+      hiveScratchDir = HiveConf.getVar(job, HiveConf.ConfVars.SCRATCHDIR);
+    }
+    return hiveScratchDir;
   }
 
   /**
@@ -1340,6 +1369,80 @@ public class ExecDriver extends Task<MapredWork> implements Serializable {
   @Override
   public int getType() {
     return StageType.MAPRED;
+  }
+
+  private boolean delOutputIfExists;
+
+  public Class<? extends InputFormat> getInputFormatCls() throws ClassNotFoundException {
+    if(this.getWork() == null || this.getWork().getInputFormatCls() == null) {
+      String inpFormat = HiveConf.getVar(job, HiveConf.ConfVars.HIVEINPUTFORMAT);
+      if ((inpFormat == null) || (!StringUtils.isNotBlank(inpFormat)))
+        inpFormat = ShimLoader.getHadoopShims().getInputFormatClassName();
+      if(inpFormat == null) {
+        return org.apache.hadoop.hive.ql.io.HiveInputFormat.class;
+      }
+        return (Class<? extends InputFormat>) Class.forName(inpFormat);
+    } else {
+      return this.getWork().getInputFormatCls();
+    }
+
+  }
+
+  public Class<? extends Mapper> getMapperClass() {
+    if(this.getWork() != null && this.getWork().getMapperClass() != null) {
+      return this.getWork().getMapperClass();
+    }
+    return ExecMapper.class;
+  }
+
+  public Class<? extends Reducer> getReducerClass() {
+    if(this.getWork() != null && this.getWork().getReducerClass() != null) {
+      return this.getWork().getReducerClass();
+    }
+    return ExecReducer.class;
+  }
+
+  public Class<?> getMapOutputKeyClass() {
+    if(this.getWork()!=null && this.getWork().getMapOutputKeyClass() != null) {
+      return this.getWork().getMapOutputKeyClass();
+    }
+    return HiveKey.class;
+  }
+
+  public Class<?> getMapOutputValueClass() {
+    if(this.getWork()!=null && this.getWork().getMapOutputValueClass() != null) {
+      return this.getWork().getMapOutputValueClass();
+    }
+    return BytesWritable.class;
+  }
+
+  public Class<?> getOutputKeyClass() {
+    if(this.getWork()!=null && this.getWork().getOutputKeyClass() !=null) {
+      return this.getWork().getOutputKeyClass();
+    }
+    return Text.class;
+  }
+
+  public Class<?> getOutputValueClass() {
+    if(this.getWork()!=null && this.getWork().getOutputValueClass() != null) {
+      return this.getWork().getOutputValueClass();
+    }
+    return Text.class;
+  }
+  
+  public boolean isDelOutputIfExists() {
+    return delOutputIfExists;
+  }
+
+  public void setDelOutputIfExists(boolean delOutputIfExists) {
+    this.delOutputIfExists = delOutputIfExists;
+  }
+  
+  public Class<? extends OutputFormat> getOutputFormatCls() {
+    if (this.work != null) {
+      return this.getWork().getOutputFormatCls();  
+    }
+    return null;
   }
 
   @Override

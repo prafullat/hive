@@ -764,7 +764,7 @@ public class Table implements Serializable {
    * @return List containing Index Table names if there is exists indexes on this table
    **/
   public List<String> getIndexTableName() {
-    List<String> vIndexNames = MetaStoreUtils.getIndexTableNames(getTTable());
+    List<String> vIndexNames = /*MetaStoreUtils.getIndexTableNames(getTTable())*/ new ArrayList<String>();
     return vIndexNames;
   }
 };

@@ -173,7 +173,7 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
           getLogger().info("Index table " + vIndexTableName.get(i) + " could not be found");
           continue;
         }
-        String sIndexType = MetaStoreUtils.getIndexType(indexTable.getTTable());
+        String sIndexType = "no-index"/*MetaStoreUtils.getIndexType(indexTable.getTTable())*/;
         boolean bIsValidIndex = false;
         for( int iIdxType = 0; iIdxType < vIndexType.size(); iIdxType++) {
           if( sIndexType.equalsIgnoreCase(vIndexType.get(iIdxType).getName()) ) {
@@ -206,7 +206,7 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
     if( getRwFlag(HiveConf.ConfVars.HIVE_QL_RW_GB_TO_IDX) == false ) {
       return false;
     }
-
+    /*
     //Multiple table not supported yet
     if( (qb.getTabAliases().size() != 1) ||
         (qb.getSubqAliases().size() != 0) ) {
@@ -279,7 +279,6 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
           "that is not supported with rewrite " + getName());
       return false;
     }
-    */
     List<String> predColRefs = getChildColRefNames(whereClause);
 
 
@@ -287,7 +286,7 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
     //Getting select list column names
     ASTNode rootSelExpr = qbParseInfo.getSelForClause(sClauseName);
     boolean bIsDistinct = (rootSelExpr.getType() == HiveParser.TOK_SELECTDI);
-    List<String> selColRefNameList = getChildColRefNames(rootSelExpr, bIsDistinct/*bOnlyDirectChildren*/);
+    List<String> selColRefNameList = getChildColRefNames(rootSelExpr, bIsDistinct bOnlyDirectChildren);
     if( bIsDistinct == true &&
         selColRefNameList.size() != rootSelExpr.getChildCount() )  {
       getLogger().debug("Select-list has distinct and it also has some non-col-ref expression. " +
@@ -298,7 +297,7 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
     //Getting groupby key information
     ASTNode groupByNode = qbParseInfo.getGroupByForClause(sClauseName);
 
-    List<String> gbKeyNameList = getChildColRefNames(groupByNode, true/*bOnlyDirectChildren*/);
+    List<String> gbKeyNameList = getChildColRefNames(groupByNode, true bOnlyDirectChildren);
     if( (groupByNode != null) &&
         (gbKeyNameList.size() != groupByNode.getChildCount()) )  {
       getLogger().debug("Group-by-key-list has some non-col-ref expression. " +
@@ -429,7 +428,7 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
       rwContext.m_bRemoveGroupBy = (sIndexType.equalsIgnoreCase(HiveIndex.IndexType.COMPACT_SUMMARY_TABLE.getName()) == true);
       setContext(rwContext);
       return true;
-    }
+    }*/
     return false;
   }
 

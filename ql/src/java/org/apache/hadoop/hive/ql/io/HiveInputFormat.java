@@ -179,8 +179,9 @@ public class HiveInputFormat<K extends WritableComparable, V extends Writable>
    */
   protected static Map<Class, InputFormat<WritableComparable, Writable>> inputFormats;
 
-  static InputFormat<WritableComparable, Writable> getInputFormatFromCache(
-      Class inputFormatClass, JobConf job) throws IOException {
+  public static InputFormat<WritableComparable, Writable> getInputFormatFromCache(
+    Class inputFormatClass, JobConf job) throws IOException {
+  
     if (inputFormats == null) {
       inputFormats = new HashMap<Class, InputFormat<WritableComparable, Writable>>();
     }
@@ -329,7 +330,7 @@ public class HiveInputFormat<K extends WritableComparable, V extends Writable>
     for (String alias : aliases) {
       Operator<? extends Serializable> op = this.mrwork.getAliasToWork().get(
           alias);
-      if (op instanceof TableScanOperator) {
+      if (op != null && op instanceof TableScanOperator) {
         TableScanOperator tableScan = (TableScanOperator) op;
         ArrayList<Integer> list = tableScan.getNeededColumnIDs();
         if (list != null) {
