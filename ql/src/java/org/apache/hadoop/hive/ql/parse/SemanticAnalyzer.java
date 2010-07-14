@@ -315,8 +315,10 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
    */
   private void doPhase1GetAllAggregations(ASTNode expressionTree,
       HashMap<String, ASTNode> aggregations) {
-    if (expressionTree.getToken().getType() == HiveParser.TOK_FUNCTION
-        || expressionTree.getToken().getType() == HiveParser.TOK_FUNCTIONDI) {
+    int exprTokenType = expressionTree.getToken().getType();
+    if (exprTokenType == HiveParser.TOK_FUNCTION
+        || exprTokenType == HiveParser.TOK_FUNCTIONDI
+        || exprTokenType == HiveParser.TOK_FUNCTIONSTAR) {
       assert (expressionTree.getChildCount() != 0);
       if (expressionTree.getChild(0).getType() == HiveParser.Identifier) {
         String functionName = unescapeIdentifier(expressionTree.getChild(0)
@@ -809,14 +811,26 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
           String fname = stripQuotes(ast.getChild(0).getText());
           if ((!qb.getParseInfo().getIsSubQ())
               && (((ASTNode) ast.getChild(0)).getToken().getType() == HiveParser.TOK_TMP_FILE)) {
-            fname = ctx.getMRTmpFileURI();
-            ctx.setResDir(new Path(fname));
 
             if (qb.isCTAS()) {
               qb.setIsQuery(false);
+
+              // allocate a temporary output dir on the location of the table
+              String location = conf.getVar(HiveConf.ConfVars.METASTOREWAREHOUSE);
+              try {
+                fname = ctx.getExternalTmpFileURI
+                  (FileUtils.makeQualified(new Path(location), conf).toUri());
+
+              } catch (Exception e) {
+                throw new SemanticException("Error creating temporary folder on: "
+                                            + location, e);
+              }
+
             } else {
               qb.setIsQuery(true);
+              fname = ctx.getMRTmpFileURI();
             }
+            ctx.setResDir(new Path(fname));
           }
           qb.getMetaData().setDestForAlias(name, fname,
               (ast.getToken().getType() == HiveParser.TOK_DIR));
@@ -1715,7 +1729,9 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     ASTNode udtfExpr = (ASTNode) selExprList.getChild(posn).getChild(0);
     GenericUDTF genericUDTF = null;
 
-    if (udtfExpr.getType() == HiveParser.TOK_FUNCTION) {
+    int udtfExprType = udtfExpr.getType();
+    if (udtfExprType == HiveParser.TOK_FUNCTION
+        || udtfExprType == HiveParser.TOK_FUNCTIONSTAR) {
       String funcName = TypeCheckProcFactory.DefaultExprProcessor
           .getFunctionText(udtfExpr, true);
       FunctionInfo fi = FunctionRegistry.getFunctionInfo(funcName);
@@ -1924,11 +1940,12 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
    * for each GroupBy aggregation.
    */
   static GenericUDAFEvaluator getGenericUDAFEvaluator(String aggName,
-      ArrayList<ExprNodeDesc> aggParameters, ASTNode aggTree)
+      ArrayList<ExprNodeDesc> aggParameters, ASTNode aggTree,
+      boolean isDistinct, boolean isAllColumns)
       throws SemanticException {
     ArrayList<TypeInfo> originalParameterTypeInfos = getTypeInfo(aggParameters);
     GenericUDAFEvaluator result = FunctionRegistry.getGenericUDAFEvaluator(
-        aggName, originalParameterTypeInfos);
+        aggName, originalParameterTypeInfos, isDistinct, isAllColumns);
     if (null == result) {
       String reason = "Looking for UDAF Evaluator\"" + aggName
           + "\" with parameters " + originalParameterTypeInfos;
@@ -2072,9 +2089,10 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       }
 
       boolean isDistinct = value.getType() == HiveParser.TOK_FUNCTIONDI;
+      boolean isAllColumns = value.getType() == HiveParser.TOK_FUNCTIONSTAR;
       Mode amode = groupByDescModeToUDAFMode(mode, isDistinct);
       GenericUDAFEvaluator genericUDAFEvaluator = getGenericUDAFEvaluator(
-          aggName, aggParameters, value);
+          aggName, aggParameters, value, isDistinct, isAllColumns);
       assert (genericUDAFEvaluator != null);
       GenericUDAFInfo udaf = getGenericUDAFInfo(genericUDAFEvaluator, amode,
           aggParameters);
@@ -2194,12 +2212,13 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
             .getIsPartitionCol()));
       }
       boolean isDistinct = (value.getType() == HiveParser.TOK_FUNCTIONDI);
+      boolean isAllColumns = value.getType() == HiveParser.TOK_FUNCTIONSTAR;
       Mode amode = groupByDescModeToUDAFMode(mode, isDistinct);
       GenericUDAFEvaluator genericUDAFEvaluator = null;
       // For distincts, partial aggregations have not been done
       if (distPartAgg) {
         genericUDAFEvaluator = getGenericUDAFEvaluator(aggName, aggParameters,
-            value);
+            value, isDistinct, isAllColumns);
         assert (genericUDAFEvaluator != null);
         genericUDAFEvaluators.put(entry.getKey(), genericUDAFEvaluator);
       } else {
@@ -2311,10 +2330,11 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       }
 
       boolean isDistinct = value.getType() == HiveParser.TOK_FUNCTIONDI;
+      boolean isAllColumns = value.getType() == HiveParser.TOK_FUNCTIONSTAR;
       Mode amode = groupByDescModeToUDAFMode(mode, isDistinct);
 
       GenericUDAFEvaluator genericUDAFEvaluator = getGenericUDAFEvaluator(
-          aggName, aggParameters, value);
+          aggName, aggParameters, value, isDistinct, isAllColumns);
       assert (genericUDAFEvaluator != null);
       GenericUDAFInfo udaf = getGenericUDAFInfo(genericUDAFEvaluator, amode,
           aggParameters);
@@ -2597,6 +2617,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       String aggName = value.getChild(0).getText();
 
       boolean isDistinct = value.getType() == HiveParser.TOK_FUNCTIONDI;
+      boolean isStar = value.getType() == HiveParser.TOK_FUNCTIONSTAR;
       Mode amode = groupByDescModeToUDAFMode(mode, isDistinct);
       GenericUDAFEvaluator genericUDAFEvaluator = genericUDAFEvaluators
           .get(entry.getKey());
@@ -3214,8 +3235,8 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
           dpCtx = new DynamicPartitionCtx(dest_tab, partSpec,
               conf.getVar(HiveConf.ConfVars.DEFAULTPARTITIONNAME),
               conf.getIntVar(HiveConf.ConfVars.DYNAMICPARTITIONMAXPARTSPERNODE));
-        	qbm.setDPCtx(dest, dpCtx);
-      	}
+          qbm.setDPCtx(dest, dpCtx);
+        }
 
         if (HiveConf.getBoolVar(conf, HiveConf.ConfVars.DYNAMICPARTITIONING)) { // allow DP
           // TODO: we should support merge files for dynamically generated partitions later
@@ -3233,7 +3254,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         }
         if (dpCtx.getSPPath() != null) {
           dest_path = new Path(dest_tab.getPath(), dpCtx.getSPPath());
-      	}
+        }
         if ((dest_tab.getNumBuckets() > 0) &&
             (conf.getBoolVar(HiveConf.ConfVars.HIVEENFORCEBUCKETING))) {
           dpCtx.setNumBuckets(dest_tab.getNumBuckets());
@@ -3464,10 +3485,10 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
                 queryTmpdir,
                 table_desc,
                 conf.getBoolVar(HiveConf.ConfVars.COMPRESSRESULT),
-		            currentTableId,
-  		          rsCtx.isMultiFileSpray(),
-    		        rsCtx.getNumFiles(),
-      		      rsCtx.getTotalFiles(),
+                currentTableId,
+                rsCtx.isMultiFileSpray(),
+                rsCtx.getNumFiles(),
+                rsCtx.getTotalFiles(),
                 rsCtx.getPartnCols(),
                 dpCtx),
             fsRS, input), inputRR);

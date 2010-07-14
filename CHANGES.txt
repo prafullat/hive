@@ -13,6 +13,9 @@ Trunk -  Unreleased
     HIVE-1387. Add PERCENTILE_APPROX which works with double data type
     (Mayank Lahiri via jvs)
 
+    HIVE-1438. SENTENCES() UDF for natural language tokenization
+    (Mayank Lahiri via jvs)
+
   IMPROVEMENTS
 
     HIVE-1394. Do not update transient_lastDdlTime if the partition is modified by a housekeeping
@@ -30,6 +33,16 @@ Trunk -  Unreleased
 
     HIVE-1440. Bug in RCFiles with local work (map-join or sort-merge join)
     (He Yongqiang via namit)
+
+    HIVE-1454. insert overwrite and CTAS fail in hive local mode
+    (Joydeep Sen Sarma via He Yongqiang )
+
+    HIVE-1305. add progress in join and groupby
+    (Siying Dong via He Yongqiang)
+
+    HIVE-1453. Make Eclipse launch tempaltes auto-adjust to Hive
+    version number changes.
+    (Arvind Prabhakar via jvs)
 
 Release 0.6.0 -  Unreleased
 
@@ -129,6 +142,9 @@ Release 0.6.0 -  Unreleased
 
     HIVE-1255. Add mathematical UDFs PI, E, degrees, radians, tan,
     sign, and atan.  (Edward Capriolo via jvs)
+
+    HIVE-287. Support count(*) and count distinct on multiple columns
+    (Arvind Prabhakar via jvs)
 
   IMPROVEMENTS
     HIVE-983. Function from_unixtime takes long.
