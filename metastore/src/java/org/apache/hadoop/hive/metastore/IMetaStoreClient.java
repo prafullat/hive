@@ -24,8 +24,6 @@ import java.util.Map;
 import org.apache.hadoop.hive.metastore.api.AlreadyExistsException;
 import org.apache.hadoop.hive.metastore.api.ConfigValSecurityException;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
-import org.apache.hadoop.hive.metastore.api.Index;
-import org.apache.hadoop.hive.metastore.api.IndexAlreadyExistsException;
 import org.apache.hadoop.hive.metastore.api.InvalidObjectException;
 import org.apache.hadoop.hive.metastore.api.InvalidOperationException;
 import org.apache.hadoop.hive.metastore.api.MetaException;
@@ -331,16 +329,4 @@ public interface IMetaStoreClient {
    */
   public Map<String, String> partitionNameToSpec(String name)
       throws MetaException, TException;
-
-  /**
-   * create an index
-   * @param index the index object
-   * @throws InvalidObjectException
-   * @throws MetaException
-   * @throws NoSuchObjectException
-   * @throws TException
-   * @throws AlreadyExistsException 
-   */
-  public void createIndex(Index index) throws InvalidObjectException,
-      MetaException, NoSuchObjectException, TException, AlreadyExistsException;
 }

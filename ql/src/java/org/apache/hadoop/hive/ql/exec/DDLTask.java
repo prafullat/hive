@@ -53,7 +53,6 @@ import org.apache.hadoop.hive.metastore.MetaStoreUtils;
 import org.apache.hadoop.hive.metastore.TableType;
 import org.apache.hadoop.hive.metastore.Warehouse;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
-import org.apache.hadoop.hive.metastore.api.Index;
 import org.apache.hadoop.hive.metastore.api.InvalidOperationException;
 import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.Order;
@@ -97,7 +96,6 @@ import org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe;
 import org.apache.hadoop.hive.shims.HadoopShims;
 import org.apache.hadoop.hive.shims.ShimLoader;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hadoop.hive.ql.plan.createIndexDesc;
 /**
  * DDLTask implementation.
  *
@@ -146,13 +144,7 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
         return createTable(db, crtTbl);
       }
 
-      createIndexDesc crtIndex = work.getCreateIndexDesc();
-      if (crtIndex != null) {
-        return createIndex(db, crtIndex);
-      }
-
       CreateTableLikeDesc crtTblLike = work.getCreateTblLikeDesc();
-
       if (crtTblLike != null) {
         return createTableLike(db, crtTblLike);
       }
@@ -238,14 +230,6 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
       return (1);
     }
     assert false;
-    return 0;
-  }
-
-  private int createIndex(Hive db, createIndexDesc crtIndex) throws HiveException {
-    db
-        .createIndex(crtIndex.getIndexName(), crtIndex.getTableName(), crtIndex
-        .getIndexType(), crtIndex.getIndexedCols(), crtIndex.getInputFormat(),
-        crtIndex.getOutputFormat(), crtIndex.getSerde());
     return 0;
   }
 

@@ -97,8 +97,6 @@ public final class SemanticAnalyzerFactory {
       case HiveParser.TOK_SHOW_TABLESTATUS:
       case HiveParser.TOK_SHOWFUNCTIONS:
       case HiveParser.TOK_SHOWPARTITIONS:
-      case HiveParser.TOK_CREATEINDEX:
-      case HiveParser.TOK_UPDATEINDEX: 
       case HiveParser.TOK_ALTERTABLE_FILEFORMAT:
       case HiveParser.TOK_ALTERTABLE_CLUSTER_SORT:
       case HiveParser.TOK_ALTERTABLE_TOUCH:

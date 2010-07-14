@@ -883,6 +883,7 @@ public class MetaStoreUtils {
     }
     return true;
   }
+<<<<<<< HEAD
   public static String INDEX_TABLE_PROPERTY="INDEX_TABLE";
   public static String INDEX_BASE_TABLE_PROPERTY="INDEX_ORIGIN_TABLE";
   public static String INDEX_TYPE_PROPERTY="INDEX_TYPE";
@@ -936,4 +937,6 @@ public class MetaStoreUtils {
    }
    return vIndexes;
   }
+=======
+>>>>>>> ba7703f... Some part of last check-in got missed.
 }

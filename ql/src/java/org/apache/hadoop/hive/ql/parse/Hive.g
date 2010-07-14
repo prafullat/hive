@@ -86,8 +86,6 @@ TOK_LIST;
 TOK_STRUCT;
 TOK_MAP;
 TOK_CREATETABLE;
-TOK_CREATEINDEX;
-TOK_UPDATEINDEX;
 TOK_LIKETABLE;
 TOK_DESCTABLE;
 TOK_DESCFUNCTION;
@@ -221,8 +219,6 @@ ddlStatement
     | createViewStatement
     | dropViewStatement
     | createFunctionStatement
-    | createIndexStatement
-    | updateIndexStatement
     | dropFunctionStatement
     ;
 
@@ -261,20 +257,6 @@ createTableStatement
          tablePropertiesPrefixed?
          selectStatement?
         )
-    ;
-
-createIndexStatement
-@init { msgs.push("create index statement");}
-@after {msgs.pop();}
-    : KW_CREATE KW_INDEX indexName=Identifier KW_TYPE typeName=Identifier KW_ON KW_TABLE tab=Identifier LPAREN indexedCols=columnNameList RPAREN tableFileFormat?
-    ->^(TOK_CREATEINDEX $indexName $typeName $tab $indexedCols tableFileFormat?)
-    ;
-    
-updateIndexStatement
-@init { msgs.push("update index statement");}
-@after {msgs.pop();}
-    : KW_UPDATE KW_INDEX indexName=Identifier partitionSpec?
-    ->^(TOK_UPDATEINDEX $indexName partitionSpec?)
     ;
 
 dropTableStatement
@@ -1531,8 +1513,6 @@ KW_PARTITION : 'PARTITION';
 KW_PARTITIONS : 'PARTITIONS';
 KW_TABLE: 'TABLE';
 KW_TABLES: 'TABLES';
-KW_INDEX: 'INDEX';
-KW_TYPE: 'TYPE';
 KW_FUNCTIONS: 'FUNCTIONS';
 KW_SHOW: 'SHOW';
 KW_MSCK: 'MSCK';
@@ -1551,7 +1531,6 @@ KW_INPATH: 'INPATH';
 KW_IS: 'IS';
 KW_NULL: 'NULL';
 KW_CREATE: 'CREATE';
-KW_UPDATE: 'UPDATE';
 KW_EXTERNAL: 'EXTERNAL';
 KW_ALTER: 'ALTER';
 KW_CHANGE: 'CHANGE';

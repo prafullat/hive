@@ -30,7 +30,7 @@ import org.apache.hadoop.hive.ql.hooks.WriteEntity;
  */
 public class DDLWork implements Serializable {
   private static final long serialVersionUID = 1L;
-  private createIndexDesc      createIndexDesc;
+
   private CreateTableDesc createTblDesc;
   private CreateTableLikeDesc createTblLikeDesc;
   private CreateViewDesc createVwDesc;
@@ -63,10 +63,6 @@ public class DDLWork implements Serializable {
     this.outputs = outputs;
   }
 
-  public DDLWork(createIndexDesc createIndex) {
-    this.createIndexDesc = createIndex;
-  }
-  
   /**
    * @param alterTblDesc
    *          alter table descriptor
@@ -225,14 +221,6 @@ public class DDLWork implements Serializable {
    */
   public void setCreateTblDesc(CreateTableDesc createTblDesc) {
     this.createTblDesc = createTblDesc;
-  }
-  
-  public createIndexDesc getCreateIndexDesc() {
-    return createIndexDesc;
-  }
-
-  public void setCreateIndexDesc(createIndexDesc createIndexDesc) {
-    this.createIndexDesc = createIndexDesc;
   }
 
   /**

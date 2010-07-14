@@ -206,30 +206,22 @@ public final class HiveFileFormatUtils {
   public static RecordWriter getHiveRecordWriter(JobConf jc,
       TableDesc tableInfo, Class<? extends Writable> outputClass,
       FileSinkDesc conf, Path outPath) throws HiveException {
-      String codecStr = conf.getCompressCodec();
-      String type = conf.getCompressType();
-      boolean compressed = conf.getCompressed();
-    return getHiveRecordWriter(jc, tableInfo, outputClass, compressed,
-        codecStr, type, outPath);
-  }
-  
-  public static RecordWriter getHiveRecordWriter(JobConf jc,
-      TableDesc tableInfo, Class<? extends Writable> outputClass, boolean isCompressed,
-     String codecStr, String compressionType, Path outPath) throws HiveException {
     try {
       HiveOutputFormat<?, ?> hiveOutputFormat = tableInfo
           .getOutputFileFormatClass().newInstance();
-      
+      boolean isCompressed = conf.getCompressed();
       JobConf jc_output = jc;
       if (isCompressed) {
         jc_output = new JobConf(jc);
+        String codecStr = conf.getCompressCodec();
         if (codecStr != null && !codecStr.trim().equals("")) {
           Class<? extends CompressionCodec> codec = (Class<? extends CompressionCodec>) Class
               .forName(codecStr);
           FileOutputFormat.setOutputCompressorClass(jc_output, codec);
         }
-        if (compressionType != null && !compressionType.trim().equals("")) {
-          CompressionType style = CompressionType.valueOf(compressionType);
+        String type = conf.getCompressType();
+        if (type != null && !type.trim().equals("")) {
+          CompressionType style = CompressionType.valueOf(type);
           SequenceFileOutputFormat.setOutputCompressionType(jc, style);
         }
       }
