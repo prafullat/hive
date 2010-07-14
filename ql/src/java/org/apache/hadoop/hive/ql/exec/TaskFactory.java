@@ -153,6 +153,14 @@ public final class TaskFactory {
       return (ret);
     }
 
+    makeChild(ret, tasklist);
+    
+    return (ret);
+  }
+
+
+  public static  void makeChild(Task<?> ret,
+      Task<? extends Serializable>... tasklist) {
     // Add the new task as child of each of the passed in tasks
     for (Task<? extends Serializable> tsk : tasklist) {
       List<Task<? extends Serializable>> children = tsk.getChildTasks();
@@ -162,8 +170,6 @@ public final class TaskFactory {
       children.add(ret);
       tsk.setChildTasks(children);
     }
-
-    return (ret);
   }
 
   private TaskFactory() {

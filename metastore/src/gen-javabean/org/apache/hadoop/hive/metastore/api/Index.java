@@ -21,44 +21,61 @@ import org.apache.thrift.protocol.*;
 public class Index implements TBase, java.io.Serializable, Cloneable {
   private static final TStruct STRUCT_DESC = new TStruct("Index");
   private static final TField INDEX_NAME_FIELD_DESC = new TField("indexName", TType.STRING, (short)1);
-  private static final TField INDEX_TYPE_FIELD_DESC = new TField("indexType", TType.I32, (short)2);
-  private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)3);
-  private static final TField DB_NAME_FIELD_DESC = new TField("dbName", TType.STRING, (short)4);
-  private static final TField COL_NAMES_FIELD_DESC = new TField("colNames", TType.LIST, (short)5);
-  private static final TField PART_NAME_FIELD_DESC = new TField("partName", TType.STRING, (short)6);
+  private static final TField INDEX_TYPE_FIELD_DESC = new TField("indexType", TType.STRING, (short)2);
+  private static final TField DB_NAME_FIELD_DESC = new TField("dbName", TType.STRING, (short)3);
+  private static final TField ORIG_TABLE_NAME_FIELD_DESC = new TField("origTableName", TType.STRING, (short)4);
+  private static final TField CREATE_TIME_FIELD_DESC = new TField("createTime", TType.I32, (short)5);
+  private static final TField LAST_ACCESS_TIME_FIELD_DESC = new TField("lastAccessTime", TType.I32, (short)6);
+  private static final TField INDEX_TABLE_NAME_FIELD_DESC = new TField("indexTableName", TType.STRING, (short)7);
+  private static final TField SD_FIELD_DESC = new TField("sd", TType.STRUCT, (short)8);
+  private static final TField PARAMETERS_FIELD_DESC = new TField("parameters", TType.MAP, (short)9);
 
   private String indexName;
   public static final int INDEXNAME = 1;
-  private int indexType;
+  private String indexType;
   public static final int INDEXTYPE = 2;
-  private String tableName;
-  public static final int TABLENAME = 3;
   private String dbName;
-  public static final int DBNAME = 4;
-  private List<String> colNames;
-  public static final int COLNAMES = 5;
-  private String partName;
-  public static final int PARTNAME = 6;
+  public static final int DBNAME = 3;
+  private String origTableName;
+  public static final int ORIGTABLENAME = 4;
+  private int createTime;
+  public static final int CREATETIME = 5;
+  private int lastAccessTime;
+  public static final int LASTACCESSTIME = 6;
+  private String indexTableName;
+  public static final int INDEXTABLENAME = 7;
+  private StorageDescriptor sd;
+  public static final int SD = 8;
+  private Map<String,String> parameters;
+  public static final int PARAMETERS = 9;
 
   private final Isset __isset = new Isset();
   private static final class Isset implements java.io.Serializable {
-    public boolean indexType = false;
+    public boolean createTime = false;
+    public boolean lastAccessTime = false;
   }
 
   public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
     put(INDEXNAME, new FieldMetaData("indexName", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.STRING)));
     put(INDEXTYPE, new FieldMetaData("indexType", TFieldRequirementType.DEFAULT, 
-        new FieldValueMetaData(TType.I32)));
-    put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.STRING)));
     put(DBNAME, new FieldMetaData("dbName", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.STRING)));
-    put(COLNAMES, new FieldMetaData("colNames", TFieldRequirementType.DEFAULT, 
-        new ListMetaData(TType.LIST, 
-            new FieldValueMetaData(TType.STRING))));
-    put(PARTNAME, new FieldMetaData("partName", TFieldRequirementType.DEFAULT, 
+    put(ORIGTABLENAME, new FieldMetaData("origTableName", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.STRING)));
+    put(CREATETIME, new FieldMetaData("createTime", TFieldRequirementType.DEFAULT, 
+        new FieldValueMetaData(TType.I32)));
+    put(LASTACCESSTIME, new FieldMetaData("lastAccessTime", TFieldRequirementType.DEFAULT, 
+        new FieldValueMetaData(TType.I32)));
+    put(INDEXTABLENAME, new FieldMetaData("indexTableName", TFieldRequirementType.DEFAULT, 
+        new FieldValueMetaData(TType.STRING)));
+    put(SD, new FieldMetaData("sd", TFieldRequirementType.DEFAULT, 
+        new StructMetaData(TType.STRUCT, StorageDescriptor.class)));
+    put(PARAMETERS, new FieldMetaData("parameters", TFieldRequirementType.DEFAULT, 
+        new MapMetaData(TType.MAP, 
+            new FieldValueMetaData(TType.STRING), 
+            new FieldValueMetaData(TType.STRING))));
   }});
 
   static {
@@ -70,20 +87,27 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
 
   public Index(
     String indexName,
-    int indexType,
-    String tableName,
+    String indexType,
     String dbName,
-    List<String> colNames,
-    String partName)
+    String origTableName,
+    int createTime,
+    int lastAccessTime,
+    String indexTableName,
+    StorageDescriptor sd,
+    Map<String,String> parameters)
   {
     this();
     this.indexName = indexName;
     this.indexType = indexType;
-    this.__isset.indexType = true;
-    this.tableName = tableName;
     this.dbName = dbName;
-    this.colNames = colNames;
-    this.partName = partName;
+    this.origTableName = origTableName;
+    this.createTime = createTime;
+    this.__isset.createTime = true;
+    this.lastAccessTime = lastAccessTime;
+    this.__isset.lastAccessTime = true;
+    this.indexTableName = indexTableName;
+    this.sd = sd;
+    this.parameters = parameters;
   }
 
   /**
@@ -93,23 +117,39 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
     if (other.isSetIndexName()) {
       this.indexName = other.indexName;
     }
-    __isset.indexType = other.__isset.indexType;
-    this.indexType = other.indexType;
-    if (other.isSetTableName()) {
-      this.tableName = other.tableName;
+    if (other.isSetIndexType()) {
+      this.indexType = other.indexType;
     }
     if (other.isSetDbName()) {
       this.dbName = other.dbName;
     }
-    if (other.isSetColNames()) {
-      List<String> __this__colNames = new ArrayList<String>();
-      for (String other_element : other.colNames) {
-        __this__colNames.add(other_element);
-      }
-      this.colNames = __this__colNames;
+    if (other.isSetOrigTableName()) {
+      this.origTableName = other.origTableName;
     }
-    if (other.isSetPartName()) {
-      this.partName = other.partName;
+    __isset.createTime = other.__isset.createTime;
+    this.createTime = other.createTime;
+    __isset.lastAccessTime = other.__isset.lastAccessTime;
+    this.lastAccessTime = other.lastAccessTime;
+    if (other.isSetIndexTableName()) {
+      this.indexTableName = other.indexTableName;
+    }
+    if (other.isSetSd()) {
+      this.sd = new StorageDescriptor(other.sd);
+    }
+    if (other.isSetParameters()) {
+      Map<String,String> __this__parameters = new HashMap<String,String>();
+      for (Map.Entry<String, String> other_element : other.parameters.entrySet()) {
+
+        String other_element_key = other_element.getKey();
+        String other_element_value = other_element.getValue();
+
+        String __this__parameters_copy_key = other_element_key;
+
+        String __this__parameters_copy_value = other_element_value;
+
+        __this__parameters.put(__this__parameters_copy_key, __this__parameters_copy_value);
+      }
+      this.parameters = __this__parameters;
     }
   }
 
@@ -135,39 +175,21 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
     return this.indexName != null;
   }
 
-  public int getIndexType() {
+  public String getIndexType() {
     return this.indexType;
   }
 
-  public void setIndexType(int indexType) {
+  public void setIndexType(String indexType) {
     this.indexType = indexType;
-    this.__isset.indexType = true;
   }
 
   public void unsetIndexType() {
-    this.__isset.indexType = false;
+    this.indexType = null;
   }
 
   // Returns true if field indexType is set (has been asigned a value) and false otherwise
   public boolean isSetIndexType() {
-    return this.__isset.indexType;
-  }
-
-  public String getTableName() {
-    return this.tableName;
-  }
-
-  public void setTableName(String tableName) {
-    this.tableName = tableName;
-  }
-
-  public void unsetTableName() {
-    this.tableName = null;
-  }
-
-  // Returns true if field tableName is set (has been asigned a value) and false otherwise
-  public boolean isSetTableName() {
-    return this.tableName != null;
+    return this.indexType != null;
   }
 
   public String getDbName() {
@@ -187,53 +209,119 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
     return this.dbName != null;
   }
 
-  public int getColNamesSize() {
-    return (this.colNames == null) ? 0 : this.colNames.size();
+  public String getOrigTableName() {
+    return this.origTableName;
   }
 
-  public java.util.Iterator<String> getColNamesIterator() {
-    return (this.colNames == null) ? null : this.colNames.iterator();
+  public void setOrigTableName(String origTableName) {
+    this.origTableName = origTableName;
   }
 
-  public void addToColNames(String elem) {
-    if (this.colNames == null) {
-      this.colNames = new ArrayList<String>();
+  public void unsetOrigTableName() {
+    this.origTableName = null;
+  }
+
+  // Returns true if field origTableName is set (has been asigned a value) and false otherwise
+  public boolean isSetOrigTableName() {
+    return this.origTableName != null;
+  }
+
+  public int getCreateTime() {
+    return this.createTime;
+  }
+
+  public void setCreateTime(int createTime) {
+    this.createTime = createTime;
+    this.__isset.createTime = true;
+  }
+
+  public void unsetCreateTime() {
+    this.__isset.createTime = false;
+  }
+
+  // Returns true if field createTime is set (has been asigned a value) and false otherwise
+  public boolean isSetCreateTime() {
+    return this.__isset.createTime;
+  }
+
+  public int getLastAccessTime() {
+    return this.lastAccessTime;
+  }
+
+  public void setLastAccessTime(int lastAccessTime) {
+    this.lastAccessTime = lastAccessTime;
+    this.__isset.lastAccessTime = true;
+  }
+
+  public void unsetLastAccessTime() {
+    this.__isset.lastAccessTime = false;
+  }
+
+  // Returns true if field lastAccessTime is set (has been asigned a value) and false otherwise
+  public boolean isSetLastAccessTime() {
+    return this.__isset.lastAccessTime;
+  }
+
+  public String getIndexTableName() {
+    return this.indexTableName;
+  }
+
+  public void setIndexTableName(String indexTableName) {
+    this.indexTableName = indexTableName;
+  }
+
+  public void unsetIndexTableName() {
+    this.indexTableName = null;
+  }
+
+  // Returns true if field indexTableName is set (has been asigned a value) and false otherwise
+  public boolean isSetIndexTableName() {
+    return this.indexTableName != null;
+  }
+
+  public StorageDescriptor getSd() {
+    return this.sd;
+  }
+
+  public void setSd(StorageDescriptor sd) {
+    this.sd = sd;
+  }
+
+  public void unsetSd() {
+    this.sd = null;
+  }
+
+  // Returns true if field sd is set (has been asigned a value) and false otherwise
+  public boolean isSetSd() {
+    return this.sd != null;
+  }
+
+  public int getParametersSize() {
+    return (this.parameters == null) ? 0 : this.parameters.size();
+  }
+
+  public void putToParameters(String key, String val) {
+    if (this.parameters == null) {
+      this.parameters = new HashMap<String,String>();
     }
-    this.colNames.add(elem);
+    this.parameters.put(key, val);
   }
 
-  public List<String> getColNames() {
-    return this.colNames;
+  public Map<String,String> getParameters() {
+    return this.parameters;
   }
 
-  public void setColNames(List<String> colNames) {
-    this.colNames = colNames;
+  public void setParameters(Map<String,String> parameters) {
+    this.parameters = parameters;
   }
 
-  public void unsetColNames() {
-    this.colNames = null;
+  public void unsetParameters() {
+    this.parameters = null;
   }
 
-  // Returns true if field colNames is set (has been asigned a value) and false otherwise
-  public boolean isSetColNames() {
-    return this.colNames != null;
-  }
-
-  public String getPartName() {
-    return this.partName;
-  }
-
-  public void setPartName(String partName) {
-    this.partName = partName;
-  }
-
-  public void unsetPartName() {
-    this.partName = null;
-  }
-
-  // Returns true if field partName is set (has been asigned a value) and false otherwise
-  public boolean isSetPartName() {
-    return this.partName != null;
+  // Returns true if field parameters is set (has been asigned a value) and false otherwise
+  public boolean isSetParameters() {
+    return this.parameters != null;
   }
 
   public void setFieldValue(int fieldID, Object value) {
@@ -250,15 +338,7 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
       if (value == null) {
         unsetIndexType();
       } else {
-        setIndexType((Integer)value);
-      }
-      break;
-
-    case TABLENAME:
-      if (value == null) {
-        unsetTableName();
-      } else {
-        setTableName((String)value);
+        setIndexType((String)value);
       }
       break;
 
@@ -270,19 +350,51 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
       }
       break;
 
-    case COLNAMES:
+    case ORIGTABLENAME:
       if (value == null) {
-        unsetColNames();
+        unsetOrigTableName();
       } else {
-        setColNames((List<String>)value);
+        setOrigTableName((String)value);
       }
       break;
 
-    case PARTNAME:
+    case CREATETIME:
       if (value == null) {
-        unsetPartName();
+        unsetCreateTime();
       } else {
-        setPartName((String)value);
+        setCreateTime((Integer)value);
+      }
+      break;
+
+    case LASTACCESSTIME:
+      if (value == null) {
+        unsetLastAccessTime();
+      } else {
+        setLastAccessTime((Integer)value);
+      }
+      break;
+
+    case INDEXTABLENAME:
+      if (value == null) {
+        unsetIndexTableName();
+      } else {
+        setIndexTableName((String)value);
+      }
+      break;
+
+    case SD:
+      if (value == null) {
+        unsetSd();
+      } else {
+        setSd((StorageDescriptor)value);
+      }
+      break;
+
+    case PARAMETERS:
+      if (value == null) {
+        unsetParameters();
+      } else {
+        setParameters((Map<String,String>)value);
       }
       break;
 
@@ -297,19 +409,28 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
       return getIndexName();
 
     case INDEXTYPE:
-      return new Integer(getIndexType());
-
-    case TABLENAME:
-      return getTableName();
+      return getIndexType();
 
     case DBNAME:
       return getDbName();
 
-    case COLNAMES:
-      return getColNames();
+    case ORIGTABLENAME:
+      return getOrigTableName();
 
-    case PARTNAME:
-      return getPartName();
+    case CREATETIME:
+      return new Integer(getCreateTime());
+
+    case LASTACCESSTIME:
+      return new Integer(getLastAccessTime());
+
+    case INDEXTABLENAME:
+      return getIndexTableName();
+
+    case SD:
+      return getSd();
+
+    case PARAMETERS:
+      return getParameters();
 
     default:
       throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
@@ -323,14 +444,20 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
       return isSetIndexName();
     case INDEXTYPE:
       return isSetIndexType();
-    case TABLENAME:
-      return isSetTableName();
     case DBNAME:
       return isSetDbName();
-    case COLNAMES:
-      return isSetColNames();
-    case PARTNAME:
-      return isSetPartName();
+    case ORIGTABLENAME:
+      return isSetOrigTableName();
+    case CREATETIME:
+      return isSetCreateTime();
+    case LASTACCESSTIME:
+      return isSetLastAccessTime();
+    case INDEXTABLENAME:
+      return isSetIndexTableName();
+    case SD:
+      return isSetSd();
+    case PARAMETERS:
+      return isSetParameters();
     default:
       throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
     }
@@ -358,21 +485,12 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
         return false;
     }
 
-    boolean this_present_indexType = true;
-    boolean that_present_indexType = true;
+    boolean this_present_indexType = true && this.isSetIndexType();
+    boolean that_present_indexType = true && that.isSetIndexType();
     if (this_present_indexType || that_present_indexType) {
       if (!(this_present_indexType && that_present_indexType))
         return false;
-      if (this.indexType != that.indexType)
-        return false;
-    }
-
-    boolean this_present_tableName = true && this.isSetTableName();
-    boolean that_present_tableName = true && that.isSetTableName();
-    if (this_present_tableName || that_present_tableName) {
-      if (!(this_present_tableName && that_present_tableName))
-        return false;
-      if (!this.tableName.equals(that.tableName))
+      if (!this.indexType.equals(that.indexType))
         return false;
     }
 
@@ -385,21 +503,57 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
         return false;
     }
 
-    boolean this_present_colNames = true && this.isSetColNames();
-    boolean that_present_colNames = true && that.isSetColNames();
-    if (this_present_colNames || that_present_colNames) {
-      if (!(this_present_colNames && that_present_colNames))
+    boolean this_present_origTableName = true && this.isSetOrigTableName();
+    boolean that_present_origTableName = true && that.isSetOrigTableName();
+    if (this_present_origTableName || that_present_origTableName) {
+      if (!(this_present_origTableName && that_present_origTableName))
         return false;
-      if (!this.colNames.equals(that.colNames))
+      if (!this.origTableName.equals(that.origTableName))
         return false;
     }
 
-    boolean this_present_partName = true && this.isSetPartName();
-    boolean that_present_partName = true && that.isSetPartName();
-    if (this_present_partName || that_present_partName) {
-      if (!(this_present_partName && that_present_partName))
+    boolean this_present_createTime = true;
+    boolean that_present_createTime = true;
+    if (this_present_createTime || that_present_createTime) {
+      if (!(this_present_createTime && that_present_createTime))
         return false;
-      if (!this.partName.equals(that.partName))
+      if (this.createTime != that.createTime)
+        return false;
+    }
+
+    boolean this_present_lastAccessTime = true;
+    boolean that_present_lastAccessTime = true;
+    if (this_present_lastAccessTime || that_present_lastAccessTime) {
+      if (!(this_present_lastAccessTime && that_present_lastAccessTime))
+        return false;
+      if (this.lastAccessTime != that.lastAccessTime)
+        return false;
+    }
+
+    boolean this_present_indexTableName = true && this.isSetIndexTableName();
+    boolean that_present_indexTableName = true && that.isSetIndexTableName();
+    if (this_present_indexTableName || that_present_indexTableName) {
+      if (!(this_present_indexTableName && that_present_indexTableName))
+        return false;
+      if (!this.indexTableName.equals(that.indexTableName))
+        return false;
+    }
+
+    boolean this_present_sd = true && this.isSetSd();
+    boolean that_present_sd = true && that.isSetSd();
+    if (this_present_sd || that_present_sd) {
+      if (!(this_present_sd && that_present_sd))
+        return false;
+      if (!this.sd.equals(that.sd))
+        return false;
+    }
+
+    boolean this_present_parameters = true && this.isSetParameters();
+    boolean that_present_parameters = true && that.isSetParameters();
+    if (this_present_parameters || that_present_parameters) {
+      if (!(this_present_parameters && that_present_parameters))
+        return false;
+      if (!this.parameters.equals(that.parameters))
         return false;
     }
 
@@ -430,16 +584,8 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
           }
           break;
         case INDEXTYPE:
-          if (field.type == TType.I32) {
-            this.indexType = iprot.readI32();
-            this.__isset.indexType = true;
-          } else { 
-            TProtocolUtil.skip(iprot, field.type);
-          }
-          break;
-        case TABLENAME:
           if (field.type == TType.STRING) {
-            this.tableName = iprot.readString();
+            this.indexType = iprot.readString();
           } else { 
             TProtocolUtil.skip(iprot, field.type);
           }
@@ -451,26 +597,59 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case COLNAMES:
-          if (field.type == TType.LIST) {
-            {
-              TList _list44 = iprot.readListBegin();
-              this.colNames = new ArrayList<String>(_list44.size);
-              for (int _i45 = 0; _i45 < _list44.size; ++_i45)
-              {
-                String _elem46;
-                _elem46 = iprot.readString();
-                this.colNames.add(_elem46);
-              }
-              iprot.readListEnd();
-            }
+        case ORIGTABLENAME:
+          if (field.type == TType.STRING) {
+            this.origTableName = iprot.readString();
           } else { 
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case PARTNAME:
+        case CREATETIME:
+          if (field.type == TType.I32) {
+            this.createTime = iprot.readI32();
+            this.__isset.createTime = true;
+          } else { 
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
+        case LASTACCESSTIME:
+          if (field.type == TType.I32) {
+            this.lastAccessTime = iprot.readI32();
+            this.__isset.lastAccessTime = true;
+          } else { 
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
+        case INDEXTABLENAME:
           if (field.type == TType.STRING) {
-            this.partName = iprot.readString();
+            this.indexTableName = iprot.readString();
+          } else { 
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
+        case SD:
+          if (field.type == TType.STRUCT) {
+            this.sd = new StorageDescriptor();
+            this.sd.read(iprot);
+          } else { 
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
+        case PARAMETERS:
+          if (field.type == TType.MAP) {
+            {
+              TMap _map44 = iprot.readMapBegin();
+              this.parameters = new HashMap<String,String>(2*_map44.size);
+              for (int _i45 = 0; _i45 < _map44.size; ++_i45)
+              {
+                String _key46;
+                String _val47;
+                _key46 = iprot.readString();
+                _val47 = iprot.readString();
+                this.parameters.put(_key46, _val47);
+              }
+              iprot.readMapEnd();
+            }
           } else { 
             TProtocolUtil.skip(iprot, field.type);
           }
@@ -495,12 +674,9 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
       oprot.writeString(this.indexName);
       oprot.writeFieldEnd();
     }
-    oprot.writeFieldBegin(INDEX_TYPE_FIELD_DESC);
-    oprot.writeI32(this.indexType);
-    oprot.writeFieldEnd();
-    if (this.tableName != null) {
-      oprot.writeFieldBegin(TABLE_NAME_FIELD_DESC);
-      oprot.writeString(this.tableName);
+    if (this.indexType != null) {
+      oprot.writeFieldBegin(INDEX_TYPE_FIELD_DESC);
+      oprot.writeString(this.indexType);
       oprot.writeFieldEnd();
     }
     if (this.dbName != null) {
@@ -508,20 +684,37 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
       oprot.writeString(this.dbName);
       oprot.writeFieldEnd();
     }
-    if (this.colNames != null) {
-      oprot.writeFieldBegin(COL_NAMES_FIELD_DESC);
-      {
-        oprot.writeListBegin(new TList(TType.STRING, this.colNames.size()));
-        for (String _iter47 : this.colNames)        {
-          oprot.writeString(_iter47);
-        }
-        oprot.writeListEnd();
-      }
+    if (this.origTableName != null) {
+      oprot.writeFieldBegin(ORIG_TABLE_NAME_FIELD_DESC);
+      oprot.writeString(this.origTableName);
       oprot.writeFieldEnd();
     }
-    if (this.partName != null) {
-      oprot.writeFieldBegin(PART_NAME_FIELD_DESC);
-      oprot.writeString(this.partName);
+    oprot.writeFieldBegin(CREATE_TIME_FIELD_DESC);
+    oprot.writeI32(this.createTime);
+    oprot.writeFieldEnd();
+    oprot.writeFieldBegin(LAST_ACCESS_TIME_FIELD_DESC);
+    oprot.writeI32(this.lastAccessTime);
+    oprot.writeFieldEnd();
+    if (this.indexTableName != null) {
+      oprot.writeFieldBegin(INDEX_TABLE_NAME_FIELD_DESC);
+      oprot.writeString(this.indexTableName);
+      oprot.writeFieldEnd();
+    }
+    if (this.sd != null) {
+      oprot.writeFieldBegin(SD_FIELD_DESC);
+      this.sd.write(oprot);
+      oprot.writeFieldEnd();
+    }
+    if (this.parameters != null) {
+      oprot.writeFieldBegin(PARAMETERS_FIELD_DESC);
+      {
+        oprot.writeMapBegin(new TMap(TType.STRING, TType.STRING, this.parameters.size()));
+        for (Map.Entry<String, String> _iter48 : this.parameters.entrySet())        {
+          oprot.writeString(_iter48.getKey());
+          oprot.writeString(_iter48.getValue());
+        }
+        oprot.writeMapEnd();
+      }
       oprot.writeFieldEnd();
     }
     oprot.writeFieldStop();
@@ -542,14 +735,10 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
     first = false;
     if (!first) sb.append(", ");
     sb.append("indexType:");
-    sb.append(this.indexType);
-    first = false;
-    if (!first) sb.append(", ");
-    sb.append("tableName:");
-    if (this.tableName == null) {
+    if (this.indexType == null) {
       sb.append("null");
     } else {
-      sb.append(this.tableName);
+      sb.append(this.indexType);
     }
     first = false;
     if (!first) sb.append(", ");
@@ -561,19 +750,43 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
     }
     first = false;
     if (!first) sb.append(", ");
-    sb.append("colNames:");
-    if (this.colNames == null) {
+    sb.append("origTableName:");
+    if (this.origTableName == null) {
       sb.append("null");
     } else {
-      sb.append(this.colNames);
+      sb.append(this.origTableName);
     }
     first = false;
     if (!first) sb.append(", ");
-    sb.append("partName:");
-    if (this.partName == null) {
+    sb.append("createTime:");
+    sb.append(this.createTime);
+    first = false;
+    if (!first) sb.append(", ");
+    sb.append("lastAccessTime:");
+    sb.append(this.lastAccessTime);
+    first = false;
+    if (!first) sb.append(", ");
+    sb.append("indexTableName:");
+    if (this.indexTableName == null) {
       sb.append("null");
     } else {
-      sb.append(this.partName);
+      sb.append(this.indexTableName);
+    }
+    first = false;
+    if (!first) sb.append(", ");
+    sb.append("sd:");
+    if (this.sd == null) {
+      sb.append("null");
+    } else {
+      sb.append(this.sd);
+    }
+    first = false;
+    if (!first) sb.append(", ");
+    sb.append("parameters:");
+    if (this.parameters == null) {
+      sb.append("null");
+    } else {
+      sb.append(this.parameters);
     }
     first = false;
     sb.append(")");

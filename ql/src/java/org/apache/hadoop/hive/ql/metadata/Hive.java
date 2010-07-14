@@ -20,6 +20,7 @@ package org.apache.hadoop.hive.ql.metadata;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +33,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.HiveMetaException;
 import org.apache.hadoop.hive.metastore.HiveMetaHook;
+import org.apache.hadoop.hive.metastore.api.Index;
 import org.apache.hadoop.hive.metastore.HiveMetaHookLoader;
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient;
 import org.apache.hadoop.hive.metastore.IMetaStoreClient;
@@ -44,7 +46,11 @@ import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.InvalidOperationException;
 import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.NoSuchObjectException;
+import org.apache.hadoop.hive.metastore.api.Order;
+import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
+import org.apache.hadoop.hive.metastore.api.UnknownTableException;
 import org.apache.hadoop.hive.ql.exec.Utilities;
+import org.apache.hadoop.hive.ql.io.RCFileInputFormat;
 import org.apache.hadoop.hive.ql.index.HiveIndex;
 import org.apache.hadoop.hive.serde2.Deserializer;
 import org.apache.hadoop.hive.serde2.SerDeException;
@@ -328,6 +334,118 @@ public class Hive {
   }
 
   /**
+   * Creates the index with the given objects
+   * 
+   * @param indexName
+   *          the index name
+   * @param tableName
+   *          the table name that this index is built on
+   * @param indexType
+   *          the type of the index
+   * @param indexedCols
+   * @param inputFormat
+   * @param outputFormat
+   * @param serde
+   * @throws HiveException
+   */
+  public void createIndex(String indexName, String tableName, String indexType,
+      List<String> indexedCols, String inputFormat, String outputFormat,
+      String serde)
+      throws HiveException {
+    try {
+      String dbName = MetaStoreUtils.DEFAULT_DATABASE_NAME;
+      Index old_index = null;
+      try {
+        old_index = this.getMSC().getIndex(dbName, tableName, indexName);  
+      } catch (Exception e) {
+      }
+      if (old_index != null) {
+        throw new HiveException("Index " + indexName + " already exists on table " + tableName + ", db=" + dbName);
+      }
+      
+      org.apache.hadoop.hive.metastore.api.Table baseTbl = getMSC().getTable(dbName, tableName);
+      if (baseTbl.getTableType() == TableType.VIRTUAL_VIEW.toString()) {
+        throw new HiveException("tableName="+ tableName +" is a VIRTUAL VIEW. Index on VIRTUAL VIEW is not supported.");
+      }
+      org.apache.hadoop.hive.metastore.api.StorageDescriptor storageDescriptor = baseTbl.getSd().clone();
+      String indexTblName = MetaStoreUtils.getIndexTableName(dbName, tableName, indexName);
+      List<FieldSchema> indexTblCols = new ArrayList<FieldSchema>();
+      List<Order> sortCols = new ArrayList<Order>();
+      storageDescriptor.setBucketCols(null);
+      int k = 0;
+      for (int i = 0; i < storageDescriptor.getCols().size(); i++) {
+        FieldSchema col = storageDescriptor.getCols().get(i);
+        if (indexedCols.contains(col.getName())) {
+          indexTblCols.add(col);
+          sortCols.add(new Order(col.getName(), 1));
+          k++;
+        }
+      }
+      if (k != indexedCols.size())
+        throw new RuntimeException(
+            "Check the index columns, they should appear in the table being indexed.");
+      
+      FieldSchema bucketFileName = new FieldSchema("_bucketname", "string", "");
+      indexTblCols.add(bucketFileName);
+      FieldSchema offSets = new FieldSchema("_offsets", "array<string>", "");
+      indexTblCols.add(offSets);
+      storageDescriptor.setCols(indexTblCols);
+      storageDescriptor.setLocation(null);
+      storageDescriptor.setNumBuckets(1);
+      storageDescriptor.setSortCols(sortCols);
+      if(inputFormat == null) {
+        inputFormat = "org.apache.hadoop.mapred.TextInputFormat";
+      }
+      storageDescriptor.setInputFormat(inputFormat);
+      
+      if(outputFormat == null) {
+        outputFormat = 
+          "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat";
+      }
+      storageDescriptor.setOutputFormat(outputFormat);
+      
+      if(serde == null) {
+        serde = org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe.class.getName();
+      }
+      
+      storageDescriptor.getSerdeInfo().setSerializationLib(serde);
+      
+      Map<String, String> params = new HashMap<String,String>();
+      int time = (int) (System.currentTimeMillis() / 1000);
+      Index indexDesc = new Index(indexName, indexType, dbName, tableName, time, time, indexTblName,
+          storageDescriptor, params);
+      this.getMSC().createIndex(indexDesc);
+      
+    } catch (Exception e) {
+      throw new HiveException(e);
+    }
+  }
+  
+  public Index getIndex(String defaultDatabaseName, String baseTableName,
+      String indexName) throws HiveException {
+    try {
+      return this.getMSC().getIndex(defaultDatabaseName, baseTableName, indexName);
+    } catch (Exception e) {
+      throw new HiveException(e);
+    }
+  }
+  
+  public boolean dropIndex(String db_name, String tbl_name, String index_name, boolean deleteData) throws HiveException {
+    try {
+      return getMSC().dropIndex(db_name, tbl_name, index_name, deleteData);
+    } catch (NoSuchObjectException e) {
+      throw new HiveException("Partition or table doesn't exist.", e);
+    } catch (Exception e) {
+      throw new HiveException("Unknow error. Please check logs.", e);
+    }
+  }
+  
+  /**
+   * Drops table along with the data in it. If the table doesn't exist
+   * then it is a no-op
+   * @param dbName database where the table lives
+   * @param tableName table to drop
+   * @throws HiveException thrown if the drop fails
    * Drops table along with the data in it. If the table doesn't exist then it
    * is a no-op
    *
@@ -1113,4 +1231,5 @@ public class Hive {
           + e.getMessage(), e);
     }
   }
+
 };

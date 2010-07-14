@@ -43,6 +43,7 @@ import org.apache.hadoop.hive.metastore.api.InvalidOperationException;
 import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.NoSuchObjectException;
 import org.apache.hadoop.hive.metastore.api.Partition;
+import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
 import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.hadoop.hive.metastore.api.ThriftHiveMetastore;
 import org.apache.hadoop.hive.metastore.api.Type;
@@ -650,6 +651,13 @@ public class HiveMetaStore extends ThriftHiveMetastore {
       boolean success = false, madeDir = false;
       try {
         ms.openTransaction();
+        
+        // get_table checks whether database exists, it should be moved here
+        if (is_table_exists(tbl.getDbName(), tbl.getTableName())) {
+          throw new AlreadyExistsException("Table " + tbl.getTableName()
+              + " already exists");
+        }
+        
         if (!TableType.VIRTUAL_VIEW.toString().equals(tbl.getTableType())) {
           if (tbl.getSd().getLocation() == null
             || tbl.getSd().getLocation().isEmpty()) {
@@ -663,12 +671,6 @@ public class HiveMetaStore extends ThriftHiveMetastore {
             tblPath = wh.getDnsPath(new Path(tbl.getSd().getLocation()));
           }
           tbl.getSd().setLocation(tblPath.toString());
-        }
-
-        // get_table checks whether database exists, it should be moved here
-        if (is_table_exists(tbl.getDbName(), tbl.getTableName())) {
-          throw new AlreadyExistsException("Table " + tbl.getTableName()
-              + " already exists");
         }
 
         if (tblPath != null) {
@@ -1655,6 +1657,260 @@ public class HiveMetaStore extends ThriftHiveMetastore {
         return new HashMap<String, String>();
       }
       return Warehouse.makeSpecFromName(part_name);
+    }
+
+    @Override
+    public Index add_index(final Index newIndex) throws InvalidObjectException,
+        AlreadyExistsException, MetaException, TException {
+      incrementCounter("add_partition");
+      logStartFunction("add_index: db=" + newIndex.getDbName() + " tbl="
+          + newIndex.getOrigTableName() + " index=" + newIndex.getIndexName());
+      Index ret = null;
+      try {
+        ret = executeWithRetry(new Command<Index>() {
+          @Override
+          Index run(RawStore ms) throws Exception {
+            return add_index_core(ms, newIndex);
+          }
+        });
+      } catch (InvalidObjectException e) {
+        throw e;
+      } catch (AlreadyExistsException e) {
+        throw e;
+      } catch (MetaException e) {
+        throw e;
+      } catch (Exception e) {
+        assert(e instanceof RuntimeException);
+        throw (RuntimeException)e;
+      }
+      return ret;
+    }
+    
+    private Index add_index_core(final RawStore ms, final Index index)
+        throws InvalidObjectException, AlreadyExistsException, MetaException {
+      
+      boolean success = false, indexTableCreated = false;
+      
+      try {
+        ms.openTransaction();
+        Index old_index = null;
+        try {
+          old_index = get_index_by_name(index.getDbName(), index
+              .getOrigTableName(), index.getIndexName());
+        } catch (Exception e) {
+        }
+        if (old_index != null) {
+          throw new AlreadyExistsException("Index already exists:" + index);
+        }
+        Table origTbl = ms.getTable(index.getDbName(), index.getOrigTableName());
+        if (origTbl == null) {
+          throw new InvalidObjectException(
+              "Unable to add index because database or the orginal table do not exist");
+        }
+        
+        Table indexTbl = null;
+        
+        try {
+          indexTbl = ms.getTable(index.getDbName(), index.getIndexTableName());  
+        } catch (Exception e) {
+        }
+        if (indexTbl != null) {
+          throw new InvalidObjectException(
+              "Unable to add index because index table already exists");
+        }
+        
+        // set create time
+        long time = System.currentTimeMillis() / 1000;
+        indexTbl = new Table(index.getIndexTableName(), index.getDbName(), origTbl.getOwner(),
+            (int)time, (int)time, origTbl.getRetention(), index.getSd(), origTbl.getPartitionKeys(),
+            origTbl.getParameters(), null, null, TableType.INDEX_TABLE.toString());
+        this.create_table(indexTbl);
+        indexTableCreated = true;
+       
+        index.setCreateTime((int) time);
+        index.putToParameters(Constants.DDL_TIME, Long.toString(time));
+
+        success = ms.addIndex(index);
+        ms.commitTransaction();
+        return index;
+      } finally {
+        if (!success) {
+          if (indexTableCreated) {
+            try {
+              this.drop_table(index.getDbName(), index.getIndexTableName(), false);
+            } catch (Exception e) {
+            }
+          }
+          ms.rollbackTransaction();
+        }
+      }
+    }
+
+    @Override
+    public boolean drop_index_by_name(final String dbName, final String tblName,
+        final String indexName, final boolean deleteData) throws NoSuchObjectException,
+        MetaException, TException {
+      incrementCounter("drop_index_by_name");
+      logStartFunction("drop_index_by_name: db=" + dbName + " tbl="
+          + tblName + " index=" + indexName);
+
+      Boolean ret = null;
+      try {
+        ret = executeWithRetry(new Command<Boolean>() {
+          @Override
+          Boolean run(RawStore ms) throws Exception {
+            return drop_index_by_name_core(ms, dbName, tblName,
+                indexName, deleteData);
+          }
+        });
+      } catch (NoSuchObjectException e) {
+        throw e;
+      } catch (MetaException e) {
+        throw e;
+      } catch (TException e) {
+        throw e;
+      } catch (Exception e) {
+        assert(e instanceof RuntimeException);
+        throw (RuntimeException)e;
+      }
+
+      return ret.booleanValue();
+    }
+    
+    private boolean drop_index_by_name_core(final RawStore ms,
+        final String dbName, final String tblName,
+        final String indexName, final boolean deleteData) throws NoSuchObjectException,
+        MetaException, TException {
+
+      boolean success = false;
+      Path tblPath = null;
+      try {
+        ms.openTransaction();
+        
+        //drop the underlying index table
+        Index index = get_index_by_name(dbName, tblName, indexName);
+        if (index == null) {
+          throw new NoSuchObjectException(indexName + " doesn't exist");
+        }
+        ms.dropIndex(dbName, tblName, indexName);
+        
+        String idxTblName = index.getIndexTableName();
+        if (idxTblName != null) {
+          Table tbl = null;
+          tbl = this.get_table(dbName, idxTblName);
+          if (tbl.getSd() == null) {
+            throw new MetaException("Table metadata is corrupted");
+          }
+          
+          if (tbl.getSd().getLocation() != null) {
+            tblPath = new Path(tbl.getSd().getLocation());
+          }
+          if (!ms.dropTable(dbName, idxTblName)) {
+            throw new MetaException("Unable to drop underlying data table "
+                + idxTblName + " for index " + idxTblName);
+          }
+        }
+        success = ms.commitTransaction();
+      } finally {
+        if (!success) {
+          ms.rollbackTransaction();
+          return false;
+        } else if (deleteData && tblPath != null) {
+          wh.deleteDir(tblPath, true);
+          // ok even if the data is not deleted
+        }
+      }
+      return true;
+    }
+
+    @Override
+    public Index get_index_by_name(final String dbName, final String tblName,
+        final String indexName) throws MetaException, NoSuchObjectException,
+        TException {
+
+      incrementCounter("get_index_by_name");
+      logStartFunction("get_index_by_name: db=" + dbName + " tbl="
+          + tblName + " index=" + indexName);
+
+      Index ret = null;
+
+      try {
+        ret = executeWithRetry(new Command<Index>() {
+          @Override
+          Index run(RawStore ms) throws Exception {
+            return get_index_by_name_core(ms, dbName, tblName, indexName);
+          }
+        });
+      } catch (MetaException e) {
+        throw e;
+      } catch (NoSuchObjectException e) {
+        throw e;
+      } catch (TException e) {
+        throw e;
+      } catch (Exception e) {
+        assert(e instanceof RuntimeException);
+        throw (RuntimeException)e;
+      }
+      return ret;
+    }
+    
+    private Index get_index_by_name_core(final RawStore ms, final String db_name,
+        final String tbl_name, final String index_name)
+        throws MetaException, NoSuchObjectException, TException {
+      Index index = ms.getIndex(db_name, tbl_name, index_name);
+
+      if (index == null) {
+        throw new NoSuchObjectException(db_name + "." + tbl_name
+            + " index=" + index_name + " not found");
+      }
+      return index;
+    }
+
+    @Override
+    public List<String> get_index_names(final String dbName, final String tblName,
+        final short maxIndexes) throws MetaException, TException {
+      incrementCounter("get_index_names");
+      logStartFunction("get_index_names", dbName, tblName);
+
+      List<String> ret = null;
+      try {
+        ret = executeWithRetry(new Command<List<String>>() {
+          @Override
+          List<String> run(RawStore ms) throws Exception {
+            return ms.listIndexNames(dbName, tblName, maxIndexes);
+          }
+        });
+      } catch (MetaException e) {
+        throw e;
+      } catch (Exception e) {
+        assert(e instanceof RuntimeException);
+        throw (RuntimeException)e;
+      }
+      return ret;
+    }
+
+    @Override
+    public List<Index> get_indexs(final String dbName, final String tblName,
+        final short maxIndexes) throws NoSuchObjectException, MetaException,
+        TException {
+      incrementCounter("get_indexs");
+      logStartFunction("get_indexs", dbName, tblName);
+
+      List<Index> ret = null;
+      try {
+        ret = executeWithRetry(new Command<List<Index>>() {
+          @Override
+          List<Index> run(RawStore ms) throws Exception {
+            return ms.getIndexs(dbName, tblName, maxIndexes);
+          }
+        });
+      } catch (MetaException e) {
+        throw e;
+      } catch (Exception e) {
+        assert(e instanceof RuntimeException);
+        throw (RuntimeException)e;
+      }
+      return ret;
     }
 
   }

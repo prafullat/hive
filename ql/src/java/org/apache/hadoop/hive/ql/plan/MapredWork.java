@@ -25,8 +25,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.ql.exec.Operator;
 import org.apache.hadoop.hive.ql.exec.Utilities;
+import org.apache.hadoop.mapred.InputFormat;
+import org.apache.hadoop.mapred.Mapper;
+import org.apache.hadoop.mapred.OutputFormat;
+import org.apache.hadoop.mapred.Reducer;
 
 /**
  * MapredWork.
@@ -65,7 +70,26 @@ public class MapredWork implements Serializable {
 
   private MapredLocalWork mapLocalWork;
   private String inputformat;
-
+  
+  //theses fields are used for building indexing.
+  private Class<? extends Mapper> mapperClass;
+  private Class<? extends Reducer> reducerClass;
+  private Class<?> mapOutputKeyClass;
+  private Class<?> mapOutputValueClass;
+  private Class<?> outputKeyClass;
+  private Class<?> outputValueClass;
+  private Class<? extends InputFormat> inputFormatCls;
+  private Class<? extends OutputFormat> outputFormatCls;
+  private boolean compressed;
+  private String compressCodec;
+  private String outputPath;
+  private TableDesc indexTableDesc;
+  
+  /*
+  * used for indexing.
+  */
+  private String indexCols;
+  
   public MapredWork() {
     aliasToPartnInfo = new LinkedHashMap<String, PartitionDesc>();
   }
@@ -240,7 +264,7 @@ public class MapredWork implements Serializable {
 
   @SuppressWarnings("nls")
   public String isInvalid() {
-    if ((getNumReduceTasks() >= 1) && (getReducer() == null)) {
+    if((getNumReduceTasks() >= 1) && (getReducer() == null) && (getIndexCols() == null)) {
       return "Reducers > 0 but no reduce operator";
     }
 
@@ -320,6 +344,110 @@ public class MapredWork implements Serializable {
 
   public void setInputformat(String inputformat) {
     this.inputformat = inputformat;
+  }
+  
+  public String getIndexCols() {
+    return indexCols;
+  }
+
+  public void setIndexCols(String indexCols) {
+    this.indexCols = indexCols;
+  }
+  
+  public Class<? extends Mapper> getMapperClass() {
+    return mapperClass;
+  }
+
+  public void setMapperClass(Class<? extends Mapper> mapperClass) {
+    this.mapperClass = mapperClass;
+  }
+
+  public Class<? extends Reducer> getReducerClass() {
+    return reducerClass;
+  }
+
+  public void setReducerClass(Class<? extends Reducer> reducerClass) {
+    this.reducerClass = reducerClass;
+  }
+
+  public Class<?> getMapOutputKeyClass() {
+    return mapOutputKeyClass;
+  }
+
+  public void setMapOutputKeyClass(Class<?> mapOutputKeyClass) {
+    this.mapOutputKeyClass = mapOutputKeyClass;
+  }
+
+  public Class<?> getMapOutputValueClass() {
+    return mapOutputValueClass;
+  }
+
+  public void setMapOutputValueClass(Class<?> mapOutputValueClass) {
+    this.mapOutputValueClass = mapOutputValueClass;
+  }
+
+  public Class<?> getOutputKeyClass() {
+    return outputKeyClass;
+  }
+
+  public void setOutputKeyClass(Class<?> outputKeyClass) {
+    this.outputKeyClass = outputKeyClass;
+  }
+
+  public Class<?> getOutputValueClass() {
+    return outputValueClass;
+  }
+
+  public void setOutputValueClass(Class<?> outputValueClass) {
+    this.outputValueClass = outputValueClass;
+  }
+
+  public Class<? extends InputFormat> getInputFormatCls() {
+    return inputFormatCls;
+  }
+
+  public void setInputFormatCls(Class<? extends InputFormat> inputFormatCls) {
+    this.inputFormatCls = inputFormatCls;
+  }
+  
+  public Class<? extends OutputFormat> getOutputFormatCls() {
+    return outputFormatCls;
+  }
+
+  public void setOutputFormatCls(Class<? extends OutputFormat> outputFormat) {
+    this.outputFormatCls = outputFormat;
+  }
+  
+  public boolean getCompressed() {
+    return compressed;
+  }
+
+  public void setCompressed(boolean isCompressed) {
+    this.compressed = isCompressed;
+  }
+
+  public String getCompressCodec() {
+    return compressCodec;
+  }
+
+  public void setCompressCodec(String compressCodec) {
+    this.compressCodec = compressCodec;
+  }
+
+  public String getOutputPath() {
+    return outputPath;
+  }
+
+  public void setOutputPath(String outputPath) {
+    this.outputPath = outputPath;
+  }
+
+  public TableDesc getIndexTableDesc() {
+    return indexTableDesc;
+  }
+
+  public void setIndexTableDesc(TableDesc indexTableDesc) {
+    this.indexTableDesc = indexTableDesc;
   }
 
 }
