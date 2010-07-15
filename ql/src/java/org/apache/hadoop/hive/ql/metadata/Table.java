@@ -758,13 +758,19 @@ public class Table implements Serializable {
    * @return Returns number of indexes on this table
    */
   public int getNumIndexes()  {
-    return getIndexTableName().size();
+    return getIndexTableNames().size();
   }
   /**
    * @return List containing Index Table names if there is exists indexes on this table
+   * @throws HiveException
    **/
-  public List<String> getIndexTableName() {
-    List<String> vIndexNames = /*MetaStoreUtils.getIndexTableNames(getTTable())*/ new ArrayList<String>();
+  public List<String> getIndexTableNames() {
+    List<String> vIndexNames = null;
+    try {
+      Hive hive = Hive.get();
+      vIndexNames = hive.getIndexNames(getTTable().getDbName(), getTTable().getTableName(), (short) 1024);
+    } catch (HiveException e) {
+    }
     return vIndexNames;
   }
 };

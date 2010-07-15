@@ -53,7 +53,7 @@ public class HiveRewriteEngine {
   public QB invokeRewrites(QB topQueryBlock)  {
     LOG.debug("Invoking rewrites on QB(Id "+topQueryBlock.getId()+")");
     for(int iIdx = 0; iIdx < m_rwRules.size(); iIdx++) {
-      QB newRewrittenQb = null;
+      QB newRewrittenQb = topQueryBlock;
       if( m_rwRules.get(iIdx).applyTopDown() == false )  {
         newRewrittenQb = invokeRewriteInBottomUpWay(topQueryBlock, m_rwRules.get(iIdx));
       }
@@ -111,7 +111,7 @@ public class HiveRewriteEngine {
 
   public QB applyRewrite(HiveRwRule hiveRwRule, QB inputQb)  {
     LOG.debug("Trying " + hiveRwRule.getName() + " rewrite");
-    QB newRewrittenQb = null;
+    QB newRewrittenQb = inputQb;
     if( hiveRwRule.canApplyThisRule(inputQb) ) {
       LOG.debug("Applying " + hiveRwRule.getName() + " rewrite");
       newRewrittenQb = hiveRwRule.rewriteQb(inputQb);

@@ -42,23 +42,18 @@ import org.apache.hadoop.hive.metastore.Warehouse;
 import org.apache.hadoop.hive.metastore.api.AlreadyExistsException;
 import org.apache.hadoop.hive.metastore.api.Constants;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
+import org.apache.hadoop.hive.metastore.api.Index;
 import org.apache.hadoop.hive.metastore.api.InvalidOperationException;
 import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.NoSuchObjectException;
+import org.apache.hadoop.hive.metastore.api.Order;
 import org.apache.hadoop.hive.ql.exec.Utilities;
-import org.apache.hadoop.hive.ql.index.HiveIndex;
 import org.apache.hadoop.hive.serde2.Deserializer;
 import org.apache.hadoop.hive.serde2.SerDeException;
 import org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe;
 import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.thrift.TException;
-
-import org.apache.hadoop.hive.metastore.api.Index;
-import org.apache.hadoop.hive.metastore.api.Order;
-import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
-import org.apache.hadoop.hive.metastore.api.UnknownTableException;
-import org.apache.hadoop.hive.ql.io.RCFileInputFormat;
 
 
 /**
@@ -337,7 +332,7 @@ public class Hive {
 
   /**
    * Creates the index with the given objects
-   * 
+   *
    * @param indexName
    *          the index name
    * @param tableName
@@ -358,13 +353,13 @@ public class Hive {
       String dbName = MetaStoreUtils.DEFAULT_DATABASE_NAME;
       Index old_index = null;
       try {
-        old_index = this.getMSC().getIndex(dbName, tableName, indexName);  
+        old_index = this.getMSC().getIndex(dbName, tableName, indexName);
       } catch (Exception e) {
       }
       if (old_index != null) {
         throw new HiveException("Index " + indexName + " already exists on table " + tableName + ", db=" + dbName);
       }
-      
+
       org.apache.hadoop.hive.metastore.api.Table baseTbl = getMSC().getTable(dbName, tableName);
       if (baseTbl.getTableType() == TableType.VIRTUAL_VIEW.toString()) {
         throw new HiveException("tableName="+ tableName +" is a VIRTUAL VIEW. Index on VIRTUAL VIEW is not supported.");
@@ -383,10 +378,11 @@ public class Hive {
           k++;
         }
       }
-      if (k != indexedCols.size())
+      if (k != indexedCols.size()) {
         throw new RuntimeException(
             "Check the index columns, they should appear in the table being indexed.");
-      
+      }
+
       FieldSchema bucketFileName = new FieldSchema("_bucketname", "string", "");
       indexTblCols.add(bucketFileName);
       FieldSchema offSets = new FieldSchema("_offsets", "array<string>", "");
@@ -399,30 +395,30 @@ public class Hive {
         inputFormat = "org.apache.hadoop.mapred.TextInputFormat";
       }
       storageDescriptor.setInputFormat(inputFormat);
-      
+
       if(outputFormat == null) {
-        outputFormat = 
+        outputFormat =
           "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat";
       }
       storageDescriptor.setOutputFormat(outputFormat);
-      
+
       if(serde == null) {
         serde = org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe.class.getName();
       }
-      
+
       storageDescriptor.getSerdeInfo().setSerializationLib(serde);
-      
+
       Map<String, String> params = new HashMap<String,String>();
       int time = (int) (System.currentTimeMillis() / 1000);
       Index indexDesc = new Index(indexName, indexType, dbName, tableName, time, time, indexTblName,
           storageDescriptor, params);
       this.getMSC().createIndex(indexDesc);
-      
+
     } catch (Exception e) {
       throw new HiveException(e);
     }
   }
-  
+
   public Index getIndex(String defaultDatabaseName, String baseTableName,
       String indexName) throws HiveException {
     try {
@@ -431,7 +427,33 @@ public class Hive {
       throw new HiveException(e);
     }
   }
-  
+
+  public List<String> getIndexNames(String defaultDatabaseName, String baseTableName,
+      short maxNumIndex) throws HiveException  {
+    try {
+      return this.getMSC().listIndexNames(defaultDatabaseName, baseTableName, maxNumIndex);
+    } catch (MetaException e) {
+      throw new HiveException("Unknow error. Please check logs.", e);
+    } catch (TException e) {
+      throw new HiveException("Unknow error. Please check logs.", e);
+    }
+  }
+
+  public List<Index> getIndexes(String defaultDatabaseName, String baseTableName,
+      short maxNumIndex) throws HiveException  {
+    try {
+      return this.getMSC().listIndexes(defaultDatabaseName, baseTableName, maxNumIndex);
+    } catch (MetaException e) {
+      throw new HiveException("Unknow error. Please check logs.", e);
+    } catch (TException e) {
+      throw new HiveException("Unknow error. Please check logs.", e);
+    } catch (NoSuchObjectException e) {
+      throw new HiveException("Unknow error. Please check logs.", e);
+    }
+  }
+
+
+
   public boolean dropIndex(String db_name, String tbl_name, String index_name, boolean deleteData) throws HiveException {
     try {
       return getMSC().dropIndex(db_name, tbl_name, index_name, deleteData);
@@ -441,7 +463,7 @@ public class Hive {
       throw new HiveException("Unknow error. Please check logs.", e);
     }
   }
-  
+
   /**
    * Drops table along with the data in it. If the table doesn't exist
    * then it is a no-op

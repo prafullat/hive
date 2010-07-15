@@ -1,27 +1,19 @@
-PREHOOK: query: DROP TABLE src_cmpt_sum_idx
-PREHOOK: type: DROPTABLE
-POSTHOOK: query: DROP TABLE src_cmpt_sum_idx
-POSTHOOK: type: DROPTABLE
-PREHOOK: query: DROP TABLE src_proj_idx
-PREHOOK: type: DROPTABLE
-POSTHOOK: query: DROP TABLE src_proj_idx
-POSTHOOK: type: DROPTABLE
-PREHOOK: query: DROP TABLE src1_cmpt_sum_idx
-PREHOOK: type: DROPTABLE
-POSTHOOK: query: DROP TABLE src1_cmpt_sum_idx
-POSTHOOK: type: DROPTABLE
-PREHOOK: query: CREATE INDEX src_proj_idx TYPE PROJECTION ON TABLE src(key) STORED AS textfile
-PREHOOK: type: null
-POSTHOOK: query: CREATE INDEX src_proj_idx TYPE PROJECTION ON TABLE src(key) STORED AS textfile
-POSTHOOK: type: null
+PREHOOK: query: DROP INDEX src_cmpt_sum_idx on src
+PREHOOK: type: DROPINDEX
+POSTHOOK: query: DROP INDEX src_cmpt_sum_idx on src
+POSTHOOK: type: DROPINDEX
+PREHOOK: query: DROP INDEX src1_cmpt_sum_idx on src
+PREHOOK: type: DROPINDEX
+POSTHOOK: query: DROP INDEX src1_cmpt_sum_idx on src
+POSTHOOK: type: DROPINDEX
 PREHOOK: query: CREATE INDEX src_cmpt_sum_idx TYPE COMPACT ON TABLE src(key) STORED AS textfile
-PREHOOK: type: null
+PREHOOK: type: CREATEINDEX
 POSTHOOK: query: CREATE INDEX src_cmpt_sum_idx TYPE COMPACT ON TABLE src(key) STORED AS textfile
-POSTHOOK: type: null
+POSTHOOK: type: CREATEINDEX
 PREHOOK: query: CREATE INDEX src1_cmpt_sum_idx TYPE COMPACT ON TABLE src(key, value) STORED AS textfile
-PREHOOK: type: null
+PREHOOK: type: CREATEINDEX
 POSTHOOK: query: CREATE INDEX src1_cmpt_sum_idx TYPE COMPACT ON TABLE src(key, value) STORED AS textfile
-POSTHOOK: type: null
+POSTHOOK: type: CREATEINDEX
 PREHOOK: query: EXPLAIN SELECT DISTINCT key FROM src
 PREHOOK: type: QUERY
 POSTHOOK: query: EXPLAIN SELECT DISTINCT key FROM src
@@ -155,7 +147,7 @@ PREHOOK: type: QUERY
 POSTHOOK: query: EXPLAIN SELECT DISTINCT key FROM src
 POSTHOOK: type: QUERY
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF src_cmpt_sum_idx)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key)))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF default__src_src_cmpt_sum_idx__)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key)))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -165,9 +157,9 @@ STAGE PLANS:
   Stage: Stage-1
     Map Reduce
       Alias -> Map Operator Tree:
-        src_cmpt_sum_idx 
+        default__src_src_cmpt_sum_idx__ 
           TableScan
-            alias: src_cmpt_sum_idx
+            alias: default__src_src_cmpt_sum_idx__
             Select Operator
               expressions:
                     expr: key
@@ -190,7 +182,7 @@ PREHOOK: type: QUERY
 POSTHOOK: query: EXPLAIN SELECT DISTINCT key, value FROM src
 POSTHOOK: type: QUERY
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF src1_cmpt_sum_idx)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_TABLE_OR_COL value)))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF default__src_src1_cmpt_sum_idx__)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_TABLE_OR_COL value)))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -200,9 +192,9 @@ STAGE PLANS:
   Stage: Stage-1
     Map Reduce
       Alias -> Map Operator Tree:
-        src1_cmpt_sum_idx 
+        default__src_src1_cmpt_sum_idx__ 
           TableScan
-            alias: src1_cmpt_sum_idx
+            alias: default__src_src1_cmpt_sum_idx__
             Select Operator
               expressions:
                     expr: key
@@ -227,7 +219,7 @@ PREHOOK: type: QUERY
 POSTHOOK: query: EXPLAIN SELECT key FROM src GROUP BY key
 POSTHOOK: type: QUERY
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF src_cmpt_sum_idx)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key)))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF default__src_src_cmpt_sum_idx__)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key)))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -237,9 +229,9 @@ STAGE PLANS:
   Stage: Stage-1
     Map Reduce
       Alias -> Map Operator Tree:
-        src_cmpt_sum_idx 
+        default__src_src_cmpt_sum_idx__ 
           TableScan
-            alias: src_cmpt_sum_idx
+            alias: default__src_src_cmpt_sum_idx__
             Select Operator
               expressions:
                     expr: key
@@ -262,7 +254,7 @@ PREHOOK: type: QUERY
 POSTHOOK: query: EXPLAIN SELECT key FROM src GROUP BY value, key
 POSTHOOK: type: QUERY
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF src1_cmpt_sum_idx)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key)))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF default__src_src1_cmpt_sum_idx__)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key)))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -272,9 +264,9 @@ STAGE PLANS:
   Stage: Stage-1
     Map Reduce
       Alias -> Map Operator Tree:
-        src1_cmpt_sum_idx 
+        default__src_src1_cmpt_sum_idx__ 
           TableScan
-            alias: src1_cmpt_sum_idx
+            alias: default__src_src1_cmpt_sum_idx__
             Select Operator
               expressions:
                     expr: key
@@ -297,7 +289,7 @@ PREHOOK: type: QUERY
 POSTHOOK: query: EXPLAIN SELECT key, value FROM src GROUP BY value, key
 POSTHOOK: type: QUERY
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF src1_cmpt_sum_idx)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_TABLE_OR_COL value)))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF default__src_src1_cmpt_sum_idx__)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_TABLE_OR_COL value)))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -307,9 +299,9 @@ STAGE PLANS:
   Stage: Stage-1
     Map Reduce
       Alias -> Map Operator Tree:
-        src1_cmpt_sum_idx 
+        default__src_src1_cmpt_sum_idx__ 
           TableScan
-            alias: src1_cmpt_sum_idx
+            alias: default__src_src1_cmpt_sum_idx__
             Select Operator
               expressions:
                     expr: key
@@ -334,7 +326,7 @@ PREHOOK: type: QUERY
 POSTHOOK: query: EXPLAIN SELECT DISTINCT key, value FROM src WHERE value = 2
 POSTHOOK: type: QUERY
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF src1_cmpt_sum_idx)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_TABLE_OR_COL value))) (TOK_WHERE (= (TOK_TABLE_OR_COL value) 2))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF default__src_src1_cmpt_sum_idx__)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_TABLE_OR_COL value))) (TOK_WHERE (= (TOK_TABLE_OR_COL value) 2))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -344,9 +336,9 @@ STAGE PLANS:
   Stage: Stage-1
     Map Reduce
       Alias -> Map Operator Tree:
-        src1_cmpt_sum_idx 
+        default__src_src1_cmpt_sum_idx__ 
           TableScan
-            alias: src1_cmpt_sum_idx
+            alias: default__src_src1_cmpt_sum_idx__
             Filter Operator
               predicate:
                   expr: (value = 2)
@@ -379,7 +371,7 @@ PREHOOK: type: QUERY
 POSTHOOK: query: EXPLAIN SELECT DISTINCT key, value FROM src WHERE value = 2 AND key = 3
 POSTHOOK: type: QUERY
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF src1_cmpt_sum_idx)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_TABLE_OR_COL value))) (TOK_WHERE (AND (= (TOK_TABLE_OR_COL value) 2) (= (TOK_TABLE_OR_COL key) 3)))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF default__src_src1_cmpt_sum_idx__)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_TABLE_OR_COL value))) (TOK_WHERE (AND (= (TOK_TABLE_OR_COL value) 2) (= (TOK_TABLE_OR_COL key) 3)))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -389,9 +381,9 @@ STAGE PLANS:
   Stage: Stage-1
     Map Reduce
       Alias -> Map Operator Tree:
-        src1_cmpt_sum_idx 
+        default__src_src1_cmpt_sum_idx__ 
           TableScan
-            alias: src1_cmpt_sum_idx
+            alias: default__src_src1_cmpt_sum_idx__
             Filter Operator
               predicate:
                   expr: ((value = 2) and (key = 3))
@@ -424,7 +416,7 @@ PREHOOK: type: QUERY
 POSTHOOK: query: EXPLAIN SELECT DISTINCT key, value FROM src WHERE value = key
 POSTHOOK: type: QUERY
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF src1_cmpt_sum_idx)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_TABLE_OR_COL value))) (TOK_WHERE (= (TOK_TABLE_OR_COL value) (TOK_TABLE_OR_COL key)))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF default__src_src1_cmpt_sum_idx__)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_TABLE_OR_COL value))) (TOK_WHERE (= (TOK_TABLE_OR_COL value) (TOK_TABLE_OR_COL key)))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -434,9 +426,9 @@ STAGE PLANS:
   Stage: Stage-1
     Map Reduce
       Alias -> Map Operator Tree:
-        src1_cmpt_sum_idx 
+        default__src_src1_cmpt_sum_idx__ 
           TableScan
-            alias: src1_cmpt_sum_idx
+            alias: default__src_src1_cmpt_sum_idx__
             Filter Operator
               predicate:
                   expr: (value = key)
@@ -469,7 +461,7 @@ PREHOOK: type: QUERY
 POSTHOOK: query: EXPLAIN SELECT key FROM src WHERE key = 3 GROUP BY key
 POSTHOOK: type: QUERY
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF src_cmpt_sum_idx)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key))) (TOK_WHERE (= (TOK_TABLE_OR_COL key) 3))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF default__src_src_cmpt_sum_idx__)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key))) (TOK_WHERE (= (TOK_TABLE_OR_COL key) 3))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -479,9 +471,9 @@ STAGE PLANS:
   Stage: Stage-1
     Map Reduce
       Alias -> Map Operator Tree:
-        src_cmpt_sum_idx 
+        default__src_src_cmpt_sum_idx__ 
           TableScan
-            alias: src_cmpt_sum_idx
+            alias: default__src_src_cmpt_sum_idx__
             Filter Operator
               predicate:
                   expr: (key = 3)
@@ -512,7 +504,7 @@ PREHOOK: type: QUERY
 POSTHOOK: query: EXPLAIN SELECT key, value FROM src WHERE value = 1 GROUP BY key, value
 POSTHOOK: type: QUERY
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF src1_cmpt_sum_idx)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_TABLE_OR_COL value))) (TOK_WHERE (= (TOK_TABLE_OR_COL value) 1))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF default__src_src1_cmpt_sum_idx__)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_TABLE_OR_COL value))) (TOK_WHERE (= (TOK_TABLE_OR_COL value) 1))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -522,9 +514,9 @@ STAGE PLANS:
   Stage: Stage-1
     Map Reduce
       Alias -> Map Operator Tree:
-        src1_cmpt_sum_idx 
+        default__src_src1_cmpt_sum_idx__ 
           TableScan
-            alias: src1_cmpt_sum_idx
+            alias: default__src_src1_cmpt_sum_idx__
             Filter Operator
               predicate:
                   expr: (value = 1)
@@ -557,7 +549,7 @@ PREHOOK: type: QUERY
 POSTHOOK: query: EXPLAIN SELECT * FROM (SELECT DISTINCT key, value FROM src) v1 WHERE v1.value = 2
 POSTHOOK: type: QUERY
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF src1_cmpt_sum_idx)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_TABLE_OR_COL value))))) v1)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR TOK_ALLCOLREF)) (TOK_WHERE (= (. (TOK_TABLE_OR_COL v1) value) 2))))
+  (TOK_QUERY (TOK_FROM (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF default__src_src1_cmpt_sum_idx__)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_TABLE_OR_COL value))))) v1)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR TOK_ALLCOLREF)) (TOK_WHERE (= (. (TOK_TABLE_OR_COL v1) value) 2))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -567,9 +559,9 @@ STAGE PLANS:
   Stage: Stage-1
     Map Reduce
       Alias -> Map Operator Tree:
-        v1:src1_cmpt_sum_idx 
+        v1:default__src_src1_cmpt_sum_idx__ 
           TableScan
-            alias: src1_cmpt_sum_idx
+            alias: default__src_src1_cmpt_sum_idx__
             Filter Operator
               predicate:
                   expr: (value = 2)
@@ -908,18 +900,11 @@ STAGE PLANS:
       limit: -1
 
 
-PREHOOK: query: DROP TABLE src_cmpt_sum_idx
-PREHOOK: type: DROPTABLE
-POSTHOOK: query: DROP TABLE src_cmpt_sum_idx
-POSTHOOK: type: DROPTABLE
-POSTHOOK: Output: default@src_cmpt_sum_idx
-PREHOOK: query: DROP TABLE src_proj_idx
-PREHOOK: type: DROPTABLE
-POSTHOOK: query: DROP TABLE src_proj_idx
-POSTHOOK: type: DROPTABLE
-POSTHOOK: Output: default@src_proj_idx
-PREHOOK: query: DROP TABLE src1_cmpt_sum_idx
-PREHOOK: type: DROPTABLE
-POSTHOOK: query: DROP TABLE src1_cmpt_sum_idx
-POSTHOOK: type: DROPTABLE
-POSTHOOK: Output: default@src1_cmpt_sum_idx
+PREHOOK: query: DROP INDEX src_cmpt_sum_idx on src
+PREHOOK: type: DROPINDEX
+POSTHOOK: query: DROP INDEX src_cmpt_sum_idx on src
+POSTHOOK: type: DROPINDEX
+PREHOOK: query: DROP INDEX src1_cmpt_sum_idx on src
+PREHOOK: type: DROPINDEX
+POSTHOOK: query: DROP INDEX src1_cmpt_sum_idx on src
+POSTHOOK: type: DROPINDEX

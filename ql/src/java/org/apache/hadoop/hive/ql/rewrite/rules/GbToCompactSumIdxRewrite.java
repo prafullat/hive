@@ -31,9 +31,9 @@ import java.util.TreeSet;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.MetaStoreUtils;
-import org.apache.hadoop.hive.metastore.api.FieldSchema;
+import org.apache.hadoop.hive.metastore.api.Index;
+import org.apache.hadoop.hive.metastore.api.Order;
 import org.apache.hadoop.hive.ql.index.HiveIndex;
-import org.apache.hadoop.hive.ql.index.HiveIndex.IndexType;
 import org.apache.hadoop.hive.ql.lib.DefaultGraphWalker;
 import org.apache.hadoop.hive.ql.lib.DefaultRuleDispatcher;
 import org.apache.hadoop.hive.ql.lib.Node;
@@ -159,31 +159,31 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
   }
 
 
-  private List<Table> getIndexTable(Table baseTableMetaData, List<IndexType> vIndexType)  {
-    List<String> vIndexTableName = baseTableMetaData.getIndexTableName();
-    List<Table> vIndexTable = new ArrayList<Table>();
+  private List<Index> getIndexTable(Table baseTableMetaData, List<String> vValidIndexType)  {
+    List<String> vIndexTableName = baseTableMetaData.getIndexTableNames();
+    List<Index> vIndexTable = new ArrayList<Index>();
     for( int i = 0; i < vIndexTableName.size(); i++) {
-      Table indexTable = null;
+      Index indexTable = null;
       try {
         indexTable =
-          m_hiveInstance.getTable(MetaStoreUtils.DEFAULT_DATABASE_NAME,
-                            vIndexTableName.get(i),
-                            false/*bThrowException*/);
+          m_hiveInstance.getIndex(MetaStoreUtils.DEFAULT_DATABASE_NAME,
+                            baseTableMetaData.getTableName(),
+                            vIndexTableName.get(i));
+
         if( indexTable == null ) {
           getLogger().info("Index table " + vIndexTableName.get(i) + " could not be found");
           continue;
         }
-        String sIndexType = "no-index"/*MetaStoreUtils.getIndexType(indexTable.getTTable())*/;
-        boolean bIsValidIndex = false;
-        for( int iIdxType = 0; iIdxType < vIndexType.size(); iIdxType++) {
-          if( sIndexType.equalsIgnoreCase(vIndexType.get(iIdxType).getName()) ) {
-            bIsValidIndex |= true;
+        String sIndexType = indexTable.getIndexType();
+        boolean bValidIndex = false;
+        for( int  j = 0; j < vValidIndexType.size(); j++ ) {
+          if( sIndexType.equalsIgnoreCase(vValidIndexType.get(j)) ) {
+            bValidIndex = true;
           }
         }
-        if( bIsValidIndex == false ) {
-          continue;
+        if( bValidIndex ) {
+          vIndexTable.add(indexTable);
         }
-        vIndexTable.add(indexTable);
       } catch (HiveException e) {
       }
     }
@@ -206,7 +206,7 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
     if( getRwFlag(HiveConf.ConfVars.HIVE_QL_RW_GB_TO_IDX) == false ) {
       return false;
     }
-    /*
+
     //Multiple table not supported yet
     if( (qb.getTabAliases().size() != 1) ||
         (qb.getSubqAliases().size() != 0) ) {
@@ -267,44 +267,6 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
         vvColRefAggFuncInput.add(vAggFuncInp);
       }
     }
-
-
-
-    //--------------------------------------------
-    //Getting where clause information
-    ASTNode whereClause = qbParseInfo.getWhrForClause(sClauseName);
-    /*
-    if( whereClause != null )  {
-      getLogger().debug("Query has where clause, " +
-          "that is not supported with rewrite " + getName());
-      return false;
-    }
-    List<String> predColRefs = getChildColRefNames(whereClause);
-
-
-    //--------------------------------------------
-    //Getting select list column names
-    ASTNode rootSelExpr = qbParseInfo.getSelForClause(sClauseName);
-    boolean bIsDistinct = (rootSelExpr.getType() == HiveParser.TOK_SELECTDI);
-    List<String> selColRefNameList = getChildColRefNames(rootSelExpr, bIsDistinct bOnlyDirectChildren);
-    if( bIsDistinct == true &&
-        selColRefNameList.size() != rootSelExpr.getChildCount() )  {
-      getLogger().debug("Select-list has distinct and it also has some non-col-ref expression. " +
-      		"Cannot apply the rewrite " + getName());
-      return false;
-    }
-
-    //Getting groupby key information
-    ASTNode groupByNode = qbParseInfo.getGroupByForClause(sClauseName);
-
-    List<String> gbKeyNameList = getChildColRefNames(groupByNode, true bOnlyDirectChildren);
-    if( (groupByNode != null) &&
-        (gbKeyNameList.size() != groupByNode.getChildCount()) )  {
-      getLogger().debug("Group-by-key-list has some non-col-ref expression. " +
-          "Cannot apply the rewrite " + getName());
-      return false;
-    }
-
     //--------------------------------------------
     //Get Index information.
     Set<String> tableAlisesSet = qb.getTabAliases();
@@ -318,47 +280,71 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
       return false;
     }
 
-    List<IndexType> vValidIndexToBeUsed = new ArrayList<IndexType>();
-    vValidIndexToBeUsed.add(IndexType.COMPACT_SUMMARY_TABLE);
-    vValidIndexToBeUsed.add(IndexType.SUMMARY_TABLE);
-    List<Table> vIndexTable = getIndexTable(tableQlMetaData,vValidIndexToBeUsed);
+    List<String> vIdxType = new ArrayList<String>();
+    vIdxType.add(HiveIndex.IndexType.COMPACT_SUMMARY_TABLE.getName());
+    List<Index> vIndexTable = getIndexTable(tableQlMetaData, vIdxType);
     if( vIndexTable.size() == 0 ) {
       getLogger().debug("Table " + sTableName + " does not have compat summary " +
-      		"index. Cannot apply rewrite " + getName());
+          "index. Cannot apply rewrite " + getName());
       return false;
     }
 
-    Table indexTable = null;
+
+
+
+    //--------------------------------------------
+    //Getting where clause information
+    ASTNode whereClause = qbParseInfo.getWhrForClause(sClauseName);
+    /*
+    if( whereClause != null )  {
+      getLogger().debug("Query has where clause, " +
+          "that is not supported with rewrite " + getName());
+      return false;
+    }*/
+    List<String> predColRefs = getChildColRefNames(whereClause);
+
+
+    //--------------------------------------------
+    //Getting select list column names
+    ASTNode rootSelExpr = qbParseInfo.getSelForClause(sClauseName);
+    boolean bIsDistinct = (rootSelExpr.getType() == HiveParser.TOK_SELECTDI);
+    List<String> selColRefNameList = getChildColRefNames(rootSelExpr, bIsDistinct /*bOnlyDirectChildren*/);
+    if( bIsDistinct == true &&
+        selColRefNameList.size() != rootSelExpr.getChildCount() )  {
+      getLogger().debug("Select-list has distinct and it also has some non-col-ref expression. " +
+      		"Cannot apply the rewrite " + getName());
+      return false;
+    }
+
+    //Getting groupby key information
+    ASTNode groupByNode = qbParseInfo.getGroupByForClause(sClauseName);
+
+    List<String> gbKeyNameList = getChildColRefNames(groupByNode, true/* bOnlyDirectChildren*/);
+    if( (groupByNode != null) &&
+        (gbKeyNameList.size() != groupByNode.getChildCount()) )  {
+      getLogger().debug("Group-by-key-list has some non-col-ref expression. " +
+          "Cannot apply the rewrite " + getName());
+      return false;
+    }
+
+
+    Index indexTable = null;
     for( int iIdxTbl = 0;iIdxTbl < vIndexTable.size(); iIdxTbl++)  {
       indexTable = vIndexTable.get(iIdxTbl);
 
-      //If we have agg function, check if we have SUMMARY table, we currently only support that.
-      if( vvColRefAggFuncInput.size() > 0 )  {
-        String sIndexType = MetaStoreUtils.getIndexType(indexTable.getTTable());
-        if( sIndexType.equalsIgnoreCase(HiveIndex.IndexType.SUMMARY_TABLE.getName()) == false ) {
-          continue;
-        }
-      }
       //Getting index key columns
-      List<FieldSchema> vCols = indexTable.getCols();
+      List<Order> vIdxCols = indexTable.getSd().getSortCols();
+
       Set<String> idxKeyColsNames = new TreeSet<String>();
-      for( int i = 0;i < vCols.size(); i++) {
-        //Skipping index metadata columns
-        if ( vCols.get(i).getName().equals(HiveIndex.IDX_BUCKET_COL_NAME) ) {
-          continue;
-        }
-        //Skipping index metadata columns
-        if ( vCols.get(i).getName().equals(HiveIndex.IDX_OFFSET_COL_NAME) ) {
-          continue;
-        }
-        idxKeyColsNames.add(vCols.get(i).getName());
+      for( int i = 0;i < vIdxCols.size(); i++) {
+        idxKeyColsNames.add(vIdxCols.get(i).getCol());
       }
 
       //--------------------------------------------
       //Check if all columns in select list are part of index key columns
       if( idxKeyColsNames.containsAll(selColRefNameList) == false ) {
         getLogger().debug("Select list has non index key column : " +
-        		" Cannot use this index  " + indexTable.getTableName());
+        		" Cannot use this index  " + indexTable.getIndexName());
         continue;
       }
 
@@ -369,7 +355,7 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
         //Check if all columns from index are part of select list too
         if( selColRefNameList.containsAll(idxKeyColsNames) == false )  {
           getLogger().debug("Index has non select list columns " +
-              " Cannot use this index  " + indexTable.getTableName());
+              " Cannot use this index  " + indexTable.getIndexName());
           continue;
         }
       }
@@ -380,7 +366,7 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
       //to read from index_table and not from baseTable ?
       if( idxKeyColsNames.containsAll(predColRefs) == false ) {
         getLogger().debug("Predicate column ref list has non index key column : " +
-            " Cannot use this index  " + indexTable.getTableName());
+            " Cannot use this index  " + indexTable.getIndexName());
         continue;
       }
 
@@ -394,13 +380,13 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
         //select c1, c2 from src_cmpt_sum_idx;
         if( idxKeyColsNames.containsAll(gbKeyNameList) == false ) {
             getLogger().debug("Groupby key-list has non index key column  " +
-                " Cannot use this index  " + indexTable.getTableName());
+                " Cannot use this index  " + indexTable.getIndexName());
               continue;
         }
 
         if( gbKeyNameList.containsAll(idxKeyColsNames) == false )  {
           getLogger().debug("Index has some columns which do not appear in gb key columns " +
-              " Cannot use this index  " + indexTable.getTableName());
+              " Cannot use this index  " + indexTable.getIndexName());
           continue;
         }
 
@@ -419,16 +405,22 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
         }
 
       }
+
       GbToCompactSumIdxRewriteContext rwContext = new GbToCompactSumIdxRewriteContext();
-      rwContext.m_indexTableMetaData = indexTable;
+      try {
+        rwContext.m_indexTableMetaData =
+          m_hiveInstance.getTable(MetaStoreUtils.DEFAULT_DATABASE_NAME, indexTable.getIndexTableName());
+      } catch (HiveException e) {
+        return false;
+      }
       rwContext.m_sClauseName = sClauseName;
       rwContext.m_bIsDistinct = bIsDistinct;
-      String sIndexType = MetaStoreUtils.getIndexType(indexTable.getTTable());
+      String sIndexType = indexTable.getIndexType();
       rwContext.m_sOrigBaseTableAlias = sTableAlias;
       rwContext.m_bRemoveGroupBy = (sIndexType.equalsIgnoreCase(HiveIndex.IndexType.COMPACT_SUMMARY_TABLE.getName()) == true);
       setContext(rwContext);
       return true;
-    }*/
+    }
     return false;
   }
 
