@@ -58,16 +58,12 @@ import org.apache.hadoop.hive.ql.parse.ParseException;
 import org.apache.hadoop.hive.ql.parse.SemanticAnalyzer;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
 import org.apache.hadoop.hive.ql.session.SessionState;
-import org.apache.hadoop.hive.serde.Constants;
-import org.apache.hadoop.hive.serde2.thrift.ThriftDeserializer;
-import org.apache.hadoop.hive.serde2.thrift.test.Complex;
 import org.apache.hadoop.hive.shims.HadoopShims;
 import org.apache.hadoop.hive.shims.ShimLoader;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.SequenceFileInputFormat;
 import org.apache.hadoop.mapred.SequenceFileOutputFormat;
 import org.apache.hadoop.mapred.TextInputFormat;
-import org.apache.thrift.protocol.TBinaryProtocol;
 
 /**
  * QTestUtil.
@@ -328,7 +324,7 @@ public class QTestUtil {
     return;
   }
 
-  public void createSources() throws Exception {
+  public void createSources() throws Exception { /*
     // Next create the three tables src, dest1 and dest2 each with two columns
     // key and value
     LinkedList<String> cols = new LinkedList<String>();
@@ -453,7 +449,7 @@ public class QTestUtil {
     // db.loadTable(newfpath, "src_json", false);
     runLoadCmd("LOAD DATA INPATH '" + newfpath.toString()
         + "' INTO TABLE src_json");
-
+*/
   }
 
   public void init() throws Exception {

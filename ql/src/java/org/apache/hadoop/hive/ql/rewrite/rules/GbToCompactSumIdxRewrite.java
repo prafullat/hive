@@ -28,6 +28,7 @@ import java.util.Set;
 import java.util.Stack;
 import java.util.TreeSet;
 
+import org.antlr.runtime.CommonToken;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.MetaStoreUtils;
@@ -83,11 +84,24 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
   }
 
   class GbToCompactSumIdxRewriteContext extends  HiveRwRuleContext {
+    public GbToCompactSumIdxRewriteContext()  {
+      m_indexTableMetaData = null;
+      m_sClauseName = null;
+      m_bIsDistinct = false;
+      m_sOrigBaseTableAlias = null;
+      m_bRemoveGroupBy = false;
+      m_bAddLateralView = false;
+      m_sColNameToExplode = null;
+      m_countAstNode = null;
+    }
     public Table m_indexTableMetaData;
     public String m_sClauseName;
     public boolean m_bIsDistinct;
     public String m_sOrigBaseTableAlias;
     public boolean m_bRemoveGroupBy;
+    public boolean m_bAddLateralView;
+    public String m_sColNameToExplode;
+    public ASTNode m_countAstNode;
   }
 
   class CollectColRefNames implements NodeProcessor  {
@@ -171,7 +185,7 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
                             vIndexTableName.get(i));
 
         if( indexTable == null ) {
-          getLogger().info("Index table " + vIndexTableName.get(i) + " could not be found");
+          getLogger().info("Index " + vIndexTableName.get(i) + " could not be found");
           continue;
         }
         String sIndexType = indexTable.getIndexType();
@@ -204,6 +218,9 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
   public boolean canApplyThisRule(QB qb) {
 
     if( getRwFlag(HiveConf.ConfVars.HIVE_QL_RW_GB_TO_IDX) == false ) {
+      getLogger().debug("Coinfiguration variable " +
+            HiveConf.ConfVars.HIVE_QL_RW_GB_TO_IDX.name() + " is set to false," +
+            "Not doing rewrite " + getName() );
       return false;
     }
 
@@ -247,7 +264,13 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
     //Getting agg func information.
     HashMap<String, ASTNode> mapAggrNodes = qbParseInfo.getAggregationExprsForClause(sClauseName);
     List< List<String> > vvColRefAggFuncInput = new ArrayList<List<String>>();
+    List<ASTNode> aggAstNodesList = new ArrayList<ASTNode>();
     if( mapAggrNodes != null )  {
+      getLogger().debug("Found " + mapAggrNodes.size() + " aggregate functions");
+      if( mapAggrNodes.size() > 1 )  {
+        getLogger().debug("More than 1 agg funcs: Not supported by rewrite " + getName());
+        return false;
+      }
       Collection<ASTNode> listAggrNodes = mapAggrNodes.values();
       Iterator<ASTNode> it = listAggrNodes.iterator();
       while( it.hasNext() )  {
@@ -256,7 +279,6 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
         if( iChldCnt != 2 ) {
           continue;
         }
-
         ASTNode funcNameNode = (ASTNode) curNode.getChild(0);
         String sFuncName = funcNameNode.getText();
         if( sFuncName.equalsIgnoreCase("count") == false ) {
@@ -265,6 +287,7 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
         }
         List<String> vAggFuncInp = getChildColRefNames(curNode);
         vvColRefAggFuncInput.add(vAggFuncInp);
+        aggAstNodesList.add(curNode);
       }
     }
     //--------------------------------------------
@@ -294,8 +317,11 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
 
     //--------------------------------------------
     //Getting where clause information
+
     ASTNode whereClause = qbParseInfo.getWhrForClause(sClauseName);
+
     /*
+     Where clause which has only index keys are supported.
     if( whereClause != null )  {
       getLogger().debug("Query has where clause, " +
           "that is not supported with rewrite " + getName());
@@ -319,13 +345,20 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
     //Getting groupby key information
     ASTNode groupByNode = qbParseInfo.getGroupByForClause(sClauseName);
 
-    List<String> gbKeyNameList = getChildColRefNames(groupByNode, true/* bOnlyDirectChildren*/);
+    List<String> gbKeyNameList = getChildColRefNames(groupByNode, true/*bOnlyDirectChildren*/);
     if( (groupByNode != null) &&
         (gbKeyNameList.size() != groupByNode.getChildCount()) )  {
       getLogger().debug("Group-by-key-list has some non-col-ref expression. " +
           "Cannot apply the rewrite " + getName());
       return false;
     }
+
+    if( vvColRefAggFuncInput.size() > 0 && groupByNode == null)  {
+      getLogger().debug("Currently count function needs group by on key columns, Cannot apply this rewrite");
+      return false;
+    }
+
+
 
 
     Index indexTable = null;
@@ -339,6 +372,7 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
       for( int i = 0;i < vIdxCols.size(); i++) {
         idxKeyColsNames.add(vIdxCols.get(i).getCol());
       }
+
 
       //--------------------------------------------
       //Check if all columns in select list are part of index key columns
@@ -391,19 +425,25 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
         }
 
         //If we have agg function (currently only COUNT is supported), check if its input are
-        //from index. we currently only support that.
+        //from index. we currently support only that.
         if( vvColRefAggFuncInput.size() > 0 )  {
           for( int iAggFuncIdx = 0; iAggFuncIdx < vvColRefAggFuncInput.size(); iAggFuncIdx++)  {
+
             if( idxKeyColsNames.containsAll(vvColRefAggFuncInput.get(iAggFuncIdx)) == false ) {
               getLogger().debug("Agg Func input is not present in index key columns. " +
-              		"Currently only agg func on index columns are supported");
+              		"Currently only agg func on index columns are supported by rewrite" + getName());
+              continue;
+            }
+
+            if( vvColRefAggFuncInput.get(iAggFuncIdx).containsAll(idxKeyColsNames) == false ) {
+              getLogger().debug("Agg func is not on index key columns. " +
+                  "Currently only agg func on index columns are supported by rewrite " + getName());
               continue;
             }
 
           }
 
         }
-
       }
 
       GbToCompactSumIdxRewriteContext rwContext = new GbToCompactSumIdxRewriteContext();
@@ -418,7 +458,16 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
       String sIndexType = indexTable.getIndexType();
       rwContext.m_sOrigBaseTableAlias = sTableAlias;
       rwContext.m_bRemoveGroupBy = (sIndexType.equalsIgnoreCase(HiveIndex.IndexType.COMPACT_SUMMARY_TABLE.getName()) == true);
+      //We have a count(1), and a group by
+      if( vvColRefAggFuncInput.size() > 0 )  {
+        rwContext.m_bAddLateralView = true  ;
+        rwContext.m_countAstNode = aggAstNodesList.get(0);
+        rwContext.m_bRemoveGroupBy = false;
+        rwContext.m_sColNameToExplode="_offsets";
+
+      }
       setContext(rwContext);
+      getLogger().debug("Now rewriting query block id " + qb.getId() +"with " + getName() + " rewrite");
       return true;
     }
     return false;
@@ -437,6 +486,7 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
     Table indexTable = rwContext.m_indexTableMetaData;
     String sIndexTableName = indexTable.getTableName();
     QBParseInfo qbParseInfo = oldQb.getParseInfo();
+
     String sClauseName = rwContext.m_sClauseName;
     QBMetaData qbMetaData = oldQb.getMetaData();
 
@@ -457,7 +507,28 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
         qbParseInfo.clearGroupBy(sClauseName);
       }
     }
-    //We aint changing qb here, what we change is ind
+
+    if( rwContext.m_bAddLateralView == true )  {
+      String sColNameToExplode = rwContext.m_sColNameToExplode;
+      int viewIdx = 0;
+      String sViewName = "_ltview_alias_" + viewIdx;
+      viewIdx++;
+      String sAliasName = "_lt_view_" + viewIdx++;
+      ASTNode lateralViewAstNode = oldQb.newLateralView(sAliasName, sViewName, sColNameToExplode);
+      qbParseInfo.addLateralViewForAlias(sIndexTableName, lateralViewAstNode);
+      oldQb.addLateralView(lateralViewAstNode);
+
+      //Replace the input of count ast node to lateral views column _offsets.
+      if( rwContext.m_countAstNode != null )  {
+        ASTNode astNode = rwContext.m_countAstNode;
+        ASTNode inputNode = (ASTNode) astNode.getChild(1);
+        ASTNode offsetInputNode = new ASTNode(new CommonToken(HiveParser.Identifier, sAliasName));
+        inputNode.setChild(0, offsetInputNode);
+      }
+    }
+
+
+    //We aint changing qb here, what we change is internal information
     return oldQb;
   }
 

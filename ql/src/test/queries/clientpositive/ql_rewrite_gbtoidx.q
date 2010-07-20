@@ -1,9 +1,14 @@
+create table src(key int, value int);
 DROP INDEX src_cmpt_sum_idx on src;
 DROP INDEX src1_cmpt_sum_idx on src;
-
 CREATE INDEX src_cmpt_sum_idx TYPE COMPACT ON TABLE src(key) STORED AS textfile; 
 CREATE INDEX src1_cmpt_sum_idx TYPE COMPACT ON TABLE src(key, value) STORED AS textfile; 
-
+set hive.ql.rw.gb_to_idx=true;
+EXPLAIN select key, count(key) from src where key = 1 group by key;
+EXPLAIN SELECT DISTINCT key FROM src;
+EXPLAIN select count(1) from src;
+EXPLAIN select key, count(key) from src group by key;
+EXPLAIN select count(key) from src;
 EXPLAIN SELECT DISTINCT key FROM src;
 EXPLAIN SELECT key FROM src GROUP BY key;
 
