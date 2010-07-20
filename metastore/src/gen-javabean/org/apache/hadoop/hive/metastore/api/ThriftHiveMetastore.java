@@ -65,7 +65,7 @@ public class ThriftHiveMetastore {
 
     public boolean drop_partition_by_name(String db_name, String tbl_name, String part_name, boolean deleteData) throws NoSuchObjectException, MetaException, TException;
 
-    public Partition get_partition(String db_name, String tbl_name, List<String> part_vals) throws MetaException, TException;
+    public Partition get_partition(String db_name, String tbl_name, List<String> part_vals) throws MetaException, NoSuchObjectException, TException;
 
     public Partition get_partition_by_name(String db_name, String tbl_name, String part_name) throws MetaException, NoSuchObjectException, TException;
 
@@ -903,7 +903,7 @@ public class ThriftHiveMetastore {
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "drop_partition_by_name failed: unknown result");
     }
 
-    public Partition get_partition(String db_name, String tbl_name, List<String> part_vals) throws MetaException, TException
+    public Partition get_partition(String db_name, String tbl_name, List<String> part_vals) throws MetaException, NoSuchObjectException, TException
     {
       send_get_partition(db_name, tbl_name, part_vals);
       return recv_get_partition();
@@ -921,7 +921,7 @@ public class ThriftHiveMetastore {
       oprot_.getTransport().flush();
     }
 
-    public Partition recv_get_partition() throws MetaException, TException
+    public Partition recv_get_partition() throws MetaException, NoSuchObjectException, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -937,6 +937,9 @@ public class ThriftHiveMetastore {
       }
       if (result.o1 != null) {
         throw result.o1;
+      }
+      if (result.o2 != null) {
+        throw result.o2;
       }
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "get_partition failed: unknown result");
     }
@@ -2175,6 +2178,8 @@ public class ThriftHiveMetastore {
           result.success = iface_.get_partition(args.db_name, args.tbl_name, args.part_vals);
         } catch (MetaException o1) {
           result.o1 = o1;
+        } catch (NoSuchObjectException o2) {
+          result.o2 = o2;
         } catch (Throwable th) {
           LOGGER.error("Internal error processing get_partition", th);
           TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing get_partition");
@@ -14777,11 +14782,14 @@ public class ThriftHiveMetastore {
     private static final TStruct STRUCT_DESC = new TStruct("get_partition_result");
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.STRUCT, (short)0);
     private static final TField O1_FIELD_DESC = new TField("o1", TType.STRUCT, (short)1);
+    private static final TField O2_FIELD_DESC = new TField("o2", TType.STRUCT, (short)2);
 
     private Partition success;
     public static final int SUCCESS = 0;
     private MetaException o1;
     public static final int O1 = 1;
+    private NoSuchObjectException o2;
+    public static final int O2 = 2;
 
     private final Isset __isset = new Isset();
     private static final class Isset implements java.io.Serializable {
@@ -14791,6 +14799,8 @@ public class ThriftHiveMetastore {
       put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
           new StructMetaData(TType.STRUCT, Partition.class)));
       put(O1, new FieldMetaData("o1", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRUCT)));
+      put(O2, new FieldMetaData("o2", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -14803,11 +14813,13 @@ public class ThriftHiveMetastore {
 
     public get_partition_result(
       Partition success,
-      MetaException o1)
+      MetaException o1,
+      NoSuchObjectException o2)
     {
       this();
       this.success = success;
       this.o1 = o1;
+      this.o2 = o2;
     }
 
     /**
@@ -14819,6 +14831,9 @@ public class ThriftHiveMetastore {
       }
       if (other.isSetO1()) {
         this.o1 = new MetaException(other.o1);
+      }
+      if (other.isSetO2()) {
+        this.o2 = new NoSuchObjectException(other.o2);
       }
     }
 
@@ -14861,6 +14876,23 @@ public class ThriftHiveMetastore {
       return this.o1 != null;
     }
 
+    public NoSuchObjectException getO2() {
+      return this.o2;
+    }
+
+    public void setO2(NoSuchObjectException o2) {
+      this.o2 = o2;
+    }
+
+    public void unsetO2() {
+      this.o2 = null;
+    }
+
+    // Returns true if field o2 is set (has been asigned a value) and false otherwise
+    public boolean isSetO2() {
+      return this.o2 != null;
+    }
+
     public void setFieldValue(int fieldID, Object value) {
       switch (fieldID) {
       case SUCCESS:
@@ -14879,6 +14911,14 @@ public class ThriftHiveMetastore {
         }
         break;
 
+      case O2:
+        if (value == null) {
+          unsetO2();
+        } else {
+          setO2((NoSuchObjectException)value);
+        }
+        break;
+
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
@@ -14892,6 +14932,9 @@ public class ThriftHiveMetastore {
       case O1:
         return getO1();
 
+      case O2:
+        return getO2();
+
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
@@ -14904,6 +14947,8 @@ public class ThriftHiveMetastore {
         return isSetSuccess();
       case O1:
         return isSetO1();
+      case O2:
+        return isSetO2();
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
@@ -14937,6 +14982,15 @@ public class ThriftHiveMetastore {
         if (!(this_present_o1 && that_present_o1))
           return false;
         if (!this.o1.equals(that.o1))
+          return false;
+      }
+
+      boolean this_present_o2 = true && this.isSetO2();
+      boolean that_present_o2 = true && that.isSetO2();
+      if (this_present_o2 || that_present_o2) {
+        if (!(this_present_o2 && that_present_o2))
+          return false;
+        if (!this.o2.equals(that.o2))
           return false;
       }
 
@@ -14975,6 +15029,14 @@ public class ThriftHiveMetastore {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
+          case O2:
+            if (field.type == TType.STRUCT) {
+              this.o2 = new NoSuchObjectException();
+              this.o2.read(iprot);
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
           default:
             TProtocolUtil.skip(iprot, field.type);
             break;
@@ -14996,6 +15058,10 @@ public class ThriftHiveMetastore {
       } else if (this.isSetO1()) {
         oprot.writeFieldBegin(O1_FIELD_DESC);
         this.o1.write(oprot);
+        oprot.writeFieldEnd();
+      } else if (this.isSetO2()) {
+        oprot.writeFieldBegin(O2_FIELD_DESC);
+        this.o2.write(oprot);
         oprot.writeFieldEnd();
       }
       oprot.writeFieldStop();
@@ -15020,6 +15086,14 @@ public class ThriftHiveMetastore {
         sb.append("null");
       } else {
         sb.append(this.o1);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("o2:");
+      if (this.o2 == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.o2);
       }
       first = false;
       sb.append(")");

@@ -869,8 +869,14 @@ public class HiveMetaStore extends ThriftHiveMetastore {
             .makePartName(tbl.getPartitionKeys(), part_vals));
         part.getSd().setLocation(partLocation.toString());
 
-        Partition old_part = get_partition(part.getDbName(), part
+        Partition old_part = null;
+        try {
+          old_part = get_partition(part.getDbName(), part
             .getTableName(), part.getValues());
+        } catch (NoSuchObjectException e) {
+          // this means there is no existing partition
+          old_part = null;
+        }
         if (old_part != null) {
           throw new AlreadyExistsException("Partition already exists:" + part);
         }
@@ -991,8 +997,14 @@ public class HiveMetaStore extends ThriftHiveMetastore {
       Path partLocation = null;
       try {
         ms.openTransaction();
-        Partition old_part = get_partition(part.getDbName(), part
+        Partition old_part = null;
+        try {
+          old_part = get_partition(part.getDbName(), part
             .getTableName(), part.getValues());
+        } catch(NoSuchObjectException e) {
+          // this means there is no existing partition
+          old_part = null;
+        }
         if (old_part != null) {
           throw new AlreadyExistsException("Partition already exists:" + part);
         }
@@ -1154,7 +1166,7 @@ public class HiveMetaStore extends ThriftHiveMetastore {
     }
 
     public Partition get_partition(final String db_name, final String tbl_name,
-        final List<String> part_vals) throws MetaException {
+        final List<String> part_vals) throws MetaException, NoSuchObjectException {
       incrementCounter("get_partition");
       logStartFunction("get_partition", db_name, tbl_name);
 
@@ -1167,6 +1179,8 @@ public class HiveMetaStore extends ThriftHiveMetastore {
           }
         });
       } catch (MetaException e) {
+        throw e;
+      } catch (NoSuchObjectException e) {
         throw e;
       } catch (Exception e) {
         assert(e instanceof RuntimeException);

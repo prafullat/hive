@@ -4576,6 +4576,14 @@ uint32_t ThriftHiveMetastore_get_partition_result::read(apache::thrift::protocol
           xfer += iprot->skip(ftype);
         }
         break;
+      case 2:
+        if (ftype == apache::thrift::protocol::T_STRUCT) {
+          xfer += this->o2.read(iprot);
+          this->__isset.o2 = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
       default:
         xfer += iprot->skip(ftype);
         break;
@@ -4601,6 +4609,10 @@ uint32_t ThriftHiveMetastore_get_partition_result::write(apache::thrift::protoco
   } else if (this->__isset.o1) {
     xfer += oprot->writeFieldBegin("o1", apache::thrift::protocol::T_STRUCT, 1);
     xfer += this->o1.write(oprot);
+    xfer += oprot->writeFieldEnd();
+  } else if (this->__isset.o2) {
+    xfer += oprot->writeFieldBegin("o2", apache::thrift::protocol::T_STRUCT, 2);
+    xfer += this->o2.write(oprot);
     xfer += oprot->writeFieldEnd();
   }
   xfer += oprot->writeFieldStop();
@@ -4640,6 +4652,14 @@ uint32_t ThriftHiveMetastore_get_partition_presult::read(apache::thrift::protoco
         if (ftype == apache::thrift::protocol::T_STRUCT) {
           xfer += this->o1.read(iprot);
           this->__isset.o1 = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == apache::thrift::protocol::T_STRUCT) {
+          xfer += this->o2.read(iprot);
+          this->__isset.o2 = true;
         } else {
           xfer += iprot->skip(ftype);
         }
@@ -9667,7 +9687,10 @@ void ThriftHiveMetastoreClient::recv_get_partition_names_ps(std::vector<std::str
   if (result.__isset.o1) {
     throw result.o1;
   }
-  throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "get_partition_names_ps failed: unknown result");
+  if (result.__isset.o2) {
+    throw result.o2;
+  }
+  throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "get_partition failed: unknown result");
 }
 
 void ThriftHiveMetastoreClient::alter_partition(const std::string& db_name, const std::string& tbl_name, const Partition& new_part)
@@ -10995,6 +11018,9 @@ void ThriftHiveMetastoreProcessor::process_get_partition(int32_t seqid, apache::
   } catch (MetaException &o1) {
     result.o1 = o1;
     result.__isset.o1 = true;
+  } catch (NoSuchObjectException &o2) {
+    result.o2 = o2;
+    result.__isset.o2 = true;
   } catch (const std::exception& e) {
     apache::thrift::TApplicationException x(e.what());
     oprot->writeMessageBegin("get_partition", apache::thrift::protocol::T_EXCEPTION, seqid);

@@ -176,7 +176,7 @@ public interface IMetaStoreClient {
    *      java.lang.String, java.util.List)
    */
   public Partition getPartition(String tblName, String dbName,
-      List<String> partVals) throws MetaException, TException;
+      List<String> partVals) throws NoSuchObjectException, MetaException, TException;
 
   /**
    * @param dbName
