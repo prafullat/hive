@@ -43,17 +43,10 @@ interface ThriftHiveMetastoreIf extends FacebookServiceIf {
   public function get_config_value($name, $defaultValue);
   public function partition_name_to_vals($part_name);
   public function partition_name_to_spec($part_name);
-<<<<<<< HEAD:metastore/src/gen-php/ThriftHiveMetastore.php
-  public function add_index($new_index);
-  public function drop_index_by_name($db_name, $tbl_name, $index_name, $deleteData);
-  public function get_index_by_name($db_name, $tbl_name, $index_name);
-  public function get_indexs($db_name, $tbl_name, $max_indexes);
-=======
   public function add_index($new_index, $index_table);
   public function drop_index_by_name($db_name, $tbl_name, $index_name, $deleteData);
   public function get_index_by_name($db_name, $tbl_name, $index_name);
   public function get_indexes($db_name, $tbl_name, $max_indexes);
->>>>>>> apache_master/trunk:metastore/src/gen-php/ThriftHiveMetastore.php
   public function get_index_names($db_name, $tbl_name, $max_indexes);
 }
 
@@ -1960,317 +1953,11 @@ class ThriftHiveMetastoreClient extends FacebookServiceClient implements ThriftH
     throw new Exception("partition_name_to_spec failed: unknown result");
   }
 
-<<<<<<< HEAD:metastore/src/gen-php/ThriftHiveMetastore.php
-  public function add_index($new_index)
-  {
-    $this->send_add_index($new_index);
-    return $this->recv_add_index();
-  }
-
-  public function send_add_index($new_index)
-  {
-    $args = new metastore_ThriftHiveMetastore_add_index_args();
-    $args->new_index = $new_index;
-    $bin_accel = ($this->output_ instanceof TProtocol::$TBINARYPROTOCOLACCELERATED) && function_exists('thrift_protocol_write_binary');
-    if ($bin_accel)
-    {
-      thrift_protocol_write_binary($this->output_, 'add_index', TMessageType::CALL, $args, $this->seqid_, $this->output_->isStrictWrite());
-    }
-    else
-    {
-      $this->output_->writeMessageBegin('add_index', TMessageType::CALL, $this->seqid_);
-      $args->write($this->output_);
-      $this->output_->writeMessageEnd();
-      $this->output_->getTransport()->flush();
-    }
-  }
-
-  public function recv_add_index()
-  {
-    $bin_accel = ($this->input_ instanceof TProtocol::$TBINARYPROTOCOLACCELERATED) && function_exists('thrift_protocol_read_binary');
-    if ($bin_accel) $result = thrift_protocol_read_binary($this->input_, 'metastore_ThriftHiveMetastore_add_index_result', $this->input_->isStrictRead());
-    else
-    {
-      $rseqid = 0;
-      $fname = null;
-      $mtype = 0;
-
-      $this->input_->readMessageBegin($fname, $mtype, $rseqid);
-      if ($mtype == TMessageType::EXCEPTION) {
-        $x = new TApplicationException();
-        $x->read($this->input_);
-        $this->input_->readMessageEnd();
-        throw $x;
-      }
-      $result = new metastore_ThriftHiveMetastore_add_index_result();
-      $result->read($this->input_);
-      $this->input_->readMessageEnd();
-    }
-    if ($result->success !== null) {
-      return $result->success;
-    }
-    if ($result->o1 !== null) {
-      throw $result->o1;
-    }
-    if ($result->o2 !== null) {
-      throw $result->o2;
-    }
-    if ($result->o3 !== null) {
-      throw $result->o3;
-    }
-    throw new Exception("add_index failed: unknown result");
-  }
-
-  public function drop_index_by_name($db_name, $tbl_name, $index_name, $deleteData)
-  {
-    $this->send_drop_index_by_name($db_name, $tbl_name, $index_name, $deleteData);
-    return $this->recv_drop_index_by_name();
-  }
-
-  public function send_drop_index_by_name($db_name, $tbl_name, $index_name, $deleteData)
-  {
-    $args = new metastore_ThriftHiveMetastore_drop_index_by_name_args();
-    $args->db_name = $db_name;
-    $args->tbl_name = $tbl_name;
-    $args->index_name = $index_name;
-    $args->deleteData = $deleteData;
-    $bin_accel = ($this->output_ instanceof TProtocol::$TBINARYPROTOCOLACCELERATED) && function_exists('thrift_protocol_write_binary');
-    if ($bin_accel)
-    {
-      thrift_protocol_write_binary($this->output_, 'drop_index_by_name', TMessageType::CALL, $args, $this->seqid_, $this->output_->isStrictWrite());
-    }
-    else
-    {
-      $this->output_->writeMessageBegin('drop_index_by_name', TMessageType::CALL, $this->seqid_);
-      $args->write($this->output_);
-      $this->output_->writeMessageEnd();
-      $this->output_->getTransport()->flush();
-    }
-  }
-
-  public function recv_drop_index_by_name()
-  {
-    $bin_accel = ($this->input_ instanceof TProtocol::$TBINARYPROTOCOLACCELERATED) && function_exists('thrift_protocol_read_binary');
-    if ($bin_accel) $result = thrift_protocol_read_binary($this->input_, 'metastore_ThriftHiveMetastore_drop_index_by_name_result', $this->input_->isStrictRead());
-    else
-    {
-      $rseqid = 0;
-      $fname = null;
-      $mtype = 0;
-
-      $this->input_->readMessageBegin($fname, $mtype, $rseqid);
-      if ($mtype == TMessageType::EXCEPTION) {
-        $x = new TApplicationException();
-        $x->read($this->input_);
-        $this->input_->readMessageEnd();
-        throw $x;
-      }
-      $result = new metastore_ThriftHiveMetastore_drop_index_by_name_result();
-      $result->read($this->input_);
-      $this->input_->readMessageEnd();
-    }
-    if ($result->success !== null) {
-      return $result->success;
-    }
-    if ($result->o1 !== null) {
-      throw $result->o1;
-    }
-    if ($result->o2 !== null) {
-      throw $result->o2;
-    }
-    throw new Exception("drop_index_by_name failed: unknown result");
-  }
-
-  public function get_index_by_name($db_name, $tbl_name, $index_name)
-  {
-    $this->send_get_index_by_name($db_name, $tbl_name, $index_name);
-    return $this->recv_get_index_by_name();
-  }
-
-  public function send_get_index_by_name($db_name, $tbl_name, $index_name)
-  {
-    $args = new metastore_ThriftHiveMetastore_get_index_by_name_args();
-    $args->db_name = $db_name;
-    $args->tbl_name = $tbl_name;
-    $args->index_name = $index_name;
-    $bin_accel = ($this->output_ instanceof TProtocol::$TBINARYPROTOCOLACCELERATED) && function_exists('thrift_protocol_write_binary');
-    if ($bin_accel)
-    {
-      thrift_protocol_write_binary($this->output_, 'get_index_by_name', TMessageType::CALL, $args, $this->seqid_, $this->output_->isStrictWrite());
-    }
-    else
-    {
-      $this->output_->writeMessageBegin('get_index_by_name', TMessageType::CALL, $this->seqid_);
-      $args->write($this->output_);
-      $this->output_->writeMessageEnd();
-      $this->output_->getTransport()->flush();
-    }
-  }
-
-  public function recv_get_index_by_name()
-  {
-    $bin_accel = ($this->input_ instanceof TProtocol::$TBINARYPROTOCOLACCELERATED) && function_exists('thrift_protocol_read_binary');
-    if ($bin_accel) $result = thrift_protocol_read_binary($this->input_, 'metastore_ThriftHiveMetastore_get_index_by_name_result', $this->input_->isStrictRead());
-    else
-    {
-      $rseqid = 0;
-      $fname = null;
-      $mtype = 0;
-
-      $this->input_->readMessageBegin($fname, $mtype, $rseqid);
-      if ($mtype == TMessageType::EXCEPTION) {
-        $x = new TApplicationException();
-        $x->read($this->input_);
-        $this->input_->readMessageEnd();
-        throw $x;
-      }
-      $result = new metastore_ThriftHiveMetastore_get_index_by_name_result();
-      $result->read($this->input_);
-      $this->input_->readMessageEnd();
-    }
-    if ($result->success !== null) {
-      return $result->success;
-    }
-    if ($result->o1 !== null) {
-      throw $result->o1;
-    }
-    if ($result->o2 !== null) {
-      throw $result->o2;
-    }
-    throw new Exception("get_index_by_name failed: unknown result");
-  }
-
-  public function get_indexs($db_name, $tbl_name, $max_indexes)
-  {
-    $this->send_get_indexs($db_name, $tbl_name, $max_indexes);
-    return $this->recv_get_indexs();
-  }
-
-  public function send_get_indexs($db_name, $tbl_name, $max_indexes)
-  {
-    $args = new metastore_ThriftHiveMetastore_get_indexs_args();
-    $args->db_name = $db_name;
-    $args->tbl_name = $tbl_name;
-    $args->max_indexes = $max_indexes;
-    $bin_accel = ($this->output_ instanceof TProtocol::$TBINARYPROTOCOLACCELERATED) && function_exists('thrift_protocol_write_binary');
-    if ($bin_accel)
-    {
-      thrift_protocol_write_binary($this->output_, 'get_indexs', TMessageType::CALL, $args, $this->seqid_, $this->output_->isStrictWrite());
-    }
-    else
-    {
-      $this->output_->writeMessageBegin('get_indexs', TMessageType::CALL, $this->seqid_);
-      $args->write($this->output_);
-      $this->output_->writeMessageEnd();
-      $this->output_->getTransport()->flush();
-    }
-  }
-
-  public function recv_get_indexs()
-  {
-    $bin_accel = ($this->input_ instanceof TProtocol::$TBINARYPROTOCOLACCELERATED) && function_exists('thrift_protocol_read_binary');
-    if ($bin_accel) $result = thrift_protocol_read_binary($this->input_, 'metastore_ThriftHiveMetastore_get_indexs_result', $this->input_->isStrictRead());
-    else
-    {
-      $rseqid = 0;
-      $fname = null;
-      $mtype = 0;
-
-      $this->input_->readMessageBegin($fname, $mtype, $rseqid);
-      if ($mtype == TMessageType::EXCEPTION) {
-        $x = new TApplicationException();
-        $x->read($this->input_);
-        $this->input_->readMessageEnd();
-        throw $x;
-      }
-      $result = new metastore_ThriftHiveMetastore_get_indexs_result();
-      $result->read($this->input_);
-      $this->input_->readMessageEnd();
-    }
-    if ($result->success !== null) {
-      return $result->success;
-    }
-    if ($result->o1 !== null) {
-      throw $result->o1;
-    }
-    if ($result->o2 !== null) {
-      throw $result->o2;
-    }
-    throw new Exception("get_indexs failed: unknown result");
-  }
-
-  public function get_index_names($db_name, $tbl_name, $max_indexes)
-  {
-    $this->send_get_index_names($db_name, $tbl_name, $max_indexes);
-    return $this->recv_get_index_names();
-  }
-
-  public function send_get_index_names($db_name, $tbl_name, $max_indexes)
-  {
-    $args = new metastore_ThriftHiveMetastore_get_index_names_args();
-    $args->db_name = $db_name;
-    $args->tbl_name = $tbl_name;
-    $args->max_indexes = $max_indexes;
-    $bin_accel = ($this->output_ instanceof TProtocol::$TBINARYPROTOCOLACCELERATED) && function_exists('thrift_protocol_write_binary');
-    if ($bin_accel)
-    {
-      thrift_protocol_write_binary($this->output_, 'get_index_names', TMessageType::CALL, $args, $this->seqid_, $this->output_->isStrictWrite());
-    }
-    else
-    {
-      $this->output_->writeMessageBegin('get_index_names', TMessageType::CALL, $this->seqid_);
-      $args->write($this->output_);
-      $this->output_->writeMessageEnd();
-      $this->output_->getTransport()->flush();
-    }
-  }
-
-  public function recv_get_index_names()
-  {
-    $bin_accel = ($this->input_ instanceof TProtocol::$TBINARYPROTOCOLACCELERATED) && function_exists('thrift_protocol_read_binary');
-    if ($bin_accel) $result = thrift_protocol_read_binary($this->input_, 'metastore_ThriftHiveMetastore_get_index_names_result', $this->input_->isStrictRead());
-    else
-    {
-      $rseqid = 0;
-      $fname = null;
-      $mtype = 0;
-
-      $this->input_->readMessageBegin($fname, $mtype, $rseqid);
-      if ($mtype == TMessageType::EXCEPTION) {
-        $x = new TApplicationException();
-        $x->read($this->input_);
-        $this->input_->readMessageEnd();
-        throw $x;
-      }
-      $result = new metastore_ThriftHiveMetastore_get_index_names_result();
-      $result->read($this->input_);
-      $this->input_->readMessageEnd();
-    }
-    if ($result->success !== null) {
-      return $result->success;
-    }
-    if ($result->o2 !== null) {
-      throw $result->o2;
-    }
-    throw new Exception("get_index_names failed: unknown result");
-  }
-
-}
-
-// HELPER FUNCTIONS AND STRUCTURES
-
-class metastore_ThriftHiveMetastore_create_database_args {
-  static $_TSPEC;
-
-  public $name = null;
-  public $description = null;
-=======
   public function add_index($new_index, $index_table)
   {
     $this->send_add_index($new_index, $index_table);
     return $this->recv_add_index();
   }
->>>>>>> apache_master/trunk:metastore/src/gen-php/ThriftHiveMetastore.php
 
   public function send_add_index($new_index, $index_table)
   {
@@ -4984,26 +4671,10 @@ class metastore_ThriftHiveMetastore_create_table_result {
       }
       switch ($fid)
       {
-<<<<<<< HEAD:metastore/src/gen-php/ThriftHiveMetastore.php
-        case 0:
-          if ($ftype == TType::LST) {
-            $this->success = array();
-            $_size103 = 0;
-            $_etype106 = 0;
-            $xfer += $input->readListBegin($_etype106, $_size103);
-            for ($_i107 = 0; $_i107 < $_size103; ++$_i107)
-            {
-              $elem108 = null;
-              $xfer += $input->readString($elem108);
-              $this->success []= $elem108;
-            }
-            $xfer += $input->readListEnd();
-=======
         case 1:
           if ($ftype == TType::STRUCT) {
             $this->o1 = new metastore_AlreadyExistsException();
             $xfer += $this->o1->read($input);
->>>>>>> apache_master/trunk:metastore/src/gen-php/ThriftHiveMetastore.php
           } else {
             $xfer += $input->skip($ftype);
           }
@@ -5044,28 +4715,7 @@ class metastore_ThriftHiveMetastore_create_table_result {
 
   public function write($output) {
     $xfer = 0;
-<<<<<<< HEAD:metastore/src/gen-php/ThriftHiveMetastore.php
-    $xfer += $output->writeStructBegin('ThriftHiveMetastore_get_databases_result');
-    if ($this->success !== null) {
-      if (!is_array($this->success)) {
-        throw new TProtocolException('Bad type in structure.', TProtocolException::INVALID_DATA);
-      }
-      $xfer += $output->writeFieldBegin('success', TType::LST, 0);
-      {
-        $output->writeListBegin(TType::STRING, count($this->success));
-        {
-          foreach ($this->success as $iter109)
-          {
-            $xfer += $output->writeString($iter109);
-          }
-        }
-        $output->writeListEnd();
-      }
-      $xfer += $output->writeFieldEnd();
-    }
-=======
     $xfer += $output->writeStructBegin('ThriftHiveMetastore_create_table_result');
->>>>>>> apache_master/trunk:metastore/src/gen-php/ThriftHiveMetastore.php
     if ($this->o1 !== null) {
       $xfer += $output->writeFieldBegin('o1', TType::STRUCT, 1);
       $xfer += $this->o1->write($output);
@@ -5857,28 +5507,9 @@ class metastore_ThriftHiveMetastore_get_table_result {
       switch ($fid)
       {
         case 0:
-<<<<<<< HEAD:metastore/src/gen-php/ThriftHiveMetastore.php
-          if ($ftype == TType::MAP) {
-            $this->success = array();
-            $_size110 = 0;
-            $_ktype111 = 0;
-            $_vtype112 = 0;
-            $xfer += $input->readMapBegin($_ktype111, $_vtype112, $_size110);
-            for ($_i114 = 0; $_i114 < $_size110; ++$_i114)
-            {
-              $key115 = '';
-              $val116 = new metastore_Type();
-              $xfer += $input->readString($key115);
-              $val116 = new metastore_Type();
-              $xfer += $val116->read($input);
-              $this->success[$key115] = $val116;
-            }
-            $xfer += $input->readMapEnd();
-=======
           if ($ftype == TType::STRUCT) {
             $this->success = new metastore_Table();
             $xfer += $this->success->read($input);
->>>>>>> apache_master/trunk:metastore/src/gen-php/ThriftHiveMetastore.php
           } else {
             $xfer += $input->skip($ftype);
           }
@@ -5916,20 +5547,6 @@ class metastore_ThriftHiveMetastore_get_table_result {
       if (!is_object($this->success)) {
         throw new TProtocolException('Bad type in structure.', TProtocolException::INVALID_DATA);
       }
-<<<<<<< HEAD:metastore/src/gen-php/ThriftHiveMetastore.php
-      $xfer += $output->writeFieldBegin('success', TType::MAP, 0);
-      {
-        $output->writeMapBegin(TType::STRING, TType::STRUCT, count($this->success));
-        {
-          foreach ($this->success as $kiter117 => $viter118)
-          {
-            $xfer += $output->writeString($kiter117);
-            $xfer += $viter118->write($output);
-          }
-        }
-        $output->writeMapEnd();
-      }
-=======
       $xfer += $output->writeFieldBegin('success', TType::STRUCT, 0);
       $xfer += $this->success->write($output);
       $xfer += $output->writeFieldEnd();
@@ -5937,7 +5554,6 @@ class metastore_ThriftHiveMetastore_get_table_result {
     if ($this->o1 !== null) {
       $xfer += $output->writeFieldBegin('o1', TType::STRUCT, 1);
       $xfer += $this->o1->write($output);
->>>>>>> apache_master/trunk:metastore/src/gen-php/ThriftHiveMetastore.php
       $xfer += $output->writeFieldEnd();
     }
     if ($this->o2 !== null) {
@@ -6119,27 +5735,6 @@ class metastore_ThriftHiveMetastore_alter_table_result {
       }
       switch ($fid)
       {
-<<<<<<< HEAD:metastore/src/gen-php/ThriftHiveMetastore.php
-        case 0:
-          if ($ftype == TType::LST) {
-            $this->success = array();
-            $_size119 = 0;
-            $_etype122 = 0;
-            $xfer += $input->readListBegin($_etype122, $_size119);
-            for ($_i123 = 0; $_i123 < $_size119; ++$_i123)
-            {
-              $elem124 = null;
-              $elem124 = new metastore_FieldSchema();
-              $xfer += $elem124->read($input);
-              $this->success []= $elem124;
-            }
-            $xfer += $input->readListEnd();
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
-=======
->>>>>>> apache_master/trunk:metastore/src/gen-php/ThriftHiveMetastore.php
         case 1:
           if ($ftype == TType::STRUCT) {
             $this->o1 = new metastore_InvalidOperationException();
@@ -6168,28 +5763,7 @@ class metastore_ThriftHiveMetastore_alter_table_result {
 
   public function write($output) {
     $xfer = 0;
-<<<<<<< HEAD:metastore/src/gen-php/ThriftHiveMetastore.php
-    $xfer += $output->writeStructBegin('ThriftHiveMetastore_get_fields_result');
-    if ($this->success !== null) {
-      if (!is_array($this->success)) {
-        throw new TProtocolException('Bad type in structure.', TProtocolException::INVALID_DATA);
-      }
-      $xfer += $output->writeFieldBegin('success', TType::LST, 0);
-      {
-        $output->writeListBegin(TType::STRUCT, count($this->success));
-        {
-          foreach ($this->success as $iter125)
-          {
-            $xfer += $iter125->write($output);
-          }
-        }
-        $output->writeListEnd();
-      }
-      $xfer += $output->writeFieldEnd();
-    }
-=======
     $xfer += $output->writeStructBegin('ThriftHiveMetastore_alter_table_result');
->>>>>>> apache_master/trunk:metastore/src/gen-php/ThriftHiveMetastore.php
     if ($this->o1 !== null) {
       $xfer += $output->writeFieldBegin('o1', TType::STRUCT, 1);
       $xfer += $this->o1->write($output);
@@ -6353,25 +5927,9 @@ class metastore_ThriftHiveMetastore_add_partition_result {
       switch ($fid)
       {
         case 0:
-<<<<<<< HEAD:metastore/src/gen-php/ThriftHiveMetastore.php
-          if ($ftype == TType::LST) {
-            $this->success = array();
-            $_size126 = 0;
-            $_etype129 = 0;
-            $xfer += $input->readListBegin($_etype129, $_size126);
-            for ($_i130 = 0; $_i130 < $_size126; ++$_i130)
-            {
-              $elem131 = null;
-              $elem131 = new metastore_FieldSchema();
-              $xfer += $elem131->read($input);
-              $this->success []= $elem131;
-            }
-            $xfer += $input->readListEnd();
-=======
           if ($ftype == TType::STRUCT) {
             $this->success = new metastore_Partition();
             $xfer += $this->success->read($input);
->>>>>>> apache_master/trunk:metastore/src/gen-php/ThriftHiveMetastore.php
           } else {
             $xfer += $input->skip($ftype);
           }
@@ -6417,22 +5975,8 @@ class metastore_ThriftHiveMetastore_add_partition_result {
       if (!is_object($this->success)) {
         throw new TProtocolException('Bad type in structure.', TProtocolException::INVALID_DATA);
       }
-<<<<<<< HEAD:metastore/src/gen-php/ThriftHiveMetastore.php
-      $xfer += $output->writeFieldBegin('success', TType::LST, 0);
-      {
-        $output->writeListBegin(TType::STRUCT, count($this->success));
-        {
-          foreach ($this->success as $iter132)
-          {
-            $xfer += $iter132->write($output);
-          }
-        }
-        $output->writeListEnd();
-      }
-=======
       $xfer += $output->writeFieldBegin('success', TType::STRUCT, 0);
       $xfer += $this->success->write($output);
->>>>>>> apache_master/trunk:metastore/src/gen-php/ThriftHiveMetastore.php
       $xfer += $output->writeFieldEnd();
     }
     if ($this->o1 !== null) {
@@ -7210,23 +6754,8 @@ class metastore_ThriftHiveMetastore_drop_partition_result {
       switch ($fid)
       {
         case 0:
-<<<<<<< HEAD:metastore/src/gen-php/ThriftHiveMetastore.php
-          if ($ftype == TType::LST) {
-            $this->success = array();
-            $_size133 = 0;
-            $_etype136 = 0;
-            $xfer += $input->readListBegin($_etype136, $_size133);
-            for ($_i137 = 0; $_i137 < $_size133; ++$_i137)
-            {
-              $elem138 = null;
-              $xfer += $input->readString($elem138);
-              $this->success []= $elem138;
-            }
-            $xfer += $input->readListEnd();
-=======
           if ($ftype == TType::BOOL) {
             $xfer += $input->readBool($this->success);
->>>>>>> apache_master/trunk:metastore/src/gen-php/ThriftHiveMetastore.php
           } else {
             $xfer += $input->skip($ftype);
           }
@@ -7261,25 +6790,8 @@ class metastore_ThriftHiveMetastore_drop_partition_result {
     $xfer = 0;
     $xfer += $output->writeStructBegin('ThriftHiveMetastore_drop_partition_result');
     if ($this->success !== null) {
-<<<<<<< HEAD:metastore/src/gen-php/ThriftHiveMetastore.php
-      if (!is_array($this->success)) {
-        throw new TProtocolException('Bad type in structure.', TProtocolException::INVALID_DATA);
-      }
-      $xfer += $output->writeFieldBegin('success', TType::LST, 0);
-      {
-        $output->writeListBegin(TType::STRING, count($this->success));
-        {
-          foreach ($this->success as $iter139)
-          {
-            $xfer += $output->writeString($iter139);
-          }
-        }
-        $output->writeListEnd();
-      }
-=======
       $xfer += $output->writeFieldBegin('success', TType::BOOL, 0);
       $xfer += $output->writeBool($this->success);
->>>>>>> apache_master/trunk:metastore/src/gen-php/ThriftHiveMetastore.php
       $xfer += $output->writeFieldEnd();
     }
     if ($this->o1 !== null) {
@@ -8110,23 +7622,8 @@ class metastore_ThriftHiveMetastore_get_partitions_args {
           }
           break;
         case 3:
-<<<<<<< HEAD:metastore/src/gen-php/ThriftHiveMetastore.php
-          if ($ftype == TType::LST) {
-            $this->part_vals = array();
-            $_size140 = 0;
-            $_etype143 = 0;
-            $xfer += $input->readListBegin($_etype143, $_size140);
-            for ($_i144 = 0; $_i144 < $_size140; ++$_i144)
-            {
-              $elem145 = null;
-              $xfer += $input->readString($elem145);
-              $this->part_vals []= $elem145;
-            }
-            $xfer += $input->readListEnd();
-=======
           if ($ftype == TType::I16) {
             $xfer += $input->readI16($this->max_parts);
->>>>>>> apache_master/trunk:metastore/src/gen-php/ThriftHiveMetastore.php
           } else {
             $xfer += $input->skip($ftype);
           }
@@ -8154,27 +7651,9 @@ class metastore_ThriftHiveMetastore_get_partitions_args {
       $xfer += $output->writeString($this->tbl_name);
       $xfer += $output->writeFieldEnd();
     }
-<<<<<<< HEAD:metastore/src/gen-php/ThriftHiveMetastore.php
-    if ($this->part_vals !== null) {
-      if (!is_array($this->part_vals)) {
-        throw new TProtocolException('Bad type in structure.', TProtocolException::INVALID_DATA);
-      }
-      $xfer += $output->writeFieldBegin('part_vals', TType::LST, 3);
-      {
-        $output->writeListBegin(TType::STRING, count($this->part_vals));
-        {
-          foreach ($this->part_vals as $iter146)
-          {
-            $xfer += $output->writeString($iter146);
-          }
-        }
-        $output->writeListEnd();
-      }
-=======
     if ($this->max_parts !== null) {
       $xfer += $output->writeFieldBegin('max_parts', TType::I16, 3);
       $xfer += $output->writeI16($this->max_parts);
->>>>>>> apache_master/trunk:metastore/src/gen-php/ThriftHiveMetastore.php
       $xfer += $output->writeFieldEnd();
     }
     $xfer += $output->writeFieldStop();
@@ -8645,16 +8124,6 @@ class metastore_ThriftHiveMetastore_get_partitions_ps_args {
         case 3:
           if ($ftype == TType::LST) {
             $this->part_vals = array();
-<<<<<<< HEAD:metastore/src/gen-php/ThriftHiveMetastore.php
-            $_size147 = 0;
-            $_etype150 = 0;
-            $xfer += $input->readListBegin($_etype150, $_size147);
-            for ($_i151 = 0; $_i151 < $_size147; ++$_i151)
-            {
-              $elem152 = null;
-              $xfer += $input->readString($elem152);
-              $this->part_vals []= $elem152;
-=======
             $_size189 = 0;
             $_etype192 = 0;
             $xfer += $input->readListBegin($_etype192, $_size189);
@@ -8663,7 +8132,6 @@ class metastore_ThriftHiveMetastore_get_partitions_ps_args {
               $elem194 = null;
               $xfer += $input->readString($elem194);
               $this->part_vals []= $elem194;
->>>>>>> apache_master/trunk:metastore/src/gen-php/ThriftHiveMetastore.php
             }
             $xfer += $input->readListEnd();
           } else {
@@ -8708,15 +8176,9 @@ class metastore_ThriftHiveMetastore_get_partitions_ps_args {
       {
         $output->writeListBegin(TType::STRING, count($this->part_vals));
         {
-<<<<<<< HEAD:metastore/src/gen-php/ThriftHiveMetastore.php
-          foreach ($this->part_vals as $iter153)
-          {
-            $xfer += $output->writeString($iter153);
-=======
           foreach ($this->part_vals as $iter195)
           {
             $xfer += $output->writeString($iter195);
->>>>>>> apache_master/trunk:metastore/src/gen-php/ThriftHiveMetastore.php
           }
         }
         $output->writeListEnd();
@@ -9214,20 +8676,6 @@ class metastore_ThriftHiveMetastore_get_partitions_by_filter_args {
           }
           break;
         case 3:
-<<<<<<< HEAD:metastore/src/gen-php/ThriftHiveMetastore.php
-          if ($ftype == TType::LST) {
-            $this->part_vals = array();
-            $_size154 = 0;
-            $_etype157 = 0;
-            $xfer += $input->readListBegin($_etype157, $_size154);
-            for ($_i158 = 0; $_i158 < $_size154; ++$_i158)
-            {
-              $elem159 = null;
-              $xfer += $input->readString($elem159);
-              $this->part_vals []= $elem159;
-            }
-            $xfer += $input->readListEnd();
-=======
           if ($ftype == TType::STRING) {
             $xfer += $input->readString($this->filter);
           } else {
@@ -9237,7 +8685,6 @@ class metastore_ThriftHiveMetastore_get_partitions_by_filter_args {
         case 4:
           if ($ftype == TType::I16) {
             $xfer += $input->readI16($this->max_parts);
->>>>>>> apache_master/trunk:metastore/src/gen-php/ThriftHiveMetastore.php
           } else {
             $xfer += $input->skip($ftype);
           }
@@ -9265,23 +8712,6 @@ class metastore_ThriftHiveMetastore_get_partitions_by_filter_args {
       $xfer += $output->writeString($this->tbl_name);
       $xfer += $output->writeFieldEnd();
     }
-<<<<<<< HEAD:metastore/src/gen-php/ThriftHiveMetastore.php
-    if ($this->part_vals !== null) {
-      if (!is_array($this->part_vals)) {
-        throw new TProtocolException('Bad type in structure.', TProtocolException::INVALID_DATA);
-      }
-      $xfer += $output->writeFieldBegin('part_vals', TType::LST, 3);
-      {
-        $output->writeListBegin(TType::STRING, count($this->part_vals));
-        {
-          foreach ($this->part_vals as $iter160)
-          {
-            $xfer += $output->writeString($iter160);
-          }
-        }
-        $output->writeListEnd();
-      }
-=======
     if ($this->filter !== null) {
       $xfer += $output->writeFieldBegin('filter', TType::STRING, 3);
       $xfer += $output->writeString($this->filter);
@@ -9290,7 +8720,6 @@ class metastore_ThriftHiveMetastore_get_partitions_by_filter_args {
     if ($this->max_parts !== null) {
       $xfer += $output->writeFieldBegin('max_parts', TType::I16, 4);
       $xfer += $output->writeI16($this->max_parts);
->>>>>>> apache_master/trunk:metastore/src/gen-php/ThriftHiveMetastore.php
       $xfer += $output->writeFieldEnd();
     }
     $xfer += $output->writeFieldStop();
@@ -9799,24 +9228,8 @@ class metastore_ThriftHiveMetastore_get_config_value_result {
       switch ($fid)
       {
         case 0:
-<<<<<<< HEAD:metastore/src/gen-php/ThriftHiveMetastore.php
-          if ($ftype == TType::LST) {
-            $this->success = array();
-            $_size161 = 0;
-            $_etype164 = 0;
-            $xfer += $input->readListBegin($_etype164, $_size161);
-            for ($_i165 = 0; $_i165 < $_size161; ++$_i165)
-            {
-              $elem166 = null;
-              $elem166 = new metastore_Partition();
-              $xfer += $elem166->read($input);
-              $this->success []= $elem166;
-            }
-            $xfer += $input->readListEnd();
-=======
           if ($ftype == TType::STRING) {
             $xfer += $input->readString($this->success);
->>>>>>> apache_master/trunk:metastore/src/gen-php/ThriftHiveMetastore.php
           } else {
             $xfer += $input->skip($ftype);
           }
@@ -9843,25 +9256,8 @@ class metastore_ThriftHiveMetastore_get_config_value_result {
     $xfer = 0;
     $xfer += $output->writeStructBegin('ThriftHiveMetastore_get_config_value_result');
     if ($this->success !== null) {
-<<<<<<< HEAD:metastore/src/gen-php/ThriftHiveMetastore.php
-      if (!is_array($this->success)) {
-        throw new TProtocolException('Bad type in structure.', TProtocolException::INVALID_DATA);
-      }
-      $xfer += $output->writeFieldBegin('success', TType::LST, 0);
-      {
-        $output->writeListBegin(TType::STRUCT, count($this->success));
-        {
-          foreach ($this->success as $iter167)
-          {
-            $xfer += $iter167->write($output);
-          }
-        }
-        $output->writeListEnd();
-      }
-=======
       $xfer += $output->writeFieldBegin('success', TType::STRING, 0);
       $xfer += $output->writeString($this->success);
->>>>>>> apache_master/trunk:metastore/src/gen-php/ThriftHiveMetastore.php
       $xfer += $output->writeFieldEnd();
     }
     if ($this->o1 !== null) {
@@ -10004,16 +9400,6 @@ class metastore_ThriftHiveMetastore_partition_name_to_vals_result {
         case 0:
           if ($ftype == TType::LST) {
             $this->success = array();
-<<<<<<< HEAD:metastore/src/gen-php/ThriftHiveMetastore.php
-            $_size168 = 0;
-            $_etype171 = 0;
-            $xfer += $input->readListBegin($_etype171, $_size168);
-            for ($_i172 = 0; $_i172 < $_size168; ++$_i172)
-            {
-              $elem173 = null;
-              $xfer += $input->readString($elem173);
-              $this->success []= $elem173;
-=======
             $_size224 = 0;
             $_etype227 = 0;
             $xfer += $input->readListBegin($_etype227, $_size224);
@@ -10022,7 +9408,6 @@ class metastore_ThriftHiveMetastore_partition_name_to_vals_result {
               $elem229 = null;
               $xfer += $input->readString($elem229);
               $this->success []= $elem229;
->>>>>>> apache_master/trunk:metastore/src/gen-php/ThriftHiveMetastore.php
             }
             $xfer += $input->readListEnd();
           } else {
@@ -10058,15 +9443,9 @@ class metastore_ThriftHiveMetastore_partition_name_to_vals_result {
       {
         $output->writeListBegin(TType::STRING, count($this->success));
         {
-<<<<<<< HEAD:metastore/src/gen-php/ThriftHiveMetastore.php
-          foreach ($this->success as $iter174)
-          {
-            $xfer += $output->writeString($iter174);
-=======
           foreach ($this->success as $iter230)
           {
             $xfer += $output->writeString($iter230);
->>>>>>> apache_master/trunk:metastore/src/gen-php/ThriftHiveMetastore.php
           }
         }
         $output->writeListEnd();
@@ -10127,42 +9506,7 @@ class metastore_ThriftHiveMetastore_partition_name_to_spec_args {
       {
         case 1:
           if ($ftype == TType::STRING) {
-<<<<<<< HEAD:metastore/src/gen-php/ThriftHiveMetastore.php
-            $xfer += $input->readString($this->db_name);
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
-        case 2:
-          if ($ftype == TType::STRING) {
-            $xfer += $input->readString($this->tbl_name);
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
-        case 3:
-          if ($ftype == TType::LST) {
-            $this->part_vals = array();
-            $_size175 = 0;
-            $_etype178 = 0;
-            $xfer += $input->readListBegin($_etype178, $_size175);
-            for ($_i179 = 0; $_i179 < $_size175; ++$_i179)
-            {
-              $elem180 = null;
-              $xfer += $input->readString($elem180);
-              $this->part_vals []= $elem180;
-            }
-            $xfer += $input->readListEnd();
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
-        case 4:
-          if ($ftype == TType::I16) {
-            $xfer += $input->readI16($this->max_parts);
-=======
             $xfer += $input->readString($this->part_name);
->>>>>>> apache_master/trunk:metastore/src/gen-php/ThriftHiveMetastore.php
           } else {
             $xfer += $input->skip($ftype);
           }
@@ -10179,44 +9523,10 @@ class metastore_ThriftHiveMetastore_partition_name_to_spec_args {
 
   public function write($output) {
     $xfer = 0;
-<<<<<<< HEAD:metastore/src/gen-php/ThriftHiveMetastore.php
-    $xfer += $output->writeStructBegin('ThriftHiveMetastore_get_partitions_ps_args');
-    if ($this->db_name !== null) {
-      $xfer += $output->writeFieldBegin('db_name', TType::STRING, 1);
-      $xfer += $output->writeString($this->db_name);
-      $xfer += $output->writeFieldEnd();
-    }
-    if ($this->tbl_name !== null) {
-      $xfer += $output->writeFieldBegin('tbl_name', TType::STRING, 2);
-      $xfer += $output->writeString($this->tbl_name);
-      $xfer += $output->writeFieldEnd();
-    }
-    if ($this->part_vals !== null) {
-      if (!is_array($this->part_vals)) {
-        throw new TProtocolException('Bad type in structure.', TProtocolException::INVALID_DATA);
-      }
-      $xfer += $output->writeFieldBegin('part_vals', TType::LST, 3);
-      {
-        $output->writeListBegin(TType::STRING, count($this->part_vals));
-        {
-          foreach ($this->part_vals as $iter181)
-          {
-            $xfer += $output->writeString($iter181);
-          }
-        }
-        $output->writeListEnd();
-      }
-      $xfer += $output->writeFieldEnd();
-    }
-    if ($this->max_parts !== null) {
-      $xfer += $output->writeFieldBegin('max_parts', TType::I16, 4);
-      $xfer += $output->writeI16($this->max_parts);
-=======
     $xfer += $output->writeStructBegin('ThriftHiveMetastore_partition_name_to_spec_args');
     if ($this->part_name !== null) {
       $xfer += $output->writeFieldBegin('part_name', TType::STRING, 1);
       $xfer += $output->writeString($this->part_name);
->>>>>>> apache_master/trunk:metastore/src/gen-php/ThriftHiveMetastore.php
       $xfer += $output->writeFieldEnd();
     }
     $xfer += $output->writeFieldStop();
@@ -10286,17 +9596,6 @@ class metastore_ThriftHiveMetastore_partition_name_to_spec_result {
         case 0:
           if ($ftype == TType::MAP) {
             $this->success = array();
-<<<<<<< HEAD:metastore/src/gen-php/ThriftHiveMetastore.php
-            $_size182 = 0;
-            $_etype185 = 0;
-            $xfer += $input->readListBegin($_etype185, $_size182);
-            for ($_i186 = 0; $_i186 < $_size182; ++$_i186)
-            {
-              $elem187 = null;
-              $elem187 = new metastore_Partition();
-              $xfer += $elem187->read($input);
-              $this->success []= $elem187;
-=======
             $_size231 = 0;
             $_ktype232 = 0;
             $_vtype233 = 0;
@@ -10308,7 +9607,6 @@ class metastore_ThriftHiveMetastore_partition_name_to_spec_result {
               $xfer += $input->readString($key236);
               $xfer += $input->readString($val237);
               $this->success[$key236] = $val237;
->>>>>>> apache_master/trunk:metastore/src/gen-php/ThriftHiveMetastore.php
             }
             $xfer += $input->readMapEnd();
           } else {
@@ -10344,16 +9642,10 @@ class metastore_ThriftHiveMetastore_partition_name_to_spec_result {
       {
         $output->writeMapBegin(TType::STRING, TType::STRING, count($this->success));
         {
-<<<<<<< HEAD:metastore/src/gen-php/ThriftHiveMetastore.php
-          foreach ($this->success as $iter188)
-          {
-            $xfer += $iter188->write($output);
-=======
           foreach ($this->success as $kiter238 => $viter239)
           {
             $xfer += $output->writeString($kiter238);
             $xfer += $output->writeString($viter239);
->>>>>>> apache_master/trunk:metastore/src/gen-php/ThriftHiveMetastore.php
           }
         }
         $output->writeMapEnd();
@@ -10431,38 +9723,9 @@ class metastore_ThriftHiveMetastore_add_index_args {
           }
           break;
         case 2:
-<<<<<<< HEAD:metastore/src/gen-php/ThriftHiveMetastore.php
-          if ($ftype == TType::STRING) {
-            $xfer += $input->readString($this->tbl_name);
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
-        case 3:
-          if ($ftype == TType::LST) {
-            $this->part_vals = array();
-            $_size189 = 0;
-            $_etype192 = 0;
-            $xfer += $input->readListBegin($_etype192, $_size189);
-            for ($_i193 = 0; $_i193 < $_size189; ++$_i193)
-            {
-              $elem194 = null;
-              $xfer += $input->readString($elem194);
-              $this->part_vals []= $elem194;
-            }
-            $xfer += $input->readListEnd();
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
-        case 4:
-          if ($ftype == TType::I16) {
-            $xfer += $input->readI16($this->max_parts);
-=======
           if ($ftype == TType::STRUCT) {
             $this->index_table = new metastore_Table();
             $xfer += $this->index_table->read($input);
->>>>>>> apache_master/trunk:metastore/src/gen-php/ThriftHiveMetastore.php
           } else {
             $xfer += $input->skip($ftype);
           }
@@ -10484,22 +9747,8 @@ class metastore_ThriftHiveMetastore_add_index_args {
       if (!is_object($this->new_index)) {
         throw new TProtocolException('Bad type in structure.', TProtocolException::INVALID_DATA);
       }
-<<<<<<< HEAD:metastore/src/gen-php/ThriftHiveMetastore.php
-      $xfer += $output->writeFieldBegin('part_vals', TType::LST, 3);
-      {
-        $output->writeListBegin(TType::STRING, count($this->part_vals));
-        {
-          foreach ($this->part_vals as $iter195)
-          {
-            $xfer += $output->writeString($iter195);
-          }
-        }
-        $output->writeListEnd();
-      }
-=======
       $xfer += $output->writeFieldBegin('new_index', TType::STRUCT, 1);
       $xfer += $this->new_index->write($output);
->>>>>>> apache_master/trunk:metastore/src/gen-php/ThriftHiveMetastore.php
       $xfer += $output->writeFieldEnd();
     }
     if ($this->index_table !== null) {
@@ -10586,24 +9835,9 @@ class metastore_ThriftHiveMetastore_add_index_result {
       switch ($fid)
       {
         case 0:
-<<<<<<< HEAD:metastore/src/gen-php/ThriftHiveMetastore.php
-          if ($ftype == TType::LST) {
-            $this->success = array();
-            $_size196 = 0;
-            $_etype199 = 0;
-            $xfer += $input->readListBegin($_etype199, $_size196);
-            for ($_i200 = 0; $_i200 < $_size196; ++$_i200)
-            {
-              $elem201 = null;
-              $xfer += $input->readString($elem201);
-              $this->success []= $elem201;
-            }
-            $xfer += $input->readListEnd();
-=======
           if ($ftype == TType::STRUCT) {
             $this->success = new metastore_Index();
             $xfer += $this->success->read($input);
->>>>>>> apache_master/trunk:metastore/src/gen-php/ThriftHiveMetastore.php
           } else {
             $xfer += $input->skip($ftype);
           }
@@ -10649,22 +9883,8 @@ class metastore_ThriftHiveMetastore_add_index_result {
       if (!is_object($this->success)) {
         throw new TProtocolException('Bad type in structure.', TProtocolException::INVALID_DATA);
       }
-<<<<<<< HEAD:metastore/src/gen-php/ThriftHiveMetastore.php
-      $xfer += $output->writeFieldBegin('success', TType::LST, 0);
-      {
-        $output->writeListBegin(TType::STRING, count($this->success));
-        {
-          foreach ($this->success as $iter202)
-          {
-            $xfer += $output->writeString($iter202);
-          }
-        }
-        $output->writeListEnd();
-      }
-=======
       $xfer += $output->writeFieldBegin('success', TType::STRUCT, 0);
       $xfer += $this->success->write($output);
->>>>>>> apache_master/trunk:metastore/src/gen-php/ThriftHiveMetastore.php
       $xfer += $output->writeFieldEnd();
     }
     if ($this->o1 !== null) {
@@ -11348,16 +10568,6 @@ class metastore_ThriftHiveMetastore_get_indexes_result {
         case 0:
           if ($ftype == TType::LST) {
             $this->success = array();
-<<<<<<< HEAD:metastore/src/gen-php/ThriftHiveMetastore.php
-            $_size203 = 0;
-            $_etype206 = 0;
-            $xfer += $input->readListBegin($_etype206, $_size203);
-            for ($_i207 = 0; $_i207 < $_size203; ++$_i207)
-            {
-              $elem208 = null;
-              $xfer += $input->readString($elem208);
-              $this->success []= $elem208;
-=======
             $_size240 = 0;
             $_etype243 = 0;
             $xfer += $input->readListBegin($_etype243, $_size240);
@@ -11367,7 +10577,6 @@ class metastore_ThriftHiveMetastore_get_indexes_result {
               $elem245 = new metastore_Index();
               $xfer += $elem245->read($input);
               $this->success []= $elem245;
->>>>>>> apache_master/trunk:metastore/src/gen-php/ThriftHiveMetastore.php
             }
             $xfer += $input->readListEnd();
           } else {
@@ -11411,15 +10620,9 @@ class metastore_ThriftHiveMetastore_get_indexes_result {
       {
         $output->writeListBegin(TType::STRUCT, count($this->success));
         {
-<<<<<<< HEAD:metastore/src/gen-php/ThriftHiveMetastore.php
-          foreach ($this->success as $iter209)
-          {
-            $xfer += $output->writeString($iter209);
-=======
           foreach ($this->success as $iter246)
           {
             $xfer += $iter246->write($output);
->>>>>>> apache_master/trunk:metastore/src/gen-php/ThriftHiveMetastore.php
           }
         }
         $output->writeListEnd();
@@ -11611,19 +10814,6 @@ class metastore_ThriftHiveMetastore_get_index_names_result {
         case 0:
           if ($ftype == TType::LST) {
             $this->success = array();
-<<<<<<< HEAD:metastore/src/gen-php/ThriftHiveMetastore.php
-            $_size210 = 0;
-            $_ktype211 = 0;
-            $_vtype212 = 0;
-            $xfer += $input->readMapBegin($_ktype211, $_vtype212, $_size210);
-            for ($_i214 = 0; $_i214 < $_size210; ++$_i214)
-            {
-              $key215 = '';
-              $val216 = '';
-              $xfer += $input->readString($key215);
-              $xfer += $input->readString($val216);
-              $this->success[$key215] = $val216;
-=======
             $_size247 = 0;
             $_etype250 = 0;
             $xfer += $input->readListBegin($_etype250, $_size247);
@@ -11632,7 +10822,6 @@ class metastore_ThriftHiveMetastore_get_index_names_result {
               $elem252 = null;
               $xfer += $input->readString($elem252);
               $this->success []= $elem252;
->>>>>>> apache_master/trunk:metastore/src/gen-php/ThriftHiveMetastore.php
             }
             $xfer += $input->readListEnd();
           } else {
@@ -11668,1205 +10857,9 @@ class metastore_ThriftHiveMetastore_get_index_names_result {
       {
         $output->writeListBegin(TType::STRING, count($this->success));
         {
-<<<<<<< HEAD:metastore/src/gen-php/ThriftHiveMetastore.php
-          foreach ($this->success as $kiter217 => $viter218)
-          {
-            $xfer += $output->writeString($kiter217);
-            $xfer += $output->writeString($viter218);
-=======
           foreach ($this->success as $iter253)
           {
             $xfer += $output->writeString($iter253);
->>>>>>> apache_master/trunk:metastore/src/gen-php/ThriftHiveMetastore.php
-          }
-        }
-        $output->writeListEnd();
-      }
-      $xfer += $output->writeFieldEnd();
-    }
-    if ($this->o2 !== null) {
-      $xfer += $output->writeFieldBegin('o2', TType::STRUCT, 1);
-      $xfer += $this->o2->write($output);
-      $xfer += $output->writeFieldEnd();
-    }
-    $xfer += $output->writeFieldStop();
-    $xfer += $output->writeStructEnd();
-    return $xfer;
-  }
-
-}
-
-class metastore_ThriftHiveMetastore_add_index_args {
-  static $_TSPEC;
-
-  public $new_index = null;
-
-  public function __construct($vals=null) {
-    if (!isset(self::$_TSPEC)) {
-      self::$_TSPEC = array(
-        1 => array(
-          'var' => 'new_index',
-          'type' => TType::STRUCT,
-          'class' => 'metastore_Index',
-          ),
-        );
-    }
-    if (is_array($vals)) {
-      if (isset($vals['new_index'])) {
-        $this->new_index = $vals['new_index'];
-      }
-    }
-  }
-
-  public function getName() {
-    return 'ThriftHiveMetastore_add_index_args';
-  }
-
-  public function read($input)
-  {
-    $xfer = 0;
-    $fname = null;
-    $ftype = 0;
-    $fid = 0;
-    $xfer += $input->readStructBegin($fname);
-    while (true)
-    {
-      $xfer += $input->readFieldBegin($fname, $ftype, $fid);
-      if ($ftype == TType::STOP) {
-        break;
-      }
-      switch ($fid)
-      {
-        case 1:
-          if ($ftype == TType::STRUCT) {
-            $this->new_index = new metastore_Index();
-            $xfer += $this->new_index->read($input);
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
-        default:
-          $xfer += $input->skip($ftype);
-          break;
-      }
-      $xfer += $input->readFieldEnd();
-    }
-    $xfer += $input->readStructEnd();
-    return $xfer;
-  }
-
-  public function write($output) {
-    $xfer = 0;
-    $xfer += $output->writeStructBegin('ThriftHiveMetastore_add_index_args');
-    if ($this->new_index !== null) {
-      if (!is_object($this->new_index)) {
-        throw new TProtocolException('Bad type in structure.', TProtocolException::INVALID_DATA);
-      }
-      $xfer += $output->writeFieldBegin('new_index', TType::STRUCT, 1);
-      $xfer += $this->new_index->write($output);
-      $xfer += $output->writeFieldEnd();
-    }
-    $xfer += $output->writeFieldStop();
-    $xfer += $output->writeStructEnd();
-    return $xfer;
-  }
-
-}
-
-class metastore_ThriftHiveMetastore_add_index_result {
-  static $_TSPEC;
-
-  public $success = null;
-  public $o1 = null;
-  public $o2 = null;
-  public $o3 = null;
-
-  public function __construct($vals=null) {
-    if (!isset(self::$_TSPEC)) {
-      self::$_TSPEC = array(
-        0 => array(
-          'var' => 'success',
-          'type' => TType::STRUCT,
-          'class' => 'metastore_Index',
-          ),
-        1 => array(
-          'var' => 'o1',
-          'type' => TType::STRUCT,
-          'class' => 'metastore_InvalidObjectException',
-          ),
-        2 => array(
-          'var' => 'o2',
-          'type' => TType::STRUCT,
-          'class' => 'metastore_AlreadyExistsException',
-          ),
-        3 => array(
-          'var' => 'o3',
-          'type' => TType::STRUCT,
-          'class' => 'metastore_MetaException',
-          ),
-        );
-    }
-    if (is_array($vals)) {
-      if (isset($vals['success'])) {
-        $this->success = $vals['success'];
-      }
-      if (isset($vals['o1'])) {
-        $this->o1 = $vals['o1'];
-      }
-      if (isset($vals['o2'])) {
-        $this->o2 = $vals['o2'];
-      }
-      if (isset($vals['o3'])) {
-        $this->o3 = $vals['o3'];
-      }
-    }
-  }
-
-  public function getName() {
-    return 'ThriftHiveMetastore_add_index_result';
-  }
-
-  public function read($input)
-  {
-    $xfer = 0;
-    $fname = null;
-    $ftype = 0;
-    $fid = 0;
-    $xfer += $input->readStructBegin($fname);
-    while (true)
-    {
-      $xfer += $input->readFieldBegin($fname, $ftype, $fid);
-      if ($ftype == TType::STOP) {
-        break;
-      }
-      switch ($fid)
-      {
-        case 0:
-          if ($ftype == TType::STRUCT) {
-            $this->success = new metastore_Index();
-            $xfer += $this->success->read($input);
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
-        case 1:
-          if ($ftype == TType::STRUCT) {
-            $this->o1 = new metastore_InvalidObjectException();
-            $xfer += $this->o1->read($input);
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
-        case 2:
-          if ($ftype == TType::STRUCT) {
-            $this->o2 = new metastore_AlreadyExistsException();
-            $xfer += $this->o2->read($input);
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
-        case 3:
-          if ($ftype == TType::STRUCT) {
-            $this->o3 = new metastore_MetaException();
-            $xfer += $this->o3->read($input);
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
-        default:
-          $xfer += $input->skip($ftype);
-          break;
-      }
-      $xfer += $input->readFieldEnd();
-    }
-    $xfer += $input->readStructEnd();
-    return $xfer;
-  }
-
-  public function write($output) {
-    $xfer = 0;
-    $xfer += $output->writeStructBegin('ThriftHiveMetastore_add_index_result');
-    if ($this->success !== null) {
-      if (!is_object($this->success)) {
-        throw new TProtocolException('Bad type in structure.', TProtocolException::INVALID_DATA);
-      }
-      $xfer += $output->writeFieldBegin('success', TType::STRUCT, 0);
-      $xfer += $this->success->write($output);
-      $xfer += $output->writeFieldEnd();
-    }
-    if ($this->o1 !== null) {
-      $xfer += $output->writeFieldBegin('o1', TType::STRUCT, 1);
-      $xfer += $this->o1->write($output);
-      $xfer += $output->writeFieldEnd();
-    }
-    if ($this->o2 !== null) {
-      $xfer += $output->writeFieldBegin('o2', TType::STRUCT, 2);
-      $xfer += $this->o2->write($output);
-      $xfer += $output->writeFieldEnd();
-    }
-    if ($this->o3 !== null) {
-      $xfer += $output->writeFieldBegin('o3', TType::STRUCT, 3);
-      $xfer += $this->o3->write($output);
-      $xfer += $output->writeFieldEnd();
-    }
-    $xfer += $output->writeFieldStop();
-    $xfer += $output->writeStructEnd();
-    return $xfer;
-  }
-
-}
-
-class metastore_ThriftHiveMetastore_drop_index_by_name_args {
-  static $_TSPEC;
-
-  public $db_name = null;
-  public $tbl_name = null;
-  public $index_name = null;
-  public $deleteData = null;
-
-  public function __construct($vals=null) {
-    if (!isset(self::$_TSPEC)) {
-      self::$_TSPEC = array(
-        1 => array(
-          'var' => 'db_name',
-          'type' => TType::STRING,
-          ),
-        2 => array(
-          'var' => 'tbl_name',
-          'type' => TType::STRING,
-          ),
-        3 => array(
-          'var' => 'index_name',
-          'type' => TType::STRING,
-          ),
-        4 => array(
-          'var' => 'deleteData',
-          'type' => TType::BOOL,
-          ),
-        );
-    }
-    if (is_array($vals)) {
-      if (isset($vals['db_name'])) {
-        $this->db_name = $vals['db_name'];
-      }
-      if (isset($vals['tbl_name'])) {
-        $this->tbl_name = $vals['tbl_name'];
-      }
-      if (isset($vals['index_name'])) {
-        $this->index_name = $vals['index_name'];
-      }
-      if (isset($vals['deleteData'])) {
-        $this->deleteData = $vals['deleteData'];
-      }
-    }
-  }
-
-  public function getName() {
-    return 'ThriftHiveMetastore_drop_index_by_name_args';
-  }
-
-  public function read($input)
-  {
-    $xfer = 0;
-    $fname = null;
-    $ftype = 0;
-    $fid = 0;
-    $xfer += $input->readStructBegin($fname);
-    while (true)
-    {
-      $xfer += $input->readFieldBegin($fname, $ftype, $fid);
-      if ($ftype == TType::STOP) {
-        break;
-      }
-      switch ($fid)
-      {
-        case 1:
-          if ($ftype == TType::STRING) {
-            $xfer += $input->readString($this->db_name);
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
-        case 2:
-          if ($ftype == TType::STRING) {
-            $xfer += $input->readString($this->tbl_name);
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
-        case 3:
-          if ($ftype == TType::STRING) {
-            $xfer += $input->readString($this->index_name);
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
-        case 4:
-          if ($ftype == TType::BOOL) {
-            $xfer += $input->readBool($this->deleteData);
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
-        default:
-          $xfer += $input->skip($ftype);
-          break;
-      }
-      $xfer += $input->readFieldEnd();
-    }
-    $xfer += $input->readStructEnd();
-    return $xfer;
-  }
-
-  public function write($output) {
-    $xfer = 0;
-    $xfer += $output->writeStructBegin('ThriftHiveMetastore_drop_index_by_name_args');
-    if ($this->db_name !== null) {
-      $xfer += $output->writeFieldBegin('db_name', TType::STRING, 1);
-      $xfer += $output->writeString($this->db_name);
-      $xfer += $output->writeFieldEnd();
-    }
-    if ($this->tbl_name !== null) {
-      $xfer += $output->writeFieldBegin('tbl_name', TType::STRING, 2);
-      $xfer += $output->writeString($this->tbl_name);
-      $xfer += $output->writeFieldEnd();
-    }
-    if ($this->index_name !== null) {
-      $xfer += $output->writeFieldBegin('index_name', TType::STRING, 3);
-      $xfer += $output->writeString($this->index_name);
-      $xfer += $output->writeFieldEnd();
-    }
-    if ($this->deleteData !== null) {
-      $xfer += $output->writeFieldBegin('deleteData', TType::BOOL, 4);
-      $xfer += $output->writeBool($this->deleteData);
-      $xfer += $output->writeFieldEnd();
-    }
-    $xfer += $output->writeFieldStop();
-    $xfer += $output->writeStructEnd();
-    return $xfer;
-  }
-
-}
-
-class metastore_ThriftHiveMetastore_drop_index_by_name_result {
-  static $_TSPEC;
-
-  public $success = null;
-  public $o1 = null;
-  public $o2 = null;
-
-  public function __construct($vals=null) {
-    if (!isset(self::$_TSPEC)) {
-      self::$_TSPEC = array(
-        0 => array(
-          'var' => 'success',
-          'type' => TType::BOOL,
-          ),
-        1 => array(
-          'var' => 'o1',
-          'type' => TType::STRUCT,
-          'class' => 'metastore_NoSuchObjectException',
-          ),
-        2 => array(
-          'var' => 'o2',
-          'type' => TType::STRUCT,
-          'class' => 'metastore_MetaException',
-          ),
-        );
-    }
-    if (is_array($vals)) {
-      if (isset($vals['success'])) {
-        $this->success = $vals['success'];
-      }
-      if (isset($vals['o1'])) {
-        $this->o1 = $vals['o1'];
-      }
-      if (isset($vals['o2'])) {
-        $this->o2 = $vals['o2'];
-      }
-    }
-  }
-
-  public function getName() {
-    return 'ThriftHiveMetastore_drop_index_by_name_result';
-  }
-
-  public function read($input)
-  {
-    $xfer = 0;
-    $fname = null;
-    $ftype = 0;
-    $fid = 0;
-    $xfer += $input->readStructBegin($fname);
-    while (true)
-    {
-      $xfer += $input->readFieldBegin($fname, $ftype, $fid);
-      if ($ftype == TType::STOP) {
-        break;
-      }
-      switch ($fid)
-      {
-        case 0:
-          if ($ftype == TType::BOOL) {
-            $xfer += $input->readBool($this->success);
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
-        case 1:
-          if ($ftype == TType::STRUCT) {
-            $this->o1 = new metastore_NoSuchObjectException();
-            $xfer += $this->o1->read($input);
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
-        case 2:
-          if ($ftype == TType::STRUCT) {
-            $this->o2 = new metastore_MetaException();
-            $xfer += $this->o2->read($input);
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
-        default:
-          $xfer += $input->skip($ftype);
-          break;
-      }
-      $xfer += $input->readFieldEnd();
-    }
-    $xfer += $input->readStructEnd();
-    return $xfer;
-  }
-
-  public function write($output) {
-    $xfer = 0;
-    $xfer += $output->writeStructBegin('ThriftHiveMetastore_drop_index_by_name_result');
-    if ($this->success !== null) {
-      $xfer += $output->writeFieldBegin('success', TType::BOOL, 0);
-      $xfer += $output->writeBool($this->success);
-      $xfer += $output->writeFieldEnd();
-    }
-    if ($this->o1 !== null) {
-      $xfer += $output->writeFieldBegin('o1', TType::STRUCT, 1);
-      $xfer += $this->o1->write($output);
-      $xfer += $output->writeFieldEnd();
-    }
-    if ($this->o2 !== null) {
-      $xfer += $output->writeFieldBegin('o2', TType::STRUCT, 2);
-      $xfer += $this->o2->write($output);
-      $xfer += $output->writeFieldEnd();
-    }
-    $xfer += $output->writeFieldStop();
-    $xfer += $output->writeStructEnd();
-    return $xfer;
-  }
-
-}
-
-class metastore_ThriftHiveMetastore_get_index_by_name_args {
-  static $_TSPEC;
-
-  public $db_name = null;
-  public $tbl_name = null;
-  public $index_name = null;
-
-  public function __construct($vals=null) {
-    if (!isset(self::$_TSPEC)) {
-      self::$_TSPEC = array(
-        1 => array(
-          'var' => 'db_name',
-          'type' => TType::STRING,
-          ),
-        2 => array(
-          'var' => 'tbl_name',
-          'type' => TType::STRING,
-          ),
-        3 => array(
-          'var' => 'index_name',
-          'type' => TType::STRING,
-          ),
-        );
-    }
-    if (is_array($vals)) {
-      if (isset($vals['db_name'])) {
-        $this->db_name = $vals['db_name'];
-      }
-      if (isset($vals['tbl_name'])) {
-        $this->tbl_name = $vals['tbl_name'];
-      }
-      if (isset($vals['index_name'])) {
-        $this->index_name = $vals['index_name'];
-      }
-    }
-  }
-
-  public function getName() {
-    return 'ThriftHiveMetastore_get_index_by_name_args';
-  }
-
-  public function read($input)
-  {
-    $xfer = 0;
-    $fname = null;
-    $ftype = 0;
-    $fid = 0;
-    $xfer += $input->readStructBegin($fname);
-    while (true)
-    {
-      $xfer += $input->readFieldBegin($fname, $ftype, $fid);
-      if ($ftype == TType::STOP) {
-        break;
-      }
-      switch ($fid)
-      {
-        case 1:
-          if ($ftype == TType::STRING) {
-            $xfer += $input->readString($this->db_name);
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
-        case 2:
-          if ($ftype == TType::STRING) {
-            $xfer += $input->readString($this->tbl_name);
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
-        case 3:
-          if ($ftype == TType::STRING) {
-            $xfer += $input->readString($this->index_name);
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
-        default:
-          $xfer += $input->skip($ftype);
-          break;
-      }
-      $xfer += $input->readFieldEnd();
-    }
-    $xfer += $input->readStructEnd();
-    return $xfer;
-  }
-
-  public function write($output) {
-    $xfer = 0;
-    $xfer += $output->writeStructBegin('ThriftHiveMetastore_get_index_by_name_args');
-    if ($this->db_name !== null) {
-      $xfer += $output->writeFieldBegin('db_name', TType::STRING, 1);
-      $xfer += $output->writeString($this->db_name);
-      $xfer += $output->writeFieldEnd();
-    }
-    if ($this->tbl_name !== null) {
-      $xfer += $output->writeFieldBegin('tbl_name', TType::STRING, 2);
-      $xfer += $output->writeString($this->tbl_name);
-      $xfer += $output->writeFieldEnd();
-    }
-    if ($this->index_name !== null) {
-      $xfer += $output->writeFieldBegin('index_name', TType::STRING, 3);
-      $xfer += $output->writeString($this->index_name);
-      $xfer += $output->writeFieldEnd();
-    }
-    $xfer += $output->writeFieldStop();
-    $xfer += $output->writeStructEnd();
-    return $xfer;
-  }
-
-}
-
-class metastore_ThriftHiveMetastore_get_index_by_name_result {
-  static $_TSPEC;
-
-  public $success = null;
-  public $o1 = null;
-  public $o2 = null;
-
-  public function __construct($vals=null) {
-    if (!isset(self::$_TSPEC)) {
-      self::$_TSPEC = array(
-        0 => array(
-          'var' => 'success',
-          'type' => TType::STRUCT,
-          'class' => 'metastore_Index',
-          ),
-        1 => array(
-          'var' => 'o1',
-          'type' => TType::STRUCT,
-          'class' => 'metastore_MetaException',
-          ),
-        2 => array(
-          'var' => 'o2',
-          'type' => TType::STRUCT,
-          'class' => 'metastore_NoSuchObjectException',
-          ),
-        );
-    }
-    if (is_array($vals)) {
-      if (isset($vals['success'])) {
-        $this->success = $vals['success'];
-      }
-      if (isset($vals['o1'])) {
-        $this->o1 = $vals['o1'];
-      }
-      if (isset($vals['o2'])) {
-        $this->o2 = $vals['o2'];
-      }
-    }
-  }
-
-  public function getName() {
-    return 'ThriftHiveMetastore_get_index_by_name_result';
-  }
-
-  public function read($input)
-  {
-    $xfer = 0;
-    $fname = null;
-    $ftype = 0;
-    $fid = 0;
-    $xfer += $input->readStructBegin($fname);
-    while (true)
-    {
-      $xfer += $input->readFieldBegin($fname, $ftype, $fid);
-      if ($ftype == TType::STOP) {
-        break;
-      }
-      switch ($fid)
-      {
-        case 0:
-          if ($ftype == TType::STRUCT) {
-            $this->success = new metastore_Index();
-            $xfer += $this->success->read($input);
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
-        case 1:
-          if ($ftype == TType::STRUCT) {
-            $this->o1 = new metastore_MetaException();
-            $xfer += $this->o1->read($input);
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
-        case 2:
-          if ($ftype == TType::STRUCT) {
-            $this->o2 = new metastore_NoSuchObjectException();
-            $xfer += $this->o2->read($input);
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
-        default:
-          $xfer += $input->skip($ftype);
-          break;
-      }
-      $xfer += $input->readFieldEnd();
-    }
-    $xfer += $input->readStructEnd();
-    return $xfer;
-  }
-
-  public function write($output) {
-    $xfer = 0;
-    $xfer += $output->writeStructBegin('ThriftHiveMetastore_get_index_by_name_result');
-    if ($this->success !== null) {
-      if (!is_object($this->success)) {
-        throw new TProtocolException('Bad type in structure.', TProtocolException::INVALID_DATA);
-      }
-      $xfer += $output->writeFieldBegin('success', TType::STRUCT, 0);
-      $xfer += $this->success->write($output);
-      $xfer += $output->writeFieldEnd();
-    }
-    if ($this->o1 !== null) {
-      $xfer += $output->writeFieldBegin('o1', TType::STRUCT, 1);
-      $xfer += $this->o1->write($output);
-      $xfer += $output->writeFieldEnd();
-    }
-    if ($this->o2 !== null) {
-      $xfer += $output->writeFieldBegin('o2', TType::STRUCT, 2);
-      $xfer += $this->o2->write($output);
-      $xfer += $output->writeFieldEnd();
-    }
-    $xfer += $output->writeFieldStop();
-    $xfer += $output->writeStructEnd();
-    return $xfer;
-  }
-
-}
-
-class metastore_ThriftHiveMetastore_get_indexs_args {
-  static $_TSPEC;
-
-  public $db_name = null;
-  public $tbl_name = null;
-  public $max_indexes = -1;
-
-  public function __construct($vals=null) {
-    if (!isset(self::$_TSPEC)) {
-      self::$_TSPEC = array(
-        1 => array(
-          'var' => 'db_name',
-          'type' => TType::STRING,
-          ),
-        2 => array(
-          'var' => 'tbl_name',
-          'type' => TType::STRING,
-          ),
-        3 => array(
-          'var' => 'max_indexes',
-          'type' => TType::I16,
-          ),
-        );
-    }
-    if (is_array($vals)) {
-      if (isset($vals['db_name'])) {
-        $this->db_name = $vals['db_name'];
-      }
-      if (isset($vals['tbl_name'])) {
-        $this->tbl_name = $vals['tbl_name'];
-      }
-      if (isset($vals['max_indexes'])) {
-        $this->max_indexes = $vals['max_indexes'];
-      }
-    }
-  }
-
-  public function getName() {
-    return 'ThriftHiveMetastore_get_indexs_args';
-  }
-
-  public function read($input)
-  {
-    $xfer = 0;
-    $fname = null;
-    $ftype = 0;
-    $fid = 0;
-    $xfer += $input->readStructBegin($fname);
-    while (true)
-    {
-      $xfer += $input->readFieldBegin($fname, $ftype, $fid);
-      if ($ftype == TType::STOP) {
-        break;
-      }
-      switch ($fid)
-      {
-        case 1:
-          if ($ftype == TType::STRING) {
-            $xfer += $input->readString($this->db_name);
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
-        case 2:
-          if ($ftype == TType::STRING) {
-            $xfer += $input->readString($this->tbl_name);
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
-        case 3:
-          if ($ftype == TType::I16) {
-            $xfer += $input->readI16($this->max_indexes);
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
-        default:
-          $xfer += $input->skip($ftype);
-          break;
-      }
-      $xfer += $input->readFieldEnd();
-    }
-    $xfer += $input->readStructEnd();
-    return $xfer;
-  }
-
-  public function write($output) {
-    $xfer = 0;
-    $xfer += $output->writeStructBegin('ThriftHiveMetastore_get_indexs_args');
-    if ($this->db_name !== null) {
-      $xfer += $output->writeFieldBegin('db_name', TType::STRING, 1);
-      $xfer += $output->writeString($this->db_name);
-      $xfer += $output->writeFieldEnd();
-    }
-    if ($this->tbl_name !== null) {
-      $xfer += $output->writeFieldBegin('tbl_name', TType::STRING, 2);
-      $xfer += $output->writeString($this->tbl_name);
-      $xfer += $output->writeFieldEnd();
-    }
-    if ($this->max_indexes !== null) {
-      $xfer += $output->writeFieldBegin('max_indexes', TType::I16, 3);
-      $xfer += $output->writeI16($this->max_indexes);
-      $xfer += $output->writeFieldEnd();
-    }
-    $xfer += $output->writeFieldStop();
-    $xfer += $output->writeStructEnd();
-    return $xfer;
-  }
-
-}
-
-class metastore_ThriftHiveMetastore_get_indexs_result {
-  static $_TSPEC;
-
-  public $success = null;
-  public $o1 = null;
-  public $o2 = null;
-
-  public function __construct($vals=null) {
-    if (!isset(self::$_TSPEC)) {
-      self::$_TSPEC = array(
-        0 => array(
-          'var' => 'success',
-          'type' => TType::LST,
-          'etype' => TType::STRUCT,
-          'elem' => array(
-            'type' => TType::STRUCT,
-            'class' => 'metastore_Index',
-            ),
-          ),
-        1 => array(
-          'var' => 'o1',
-          'type' => TType::STRUCT,
-          'class' => 'metastore_NoSuchObjectException',
-          ),
-        2 => array(
-          'var' => 'o2',
-          'type' => TType::STRUCT,
-          'class' => 'metastore_MetaException',
-          ),
-        );
-    }
-    if (is_array($vals)) {
-      if (isset($vals['success'])) {
-        $this->success = $vals['success'];
-      }
-      if (isset($vals['o1'])) {
-        $this->o1 = $vals['o1'];
-      }
-      if (isset($vals['o2'])) {
-        $this->o2 = $vals['o2'];
-      }
-    }
-  }
-
-  public function getName() {
-    return 'ThriftHiveMetastore_get_indexs_result';
-  }
-
-  public function read($input)
-  {
-    $xfer = 0;
-    $fname = null;
-    $ftype = 0;
-    $fid = 0;
-    $xfer += $input->readStructBegin($fname);
-    while (true)
-    {
-      $xfer += $input->readFieldBegin($fname, $ftype, $fid);
-      if ($ftype == TType::STOP) {
-        break;
-      }
-      switch ($fid)
-      {
-        case 0:
-          if ($ftype == TType::LST) {
-            $this->success = array();
-            $_size219 = 0;
-            $_etype222 = 0;
-            $xfer += $input->readListBegin($_etype222, $_size219);
-            for ($_i223 = 0; $_i223 < $_size219; ++$_i223)
-            {
-              $elem224 = null;
-              $elem224 = new metastore_Index();
-              $xfer += $elem224->read($input);
-              $this->success []= $elem224;
-            }
-            $xfer += $input->readListEnd();
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
-        case 1:
-          if ($ftype == TType::STRUCT) {
-            $this->o1 = new metastore_NoSuchObjectException();
-            $xfer += $this->o1->read($input);
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
-        case 2:
-          if ($ftype == TType::STRUCT) {
-            $this->o2 = new metastore_MetaException();
-            $xfer += $this->o2->read($input);
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
-        default:
-          $xfer += $input->skip($ftype);
-          break;
-      }
-      $xfer += $input->readFieldEnd();
-    }
-    $xfer += $input->readStructEnd();
-    return $xfer;
-  }
-
-  public function write($output) {
-    $xfer = 0;
-    $xfer += $output->writeStructBegin('ThriftHiveMetastore_get_indexs_result');
-    if ($this->success !== null) {
-      if (!is_array($this->success)) {
-        throw new TProtocolException('Bad type in structure.', TProtocolException::INVALID_DATA);
-      }
-      $xfer += $output->writeFieldBegin('success', TType::LST, 0);
-      {
-        $output->writeListBegin(TType::STRUCT, count($this->success));
-        {
-          foreach ($this->success as $iter225)
-          {
-            $xfer += $iter225->write($output);
-          }
-        }
-        $output->writeListEnd();
-      }
-      $xfer += $output->writeFieldEnd();
-    }
-    if ($this->o1 !== null) {
-      $xfer += $output->writeFieldBegin('o1', TType::STRUCT, 1);
-      $xfer += $this->o1->write($output);
-      $xfer += $output->writeFieldEnd();
-    }
-    if ($this->o2 !== null) {
-      $xfer += $output->writeFieldBegin('o2', TType::STRUCT, 2);
-      $xfer += $this->o2->write($output);
-      $xfer += $output->writeFieldEnd();
-    }
-    $xfer += $output->writeFieldStop();
-    $xfer += $output->writeStructEnd();
-    return $xfer;
-  }
-
-}
-
-class metastore_ThriftHiveMetastore_get_index_names_args {
-  static $_TSPEC;
-
-  public $db_name = null;
-  public $tbl_name = null;
-  public $max_indexes = -1;
-
-  public function __construct($vals=null) {
-    if (!isset(self::$_TSPEC)) {
-      self::$_TSPEC = array(
-        1 => array(
-          'var' => 'db_name',
-          'type' => TType::STRING,
-          ),
-        2 => array(
-          'var' => 'tbl_name',
-          'type' => TType::STRING,
-          ),
-        3 => array(
-          'var' => 'max_indexes',
-          'type' => TType::I16,
-          ),
-        );
-    }
-    if (is_array($vals)) {
-      if (isset($vals['db_name'])) {
-        $this->db_name = $vals['db_name'];
-      }
-      if (isset($vals['tbl_name'])) {
-        $this->tbl_name = $vals['tbl_name'];
-      }
-      if (isset($vals['max_indexes'])) {
-        $this->max_indexes = $vals['max_indexes'];
-      }
-    }
-  }
-
-  public function getName() {
-    return 'ThriftHiveMetastore_get_index_names_args';
-  }
-
-  public function read($input)
-  {
-    $xfer = 0;
-    $fname = null;
-    $ftype = 0;
-    $fid = 0;
-    $xfer += $input->readStructBegin($fname);
-    while (true)
-    {
-      $xfer += $input->readFieldBegin($fname, $ftype, $fid);
-      if ($ftype == TType::STOP) {
-        break;
-      }
-      switch ($fid)
-      {
-        case 1:
-          if ($ftype == TType::STRING) {
-            $xfer += $input->readString($this->db_name);
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
-        case 2:
-          if ($ftype == TType::STRING) {
-            $xfer += $input->readString($this->tbl_name);
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
-        case 3:
-          if ($ftype == TType::I16) {
-            $xfer += $input->readI16($this->max_indexes);
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
-        default:
-          $xfer += $input->skip($ftype);
-          break;
-      }
-      $xfer += $input->readFieldEnd();
-    }
-    $xfer += $input->readStructEnd();
-    return $xfer;
-  }
-
-  public function write($output) {
-    $xfer = 0;
-    $xfer += $output->writeStructBegin('ThriftHiveMetastore_get_index_names_args');
-    if ($this->db_name !== null) {
-      $xfer += $output->writeFieldBegin('db_name', TType::STRING, 1);
-      $xfer += $output->writeString($this->db_name);
-      $xfer += $output->writeFieldEnd();
-    }
-    if ($this->tbl_name !== null) {
-      $xfer += $output->writeFieldBegin('tbl_name', TType::STRING, 2);
-      $xfer += $output->writeString($this->tbl_name);
-      $xfer += $output->writeFieldEnd();
-    }
-    if ($this->max_indexes !== null) {
-      $xfer += $output->writeFieldBegin('max_indexes', TType::I16, 3);
-      $xfer += $output->writeI16($this->max_indexes);
-      $xfer += $output->writeFieldEnd();
-    }
-    $xfer += $output->writeFieldStop();
-    $xfer += $output->writeStructEnd();
-    return $xfer;
-  }
-
-}
-
-class metastore_ThriftHiveMetastore_get_index_names_result {
-  static $_TSPEC;
-
-  public $success = null;
-  public $o2 = null;
-
-  public function __construct($vals=null) {
-    if (!isset(self::$_TSPEC)) {
-      self::$_TSPEC = array(
-        0 => array(
-          'var' => 'success',
-          'type' => TType::LST,
-          'etype' => TType::STRING,
-          'elem' => array(
-            'type' => TType::STRING,
-            ),
-          ),
-        1 => array(
-          'var' => 'o2',
-          'type' => TType::STRUCT,
-          'class' => 'metastore_MetaException',
-          ),
-        );
-    }
-    if (is_array($vals)) {
-      if (isset($vals['success'])) {
-        $this->success = $vals['success'];
-      }
-      if (isset($vals['o2'])) {
-        $this->o2 = $vals['o2'];
-      }
-    }
-  }
-
-  public function getName() {
-    return 'ThriftHiveMetastore_get_index_names_result';
-  }
-
-  public function read($input)
-  {
-    $xfer = 0;
-    $fname = null;
-    $ftype = 0;
-    $fid = 0;
-    $xfer += $input->readStructBegin($fname);
-    while (true)
-    {
-      $xfer += $input->readFieldBegin($fname, $ftype, $fid);
-      if ($ftype == TType::STOP) {
-        break;
-      }
-      switch ($fid)
-      {
-        case 0:
-          if ($ftype == TType::LST) {
-            $this->success = array();
-            $_size226 = 0;
-            $_etype229 = 0;
-            $xfer += $input->readListBegin($_etype229, $_size226);
-            for ($_i230 = 0; $_i230 < $_size226; ++$_i230)
-            {
-              $elem231 = null;
-              $xfer += $input->readString($elem231);
-              $this->success []= $elem231;
-            }
-            $xfer += $input->readListEnd();
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
-        case 1:
-          if ($ftype == TType::STRUCT) {
-            $this->o2 = new metastore_MetaException();
-            $xfer += $this->o2->read($input);
-          } else {
-            $xfer += $input->skip($ftype);
-          }
-          break;
-        default:
-          $xfer += $input->skip($ftype);
-          break;
-      }
-      $xfer += $input->readFieldEnd();
-    }
-    $xfer += $input->readStructEnd();
-    return $xfer;
-  }
-
-  public function write($output) {
-    $xfer = 0;
-    $xfer += $output->writeStructBegin('ThriftHiveMetastore_get_index_names_result');
-    if ($this->success !== null) {
-      if (!is_array($this->success)) {
-        throw new TProtocolException('Bad type in structure.', TProtocolException::INVALID_DATA);
-      }
-      $xfer += $output->writeFieldBegin('success', TType::LST, 0);
-      {
-        $output->writeListBegin(TType::STRING, count($this->success));
-        {
-          foreach ($this->success as $iter232)
-          {
-            $xfer += $output->writeString($iter232);
           }
         }
         $output->writeListEnd();

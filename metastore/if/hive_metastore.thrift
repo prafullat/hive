@@ -91,23 +91,15 @@ struct Partition {
 
 struct Index {
   1: string       indexName, // unique with in the whole database namespace
-<<<<<<< HEAD:metastore/if/hive_metastore.thrift
-  2: string       indexType, // reserved
-=======
   2: string       indexHandlerClass, // reserved
->>>>>>> apache_master/trunk:metastore/if/hive_metastore.thrift
   3: string       dbName,
   4: string       origTableName,
   5: i32          createTime,
   6: i32          lastAccessTime,
   7: string       indexTableName,
   8: StorageDescriptor   sd,
-<<<<<<< HEAD:metastore/if/hive_metastore.thrift
-  9: map<string, string> parameters
-=======
   9: map<string, string> parameters,
   10: bool         deferredRebuild
->>>>>>> apache_master/trunk:metastore/if/hive_metastore.thrift
 }
 
 // schema of the table/query results etc.
@@ -262,22 +254,14 @@ service ThriftHiveMetastore extends fb303.FacebookService
                           throws(1: MetaException o1)
   
   //index
-<<<<<<< HEAD:metastore/if/hive_metastore.thrift
-  Index add_index(1:Index new_index)
-=======
   Index add_index(1:Index new_index, 2: Table index_table)
->>>>>>> apache_master/trunk:metastore/if/hive_metastore.thrift
                        throws(1:InvalidObjectException o1, 2:AlreadyExistsException o2, 3:MetaException o3)
   bool drop_index_by_name(1:string db_name, 2:string tbl_name, 3:string index_name, 4:bool deleteData)
                        throws(1:NoSuchObjectException o1, 2:MetaException o2) 
   Index get_index_by_name(1:string db_name 2:string tbl_name, 3:string index_name)
                        throws(1:MetaException o1, 2:NoSuchObjectException o2)
 
-<<<<<<< HEAD:metastore/if/hive_metastore.thrift
-  list<Index> get_indexs(1:string db_name, 2:string tbl_name, 3:i16 max_indexes=-1)
-=======
   list<Index> get_indexes(1:string db_name, 2:string tbl_name, 3:i16 max_indexes=-1)
->>>>>>> apache_master/trunk:metastore/if/hive_metastore.thrift
                        throws(1:NoSuchObjectException o1, 2:MetaException o2)
   list<string> get_index_names(1:string db_name, 2:string tbl_name, 3:i16 max_indexes=-1)
                        throws(1:MetaException o2)

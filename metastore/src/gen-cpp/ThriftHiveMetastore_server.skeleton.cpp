@@ -187,11 +187,7 @@ class ThriftHiveMetastoreHandler : virtual public ThriftHiveMetastoreIf {
     printf("partition_name_to_spec\n");
   }
 
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore_server.skeleton.cpp
-  void add_index(Index& _return, const Index& new_index) {
-=======
   void add_index(Index& _return, const Index& new_index, const Table& index_table) {
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore_server.skeleton.cpp
     // Your implementation goes here
     printf("add_index\n");
   }
@@ -206,15 +202,9 @@ class ThriftHiveMetastoreHandler : virtual public ThriftHiveMetastoreIf {
     printf("get_index_by_name\n");
   }
 
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore_server.skeleton.cpp
-  void get_indexs(std::vector<Index> & _return, const std::string& db_name, const std::string& tbl_name, const int16_t max_indexes) {
-    // Your implementation goes here
-    printf("get_indexs\n");
-=======
   void get_indexes(std::vector<Index> & _return, const std::string& db_name, const std::string& tbl_name, const int16_t max_indexes) {
     // Your implementation goes here
     printf("get_indexes\n");
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore_server.skeleton.cpp
   }
 
   void get_index_names(std::vector<std::string> & _return, const std::string& db_name, const std::string& tbl_name, const int16_t max_indexes) {

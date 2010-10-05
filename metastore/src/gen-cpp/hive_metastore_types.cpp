@@ -1122,13 +1122,8 @@ uint32_t Partition::write(apache::thrift::protocol::TProtocol* oprot) const {
   return xfer;
 }
 
-<<<<<<< HEAD:metastore/src/gen-cpp/hive_metastore_types.cpp
-const char* Index::ascii_fingerprint = "A4E842FF5A6136E0F82B26551E846244";
-const uint8_t Index::binary_fingerprint[16] = {0xA4,0xE8,0x42,0xFF,0x5A,0x61,0x36,0xE0,0xF8,0x2B,0x26,0x55,0x1E,0x84,0x62,0x44};
-=======
 const char* Index::ascii_fingerprint = "5FEE4F7E28935B644F207D74459F6A29";
 const uint8_t Index::binary_fingerprint[16] = {0x5F,0xEE,0x4F,0x7E,0x28,0x93,0x5B,0x64,0x4F,0x20,0x7D,0x74,0x45,0x9F,0x6A,0x29};
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/hive_metastore_types.cpp
 
 uint32_t Index::read(apache::thrift::protocol::TProtocol* iprot) {
 
@@ -1160,13 +1155,8 @@ uint32_t Index::read(apache::thrift::protocol::TProtocol* iprot) {
         break;
       case 2:
         if (ftype == apache::thrift::protocol::T_STRING) {
-<<<<<<< HEAD:metastore/src/gen-cpp/hive_metastore_types.cpp
-          xfer += iprot->readString(this->indexType);
-          this->__isset.indexType = true;
-=======
           xfer += iprot->readString(this->indexHandlerClass);
           this->__isset.indexHandlerClass = true;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/hive_metastore_types.cpp
         } else {
           xfer += iprot->skip(ftype);
         }
@@ -1238,8 +1228,6 @@ uint32_t Index::read(apache::thrift::protocol::TProtocol* iprot) {
             iprot->readMapEnd();
           }
           this->__isset.parameters = true;
-<<<<<<< HEAD:metastore/src/gen-cpp/hive_metastore_types.cpp
-=======
         } else {
           xfer += iprot->skip(ftype);
         }
@@ -1248,7 +1236,6 @@ uint32_t Index::read(apache::thrift::protocol::TProtocol* iprot) {
         if (ftype == apache::thrift::protocol::T_BOOL) {
           xfer += iprot->readBool(this->deferredRebuild);
           this->__isset.deferredRebuild = true;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/hive_metastore_types.cpp
         } else {
           xfer += iprot->skip(ftype);
         }
@@ -1271,13 +1258,8 @@ uint32_t Index::write(apache::thrift::protocol::TProtocol* oprot) const {
   xfer += oprot->writeFieldBegin("indexName", apache::thrift::protocol::T_STRING, 1);
   xfer += oprot->writeString(this->indexName);
   xfer += oprot->writeFieldEnd();
-<<<<<<< HEAD:metastore/src/gen-cpp/hive_metastore_types.cpp
-  xfer += oprot->writeFieldBegin("indexType", apache::thrift::protocol::T_STRING, 2);
-  xfer += oprot->writeString(this->indexType);
-=======
   xfer += oprot->writeFieldBegin("indexHandlerClass", apache::thrift::protocol::T_STRING, 2);
   xfer += oprot->writeString(this->indexHandlerClass);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/hive_metastore_types.cpp
   xfer += oprot->writeFieldEnd();
   xfer += oprot->writeFieldBegin("dbName", apache::thrift::protocol::T_STRING, 3);
   xfer += oprot->writeString(this->dbName);
@@ -1309,12 +1291,9 @@ uint32_t Index::write(apache::thrift::protocol::TProtocol* oprot) const {
     xfer += oprot->writeMapEnd();
   }
   xfer += oprot->writeFieldEnd();
-<<<<<<< HEAD:metastore/src/gen-cpp/hive_metastore_types.cpp
-=======
   xfer += oprot->writeFieldBegin("deferredRebuild", apache::thrift::protocol::T_BOOL, 10);
   xfer += oprot->writeBool(this->deferredRebuild);
   xfer += oprot->writeFieldEnd();
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/hive_metastore_types.cpp
   xfer += oprot->writeFieldStop();
   xfer += oprot->writeStructEnd();
   return xfer;

@@ -1721,19 +1721,6 @@ uint32_t ThriftHiveMetastore_get_type_all_result::read(apache::thrift::protocol:
         if (ftype == apache::thrift::protocol::T_MAP) {
           {
             this->success.clear();
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-            uint32_t _size101;
-            apache::thrift::protocol::TType _ktype102;
-            apache::thrift::protocol::TType _vtype103;
-            iprot->readMapBegin(_ktype102, _vtype103, _size101);
-            uint32_t _i105;
-            for (_i105 = 0; _i105 < _size101; ++_i105)
-            {
-              std::string _key106;
-              xfer += iprot->readString(_key106);
-              Type& _val107 = this->success[_key106];
-              xfer += _val107.read(iprot);
-=======
             uint32_t _size112;
             apache::thrift::protocol::TType _ktype113;
             apache::thrift::protocol::TType _vtype114;
@@ -1745,7 +1732,6 @@ uint32_t ThriftHiveMetastore_get_type_all_result::read(apache::thrift::protocol:
               xfer += iprot->readString(_key117);
               Type& _val118 = this->success[_key117];
               xfer += _val118.read(iprot);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
             }
             iprot->readMapEnd();
           }
@@ -1784,19 +1770,11 @@ uint32_t ThriftHiveMetastore_get_type_all_result::write(apache::thrift::protocol
     xfer += oprot->writeFieldBegin("success", apache::thrift::protocol::T_MAP, 0);
     {
       xfer += oprot->writeMapBegin(apache::thrift::protocol::T_STRING, apache::thrift::protocol::T_STRUCT, this->success.size());
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-      std::map<std::string, Type> ::const_iterator _iter108;
-      for (_iter108 = this->success.begin(); _iter108 != this->success.end(); ++_iter108)
-      {
-        xfer += oprot->writeString(_iter108->first);
-        xfer += _iter108->second.write(oprot);
-=======
       std::map<std::string, Type> ::const_iterator _iter119;
       for (_iter119 = this->success.begin(); _iter119 != this->success.end(); ++_iter119)
       {
         xfer += oprot->writeString(_iter119->first);
         xfer += _iter119->second.write(oprot);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
       }
       xfer += oprot->writeMapEnd();
     }
@@ -1835,19 +1813,6 @@ uint32_t ThriftHiveMetastore_get_type_all_presult::read(apache::thrift::protocol
         if (ftype == apache::thrift::protocol::T_MAP) {
           {
             (*(this->success)).clear();
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-            uint32_t _size109;
-            apache::thrift::protocol::TType _ktype110;
-            apache::thrift::protocol::TType _vtype111;
-            iprot->readMapBegin(_ktype110, _vtype111, _size109);
-            uint32_t _i113;
-            for (_i113 = 0; _i113 < _size109; ++_i113)
-            {
-              std::string _key114;
-              xfer += iprot->readString(_key114);
-              Type& _val115 = (*(this->success))[_key114];
-              xfer += _val115.read(iprot);
-=======
             uint32_t _size120;
             apache::thrift::protocol::TType _ktype121;
             apache::thrift::protocol::TType _vtype122;
@@ -1859,7 +1824,6 @@ uint32_t ThriftHiveMetastore_get_type_all_presult::read(apache::thrift::protocol
               xfer += iprot->readString(_key125);
               Type& _val126 = (*(this->success))[_key125];
               xfer += _val126.read(iprot);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
             }
             iprot->readMapEnd();
           }
@@ -1988,16 +1952,6 @@ uint32_t ThriftHiveMetastore_get_fields_result::read(apache::thrift::protocol::T
         if (ftype == apache::thrift::protocol::T_LIST) {
           {
             this->success.clear();
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-            uint32_t _size116;
-            apache::thrift::protocol::TType _etype119;
-            iprot->readListBegin(_etype119, _size116);
-            this->success.resize(_size116);
-            uint32_t _i120;
-            for (_i120 = 0; _i120 < _size116; ++_i120)
-            {
-              xfer += this->success[_i120].read(iprot);
-=======
             uint32_t _size127;
             apache::thrift::protocol::TType _etype130;
             iprot->readListBegin(_etype130, _size127);
@@ -2006,7 +1960,6 @@ uint32_t ThriftHiveMetastore_get_fields_result::read(apache::thrift::protocol::T
             for (_i131 = 0; _i131 < _size127; ++_i131)
             {
               xfer += this->success[_i131].read(iprot);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
             }
             iprot->readListEnd();
           }
@@ -2061,17 +2014,10 @@ uint32_t ThriftHiveMetastore_get_fields_result::write(apache::thrift::protocol::
     xfer += oprot->writeFieldBegin("success", apache::thrift::protocol::T_LIST, 0);
     {
       xfer += oprot->writeListBegin(apache::thrift::protocol::T_STRUCT, this->success.size());
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-      std::vector<FieldSchema> ::const_iterator _iter121;
-      for (_iter121 = this->success.begin(); _iter121 != this->success.end(); ++_iter121)
-      {
-        xfer += (*_iter121).write(oprot);
-=======
       std::vector<FieldSchema> ::const_iterator _iter132;
       for (_iter132 = this->success.begin(); _iter132 != this->success.end(); ++_iter132)
       {
         xfer += (*_iter132).write(oprot);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
       }
       xfer += oprot->writeListEnd();
     }
@@ -2118,16 +2064,6 @@ uint32_t ThriftHiveMetastore_get_fields_presult::read(apache::thrift::protocol::
         if (ftype == apache::thrift::protocol::T_LIST) {
           {
             (*(this->success)).clear();
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-            uint32_t _size122;
-            apache::thrift::protocol::TType _etype125;
-            iprot->readListBegin(_etype125, _size122);
-            (*(this->success)).resize(_size122);
-            uint32_t _i126;
-            for (_i126 = 0; _i126 < _size122; ++_i126)
-            {
-              xfer += (*(this->success))[_i126].read(iprot);
-=======
             uint32_t _size133;
             apache::thrift::protocol::TType _etype136;
             iprot->readListBegin(_etype136, _size133);
@@ -2136,7 +2072,6 @@ uint32_t ThriftHiveMetastore_get_fields_presult::read(apache::thrift::protocol::
             for (_i137 = 0; _i137 < _size133; ++_i137)
             {
               xfer += (*(this->success))[_i137].read(iprot);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
             }
             iprot->readListEnd();
           }
@@ -2281,16 +2216,6 @@ uint32_t ThriftHiveMetastore_get_schema_result::read(apache::thrift::protocol::T
         if (ftype == apache::thrift::protocol::T_LIST) {
           {
             this->success.clear();
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-            uint32_t _size127;
-            apache::thrift::protocol::TType _etype130;
-            iprot->readListBegin(_etype130, _size127);
-            this->success.resize(_size127);
-            uint32_t _i131;
-            for (_i131 = 0; _i131 < _size127; ++_i131)
-            {
-              xfer += this->success[_i131].read(iprot);
-=======
             uint32_t _size138;
             apache::thrift::protocol::TType _etype141;
             iprot->readListBegin(_etype141, _size138);
@@ -2299,7 +2224,6 @@ uint32_t ThriftHiveMetastore_get_schema_result::read(apache::thrift::protocol::T
             for (_i142 = 0; _i142 < _size138; ++_i142)
             {
               xfer += this->success[_i142].read(iprot);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
             }
             iprot->readListEnd();
           }
@@ -2354,17 +2278,10 @@ uint32_t ThriftHiveMetastore_get_schema_result::write(apache::thrift::protocol::
     xfer += oprot->writeFieldBegin("success", apache::thrift::protocol::T_LIST, 0);
     {
       xfer += oprot->writeListBegin(apache::thrift::protocol::T_STRUCT, this->success.size());
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-      std::vector<FieldSchema> ::const_iterator _iter132;
-      for (_iter132 = this->success.begin(); _iter132 != this->success.end(); ++_iter132)
-      {
-        xfer += (*_iter132).write(oprot);
-=======
       std::vector<FieldSchema> ::const_iterator _iter143;
       for (_iter143 = this->success.begin(); _iter143 != this->success.end(); ++_iter143)
       {
         xfer += (*_iter143).write(oprot);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
       }
       xfer += oprot->writeListEnd();
     }
@@ -2411,16 +2328,6 @@ uint32_t ThriftHiveMetastore_get_schema_presult::read(apache::thrift::protocol::
         if (ftype == apache::thrift::protocol::T_LIST) {
           {
             (*(this->success)).clear();
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-            uint32_t _size133;
-            apache::thrift::protocol::TType _etype136;
-            iprot->readListBegin(_etype136, _size133);
-            (*(this->success)).resize(_size133);
-            uint32_t _i137;
-            for (_i137 = 0; _i137 < _size133; ++_i137)
-            {
-              xfer += (*(this->success))[_i137].read(iprot);
-=======
             uint32_t _size144;
             apache::thrift::protocol::TType _etype147;
             iprot->readListBegin(_etype147, _size144);
@@ -2429,7 +2336,6 @@ uint32_t ThriftHiveMetastore_get_schema_presult::read(apache::thrift::protocol::
             for (_i148 = 0; _i148 < _size144; ++_i148)
             {
               xfer += (*(this->success))[_i148].read(iprot);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
             }
             iprot->readListEnd();
           }
@@ -2998,16 +2904,6 @@ uint32_t ThriftHiveMetastore_get_tables_result::read(apache::thrift::protocol::T
         if (ftype == apache::thrift::protocol::T_LIST) {
           {
             this->success.clear();
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-            uint32_t _size138;
-            apache::thrift::protocol::TType _etype141;
-            iprot->readListBegin(_etype141, _size138);
-            this->success.resize(_size138);
-            uint32_t _i142;
-            for (_i142 = 0; _i142 < _size138; ++_i142)
-            {
-              xfer += iprot->readString(this->success[_i142]);
-=======
             uint32_t _size149;
             apache::thrift::protocol::TType _etype152;
             iprot->readListBegin(_etype152, _size149);
@@ -3016,7 +2912,6 @@ uint32_t ThriftHiveMetastore_get_tables_result::read(apache::thrift::protocol::T
             for (_i153 = 0; _i153 < _size149; ++_i153)
             {
               xfer += iprot->readString(this->success[_i153]);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
             }
             iprot->readListEnd();
           }
@@ -3055,17 +2950,10 @@ uint32_t ThriftHiveMetastore_get_tables_result::write(apache::thrift::protocol::
     xfer += oprot->writeFieldBegin("success", apache::thrift::protocol::T_LIST, 0);
     {
       xfer += oprot->writeListBegin(apache::thrift::protocol::T_STRING, this->success.size());
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-      std::vector<std::string> ::const_iterator _iter143;
-      for (_iter143 = this->success.begin(); _iter143 != this->success.end(); ++_iter143)
-      {
-        xfer += oprot->writeString((*_iter143));
-=======
       std::vector<std::string> ::const_iterator _iter154;
       for (_iter154 = this->success.begin(); _iter154 != this->success.end(); ++_iter154)
       {
         xfer += oprot->writeString((*_iter154));
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
       }
       xfer += oprot->writeListEnd();
     }
@@ -3104,16 +2992,6 @@ uint32_t ThriftHiveMetastore_get_tables_presult::read(apache::thrift::protocol::
         if (ftype == apache::thrift::protocol::T_LIST) {
           {
             (*(this->success)).clear();
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-            uint32_t _size144;
-            apache::thrift::protocol::TType _etype147;
-            iprot->readListBegin(_etype147, _size144);
-            (*(this->success)).resize(_size144);
-            uint32_t _i148;
-            for (_i148 = 0; _i148 < _size144; ++_i148)
-            {
-              xfer += iprot->readString((*(this->success))[_i148]);
-=======
             uint32_t _size155;
             apache::thrift::protocol::TType _etype158;
             iprot->readListBegin(_etype158, _size155);
@@ -3122,7 +3000,6 @@ uint32_t ThriftHiveMetastore_get_tables_presult::read(apache::thrift::protocol::
             for (_i159 = 0; _i159 < _size155; ++_i159)
             {
               xfer += iprot->readString((*(this->success))[_i159]);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
             }
             iprot->readListEnd();
           }
@@ -4037,16 +3914,6 @@ uint32_t ThriftHiveMetastore_append_partition_args::read(apache::thrift::protoco
         if (ftype == apache::thrift::protocol::T_LIST) {
           {
             this->part_vals.clear();
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-            uint32_t _size149;
-            apache::thrift::protocol::TType _etype152;
-            iprot->readListBegin(_etype152, _size149);
-            this->part_vals.resize(_size149);
-            uint32_t _i153;
-            for (_i153 = 0; _i153 < _size149; ++_i153)
-            {
-              xfer += iprot->readString(this->part_vals[_i153]);
-=======
             uint32_t _size171;
             apache::thrift::protocol::TType _etype174;
             iprot->readListBegin(_etype174, _size171);
@@ -4055,7 +3922,6 @@ uint32_t ThriftHiveMetastore_append_partition_args::read(apache::thrift::protoco
             for (_i175 = 0; _i175 < _size171; ++_i175)
             {
               xfer += iprot->readString(this->part_vals[_i175]);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
             }
             iprot->readListEnd();
           }
@@ -4088,17 +3954,10 @@ uint32_t ThriftHiveMetastore_append_partition_args::write(apache::thrift::protoc
   xfer += oprot->writeFieldBegin("part_vals", apache::thrift::protocol::T_LIST, 3);
   {
     xfer += oprot->writeListBegin(apache::thrift::protocol::T_STRING, this->part_vals.size());
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-    std::vector<std::string> ::const_iterator _iter154;
-    for (_iter154 = this->part_vals.begin(); _iter154 != this->part_vals.end(); ++_iter154)
-    {
-      xfer += oprot->writeString((*_iter154));
-=======
     std::vector<std::string> ::const_iterator _iter176;
     for (_iter176 = this->part_vals.begin(); _iter176 != this->part_vals.end(); ++_iter176)
     {
       xfer += oprot->writeString((*_iter176));
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
     }
     xfer += oprot->writeListEnd();
   }
@@ -4120,17 +3979,10 @@ uint32_t ThriftHiveMetastore_append_partition_pargs::write(apache::thrift::proto
   xfer += oprot->writeFieldBegin("part_vals", apache::thrift::protocol::T_LIST, 3);
   {
     xfer += oprot->writeListBegin(apache::thrift::protocol::T_STRING, (*(this->part_vals)).size());
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-    std::vector<std::string> ::const_iterator _iter155;
-    for (_iter155 = (*(this->part_vals)).begin(); _iter155 != (*(this->part_vals)).end(); ++_iter155)
-    {
-      xfer += oprot->writeString((*_iter155));
-=======
     std::vector<std::string> ::const_iterator _iter177;
     for (_iter177 = (*(this->part_vals)).begin(); _iter177 != (*(this->part_vals)).end(); ++_iter177)
     {
       xfer += oprot->writeString((*_iter177));
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
     }
     xfer += oprot->writeListEnd();
   }
@@ -4582,16 +4434,6 @@ uint32_t ThriftHiveMetastore_drop_partition_args::read(apache::thrift::protocol:
         if (ftype == apache::thrift::protocol::T_LIST) {
           {
             this->part_vals.clear();
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-            uint32_t _size156;
-            apache::thrift::protocol::TType _etype159;
-            iprot->readListBegin(_etype159, _size156);
-            this->part_vals.resize(_size156);
-            uint32_t _i160;
-            for (_i160 = 0; _i160 < _size156; ++_i160)
-            {
-              xfer += iprot->readString(this->part_vals[_i160]);
-=======
             uint32_t _size178;
             apache::thrift::protocol::TType _etype181;
             iprot->readListBegin(_etype181, _size178);
@@ -4600,7 +4442,6 @@ uint32_t ThriftHiveMetastore_drop_partition_args::read(apache::thrift::protocol:
             for (_i182 = 0; _i182 < _size178; ++_i182)
             {
               xfer += iprot->readString(this->part_vals[_i182]);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
             }
             iprot->readListEnd();
           }
@@ -4641,17 +4482,10 @@ uint32_t ThriftHiveMetastore_drop_partition_args::write(apache::thrift::protocol
   xfer += oprot->writeFieldBegin("part_vals", apache::thrift::protocol::T_LIST, 3);
   {
     xfer += oprot->writeListBegin(apache::thrift::protocol::T_STRING, this->part_vals.size());
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-    std::vector<std::string> ::const_iterator _iter161;
-    for (_iter161 = this->part_vals.begin(); _iter161 != this->part_vals.end(); ++_iter161)
-    {
-      xfer += oprot->writeString((*_iter161));
-=======
     std::vector<std::string> ::const_iterator _iter183;
     for (_iter183 = this->part_vals.begin(); _iter183 != this->part_vals.end(); ++_iter183)
     {
       xfer += oprot->writeString((*_iter183));
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
     }
     xfer += oprot->writeListEnd();
   }
@@ -4676,17 +4510,10 @@ uint32_t ThriftHiveMetastore_drop_partition_pargs::write(apache::thrift::protoco
   xfer += oprot->writeFieldBegin("part_vals", apache::thrift::protocol::T_LIST, 3);
   {
     xfer += oprot->writeListBegin(apache::thrift::protocol::T_STRING, (*(this->part_vals)).size());
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-    std::vector<std::string> ::const_iterator _iter162;
-    for (_iter162 = (*(this->part_vals)).begin(); _iter162 != (*(this->part_vals)).end(); ++_iter162)
-    {
-      xfer += oprot->writeString((*_iter162));
-=======
     std::vector<std::string> ::const_iterator _iter184;
     for (_iter184 = (*(this->part_vals)).begin(); _iter184 != (*(this->part_vals)).end(); ++_iter184)
     {
       xfer += oprot->writeString((*_iter184));
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
     }
     xfer += oprot->writeListEnd();
   }
@@ -5115,16 +4942,6 @@ uint32_t ThriftHiveMetastore_get_partition_args::read(apache::thrift::protocol::
         if (ftype == apache::thrift::protocol::T_LIST) {
           {
             this->part_vals.clear();
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-            uint32_t _size163;
-            apache::thrift::protocol::TType _etype166;
-            iprot->readListBegin(_etype166, _size163);
-            this->part_vals.resize(_size163);
-            uint32_t _i167;
-            for (_i167 = 0; _i167 < _size163; ++_i167)
-            {
-              xfer += iprot->readString(this->part_vals[_i167]);
-=======
             uint32_t _size185;
             apache::thrift::protocol::TType _etype188;
             iprot->readListBegin(_etype188, _size185);
@@ -5133,7 +4950,6 @@ uint32_t ThriftHiveMetastore_get_partition_args::read(apache::thrift::protocol::
             for (_i189 = 0; _i189 < _size185; ++_i189)
             {
               xfer += iprot->readString(this->part_vals[_i189]);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
             }
             iprot->readListEnd();
           }
@@ -5166,17 +4982,10 @@ uint32_t ThriftHiveMetastore_get_partition_args::write(apache::thrift::protocol:
   xfer += oprot->writeFieldBegin("part_vals", apache::thrift::protocol::T_LIST, 3);
   {
     xfer += oprot->writeListBegin(apache::thrift::protocol::T_STRING, this->part_vals.size());
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-    std::vector<std::string> ::const_iterator _iter168;
-    for (_iter168 = this->part_vals.begin(); _iter168 != this->part_vals.end(); ++_iter168)
-    {
-      xfer += oprot->writeString((*_iter168));
-=======
     std::vector<std::string> ::const_iterator _iter190;
     for (_iter190 = this->part_vals.begin(); _iter190 != this->part_vals.end(); ++_iter190)
     {
       xfer += oprot->writeString((*_iter190));
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
     }
     xfer += oprot->writeListEnd();
   }
@@ -5198,17 +5007,10 @@ uint32_t ThriftHiveMetastore_get_partition_pargs::write(apache::thrift::protocol
   xfer += oprot->writeFieldBegin("part_vals", apache::thrift::protocol::T_LIST, 3);
   {
     xfer += oprot->writeListBegin(apache::thrift::protocol::T_STRING, (*(this->part_vals)).size());
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-    std::vector<std::string> ::const_iterator _iter169;
-    for (_iter169 = (*(this->part_vals)).begin(); _iter169 != (*(this->part_vals)).end(); ++_iter169)
-    {
-      xfer += oprot->writeString((*_iter169));
-=======
     std::vector<std::string> ::const_iterator _iter191;
     for (_iter191 = (*(this->part_vals)).begin(); _iter191 != (*(this->part_vals)).end(); ++_iter191)
     {
       xfer += oprot->writeString((*_iter191));
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
     }
     xfer += oprot->writeListEnd();
   }
@@ -5694,16 +5496,6 @@ uint32_t ThriftHiveMetastore_get_partitions_result::read(apache::thrift::protoco
         if (ftype == apache::thrift::protocol::T_LIST) {
           {
             this->success.clear();
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-            uint32_t _size170;
-            apache::thrift::protocol::TType _etype173;
-            iprot->readListBegin(_etype173, _size170);
-            this->success.resize(_size170);
-            uint32_t _i174;
-            for (_i174 = 0; _i174 < _size170; ++_i174)
-            {
-              xfer += this->success[_i174].read(iprot);
-=======
             uint32_t _size192;
             apache::thrift::protocol::TType _etype195;
             iprot->readListBegin(_etype195, _size192);
@@ -5712,7 +5504,6 @@ uint32_t ThriftHiveMetastore_get_partitions_result::read(apache::thrift::protoco
             for (_i196 = 0; _i196 < _size192; ++_i196)
             {
               xfer += this->success[_i196].read(iprot);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
             }
             iprot->readListEnd();
           }
@@ -5759,17 +5550,10 @@ uint32_t ThriftHiveMetastore_get_partitions_result::write(apache::thrift::protoc
     xfer += oprot->writeFieldBegin("success", apache::thrift::protocol::T_LIST, 0);
     {
       xfer += oprot->writeListBegin(apache::thrift::protocol::T_STRUCT, this->success.size());
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-      std::vector<Partition> ::const_iterator _iter175;
-      for (_iter175 = this->success.begin(); _iter175 != this->success.end(); ++_iter175)
-      {
-        xfer += (*_iter175).write(oprot);
-=======
       std::vector<Partition> ::const_iterator _iter197;
       for (_iter197 = this->success.begin(); _iter197 != this->success.end(); ++_iter197)
       {
         xfer += (*_iter197).write(oprot);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
       }
       xfer += oprot->writeListEnd();
     }
@@ -5812,16 +5596,6 @@ uint32_t ThriftHiveMetastore_get_partitions_presult::read(apache::thrift::protoc
         if (ftype == apache::thrift::protocol::T_LIST) {
           {
             (*(this->success)).clear();
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-            uint32_t _size176;
-            apache::thrift::protocol::TType _etype179;
-            iprot->readListBegin(_etype179, _size176);
-            (*(this->success)).resize(_size176);
-            uint32_t _i180;
-            for (_i180 = 0; _i180 < _size176; ++_i180)
-            {
-              xfer += (*(this->success))[_i180].read(iprot);
-=======
             uint32_t _size198;
             apache::thrift::protocol::TType _etype201;
             iprot->readListBegin(_etype201, _size198);
@@ -5830,7 +5604,6 @@ uint32_t ThriftHiveMetastore_get_partitions_presult::read(apache::thrift::protoc
             for (_i202 = 0; _i202 < _size198; ++_i202)
             {
               xfer += (*(this->success))[_i202].read(iprot);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
             }
             iprot->readListEnd();
           }
@@ -5981,16 +5754,6 @@ uint32_t ThriftHiveMetastore_get_partition_names_result::read(apache::thrift::pr
         if (ftype == apache::thrift::protocol::T_LIST) {
           {
             this->success.clear();
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-            uint32_t _size181;
-            apache::thrift::protocol::TType _etype184;
-            iprot->readListBegin(_etype184, _size181);
-            this->success.resize(_size181);
-            uint32_t _i185;
-            for (_i185 = 0; _i185 < _size181; ++_i185)
-            {
-              xfer += iprot->readString(this->success[_i185]);
-=======
             uint32_t _size203;
             apache::thrift::protocol::TType _etype206;
             iprot->readListBegin(_etype206, _size203);
@@ -5999,7 +5762,6 @@ uint32_t ThriftHiveMetastore_get_partition_names_result::read(apache::thrift::pr
             for (_i207 = 0; _i207 < _size203; ++_i207)
             {
               xfer += iprot->readString(this->success[_i207]);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
             }
             iprot->readListEnd();
           }
@@ -6038,17 +5800,10 @@ uint32_t ThriftHiveMetastore_get_partition_names_result::write(apache::thrift::p
     xfer += oprot->writeFieldBegin("success", apache::thrift::protocol::T_LIST, 0);
     {
       xfer += oprot->writeListBegin(apache::thrift::protocol::T_STRING, this->success.size());
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-      std::vector<std::string> ::const_iterator _iter186;
-      for (_iter186 = this->success.begin(); _iter186 != this->success.end(); ++_iter186)
-      {
-        xfer += oprot->writeString((*_iter186));
-=======
       std::vector<std::string> ::const_iterator _iter208;
       for (_iter208 = this->success.begin(); _iter208 != this->success.end(); ++_iter208)
       {
         xfer += oprot->writeString((*_iter208));
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
       }
       xfer += oprot->writeListEnd();
     }
@@ -6087,16 +5842,6 @@ uint32_t ThriftHiveMetastore_get_partition_names_presult::read(apache::thrift::p
         if (ftype == apache::thrift::protocol::T_LIST) {
           {
             (*(this->success)).clear();
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-            uint32_t _size187;
-            apache::thrift::protocol::TType _etype190;
-            iprot->readListBegin(_etype190, _size187);
-            (*(this->success)).resize(_size187);
-            uint32_t _i191;
-            for (_i191 = 0; _i191 < _size187; ++_i191)
-            {
-              xfer += iprot->readString((*(this->success))[_i191]);
-=======
             uint32_t _size209;
             apache::thrift::protocol::TType _etype212;
             iprot->readListBegin(_etype212, _size209);
@@ -6105,7 +5850,6 @@ uint32_t ThriftHiveMetastore_get_partition_names_presult::read(apache::thrift::p
             for (_i213 = 0; _i213 < _size209; ++_i213)
             {
               xfer += iprot->readString((*(this->success))[_i213]);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
             }
             iprot->readListEnd();
           }
@@ -6174,16 +5918,6 @@ uint32_t ThriftHiveMetastore_get_partitions_ps_args::read(apache::thrift::protoc
         if (ftype == apache::thrift::protocol::T_LIST) {
           {
             this->part_vals.clear();
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-            uint32_t _size192;
-            apache::thrift::protocol::TType _etype195;
-            iprot->readListBegin(_etype195, _size192);
-            this->part_vals.resize(_size192);
-            uint32_t _i196;
-            for (_i196 = 0; _i196 < _size192; ++_i196)
-            {
-              xfer += iprot->readString(this->part_vals[_i196]);
-=======
             uint32_t _size214;
             apache::thrift::protocol::TType _etype217;
             iprot->readListBegin(_etype217, _size214);
@@ -6192,7 +5926,6 @@ uint32_t ThriftHiveMetastore_get_partitions_ps_args::read(apache::thrift::protoc
             for (_i218 = 0; _i218 < _size214; ++_i218)
             {
               xfer += iprot->readString(this->part_vals[_i218]);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
             }
             iprot->readListEnd();
           }
@@ -6233,17 +5966,10 @@ uint32_t ThriftHiveMetastore_get_partitions_ps_args::write(apache::thrift::proto
   xfer += oprot->writeFieldBegin("part_vals", apache::thrift::protocol::T_LIST, 3);
   {
     xfer += oprot->writeListBegin(apache::thrift::protocol::T_STRING, this->part_vals.size());
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-    std::vector<std::string> ::const_iterator _iter197;
-    for (_iter197 = this->part_vals.begin(); _iter197 != this->part_vals.end(); ++_iter197)
-    {
-      xfer += oprot->writeString((*_iter197));
-=======
     std::vector<std::string> ::const_iterator _iter219;
     for (_iter219 = this->part_vals.begin(); _iter219 != this->part_vals.end(); ++_iter219)
     {
       xfer += oprot->writeString((*_iter219));
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
     }
     xfer += oprot->writeListEnd();
   }
@@ -6268,17 +5994,10 @@ uint32_t ThriftHiveMetastore_get_partitions_ps_pargs::write(apache::thrift::prot
   xfer += oprot->writeFieldBegin("part_vals", apache::thrift::protocol::T_LIST, 3);
   {
     xfer += oprot->writeListBegin(apache::thrift::protocol::T_STRING, (*(this->part_vals)).size());
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-    std::vector<std::string> ::const_iterator _iter198;
-    for (_iter198 = (*(this->part_vals)).begin(); _iter198 != (*(this->part_vals)).end(); ++_iter198)
-    {
-      xfer += oprot->writeString((*_iter198));
-=======
     std::vector<std::string> ::const_iterator _iter220;
     for (_iter220 = (*(this->part_vals)).begin(); _iter220 != (*(this->part_vals)).end(); ++_iter220)
     {
       xfer += oprot->writeString((*_iter220));
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
     }
     xfer += oprot->writeListEnd();
   }
@@ -6315,16 +6034,6 @@ uint32_t ThriftHiveMetastore_get_partitions_ps_result::read(apache::thrift::prot
         if (ftype == apache::thrift::protocol::T_LIST) {
           {
             this->success.clear();
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-            uint32_t _size199;
-            apache::thrift::protocol::TType _etype202;
-            iprot->readListBegin(_etype202, _size199);
-            this->success.resize(_size199);
-            uint32_t _i203;
-            for (_i203 = 0; _i203 < _size199; ++_i203)
-            {
-              xfer += this->success[_i203].read(iprot);
-=======
             uint32_t _size221;
             apache::thrift::protocol::TType _etype224;
             iprot->readListBegin(_etype224, _size221);
@@ -6333,7 +6042,6 @@ uint32_t ThriftHiveMetastore_get_partitions_ps_result::read(apache::thrift::prot
             for (_i225 = 0; _i225 < _size221; ++_i225)
             {
               xfer += this->success[_i225].read(iprot);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
             }
             iprot->readListEnd();
           }
@@ -6372,17 +6080,10 @@ uint32_t ThriftHiveMetastore_get_partitions_ps_result::write(apache::thrift::pro
     xfer += oprot->writeFieldBegin("success", apache::thrift::protocol::T_LIST, 0);
     {
       xfer += oprot->writeListBegin(apache::thrift::protocol::T_STRUCT, this->success.size());
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-      std::vector<Partition> ::const_iterator _iter204;
-      for (_iter204 = this->success.begin(); _iter204 != this->success.end(); ++_iter204)
-      {
-        xfer += (*_iter204).write(oprot);
-=======
       std::vector<Partition> ::const_iterator _iter226;
       for (_iter226 = this->success.begin(); _iter226 != this->success.end(); ++_iter226)
       {
         xfer += (*_iter226).write(oprot);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
       }
       xfer += oprot->writeListEnd();
     }
@@ -6421,16 +6122,6 @@ uint32_t ThriftHiveMetastore_get_partitions_ps_presult::read(apache::thrift::pro
         if (ftype == apache::thrift::protocol::T_LIST) {
           {
             (*(this->success)).clear();
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-            uint32_t _size205;
-            apache::thrift::protocol::TType _etype208;
-            iprot->readListBegin(_etype208, _size205);
-            (*(this->success)).resize(_size205);
-            uint32_t _i209;
-            for (_i209 = 0; _i209 < _size205; ++_i209)
-            {
-              xfer += (*(this->success))[_i209].read(iprot);
-=======
             uint32_t _size227;
             apache::thrift::protocol::TType _etype230;
             iprot->readListBegin(_etype230, _size227);
@@ -6439,7 +6130,6 @@ uint32_t ThriftHiveMetastore_get_partitions_ps_presult::read(apache::thrift::pro
             for (_i231 = 0; _i231 < _size227; ++_i231)
             {
               xfer += (*(this->success))[_i231].read(iprot);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
             }
             iprot->readListEnd();
           }
@@ -6508,16 +6198,6 @@ uint32_t ThriftHiveMetastore_get_partition_names_ps_args::read(apache::thrift::p
         if (ftype == apache::thrift::protocol::T_LIST) {
           {
             this->part_vals.clear();
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-            uint32_t _size210;
-            apache::thrift::protocol::TType _etype213;
-            iprot->readListBegin(_etype213, _size210);
-            this->part_vals.resize(_size210);
-            uint32_t _i214;
-            for (_i214 = 0; _i214 < _size210; ++_i214)
-            {
-              xfer += iprot->readString(this->part_vals[_i214]);
-=======
             uint32_t _size232;
             apache::thrift::protocol::TType _etype235;
             iprot->readListBegin(_etype235, _size232);
@@ -6526,7 +6206,6 @@ uint32_t ThriftHiveMetastore_get_partition_names_ps_args::read(apache::thrift::p
             for (_i236 = 0; _i236 < _size232; ++_i236)
             {
               xfer += iprot->readString(this->part_vals[_i236]);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
             }
             iprot->readListEnd();
           }
@@ -6567,17 +6246,10 @@ uint32_t ThriftHiveMetastore_get_partition_names_ps_args::write(apache::thrift::
   xfer += oprot->writeFieldBegin("part_vals", apache::thrift::protocol::T_LIST, 3);
   {
     xfer += oprot->writeListBegin(apache::thrift::protocol::T_STRING, this->part_vals.size());
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-    std::vector<std::string> ::const_iterator _iter215;
-    for (_iter215 = this->part_vals.begin(); _iter215 != this->part_vals.end(); ++_iter215)
-    {
-      xfer += oprot->writeString((*_iter215));
-=======
     std::vector<std::string> ::const_iterator _iter237;
     for (_iter237 = this->part_vals.begin(); _iter237 != this->part_vals.end(); ++_iter237)
     {
       xfer += oprot->writeString((*_iter237));
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
     }
     xfer += oprot->writeListEnd();
   }
@@ -6602,17 +6274,10 @@ uint32_t ThriftHiveMetastore_get_partition_names_ps_pargs::write(apache::thrift:
   xfer += oprot->writeFieldBegin("part_vals", apache::thrift::protocol::T_LIST, 3);
   {
     xfer += oprot->writeListBegin(apache::thrift::protocol::T_STRING, (*(this->part_vals)).size());
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-    std::vector<std::string> ::const_iterator _iter216;
-    for (_iter216 = (*(this->part_vals)).begin(); _iter216 != (*(this->part_vals)).end(); ++_iter216)
-    {
-      xfer += oprot->writeString((*_iter216));
-=======
     std::vector<std::string> ::const_iterator _iter238;
     for (_iter238 = (*(this->part_vals)).begin(); _iter238 != (*(this->part_vals)).end(); ++_iter238)
     {
       xfer += oprot->writeString((*_iter238));
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
     }
     xfer += oprot->writeListEnd();
   }
@@ -6649,16 +6314,6 @@ uint32_t ThriftHiveMetastore_get_partition_names_ps_result::read(apache::thrift:
         if (ftype == apache::thrift::protocol::T_LIST) {
           {
             this->success.clear();
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-            uint32_t _size217;
-            apache::thrift::protocol::TType _etype220;
-            iprot->readListBegin(_etype220, _size217);
-            this->success.resize(_size217);
-            uint32_t _i221;
-            for (_i221 = 0; _i221 < _size217; ++_i221)
-            {
-              xfer += iprot->readString(this->success[_i221]);
-=======
             uint32_t _size239;
             apache::thrift::protocol::TType _etype242;
             iprot->readListBegin(_etype242, _size239);
@@ -6667,7 +6322,6 @@ uint32_t ThriftHiveMetastore_get_partition_names_ps_result::read(apache::thrift:
             for (_i243 = 0; _i243 < _size239; ++_i243)
             {
               xfer += iprot->readString(this->success[_i243]);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
             }
             iprot->readListEnd();
           }
@@ -6706,17 +6360,10 @@ uint32_t ThriftHiveMetastore_get_partition_names_ps_result::write(apache::thrift
     xfer += oprot->writeFieldBegin("success", apache::thrift::protocol::T_LIST, 0);
     {
       xfer += oprot->writeListBegin(apache::thrift::protocol::T_STRING, this->success.size());
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-      std::vector<std::string> ::const_iterator _iter222;
-      for (_iter222 = this->success.begin(); _iter222 != this->success.end(); ++_iter222)
-      {
-        xfer += oprot->writeString((*_iter222));
-=======
       std::vector<std::string> ::const_iterator _iter244;
       for (_iter244 = this->success.begin(); _iter244 != this->success.end(); ++_iter244)
       {
         xfer += oprot->writeString((*_iter244));
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
       }
       xfer += oprot->writeListEnd();
     }
@@ -6755,16 +6402,6 @@ uint32_t ThriftHiveMetastore_get_partition_names_ps_presult::read(apache::thrift
         if (ftype == apache::thrift::protocol::T_LIST) {
           {
             (*(this->success)).clear();
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-            uint32_t _size223;
-            apache::thrift::protocol::TType _etype226;
-            iprot->readListBegin(_etype226, _size223);
-            (*(this->success)).resize(_size223);
-            uint32_t _i227;
-            for (_i227 = 0; _i227 < _size223; ++_i227)
-            {
-              xfer += iprot->readString((*(this->success))[_i227]);
-=======
             uint32_t _size245;
             apache::thrift::protocol::TType _etype248;
             iprot->readListBegin(_etype248, _size245);
@@ -6773,7 +6410,6 @@ uint32_t ThriftHiveMetastore_get_partition_names_ps_presult::read(apache::thrift
             for (_i249 = 0; _i249 < _size245; ++_i249)
             {
               xfer += iprot->readString((*(this->success))[_i249]);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
             }
             iprot->readListEnd();
           }
@@ -7558,16 +7194,6 @@ uint32_t ThriftHiveMetastore_partition_name_to_vals_result::read(apache::thrift:
         if (ftype == apache::thrift::protocol::T_LIST) {
           {
             this->success.clear();
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-            uint32_t _size228;
-            apache::thrift::protocol::TType _etype231;
-            iprot->readListBegin(_etype231, _size228);
-            this->success.resize(_size228);
-            uint32_t _i232;
-            for (_i232 = 0; _i232 < _size228; ++_i232)
-            {
-              xfer += iprot->readString(this->success[_i232]);
-=======
             uint32_t _size261;
             apache::thrift::protocol::TType _etype264;
             iprot->readListBegin(_etype264, _size261);
@@ -7576,7 +7202,6 @@ uint32_t ThriftHiveMetastore_partition_name_to_vals_result::read(apache::thrift:
             for (_i265 = 0; _i265 < _size261; ++_i265)
             {
               xfer += iprot->readString(this->success[_i265]);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
             }
             iprot->readListEnd();
           }
@@ -7615,17 +7240,10 @@ uint32_t ThriftHiveMetastore_partition_name_to_vals_result::write(apache::thrift
     xfer += oprot->writeFieldBegin("success", apache::thrift::protocol::T_LIST, 0);
     {
       xfer += oprot->writeListBegin(apache::thrift::protocol::T_STRING, this->success.size());
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-      std::vector<std::string> ::const_iterator _iter233;
-      for (_iter233 = this->success.begin(); _iter233 != this->success.end(); ++_iter233)
-      {
-        xfer += oprot->writeString((*_iter233));
-=======
       std::vector<std::string> ::const_iterator _iter266;
       for (_iter266 = this->success.begin(); _iter266 != this->success.end(); ++_iter266)
       {
         xfer += oprot->writeString((*_iter266));
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
       }
       xfer += oprot->writeListEnd();
     }
@@ -7664,16 +7282,6 @@ uint32_t ThriftHiveMetastore_partition_name_to_vals_presult::read(apache::thrift
         if (ftype == apache::thrift::protocol::T_LIST) {
           {
             (*(this->success)).clear();
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-            uint32_t _size234;
-            apache::thrift::protocol::TType _etype237;
-            iprot->readListBegin(_etype237, _size234);
-            (*(this->success)).resize(_size234);
-            uint32_t _i238;
-            for (_i238 = 0; _i238 < _size234; ++_i238)
-            {
-              xfer += iprot->readString((*(this->success))[_i238]);
-=======
             uint32_t _size267;
             apache::thrift::protocol::TType _etype270;
             iprot->readListBegin(_etype270, _size267);
@@ -7682,7 +7290,6 @@ uint32_t ThriftHiveMetastore_partition_name_to_vals_presult::read(apache::thrift
             for (_i271 = 0; _i271 < _size267; ++_i271)
             {
               xfer += iprot->readString((*(this->success))[_i271]);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
             }
             iprot->readListEnd();
           }
@@ -7797,19 +7404,6 @@ uint32_t ThriftHiveMetastore_partition_name_to_spec_result::read(apache::thrift:
         if (ftype == apache::thrift::protocol::T_MAP) {
           {
             this->success.clear();
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-            uint32_t _size239;
-            apache::thrift::protocol::TType _ktype240;
-            apache::thrift::protocol::TType _vtype241;
-            iprot->readMapBegin(_ktype240, _vtype241, _size239);
-            uint32_t _i243;
-            for (_i243 = 0; _i243 < _size239; ++_i243)
-            {
-              std::string _key244;
-              xfer += iprot->readString(_key244);
-              std::string& _val245 = this->success[_key244];
-              xfer += iprot->readString(_val245);
-=======
             uint32_t _size272;
             apache::thrift::protocol::TType _ktype273;
             apache::thrift::protocol::TType _vtype274;
@@ -7821,7 +7415,6 @@ uint32_t ThriftHiveMetastore_partition_name_to_spec_result::read(apache::thrift:
               xfer += iprot->readString(_key277);
               std::string& _val278 = this->success[_key277];
               xfer += iprot->readString(_val278);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
             }
             iprot->readMapEnd();
           }
@@ -7860,19 +7453,11 @@ uint32_t ThriftHiveMetastore_partition_name_to_spec_result::write(apache::thrift
     xfer += oprot->writeFieldBegin("success", apache::thrift::protocol::T_MAP, 0);
     {
       xfer += oprot->writeMapBegin(apache::thrift::protocol::T_STRING, apache::thrift::protocol::T_STRING, this->success.size());
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-      std::map<std::string, std::string> ::const_iterator _iter246;
-      for (_iter246 = this->success.begin(); _iter246 != this->success.end(); ++_iter246)
-      {
-        xfer += oprot->writeString(_iter246->first);
-        xfer += oprot->writeString(_iter246->second);
-=======
       std::map<std::string, std::string> ::const_iterator _iter279;
       for (_iter279 = this->success.begin(); _iter279 != this->success.end(); ++_iter279)
       {
         xfer += oprot->writeString(_iter279->first);
         xfer += oprot->writeString(_iter279->second);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
       }
       xfer += oprot->writeMapEnd();
     }
@@ -7911,19 +7496,6 @@ uint32_t ThriftHiveMetastore_partition_name_to_spec_presult::read(apache::thrift
         if (ftype == apache::thrift::protocol::T_MAP) {
           {
             (*(this->success)).clear();
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-            uint32_t _size247;
-            apache::thrift::protocol::TType _ktype248;
-            apache::thrift::protocol::TType _vtype249;
-            iprot->readMapBegin(_ktype248, _vtype249, _size247);
-            uint32_t _i251;
-            for (_i251 = 0; _i251 < _size247; ++_i251)
-            {
-              std::string _key252;
-              xfer += iprot->readString(_key252);
-              std::string& _val253 = (*(this->success))[_key252];
-              xfer += iprot->readString(_val253);
-=======
             uint32_t _size280;
             apache::thrift::protocol::TType _ktype281;
             apache::thrift::protocol::TType _vtype282;
@@ -7935,7 +7507,6 @@ uint32_t ThriftHiveMetastore_partition_name_to_spec_presult::read(apache::thrift
               xfer += iprot->readString(_key285);
               std::string& _val286 = (*(this->success))[_key285];
               xfer += iprot->readString(_val286);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
             }
             iprot->readMapEnd();
           }
@@ -7965,1458 +7536,6 @@ uint32_t ThriftHiveMetastore_partition_name_to_spec_presult::read(apache::thrift
 }
 
 uint32_t ThriftHiveMetastore_add_index_args::read(apache::thrift::protocol::TProtocol* iprot) {
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-
-  uint32_t xfer = 0;
-  std::string fname;
-  apache::thrift::protocol::TType ftype;
-  int16_t fid;
-
-  xfer += iprot->readStructBegin(fname);
-
-  using apache::thrift::protocol::TProtocolException;
-
-
-  while (true)
-  {
-    xfer += iprot->readFieldBegin(fname, ftype, fid);
-    if (ftype == apache::thrift::protocol::T_STOP) {
-      break;
-    }
-    switch (fid)
-    {
-      case 1:
-        if (ftype == apache::thrift::protocol::T_STRUCT) {
-          xfer += this->new_index.read(iprot);
-          this->__isset.new_index = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      default:
-        xfer += iprot->skip(ftype);
-        break;
-    }
-    xfer += iprot->readFieldEnd();
-  }
-
-  xfer += iprot->readStructEnd();
-
-  return xfer;
-}
-
-uint32_t ThriftHiveMetastore_add_index_args::write(apache::thrift::protocol::TProtocol* oprot) const {
-  uint32_t xfer = 0;
-  xfer += oprot->writeStructBegin("ThriftHiveMetastore_add_index_args");
-  xfer += oprot->writeFieldBegin("new_index", apache::thrift::protocol::T_STRUCT, 1);
-  xfer += this->new_index.write(oprot);
-  xfer += oprot->writeFieldEnd();
-  xfer += oprot->writeFieldStop();
-  xfer += oprot->writeStructEnd();
-  return xfer;
-}
-
-uint32_t ThriftHiveMetastore_add_index_pargs::write(apache::thrift::protocol::TProtocol* oprot) const {
-  uint32_t xfer = 0;
-  xfer += oprot->writeStructBegin("ThriftHiveMetastore_add_index_pargs");
-  xfer += oprot->writeFieldBegin("new_index", apache::thrift::protocol::T_STRUCT, 1);
-  xfer += (*(this->new_index)).write(oprot);
-  xfer += oprot->writeFieldEnd();
-  xfer += oprot->writeFieldStop();
-  xfer += oprot->writeStructEnd();
-  return xfer;
-}
-
-uint32_t ThriftHiveMetastore_add_index_result::read(apache::thrift::protocol::TProtocol* iprot) {
-
-  uint32_t xfer = 0;
-  std::string fname;
-  apache::thrift::protocol::TType ftype;
-  int16_t fid;
-
-  xfer += iprot->readStructBegin(fname);
-
-  using apache::thrift::protocol::TProtocolException;
-
-
-  while (true)
-  {
-    xfer += iprot->readFieldBegin(fname, ftype, fid);
-    if (ftype == apache::thrift::protocol::T_STOP) {
-      break;
-    }
-    switch (fid)
-    {
-      case 0:
-        if (ftype == apache::thrift::protocol::T_STRUCT) {
-          xfer += this->success.read(iprot);
-          this->__isset.success = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 1:
-        if (ftype == apache::thrift::protocol::T_STRUCT) {
-          xfer += this->o1.read(iprot);
-          this->__isset.o1 = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 2:
-        if (ftype == apache::thrift::protocol::T_STRUCT) {
-          xfer += this->o2.read(iprot);
-          this->__isset.o2 = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 3:
-        if (ftype == apache::thrift::protocol::T_STRUCT) {
-          xfer += this->o3.read(iprot);
-          this->__isset.o3 = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      default:
-        xfer += iprot->skip(ftype);
-        break;
-    }
-    xfer += iprot->readFieldEnd();
-  }
-
-  xfer += iprot->readStructEnd();
-
-  return xfer;
-}
-
-uint32_t ThriftHiveMetastore_add_index_result::write(apache::thrift::protocol::TProtocol* oprot) const {
-
-  uint32_t xfer = 0;
-
-  xfer += oprot->writeStructBegin("ThriftHiveMetastore_add_index_result");
-
-  if (this->__isset.success) {
-    xfer += oprot->writeFieldBegin("success", apache::thrift::protocol::T_STRUCT, 0);
-    xfer += this->success.write(oprot);
-    xfer += oprot->writeFieldEnd();
-  } else if (this->__isset.o1) {
-    xfer += oprot->writeFieldBegin("o1", apache::thrift::protocol::T_STRUCT, 1);
-    xfer += this->o1.write(oprot);
-    xfer += oprot->writeFieldEnd();
-  } else if (this->__isset.o2) {
-    xfer += oprot->writeFieldBegin("o2", apache::thrift::protocol::T_STRUCT, 2);
-    xfer += this->o2.write(oprot);
-    xfer += oprot->writeFieldEnd();
-  } else if (this->__isset.o3) {
-    xfer += oprot->writeFieldBegin("o3", apache::thrift::protocol::T_STRUCT, 3);
-    xfer += this->o3.write(oprot);
-    xfer += oprot->writeFieldEnd();
-  }
-  xfer += oprot->writeFieldStop();
-  xfer += oprot->writeStructEnd();
-  return xfer;
-}
-
-uint32_t ThriftHiveMetastore_add_index_presult::read(apache::thrift::protocol::TProtocol* iprot) {
-
-  uint32_t xfer = 0;
-  std::string fname;
-  apache::thrift::protocol::TType ftype;
-  int16_t fid;
-
-  xfer += iprot->readStructBegin(fname);
-
-  using apache::thrift::protocol::TProtocolException;
-
-
-  while (true)
-  {
-    xfer += iprot->readFieldBegin(fname, ftype, fid);
-    if (ftype == apache::thrift::protocol::T_STOP) {
-      break;
-    }
-    switch (fid)
-    {
-      case 0:
-        if (ftype == apache::thrift::protocol::T_STRUCT) {
-          xfer += (*(this->success)).read(iprot);
-          this->__isset.success = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 1:
-        if (ftype == apache::thrift::protocol::T_STRUCT) {
-          xfer += this->o1.read(iprot);
-          this->__isset.o1 = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 2:
-        if (ftype == apache::thrift::protocol::T_STRUCT) {
-          xfer += this->o2.read(iprot);
-          this->__isset.o2 = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 3:
-        if (ftype == apache::thrift::protocol::T_STRUCT) {
-          xfer += this->o3.read(iprot);
-          this->__isset.o3 = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      default:
-        xfer += iprot->skip(ftype);
-        break;
-    }
-    xfer += iprot->readFieldEnd();
-  }
-
-  xfer += iprot->readStructEnd();
-
-  return xfer;
-}
-
-uint32_t ThriftHiveMetastore_drop_index_by_name_args::read(apache::thrift::protocol::TProtocol* iprot) {
-
-  uint32_t xfer = 0;
-  std::string fname;
-  apache::thrift::protocol::TType ftype;
-  int16_t fid;
-
-  xfer += iprot->readStructBegin(fname);
-
-  using apache::thrift::protocol::TProtocolException;
-
-
-  while (true)
-  {
-    xfer += iprot->readFieldBegin(fname, ftype, fid);
-    if (ftype == apache::thrift::protocol::T_STOP) {
-      break;
-    }
-    switch (fid)
-    {
-      case 1:
-        if (ftype == apache::thrift::protocol::T_STRING) {
-          xfer += iprot->readString(this->db_name);
-          this->__isset.db_name = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 2:
-        if (ftype == apache::thrift::protocol::T_STRING) {
-          xfer += iprot->readString(this->tbl_name);
-          this->__isset.tbl_name = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 3:
-        if (ftype == apache::thrift::protocol::T_STRING) {
-          xfer += iprot->readString(this->index_name);
-          this->__isset.index_name = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 4:
-        if (ftype == apache::thrift::protocol::T_BOOL) {
-          xfer += iprot->readBool(this->deleteData);
-          this->__isset.deleteData = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      default:
-        xfer += iprot->skip(ftype);
-        break;
-    }
-    xfer += iprot->readFieldEnd();
-  }
-
-  xfer += iprot->readStructEnd();
-
-  return xfer;
-}
-
-uint32_t ThriftHiveMetastore_drop_index_by_name_args::write(apache::thrift::protocol::TProtocol* oprot) const {
-  uint32_t xfer = 0;
-  xfer += oprot->writeStructBegin("ThriftHiveMetastore_drop_index_by_name_args");
-  xfer += oprot->writeFieldBegin("db_name", apache::thrift::protocol::T_STRING, 1);
-  xfer += oprot->writeString(this->db_name);
-  xfer += oprot->writeFieldEnd();
-  xfer += oprot->writeFieldBegin("tbl_name", apache::thrift::protocol::T_STRING, 2);
-  xfer += oprot->writeString(this->tbl_name);
-  xfer += oprot->writeFieldEnd();
-  xfer += oprot->writeFieldBegin("index_name", apache::thrift::protocol::T_STRING, 3);
-  xfer += oprot->writeString(this->index_name);
-  xfer += oprot->writeFieldEnd();
-  xfer += oprot->writeFieldBegin("deleteData", apache::thrift::protocol::T_BOOL, 4);
-  xfer += oprot->writeBool(this->deleteData);
-  xfer += oprot->writeFieldEnd();
-  xfer += oprot->writeFieldStop();
-  xfer += oprot->writeStructEnd();
-  return xfer;
-}
-
-uint32_t ThriftHiveMetastore_drop_index_by_name_pargs::write(apache::thrift::protocol::TProtocol* oprot) const {
-  uint32_t xfer = 0;
-  xfer += oprot->writeStructBegin("ThriftHiveMetastore_drop_index_by_name_pargs");
-  xfer += oprot->writeFieldBegin("db_name", apache::thrift::protocol::T_STRING, 1);
-  xfer += oprot->writeString((*(this->db_name)));
-  xfer += oprot->writeFieldEnd();
-  xfer += oprot->writeFieldBegin("tbl_name", apache::thrift::protocol::T_STRING, 2);
-  xfer += oprot->writeString((*(this->tbl_name)));
-  xfer += oprot->writeFieldEnd();
-  xfer += oprot->writeFieldBegin("index_name", apache::thrift::protocol::T_STRING, 3);
-  xfer += oprot->writeString((*(this->index_name)));
-  xfer += oprot->writeFieldEnd();
-  xfer += oprot->writeFieldBegin("deleteData", apache::thrift::protocol::T_BOOL, 4);
-  xfer += oprot->writeBool((*(this->deleteData)));
-  xfer += oprot->writeFieldEnd();
-  xfer += oprot->writeFieldStop();
-  xfer += oprot->writeStructEnd();
-  return xfer;
-}
-
-uint32_t ThriftHiveMetastore_drop_index_by_name_result::read(apache::thrift::protocol::TProtocol* iprot) {
-
-  uint32_t xfer = 0;
-  std::string fname;
-  apache::thrift::protocol::TType ftype;
-  int16_t fid;
-
-  xfer += iprot->readStructBegin(fname);
-
-  using apache::thrift::protocol::TProtocolException;
-
-
-  while (true)
-  {
-    xfer += iprot->readFieldBegin(fname, ftype, fid);
-    if (ftype == apache::thrift::protocol::T_STOP) {
-      break;
-    }
-    switch (fid)
-    {
-      case 0:
-        if (ftype == apache::thrift::protocol::T_BOOL) {
-          xfer += iprot->readBool(this->success);
-          this->__isset.success = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 1:
-        if (ftype == apache::thrift::protocol::T_STRUCT) {
-          xfer += this->o1.read(iprot);
-          this->__isset.o1 = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 2:
-        if (ftype == apache::thrift::protocol::T_STRUCT) {
-          xfer += this->o2.read(iprot);
-          this->__isset.o2 = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      default:
-        xfer += iprot->skip(ftype);
-        break;
-    }
-    xfer += iprot->readFieldEnd();
-  }
-
-  xfer += iprot->readStructEnd();
-
-  return xfer;
-}
-
-uint32_t ThriftHiveMetastore_drop_index_by_name_result::write(apache::thrift::protocol::TProtocol* oprot) const {
-
-  uint32_t xfer = 0;
-
-  xfer += oprot->writeStructBegin("ThriftHiveMetastore_drop_index_by_name_result");
-
-  if (this->__isset.success) {
-    xfer += oprot->writeFieldBegin("success", apache::thrift::protocol::T_BOOL, 0);
-    xfer += oprot->writeBool(this->success);
-    xfer += oprot->writeFieldEnd();
-  } else if (this->__isset.o1) {
-    xfer += oprot->writeFieldBegin("o1", apache::thrift::protocol::T_STRUCT, 1);
-    xfer += this->o1.write(oprot);
-    xfer += oprot->writeFieldEnd();
-  } else if (this->__isset.o2) {
-    xfer += oprot->writeFieldBegin("o2", apache::thrift::protocol::T_STRUCT, 2);
-    xfer += this->o2.write(oprot);
-    xfer += oprot->writeFieldEnd();
-  }
-  xfer += oprot->writeFieldStop();
-  xfer += oprot->writeStructEnd();
-  return xfer;
-}
-
-uint32_t ThriftHiveMetastore_drop_index_by_name_presult::read(apache::thrift::protocol::TProtocol* iprot) {
-
-  uint32_t xfer = 0;
-  std::string fname;
-  apache::thrift::protocol::TType ftype;
-  int16_t fid;
-
-  xfer += iprot->readStructBegin(fname);
-
-  using apache::thrift::protocol::TProtocolException;
-
-
-  while (true)
-  {
-    xfer += iprot->readFieldBegin(fname, ftype, fid);
-    if (ftype == apache::thrift::protocol::T_STOP) {
-      break;
-    }
-    switch (fid)
-    {
-      case 0:
-        if (ftype == apache::thrift::protocol::T_BOOL) {
-          xfer += iprot->readBool((*(this->success)));
-          this->__isset.success = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 1:
-        if (ftype == apache::thrift::protocol::T_STRUCT) {
-          xfer += this->o1.read(iprot);
-          this->__isset.o1 = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 2:
-        if (ftype == apache::thrift::protocol::T_STRUCT) {
-          xfer += this->o2.read(iprot);
-          this->__isset.o2 = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      default:
-        xfer += iprot->skip(ftype);
-        break;
-    }
-    xfer += iprot->readFieldEnd();
-  }
-
-  xfer += iprot->readStructEnd();
-
-  return xfer;
-}
-
-uint32_t ThriftHiveMetastore_get_index_by_name_args::read(apache::thrift::protocol::TProtocol* iprot) {
-
-  uint32_t xfer = 0;
-  std::string fname;
-  apache::thrift::protocol::TType ftype;
-  int16_t fid;
-
-  xfer += iprot->readStructBegin(fname);
-
-  using apache::thrift::protocol::TProtocolException;
-
-
-  while (true)
-  {
-    xfer += iprot->readFieldBegin(fname, ftype, fid);
-    if (ftype == apache::thrift::protocol::T_STOP) {
-      break;
-    }
-    switch (fid)
-    {
-      case 1:
-        if (ftype == apache::thrift::protocol::T_STRING) {
-          xfer += iprot->readString(this->db_name);
-          this->__isset.db_name = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 2:
-        if (ftype == apache::thrift::protocol::T_STRING) {
-          xfer += iprot->readString(this->tbl_name);
-          this->__isset.tbl_name = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 3:
-        if (ftype == apache::thrift::protocol::T_STRING) {
-          xfer += iprot->readString(this->index_name);
-          this->__isset.index_name = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      default:
-        xfer += iprot->skip(ftype);
-        break;
-    }
-    xfer += iprot->readFieldEnd();
-  }
-
-  xfer += iprot->readStructEnd();
-
-  return xfer;
-}
-
-uint32_t ThriftHiveMetastore_get_index_by_name_args::write(apache::thrift::protocol::TProtocol* oprot) const {
-  uint32_t xfer = 0;
-  xfer += oprot->writeStructBegin("ThriftHiveMetastore_get_index_by_name_args");
-  xfer += oprot->writeFieldBegin("db_name", apache::thrift::protocol::T_STRING, 1);
-  xfer += oprot->writeString(this->db_name);
-  xfer += oprot->writeFieldEnd();
-  xfer += oprot->writeFieldBegin("tbl_name", apache::thrift::protocol::T_STRING, 2);
-  xfer += oprot->writeString(this->tbl_name);
-  xfer += oprot->writeFieldEnd();
-  xfer += oprot->writeFieldBegin("index_name", apache::thrift::protocol::T_STRING, 3);
-  xfer += oprot->writeString(this->index_name);
-  xfer += oprot->writeFieldEnd();
-  xfer += oprot->writeFieldStop();
-  xfer += oprot->writeStructEnd();
-  return xfer;
-}
-
-uint32_t ThriftHiveMetastore_get_index_by_name_pargs::write(apache::thrift::protocol::TProtocol* oprot) const {
-  uint32_t xfer = 0;
-  xfer += oprot->writeStructBegin("ThriftHiveMetastore_get_index_by_name_pargs");
-  xfer += oprot->writeFieldBegin("db_name", apache::thrift::protocol::T_STRING, 1);
-  xfer += oprot->writeString((*(this->db_name)));
-  xfer += oprot->writeFieldEnd();
-  xfer += oprot->writeFieldBegin("tbl_name", apache::thrift::protocol::T_STRING, 2);
-  xfer += oprot->writeString((*(this->tbl_name)));
-  xfer += oprot->writeFieldEnd();
-  xfer += oprot->writeFieldBegin("index_name", apache::thrift::protocol::T_STRING, 3);
-  xfer += oprot->writeString((*(this->index_name)));
-  xfer += oprot->writeFieldEnd();
-  xfer += oprot->writeFieldStop();
-  xfer += oprot->writeStructEnd();
-  return xfer;
-}
-
-uint32_t ThriftHiveMetastore_get_index_by_name_result::read(apache::thrift::protocol::TProtocol* iprot) {
-
-  uint32_t xfer = 0;
-  std::string fname;
-  apache::thrift::protocol::TType ftype;
-  int16_t fid;
-
-  xfer += iprot->readStructBegin(fname);
-
-  using apache::thrift::protocol::TProtocolException;
-
-
-  while (true)
-  {
-    xfer += iprot->readFieldBegin(fname, ftype, fid);
-    if (ftype == apache::thrift::protocol::T_STOP) {
-      break;
-    }
-    switch (fid)
-    {
-      case 0:
-        if (ftype == apache::thrift::protocol::T_STRUCT) {
-          xfer += this->success.read(iprot);
-          this->__isset.success = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 1:
-        if (ftype == apache::thrift::protocol::T_STRUCT) {
-          xfer += this->o1.read(iprot);
-          this->__isset.o1 = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 2:
-        if (ftype == apache::thrift::protocol::T_STRUCT) {
-          xfer += this->o2.read(iprot);
-          this->__isset.o2 = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      default:
-        xfer += iprot->skip(ftype);
-        break;
-    }
-    xfer += iprot->readFieldEnd();
-  }
-
-  xfer += iprot->readStructEnd();
-
-  return xfer;
-}
-
-uint32_t ThriftHiveMetastore_get_index_by_name_result::write(apache::thrift::protocol::TProtocol* oprot) const {
-
-  uint32_t xfer = 0;
-
-  xfer += oprot->writeStructBegin("ThriftHiveMetastore_get_index_by_name_result");
-
-  if (this->__isset.success) {
-    xfer += oprot->writeFieldBegin("success", apache::thrift::protocol::T_STRUCT, 0);
-    xfer += this->success.write(oprot);
-    xfer += oprot->writeFieldEnd();
-  } else if (this->__isset.o1) {
-    xfer += oprot->writeFieldBegin("o1", apache::thrift::protocol::T_STRUCT, 1);
-    xfer += this->o1.write(oprot);
-    xfer += oprot->writeFieldEnd();
-  } else if (this->__isset.o2) {
-    xfer += oprot->writeFieldBegin("o2", apache::thrift::protocol::T_STRUCT, 2);
-    xfer += this->o2.write(oprot);
-    xfer += oprot->writeFieldEnd();
-  }
-  xfer += oprot->writeFieldStop();
-  xfer += oprot->writeStructEnd();
-  return xfer;
-}
-
-uint32_t ThriftHiveMetastore_get_index_by_name_presult::read(apache::thrift::protocol::TProtocol* iprot) {
-
-  uint32_t xfer = 0;
-  std::string fname;
-  apache::thrift::protocol::TType ftype;
-  int16_t fid;
-
-  xfer += iprot->readStructBegin(fname);
-
-  using apache::thrift::protocol::TProtocolException;
-
-
-  while (true)
-  {
-    xfer += iprot->readFieldBegin(fname, ftype, fid);
-    if (ftype == apache::thrift::protocol::T_STOP) {
-      break;
-    }
-    switch (fid)
-    {
-      case 0:
-        if (ftype == apache::thrift::protocol::T_STRUCT) {
-          xfer += (*(this->success)).read(iprot);
-          this->__isset.success = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 1:
-        if (ftype == apache::thrift::protocol::T_STRUCT) {
-          xfer += this->o1.read(iprot);
-          this->__isset.o1 = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 2:
-        if (ftype == apache::thrift::protocol::T_STRUCT) {
-          xfer += this->o2.read(iprot);
-          this->__isset.o2 = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      default:
-        xfer += iprot->skip(ftype);
-        break;
-    }
-    xfer += iprot->readFieldEnd();
-  }
-
-  xfer += iprot->readStructEnd();
-
-  return xfer;
-}
-
-uint32_t ThriftHiveMetastore_get_indexs_args::read(apache::thrift::protocol::TProtocol* iprot) {
-
-  uint32_t xfer = 0;
-  std::string fname;
-  apache::thrift::protocol::TType ftype;
-  int16_t fid;
-
-  xfer += iprot->readStructBegin(fname);
-
-  using apache::thrift::protocol::TProtocolException;
-
-
-  while (true)
-  {
-    xfer += iprot->readFieldBegin(fname, ftype, fid);
-    if (ftype == apache::thrift::protocol::T_STOP) {
-      break;
-    }
-    switch (fid)
-    {
-      case 1:
-        if (ftype == apache::thrift::protocol::T_STRING) {
-          xfer += iprot->readString(this->db_name);
-          this->__isset.db_name = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 2:
-        if (ftype == apache::thrift::protocol::T_STRING) {
-          xfer += iprot->readString(this->tbl_name);
-          this->__isset.tbl_name = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 3:
-        if (ftype == apache::thrift::protocol::T_I16) {
-          xfer += iprot->readI16(this->max_indexes);
-          this->__isset.max_indexes = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      default:
-        xfer += iprot->skip(ftype);
-        break;
-    }
-    xfer += iprot->readFieldEnd();
-  }
-
-  xfer += iprot->readStructEnd();
-
-  return xfer;
-}
-
-uint32_t ThriftHiveMetastore_get_indexs_args::write(apache::thrift::protocol::TProtocol* oprot) const {
-  uint32_t xfer = 0;
-  xfer += oprot->writeStructBegin("ThriftHiveMetastore_get_indexs_args");
-  xfer += oprot->writeFieldBegin("db_name", apache::thrift::protocol::T_STRING, 1);
-  xfer += oprot->writeString(this->db_name);
-  xfer += oprot->writeFieldEnd();
-  xfer += oprot->writeFieldBegin("tbl_name", apache::thrift::protocol::T_STRING, 2);
-  xfer += oprot->writeString(this->tbl_name);
-  xfer += oprot->writeFieldEnd();
-  xfer += oprot->writeFieldBegin("max_indexes", apache::thrift::protocol::T_I16, 3);
-  xfer += oprot->writeI16(this->max_indexes);
-  xfer += oprot->writeFieldEnd();
-  xfer += oprot->writeFieldStop();
-  xfer += oprot->writeStructEnd();
-  return xfer;
-}
-
-uint32_t ThriftHiveMetastore_get_indexs_pargs::write(apache::thrift::protocol::TProtocol* oprot) const {
-  uint32_t xfer = 0;
-  xfer += oprot->writeStructBegin("ThriftHiveMetastore_get_indexs_pargs");
-  xfer += oprot->writeFieldBegin("db_name", apache::thrift::protocol::T_STRING, 1);
-  xfer += oprot->writeString((*(this->db_name)));
-  xfer += oprot->writeFieldEnd();
-  xfer += oprot->writeFieldBegin("tbl_name", apache::thrift::protocol::T_STRING, 2);
-  xfer += oprot->writeString((*(this->tbl_name)));
-  xfer += oprot->writeFieldEnd();
-  xfer += oprot->writeFieldBegin("max_indexes", apache::thrift::protocol::T_I16, 3);
-  xfer += oprot->writeI16((*(this->max_indexes)));
-  xfer += oprot->writeFieldEnd();
-  xfer += oprot->writeFieldStop();
-  xfer += oprot->writeStructEnd();
-  return xfer;
-}
-
-uint32_t ThriftHiveMetastore_get_indexs_result::read(apache::thrift::protocol::TProtocol* iprot) {
-
-  uint32_t xfer = 0;
-  std::string fname;
-  apache::thrift::protocol::TType ftype;
-  int16_t fid;
-
-  xfer += iprot->readStructBegin(fname);
-
-  using apache::thrift::protocol::TProtocolException;
-
-
-  while (true)
-  {
-    xfer += iprot->readFieldBegin(fname, ftype, fid);
-    if (ftype == apache::thrift::protocol::T_STOP) {
-      break;
-    }
-    switch (fid)
-    {
-      case 0:
-        if (ftype == apache::thrift::protocol::T_LIST) {
-          {
-            this->success.clear();
-            uint32_t _size254;
-            apache::thrift::protocol::TType _etype257;
-            iprot->readListBegin(_etype257, _size254);
-            this->success.resize(_size254);
-            uint32_t _i258;
-            for (_i258 = 0; _i258 < _size254; ++_i258)
-            {
-              xfer += this->success[_i258].read(iprot);
-            }
-            iprot->readListEnd();
-          }
-          this->__isset.success = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 1:
-        if (ftype == apache::thrift::protocol::T_STRUCT) {
-          xfer += this->o1.read(iprot);
-          this->__isset.o1 = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 2:
-        if (ftype == apache::thrift::protocol::T_STRUCT) {
-          xfer += this->o2.read(iprot);
-          this->__isset.o2 = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      default:
-        xfer += iprot->skip(ftype);
-        break;
-    }
-    xfer += iprot->readFieldEnd();
-  }
-
-  xfer += iprot->readStructEnd();
-
-  return xfer;
-}
-
-uint32_t ThriftHiveMetastore_get_indexs_result::write(apache::thrift::protocol::TProtocol* oprot) const {
-
-  uint32_t xfer = 0;
-
-  xfer += oprot->writeStructBegin("ThriftHiveMetastore_get_indexs_result");
-
-  if (this->__isset.success) {
-    xfer += oprot->writeFieldBegin("success", apache::thrift::protocol::T_LIST, 0);
-    {
-      xfer += oprot->writeListBegin(apache::thrift::protocol::T_STRUCT, this->success.size());
-      std::vector<Index> ::const_iterator _iter259;
-      for (_iter259 = this->success.begin(); _iter259 != this->success.end(); ++_iter259)
-      {
-        xfer += (*_iter259).write(oprot);
-      }
-      xfer += oprot->writeListEnd();
-    }
-    xfer += oprot->writeFieldEnd();
-  } else if (this->__isset.o1) {
-    xfer += oprot->writeFieldBegin("o1", apache::thrift::protocol::T_STRUCT, 1);
-    xfer += this->o1.write(oprot);
-    xfer += oprot->writeFieldEnd();
-  } else if (this->__isset.o2) {
-    xfer += oprot->writeFieldBegin("o2", apache::thrift::protocol::T_STRUCT, 2);
-    xfer += this->o2.write(oprot);
-    xfer += oprot->writeFieldEnd();
-  }
-  xfer += oprot->writeFieldStop();
-  xfer += oprot->writeStructEnd();
-  return xfer;
-}
-
-uint32_t ThriftHiveMetastore_get_indexs_presult::read(apache::thrift::protocol::TProtocol* iprot) {
-
-  uint32_t xfer = 0;
-  std::string fname;
-  apache::thrift::protocol::TType ftype;
-  int16_t fid;
-
-  xfer += iprot->readStructBegin(fname);
-
-  using apache::thrift::protocol::TProtocolException;
-
-
-  while (true)
-  {
-    xfer += iprot->readFieldBegin(fname, ftype, fid);
-    if (ftype == apache::thrift::protocol::T_STOP) {
-      break;
-    }
-    switch (fid)
-    {
-      case 0:
-        if (ftype == apache::thrift::protocol::T_LIST) {
-          {
-            (*(this->success)).clear();
-            uint32_t _size260;
-            apache::thrift::protocol::TType _etype263;
-            iprot->readListBegin(_etype263, _size260);
-            (*(this->success)).resize(_size260);
-            uint32_t _i264;
-            for (_i264 = 0; _i264 < _size260; ++_i264)
-            {
-              xfer += (*(this->success))[_i264].read(iprot);
-            }
-            iprot->readListEnd();
-          }
-          this->__isset.success = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 1:
-        if (ftype == apache::thrift::protocol::T_STRUCT) {
-          xfer += this->o1.read(iprot);
-          this->__isset.o1 = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 2:
-        if (ftype == apache::thrift::protocol::T_STRUCT) {
-          xfer += this->o2.read(iprot);
-          this->__isset.o2 = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      default:
-        xfer += iprot->skip(ftype);
-        break;
-    }
-    xfer += iprot->readFieldEnd();
-  }
-
-  xfer += iprot->readStructEnd();
-
-  return xfer;
-}
-
-uint32_t ThriftHiveMetastore_get_index_names_args::read(apache::thrift::protocol::TProtocol* iprot) {
-
-  uint32_t xfer = 0;
-  std::string fname;
-  apache::thrift::protocol::TType ftype;
-  int16_t fid;
-
-  xfer += iprot->readStructBegin(fname);
-
-  using apache::thrift::protocol::TProtocolException;
-
-
-  while (true)
-  {
-    xfer += iprot->readFieldBegin(fname, ftype, fid);
-    if (ftype == apache::thrift::protocol::T_STOP) {
-      break;
-    }
-    switch (fid)
-    {
-      case 1:
-        if (ftype == apache::thrift::protocol::T_STRING) {
-          xfer += iprot->readString(this->db_name);
-          this->__isset.db_name = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 2:
-        if (ftype == apache::thrift::protocol::T_STRING) {
-          xfer += iprot->readString(this->tbl_name);
-          this->__isset.tbl_name = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 3:
-        if (ftype == apache::thrift::protocol::T_I16) {
-          xfer += iprot->readI16(this->max_indexes);
-          this->__isset.max_indexes = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      default:
-        xfer += iprot->skip(ftype);
-        break;
-    }
-    xfer += iprot->readFieldEnd();
-  }
-
-  xfer += iprot->readStructEnd();
-
-  return xfer;
-}
-
-uint32_t ThriftHiveMetastore_get_index_names_args::write(apache::thrift::protocol::TProtocol* oprot) const {
-  uint32_t xfer = 0;
-  xfer += oprot->writeStructBegin("ThriftHiveMetastore_get_index_names_args");
-  xfer += oprot->writeFieldBegin("db_name", apache::thrift::protocol::T_STRING, 1);
-  xfer += oprot->writeString(this->db_name);
-  xfer += oprot->writeFieldEnd();
-  xfer += oprot->writeFieldBegin("tbl_name", apache::thrift::protocol::T_STRING, 2);
-  xfer += oprot->writeString(this->tbl_name);
-  xfer += oprot->writeFieldEnd();
-  xfer += oprot->writeFieldBegin("max_indexes", apache::thrift::protocol::T_I16, 3);
-  xfer += oprot->writeI16(this->max_indexes);
-  xfer += oprot->writeFieldEnd();
-  xfer += oprot->writeFieldStop();
-  xfer += oprot->writeStructEnd();
-  return xfer;
-}
-
-uint32_t ThriftHiveMetastore_get_index_names_pargs::write(apache::thrift::protocol::TProtocol* oprot) const {
-  uint32_t xfer = 0;
-  xfer += oprot->writeStructBegin("ThriftHiveMetastore_get_index_names_pargs");
-  xfer += oprot->writeFieldBegin("db_name", apache::thrift::protocol::T_STRING, 1);
-  xfer += oprot->writeString((*(this->db_name)));
-  xfer += oprot->writeFieldEnd();
-  xfer += oprot->writeFieldBegin("tbl_name", apache::thrift::protocol::T_STRING, 2);
-  xfer += oprot->writeString((*(this->tbl_name)));
-  xfer += oprot->writeFieldEnd();
-  xfer += oprot->writeFieldBegin("max_indexes", apache::thrift::protocol::T_I16, 3);
-  xfer += oprot->writeI16((*(this->max_indexes)));
-  xfer += oprot->writeFieldEnd();
-  xfer += oprot->writeFieldStop();
-  xfer += oprot->writeStructEnd();
-  return xfer;
-}
-
-uint32_t ThriftHiveMetastore_get_index_names_result::read(apache::thrift::protocol::TProtocol* iprot) {
-
-  uint32_t xfer = 0;
-  std::string fname;
-  apache::thrift::protocol::TType ftype;
-  int16_t fid;
-
-  xfer += iprot->readStructBegin(fname);
-
-  using apache::thrift::protocol::TProtocolException;
-
-
-  while (true)
-  {
-    xfer += iprot->readFieldBegin(fname, ftype, fid);
-    if (ftype == apache::thrift::protocol::T_STOP) {
-      break;
-    }
-    switch (fid)
-    {
-      case 0:
-        if (ftype == apache::thrift::protocol::T_LIST) {
-          {
-            this->success.clear();
-            uint32_t _size265;
-            apache::thrift::protocol::TType _etype268;
-            iprot->readListBegin(_etype268, _size265);
-            this->success.resize(_size265);
-            uint32_t _i269;
-            for (_i269 = 0; _i269 < _size265; ++_i269)
-            {
-              xfer += iprot->readString(this->success[_i269]);
-            }
-            iprot->readListEnd();
-          }
-          this->__isset.success = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 1:
-        if (ftype == apache::thrift::protocol::T_STRUCT) {
-          xfer += this->o2.read(iprot);
-          this->__isset.o2 = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      default:
-        xfer += iprot->skip(ftype);
-        break;
-    }
-    xfer += iprot->readFieldEnd();
-  }
-
-  xfer += iprot->readStructEnd();
-
-  return xfer;
-}
-
-uint32_t ThriftHiveMetastore_get_index_names_result::write(apache::thrift::protocol::TProtocol* oprot) const {
-
-  uint32_t xfer = 0;
-
-  xfer += oprot->writeStructBegin("ThriftHiveMetastore_get_index_names_result");
-
-  if (this->__isset.success) {
-    xfer += oprot->writeFieldBegin("success", apache::thrift::protocol::T_LIST, 0);
-    {
-      xfer += oprot->writeListBegin(apache::thrift::protocol::T_STRING, this->success.size());
-      std::vector<std::string> ::const_iterator _iter270;
-      for (_iter270 = this->success.begin(); _iter270 != this->success.end(); ++_iter270)
-      {
-        xfer += oprot->writeString((*_iter270));
-      }
-      xfer += oprot->writeListEnd();
-    }
-    xfer += oprot->writeFieldEnd();
-  } else if (this->__isset.o2) {
-    xfer += oprot->writeFieldBegin("o2", apache::thrift::protocol::T_STRUCT, 1);
-    xfer += this->o2.write(oprot);
-    xfer += oprot->writeFieldEnd();
-  }
-  xfer += oprot->writeFieldStop();
-  xfer += oprot->writeStructEnd();
-  return xfer;
-}
-
-uint32_t ThriftHiveMetastore_get_index_names_presult::read(apache::thrift::protocol::TProtocol* iprot) {
-
-  uint32_t xfer = 0;
-  std::string fname;
-  apache::thrift::protocol::TType ftype;
-  int16_t fid;
-
-  xfer += iprot->readStructBegin(fname);
-
-  using apache::thrift::protocol::TProtocolException;
-
-
-  while (true)
-  {
-    xfer += iprot->readFieldBegin(fname, ftype, fid);
-    if (ftype == apache::thrift::protocol::T_STOP) {
-      break;
-    }
-    switch (fid)
-    {
-      case 0:
-        if (ftype == apache::thrift::protocol::T_LIST) {
-          {
-            (*(this->success)).clear();
-            uint32_t _size271;
-            apache::thrift::protocol::TType _etype274;
-            iprot->readListBegin(_etype274, _size271);
-            (*(this->success)).resize(_size271);
-            uint32_t _i275;
-            for (_i275 = 0; _i275 < _size271; ++_i275)
-            {
-              xfer += iprot->readString((*(this->success))[_i275]);
-            }
-            iprot->readListEnd();
-          }
-          this->__isset.success = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 1:
-        if (ftype == apache::thrift::protocol::T_STRUCT) {
-          xfer += this->o2.read(iprot);
-          this->__isset.o2 = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      default:
-        xfer += iprot->skip(ftype);
-        break;
-    }
-    xfer += iprot->readFieldEnd();
-  }
-
-  xfer += iprot->readStructEnd();
-
-  return xfer;
-}
-
-bool ThriftHiveMetastoreClient::create_database(const std::string& name, const std::string& description)
-{
-  send_create_database(name, description);
-  return recv_create_database();
-}
-
-void ThriftHiveMetastoreClient::send_create_database(const std::string& name, const std::string& description)
-{
-  int32_t cseqid = 0;
-  oprot_->writeMessageBegin("create_database", apache::thrift::protocol::T_CALL, cseqid);
-
-  ThriftHiveMetastore_create_database_pargs args;
-  args.name = &name;
-  args.description = &description;
-  args.write(oprot_);
-
-  oprot_->writeMessageEnd();
-  oprot_->getTransport()->flush();
-  oprot_->getTransport()->writeEnd();
-}
-
-bool ThriftHiveMetastoreClient::recv_create_database()
-{
-
-  int32_t rseqid = 0;
-  std::string fname;
-  apache::thrift::protocol::TMessageType mtype;
-
-  iprot_->readMessageBegin(fname, mtype, rseqid);
-  if (mtype == apache::thrift::protocol::T_EXCEPTION) {
-    apache::thrift::TApplicationException x;
-    x.read(iprot_);
-    iprot_->readMessageEnd();
-    iprot_->getTransport()->readEnd();
-    throw x;
-  }
-  if (mtype != apache::thrift::protocol::T_REPLY) {
-    iprot_->skip(apache::thrift::protocol::T_STRUCT);
-    iprot_->readMessageEnd();
-    iprot_->getTransport()->readEnd();
-    throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::INVALID_MESSAGE_TYPE);
-  }
-  if (fname.compare("create_database") != 0) {
-    iprot_->skip(apache::thrift::protocol::T_STRUCT);
-    iprot_->readMessageEnd();
-    iprot_->getTransport()->readEnd();
-    throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::WRONG_METHOD_NAME);
-  }
-  bool _return;
-  ThriftHiveMetastore_create_database_presult result;
-  result.success = &_return;
-  result.read(iprot_);
-  iprot_->readMessageEnd();
-  iprot_->getTransport()->readEnd();
-
-  if (result.__isset.success) {
-    return _return;
-  }
-  if (result.__isset.o1) {
-    throw result.o1;
-  }
-  if (result.__isset.o2) {
-    throw result.o2;
-  }
-  throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "create_database failed: unknown result");
-}
-
-void ThriftHiveMetastoreClient::get_database(Database& _return, const std::string& name)
-{
-  send_get_database(name);
-  recv_get_database(_return);
-}
-
-void ThriftHiveMetastoreClient::send_get_database(const std::string& name)
-{
-  int32_t cseqid = 0;
-  oprot_->writeMessageBegin("get_database", apache::thrift::protocol::T_CALL, cseqid);
-
-  ThriftHiveMetastore_get_database_pargs args;
-  args.name = &name;
-  args.write(oprot_);
-
-  oprot_->writeMessageEnd();
-  oprot_->getTransport()->flush();
-  oprot_->getTransport()->writeEnd();
-}
-
-void ThriftHiveMetastoreClient::recv_get_database(Database& _return)
-{
-
-  int32_t rseqid = 0;
-  std::string fname;
-  apache::thrift::protocol::TMessageType mtype;
-
-  iprot_->readMessageBegin(fname, mtype, rseqid);
-  if (mtype == apache::thrift::protocol::T_EXCEPTION) {
-    apache::thrift::TApplicationException x;
-    x.read(iprot_);
-    iprot_->readMessageEnd();
-    iprot_->getTransport()->readEnd();
-    throw x;
-  }
-  if (mtype != apache::thrift::protocol::T_REPLY) {
-    iprot_->skip(apache::thrift::protocol::T_STRUCT);
-    iprot_->readMessageEnd();
-    iprot_->getTransport()->readEnd();
-    throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::INVALID_MESSAGE_TYPE);
-  }
-  if (fname.compare("get_database") != 0) {
-    iprot_->skip(apache::thrift::protocol::T_STRUCT);
-    iprot_->readMessageEnd();
-    iprot_->getTransport()->readEnd();
-    throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::WRONG_METHOD_NAME);
-  }
-  ThriftHiveMetastore_get_database_presult result;
-  result.success = &_return;
-  result.read(iprot_);
-  iprot_->readMessageEnd();
-  iprot_->getTransport()->readEnd();
-
-  if (result.__isset.success) {
-    // _return pointer has now been filled
-    return;
-  }
-  if (result.__isset.o1) {
-    throw result.o1;
-  }
-  if (result.__isset.o2) {
-    throw result.o2;
-  }
-  throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "get_database failed: unknown result");
-}
-
-bool ThriftHiveMetastoreClient::drop_database(const std::string& name)
-{
-  send_drop_database(name);
-  return recv_drop_database();
-}
-
-void ThriftHiveMetastoreClient::send_drop_database(const std::string& name)
-{
-  int32_t cseqid = 0;
-  oprot_->writeMessageBegin("drop_database", apache::thrift::protocol::T_CALL, cseqid);
-
-  ThriftHiveMetastore_drop_database_pargs args;
-  args.name = &name;
-  args.write(oprot_);
-
-  oprot_->writeMessageEnd();
-  oprot_->getTransport()->flush();
-  oprot_->getTransport()->writeEnd();
-}
-
-bool ThriftHiveMetastoreClient::recv_drop_database()
-{
-
-  int32_t rseqid = 0;
-  std::string fname;
-  apache::thrift::protocol::TMessageType mtype;
-
-  iprot_->readMessageBegin(fname, mtype, rseqid);
-  if (mtype == apache::thrift::protocol::T_EXCEPTION) {
-    apache::thrift::TApplicationException x;
-    x.read(iprot_);
-    iprot_->readMessageEnd();
-    iprot_->getTransport()->readEnd();
-    throw x;
-  }
-  if (mtype != apache::thrift::protocol::T_REPLY) {
-    iprot_->skip(apache::thrift::protocol::T_STRUCT);
-    iprot_->readMessageEnd();
-    iprot_->getTransport()->readEnd();
-    throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::INVALID_MESSAGE_TYPE);
-  }
-  if (fname.compare("drop_database") != 0) {
-    iprot_->skip(apache::thrift::protocol::T_STRUCT);
-    iprot_->readMessageEnd();
-    iprot_->getTransport()->readEnd();
-    throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::WRONG_METHOD_NAME);
-  }
-  bool _return;
-  ThriftHiveMetastore_drop_database_presult result;
-  result.success = &_return;
-  result.read(iprot_);
-  iprot_->readMessageEnd();
-  iprot_->getTransport()->readEnd();
-
-  if (result.__isset.success) {
-    return _return;
-  }
-  if (result.__isset.o2) {
-    throw result.o2;
-  }
-  throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "drop_database failed: unknown result");
-}
-
-void ThriftHiveMetastoreClient::get_databases(std::vector<std::string> & _return)
-{
-  send_get_databases();
-  recv_get_databases(_return);
-}
-
-void ThriftHiveMetastoreClient::send_get_databases()
-{
-  int32_t cseqid = 0;
-  oprot_->writeMessageBegin("get_databases", apache::thrift::protocol::T_CALL, cseqid);
-
-  ThriftHiveMetastore_get_databases_pargs args;
-  args.write(oprot_);
-
-  oprot_->writeMessageEnd();
-  oprot_->getTransport()->flush();
-  oprot_->getTransport()->writeEnd();
-}
-
-void ThriftHiveMetastoreClient::recv_get_databases(std::vector<std::string> & _return)
-{
-
-  int32_t rseqid = 0;
-  std::string fname;
-  apache::thrift::protocol::TMessageType mtype;
-
-  iprot_->readMessageBegin(fname, mtype, rseqid);
-  if (mtype == apache::thrift::protocol::T_EXCEPTION) {
-    apache::thrift::TApplicationException x;
-    x.read(iprot_);
-    iprot_->readMessageEnd();
-    iprot_->getTransport()->readEnd();
-    throw x;
-  }
-  if (mtype != apache::thrift::protocol::T_REPLY) {
-    iprot_->skip(apache::thrift::protocol::T_STRUCT);
-    iprot_->readMessageEnd();
-    iprot_->getTransport()->readEnd();
-    throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::INVALID_MESSAGE_TYPE);
-  }
-  if (fname.compare("get_databases") != 0) {
-    iprot_->skip(apache::thrift::protocol::T_STRUCT);
-    iprot_->readMessageEnd();
-    iprot_->getTransport()->readEnd();
-    throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::WRONG_METHOD_NAME);
-  }
-  ThriftHiveMetastore_get_databases_presult result;
-  result.success = &_return;
-  result.read(iprot_);
-  iprot_->readMessageEnd();
-  iprot_->getTransport()->readEnd();
-
-  if (result.__isset.success) {
-    // _return pointer has now been filled
-    return;
-  }
-  if (result.__isset.o1) {
-    throw result.o1;
-  }
-  throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "get_databases failed: unknown result");
-}
-
-void ThriftHiveMetastoreClient::get_type(Type& _return, const std::string& name)
-{
-  send_get_type(name);
-  recv_get_type(_return);
-}
-
-void ThriftHiveMetastoreClient::send_get_type(const std::string& name)
-{
-  int32_t cseqid = 0;
-  oprot_->writeMessageBegin("get_type", apache::thrift::protocol::T_CALL, cseqid);
-
-  ThriftHiveMetastore_get_type_pargs args;
-  args.name = &name;
-=======
 
   uint32_t xfer = 0;
   std::string fname;
@@ -11144,7 +9263,6 @@ void ThriftHiveMetastoreClient::send_get_type_all(const std::string& name)
 
   ThriftHiveMetastore_get_type_all_pargs args;
   args.name = &name;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   args.write(oprot_);
 
   oprot_->writeMessageEnd();
@@ -11152,11 +9270,7 @@ void ThriftHiveMetastoreClient::send_get_type_all(const std::string& name)
   oprot_->getTransport()->writeEnd();
 }
 
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-void ThriftHiveMetastoreClient::recv_get_type(Type& _return)
-=======
 void ThriftHiveMetastoreClient::recv_get_type_all(std::map<std::string, Type> & _return)
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
 {
 
   int32_t rseqid = 0;
@@ -11177,21 +9291,13 @@ void ThriftHiveMetastoreClient::recv_get_type_all(std::map<std::string, Type> & 
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::INVALID_MESSAGE_TYPE);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  if (fname.compare("get_type") != 0) {
-=======
   if (fname.compare("get_type_all") != 0) {
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
     iprot_->skip(apache::thrift::protocol::T_STRUCT);
     iprot_->readMessageEnd();
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::WRONG_METHOD_NAME);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  ThriftHiveMetastore_get_type_presult result;
-=======
   ThriftHiveMetastore_get_type_all_presult result;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   result.success = &_return;
   result.read(iprot_);
   iprot_->readMessageEnd();
@@ -11204,24 +9310,6 @@ void ThriftHiveMetastoreClient::recv_get_type_all(std::map<std::string, Type> & 
   if (result.__isset.o2) {
     throw result.o2;
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "get_type failed: unknown result");
-}
-
-bool ThriftHiveMetastoreClient::create_type(const Type& type)
-{
-  send_create_type(type);
-  return recv_create_type();
-}
-
-void ThriftHiveMetastoreClient::send_create_type(const Type& type)
-{
-  int32_t cseqid = 0;
-  oprot_->writeMessageBegin("create_type", apache::thrift::protocol::T_CALL, cseqid);
-
-  ThriftHiveMetastore_create_type_pargs args;
-  args.type = &type;
-=======
   throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "get_type_all failed: unknown result");
 }
 
@@ -11239,7 +9327,6 @@ void ThriftHiveMetastoreClient::send_get_fields(const std::string& db_name, cons
   ThriftHiveMetastore_get_fields_pargs args;
   args.db_name = &db_name;
   args.table_name = &table_name;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   args.write(oprot_);
 
   oprot_->writeMessageEnd();
@@ -11247,11 +9334,7 @@ void ThriftHiveMetastoreClient::send_get_fields(const std::string& db_name, cons
   oprot_->getTransport()->writeEnd();
 }
 
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-bool ThriftHiveMetastoreClient::recv_create_type()
-=======
 void ThriftHiveMetastoreClient::recv_get_fields(std::vector<FieldSchema> & _return)
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
 {
 
   int32_t rseqid = 0;
@@ -11272,29 +9355,21 @@ void ThriftHiveMetastoreClient::recv_get_fields(std::vector<FieldSchema> & _retu
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::INVALID_MESSAGE_TYPE);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  if (fname.compare("create_type") != 0) {
-=======
   if (fname.compare("get_fields") != 0) {
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
     iprot_->skip(apache::thrift::protocol::T_STRUCT);
     iprot_->readMessageEnd();
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::WRONG_METHOD_NAME);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  bool _return;
-  ThriftHiveMetastore_create_type_presult result;
-=======
   ThriftHiveMetastore_get_fields_presult result;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   result.success = &_return;
   result.read(iprot_);
   iprot_->readMessageEnd();
   iprot_->getTransport()->readEnd();
 
   if (result.__isset.success) {
-    return _return;
+    // _return pointer has now been filled
+    return;
   }
   if (result.__isset.o1) {
     throw result.o1;
@@ -11305,24 +9380,6 @@ void ThriftHiveMetastoreClient::recv_get_fields(std::vector<FieldSchema> & _retu
   if (result.__isset.o3) {
     throw result.o3;
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "create_type failed: unknown result");
-}
-
-bool ThriftHiveMetastoreClient::drop_type(const std::string& type)
-{
-  send_drop_type(type);
-  return recv_drop_type();
-}
-
-void ThriftHiveMetastoreClient::send_drop_type(const std::string& type)
-{
-  int32_t cseqid = 0;
-  oprot_->writeMessageBegin("drop_type", apache::thrift::protocol::T_CALL, cseqid);
-
-  ThriftHiveMetastore_drop_type_pargs args;
-  args.type = &type;
-=======
   throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "get_fields failed: unknown result");
 }
 
@@ -11340,7 +9397,6 @@ void ThriftHiveMetastoreClient::send_get_schema(const std::string& db_name, cons
   ThriftHiveMetastore_get_schema_pargs args;
   args.db_name = &db_name;
   args.table_name = &table_name;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   args.write(oprot_);
 
   oprot_->writeMessageEnd();
@@ -11348,11 +9404,7 @@ void ThriftHiveMetastoreClient::send_get_schema(const std::string& db_name, cons
   oprot_->getTransport()->writeEnd();
 }
 
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-bool ThriftHiveMetastoreClient::recv_drop_type()
-=======
 void ThriftHiveMetastoreClient::recv_get_schema(std::vector<FieldSchema> & _return)
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
 {
 
   int32_t rseqid = 0;
@@ -11373,22 +9425,13 @@ void ThriftHiveMetastoreClient::recv_get_schema(std::vector<FieldSchema> & _retu
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::INVALID_MESSAGE_TYPE);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  if (fname.compare("drop_type") != 0) {
-=======
   if (fname.compare("get_schema") != 0) {
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
     iprot_->skip(apache::thrift::protocol::T_STRUCT);
     iprot_->readMessageEnd();
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::WRONG_METHOD_NAME);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  bool _return;
-  ThriftHiveMetastore_drop_type_presult result;
-=======
   ThriftHiveMetastore_get_schema_presult result;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   result.success = &_return;
   result.read(iprot_);
   iprot_->readMessageEnd();
@@ -11404,24 +9447,6 @@ void ThriftHiveMetastoreClient::recv_get_schema(std::vector<FieldSchema> & _retu
   if (result.__isset.o2) {
     throw result.o2;
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "drop_type failed: unknown result");
-}
-
-void ThriftHiveMetastoreClient::get_type_all(std::map<std::string, Type> & _return, const std::string& name)
-{
-  send_get_type_all(name);
-  recv_get_type_all(_return);
-}
-
-void ThriftHiveMetastoreClient::send_get_type_all(const std::string& name)
-{
-  int32_t cseqid = 0;
-  oprot_->writeMessageBegin("get_type_all", apache::thrift::protocol::T_CALL, cseqid);
-
-  ThriftHiveMetastore_get_type_all_pargs args;
-  args.name = &name;
-=======
   if (result.__isset.o3) {
     throw result.o3;
   }
@@ -11441,7 +9466,6 @@ void ThriftHiveMetastoreClient::send_create_table(const Table& tbl)
 
   ThriftHiveMetastore_create_table_pargs args;
   args.tbl = &tbl;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   args.write(oprot_);
 
   oprot_->writeMessageEnd();
@@ -11449,11 +9473,7 @@ void ThriftHiveMetastoreClient::send_create_table(const Table& tbl)
   oprot_->getTransport()->writeEnd();
 }
 
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-void ThriftHiveMetastoreClient::recv_get_type_all(std::map<std::string, Type> & _return)
-=======
 void ThriftHiveMetastoreClient::recv_create_table()
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
 {
 
   int32_t rseqid = 0;
@@ -11474,52 +9494,17 @@ void ThriftHiveMetastoreClient::recv_create_table()
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::INVALID_MESSAGE_TYPE);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  if (fname.compare("get_type_all") != 0) {
-=======
   if (fname.compare("create_table") != 0) {
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
     iprot_->skip(apache::thrift::protocol::T_STRUCT);
     iprot_->readMessageEnd();
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::WRONG_METHOD_NAME);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  ThriftHiveMetastore_get_type_all_presult result;
-  result.success = &_return;
-=======
   ThriftHiveMetastore_create_table_presult result;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   result.read(iprot_);
   iprot_->readMessageEnd();
   iprot_->getTransport()->readEnd();
 
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  if (result.__isset.success) {
-    // _return pointer has now been filled
-    return;
-  }
-  if (result.__isset.o2) {
-    throw result.o2;
-  }
-  throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "get_type_all failed: unknown result");
-}
-
-void ThriftHiveMetastoreClient::get_fields(std::vector<FieldSchema> & _return, const std::string& db_name, const std::string& table_name)
-{
-  send_get_fields(db_name, table_name);
-  recv_get_fields(_return);
-}
-
-void ThriftHiveMetastoreClient::send_get_fields(const std::string& db_name, const std::string& table_name)
-{
-  int32_t cseqid = 0;
-  oprot_->writeMessageBegin("get_fields", apache::thrift::protocol::T_CALL, cseqid);
-
-  ThriftHiveMetastore_get_fields_pargs args;
-  args.db_name = &db_name;
-  args.table_name = &table_name;
-=======
   if (result.__isset.o1) {
     throw result.o1;
   }
@@ -11550,7 +9535,6 @@ void ThriftHiveMetastoreClient::send_drop_table(const std::string& dbname, const
   args.dbname = &dbname;
   args.name = &name;
   args.deleteData = &deleteData;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   args.write(oprot_);
 
   oprot_->writeMessageEnd();
@@ -11558,11 +9542,7 @@ void ThriftHiveMetastoreClient::send_drop_table(const std::string& dbname, const
   oprot_->getTransport()->writeEnd();
 }
 
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-void ThriftHiveMetastoreClient::recv_get_fields(std::vector<FieldSchema> & _return)
-=======
 void ThriftHiveMetastoreClient::recv_drop_table()
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
 {
 
   int32_t rseqid = 0;
@@ -11583,22 +9563,13 @@ void ThriftHiveMetastoreClient::recv_drop_table()
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::INVALID_MESSAGE_TYPE);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  if (fname.compare("get_fields") != 0) {
-=======
   if (fname.compare("drop_table") != 0) {
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
     iprot_->skip(apache::thrift::protocol::T_STRUCT);
     iprot_->readMessageEnd();
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::WRONG_METHOD_NAME);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  ThriftHiveMetastore_get_fields_presult result;
-  result.success = &_return;
-=======
   ThriftHiveMetastore_drop_table_presult result;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   result.read(iprot_);
   iprot_->readMessageEnd();
   iprot_->getTransport()->readEnd();
@@ -11606,34 +9577,6 @@ void ThriftHiveMetastoreClient::recv_drop_table()
   if (result.__isset.o1) {
     throw result.o1;
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  if (result.__isset.o1) {
-    throw result.o1;
-  }
-  if (result.__isset.o2) {
-    throw result.o2;
-  }
-  if (result.__isset.o3) {
-    throw result.o3;
-  }
-  throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "get_fields failed: unknown result");
-}
-
-void ThriftHiveMetastoreClient::get_schema(std::vector<FieldSchema> & _return, const std::string& db_name, const std::string& table_name)
-{
-  send_get_schema(db_name, table_name);
-  recv_get_schema(_return);
-}
-
-void ThriftHiveMetastoreClient::send_get_schema(const std::string& db_name, const std::string& table_name)
-{
-  int32_t cseqid = 0;
-  oprot_->writeMessageBegin("get_schema", apache::thrift::protocol::T_CALL, cseqid);
-
-  ThriftHiveMetastore_get_schema_pargs args;
-  args.db_name = &db_name;
-  args.table_name = &table_name;
-=======
   if (result.__isset.o3) {
     throw result.o3;
   }
@@ -11654,7 +9597,6 @@ void ThriftHiveMetastoreClient::send_get_tables(const std::string& db_name, cons
   ThriftHiveMetastore_get_tables_pargs args;
   args.db_name = &db_name;
   args.pattern = &pattern;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   args.write(oprot_);
 
   oprot_->writeMessageEnd();
@@ -11662,11 +9604,7 @@ void ThriftHiveMetastoreClient::send_get_tables(const std::string& db_name, cons
   oprot_->getTransport()->writeEnd();
 }
 
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-void ThriftHiveMetastoreClient::recv_get_schema(std::vector<FieldSchema> & _return)
-=======
 void ThriftHiveMetastoreClient::recv_get_tables(std::vector<std::string> & _return)
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
 {
 
   int32_t rseqid = 0;
@@ -11687,21 +9625,13 @@ void ThriftHiveMetastoreClient::recv_get_tables(std::vector<std::string> & _retu
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::INVALID_MESSAGE_TYPE);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  if (fname.compare("get_schema") != 0) {
-=======
   if (fname.compare("get_tables") != 0) {
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
     iprot_->skip(apache::thrift::protocol::T_STRUCT);
     iprot_->readMessageEnd();
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::WRONG_METHOD_NAME);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  ThriftHiveMetastore_get_schema_presult result;
-=======
   ThriftHiveMetastore_get_tables_presult result;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   result.success = &_return;
   result.read(iprot_);
   iprot_->readMessageEnd();
@@ -11714,99 +9644,6 @@ void ThriftHiveMetastoreClient::recv_get_tables(std::vector<std::string> & _retu
   if (result.__isset.o1) {
     throw result.o1;
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  if (result.__isset.o2) {
-    throw result.o2;
-  }
-  if (result.__isset.o3) {
-    throw result.o3;
-  }
-  throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "get_schema failed: unknown result");
-}
-
-void ThriftHiveMetastoreClient::create_table(const Table& tbl)
-{
-  send_create_table(tbl);
-  recv_create_table();
-}
-
-void ThriftHiveMetastoreClient::send_create_table(const Table& tbl)
-{
-  int32_t cseqid = 0;
-  oprot_->writeMessageBegin("create_table", apache::thrift::protocol::T_CALL, cseqid);
-
-  ThriftHiveMetastore_create_table_pargs args;
-  args.tbl = &tbl;
-  args.write(oprot_);
-
-  oprot_->writeMessageEnd();
-  oprot_->getTransport()->flush();
-  oprot_->getTransport()->writeEnd();
-}
-
-void ThriftHiveMetastoreClient::recv_create_table()
-{
-
-  int32_t rseqid = 0;
-  std::string fname;
-  apache::thrift::protocol::TMessageType mtype;
-
-  iprot_->readMessageBegin(fname, mtype, rseqid);
-  if (mtype == apache::thrift::protocol::T_EXCEPTION) {
-    apache::thrift::TApplicationException x;
-    x.read(iprot_);
-    iprot_->readMessageEnd();
-    iprot_->getTransport()->readEnd();
-    throw x;
-  }
-  if (mtype != apache::thrift::protocol::T_REPLY) {
-    iprot_->skip(apache::thrift::protocol::T_STRUCT);
-    iprot_->readMessageEnd();
-    iprot_->getTransport()->readEnd();
-    throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::INVALID_MESSAGE_TYPE);
-  }
-  if (fname.compare("create_table") != 0) {
-    iprot_->skip(apache::thrift::protocol::T_STRUCT);
-    iprot_->readMessageEnd();
-    iprot_->getTransport()->readEnd();
-    throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::WRONG_METHOD_NAME);
-  }
-  ThriftHiveMetastore_create_table_presult result;
-  result.read(iprot_);
-  iprot_->readMessageEnd();
-  iprot_->getTransport()->readEnd();
-
-  if (result.__isset.o1) {
-    throw result.o1;
-  }
-  if (result.__isset.o2) {
-    throw result.o2;
-  }
-  if (result.__isset.o3) {
-    throw result.o3;
-  }
-  if (result.__isset.o4) {
-    throw result.o4;
-  }
-  return;
-}
-
-void ThriftHiveMetastoreClient::drop_table(const std::string& dbname, const std::string& name, const bool deleteData)
-{
-  send_drop_table(dbname, name, deleteData);
-  recv_drop_table();
-}
-
-void ThriftHiveMetastoreClient::send_drop_table(const std::string& dbname, const std::string& name, const bool deleteData)
-{
-  int32_t cseqid = 0;
-  oprot_->writeMessageBegin("drop_table", apache::thrift::protocol::T_CALL, cseqid);
-
-  ThriftHiveMetastore_drop_table_pargs args;
-  args.dbname = &dbname;
-  args.name = &name;
-  args.deleteData = &deleteData;
-=======
   throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "get_tables failed: unknown result");
 }
 
@@ -11823,7 +9660,6 @@ void ThriftHiveMetastoreClient::send_get_all_tables(const std::string& db_name)
 
   ThriftHiveMetastore_get_all_tables_pargs args;
   args.db_name = &db_name;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   args.write(oprot_);
 
   oprot_->writeMessageEnd();
@@ -11831,11 +9667,7 @@ void ThriftHiveMetastoreClient::send_get_all_tables(const std::string& db_name)
   oprot_->getTransport()->writeEnd();
 }
 
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-void ThriftHiveMetastoreClient::recv_drop_table()
-=======
 void ThriftHiveMetastoreClient::recv_get_all_tables(std::vector<std::string> & _return)
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
 {
 
   int32_t rseqid = 0;
@@ -11856,51 +9688,18 @@ void ThriftHiveMetastoreClient::recv_get_all_tables(std::vector<std::string> & _
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::INVALID_MESSAGE_TYPE);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  if (fname.compare("drop_table") != 0) {
-=======
   if (fname.compare("get_all_tables") != 0) {
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
     iprot_->skip(apache::thrift::protocol::T_STRUCT);
     iprot_->readMessageEnd();
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::WRONG_METHOD_NAME);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  ThriftHiveMetastore_drop_table_presult result;
-=======
   ThriftHiveMetastore_get_all_tables_presult result;
   result.success = &_return;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   result.read(iprot_);
   iprot_->readMessageEnd();
   iprot_->getTransport()->readEnd();
 
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  if (result.__isset.o1) {
-    throw result.o1;
-  }
-  if (result.__isset.o3) {
-    throw result.o3;
-  }
-  return;
-}
-
-void ThriftHiveMetastoreClient::get_tables(std::vector<std::string> & _return, const std::string& db_name, const std::string& pattern)
-{
-  send_get_tables(db_name, pattern);
-  recv_get_tables(_return);
-}
-
-void ThriftHiveMetastoreClient::send_get_tables(const std::string& db_name, const std::string& pattern)
-{
-  int32_t cseqid = 0;
-  oprot_->writeMessageBegin("get_tables", apache::thrift::protocol::T_CALL, cseqid);
-
-  ThriftHiveMetastore_get_tables_pargs args;
-  args.db_name = &db_name;
-  args.pattern = &pattern;
-=======
   if (result.__isset.success) {
     // _return pointer has now been filled
     return;
@@ -11925,7 +9724,6 @@ void ThriftHiveMetastoreClient::send_get_table(const std::string& dbname, const 
   ThriftHiveMetastore_get_table_pargs args;
   args.dbname = &dbname;
   args.tbl_name = &tbl_name;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   args.write(oprot_);
 
   oprot_->writeMessageEnd();
@@ -11933,11 +9731,7 @@ void ThriftHiveMetastoreClient::send_get_table(const std::string& dbname, const 
   oprot_->getTransport()->writeEnd();
 }
 
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-void ThriftHiveMetastoreClient::recv_get_tables(std::vector<std::string> & _return)
-=======
 void ThriftHiveMetastoreClient::recv_get_table(Table& _return)
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
 {
 
   int32_t rseqid = 0;
@@ -11958,21 +9752,13 @@ void ThriftHiveMetastoreClient::recv_get_table(Table& _return)
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::INVALID_MESSAGE_TYPE);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  if (fname.compare("get_tables") != 0) {
-=======
   if (fname.compare("get_table") != 0) {
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
     iprot_->skip(apache::thrift::protocol::T_STRUCT);
     iprot_->readMessageEnd();
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::WRONG_METHOD_NAME);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  ThriftHiveMetastore_get_tables_presult result;
-=======
   ThriftHiveMetastore_get_table_presult result;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   result.success = &_return;
   result.read(iprot_);
   iprot_->readMessageEnd();
@@ -11984,26 +9770,6 @@ void ThriftHiveMetastoreClient::recv_get_table(Table& _return)
   }
   if (result.__isset.o1) {
     throw result.o1;
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  }
-  throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "get_tables failed: unknown result");
-}
-
-void ThriftHiveMetastoreClient::get_table(Table& _return, const std::string& dbname, const std::string& tbl_name)
-{
-  send_get_table(dbname, tbl_name);
-  recv_get_table(_return);
-}
-
-void ThriftHiveMetastoreClient::send_get_table(const std::string& dbname, const std::string& tbl_name)
-{
-  int32_t cseqid = 0;
-  oprot_->writeMessageBegin("get_table", apache::thrift::protocol::T_CALL, cseqid);
-
-  ThriftHiveMetastore_get_table_pargs args;
-  args.dbname = &dbname;
-  args.tbl_name = &tbl_name;
-=======
   }
   if (result.__isset.o2) {
     throw result.o2;
@@ -12026,7 +9792,6 @@ void ThriftHiveMetastoreClient::send_alter_table(const std::string& dbname, cons
   args.dbname = &dbname;
   args.tbl_name = &tbl_name;
   args.new_tbl = &new_tbl;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   args.write(oprot_);
 
   oprot_->writeMessageEnd();
@@ -12034,11 +9799,7 @@ void ThriftHiveMetastoreClient::send_alter_table(const std::string& dbname, cons
   oprot_->getTransport()->writeEnd();
 }
 
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-void ThriftHiveMetastoreClient::recv_get_table(Table& _return)
-=======
 void ThriftHiveMetastoreClient::recv_alter_table()
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
 {
 
   int32_t rseqid = 0;
@@ -12059,22 +9820,13 @@ void ThriftHiveMetastoreClient::recv_alter_table()
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::INVALID_MESSAGE_TYPE);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  if (fname.compare("get_table") != 0) {
-=======
   if (fname.compare("alter_table") != 0) {
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
     iprot_->skip(apache::thrift::protocol::T_STRUCT);
     iprot_->readMessageEnd();
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::WRONG_METHOD_NAME);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  ThriftHiveMetastore_get_table_presult result;
-  result.success = &_return;
-=======
   ThriftHiveMetastore_alter_table_presult result;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   result.read(iprot_);
   iprot_->readMessageEnd();
   iprot_->getTransport()->readEnd();
@@ -12085,26 +9837,6 @@ void ThriftHiveMetastoreClient::recv_alter_table()
   if (result.__isset.o2) {
     throw result.o2;
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "get_table failed: unknown result");
-}
-
-void ThriftHiveMetastoreClient::alter_table(const std::string& dbname, const std::string& tbl_name, const Table& new_tbl)
-{
-  send_alter_table(dbname, tbl_name, new_tbl);
-  recv_alter_table();
-}
-
-void ThriftHiveMetastoreClient::send_alter_table(const std::string& dbname, const std::string& tbl_name, const Table& new_tbl)
-{
-  int32_t cseqid = 0;
-  oprot_->writeMessageBegin("alter_table", apache::thrift::protocol::T_CALL, cseqid);
-
-  ThriftHiveMetastore_alter_table_pargs args;
-  args.dbname = &dbname;
-  args.tbl_name = &tbl_name;
-  args.new_tbl = &new_tbl;
-=======
   return;
 }
 
@@ -12121,7 +9853,6 @@ void ThriftHiveMetastoreClient::send_add_partition(const Partition& new_part)
 
   ThriftHiveMetastore_add_partition_pargs args;
   args.new_part = &new_part;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   args.write(oprot_);
 
   oprot_->writeMessageEnd();
@@ -12129,11 +9860,7 @@ void ThriftHiveMetastoreClient::send_add_partition(const Partition& new_part)
   oprot_->getTransport()->writeEnd();
 }
 
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-void ThriftHiveMetastoreClient::recv_alter_table()
-=======
 void ThriftHiveMetastoreClient::recv_add_partition(Partition& _return)
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
 {
 
   int32_t rseqid = 0;
@@ -12154,50 +9881,28 @@ void ThriftHiveMetastoreClient::recv_add_partition(Partition& _return)
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::INVALID_MESSAGE_TYPE);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  if (fname.compare("alter_table") != 0) {
-=======
   if (fname.compare("add_partition") != 0) {
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
     iprot_->skip(apache::thrift::protocol::T_STRUCT);
     iprot_->readMessageEnd();
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::WRONG_METHOD_NAME);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  ThriftHiveMetastore_alter_table_presult result;
-=======
   ThriftHiveMetastore_add_partition_presult result;
   result.success = &_return;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   result.read(iprot_);
   iprot_->readMessageEnd();
   iprot_->getTransport()->readEnd();
 
+  if (result.__isset.success) {
+    // _return pointer has now been filled
+    return;
+  }
   if (result.__isset.o1) {
     throw result.o1;
   }
   if (result.__isset.o2) {
     throw result.o2;
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  return;
-}
-
-void ThriftHiveMetastoreClient::add_partition(Partition& _return, const Partition& new_part)
-{
-  send_add_partition(new_part);
-  recv_add_partition(_return);
-}
-
-void ThriftHiveMetastoreClient::send_add_partition(const Partition& new_part)
-{
-  int32_t cseqid = 0;
-  oprot_->writeMessageBegin("add_partition", apache::thrift::protocol::T_CALL, cseqid);
-
-  ThriftHiveMetastore_add_partition_pargs args;
-  args.new_part = &new_part;
-=======
   if (result.__isset.o3) {
     throw result.o3;
   }
@@ -12219,7 +9924,6 @@ void ThriftHiveMetastoreClient::send_append_partition(const std::string& db_name
   args.db_name = &db_name;
   args.tbl_name = &tbl_name;
   args.part_vals = &part_vals;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   args.write(oprot_);
 
   oprot_->writeMessageEnd();
@@ -12227,11 +9931,7 @@ void ThriftHiveMetastoreClient::send_append_partition(const std::string& db_name
   oprot_->getTransport()->writeEnd();
 }
 
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-void ThriftHiveMetastoreClient::recv_add_partition(Partition& _return)
-=======
 void ThriftHiveMetastoreClient::recv_append_partition(Partition& _return)
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
 {
 
   int32_t rseqid = 0;
@@ -12252,21 +9952,13 @@ void ThriftHiveMetastoreClient::recv_append_partition(Partition& _return)
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::INVALID_MESSAGE_TYPE);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  if (fname.compare("add_partition") != 0) {
-=======
   if (fname.compare("append_partition") != 0) {
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
     iprot_->skip(apache::thrift::protocol::T_STRUCT);
     iprot_->readMessageEnd();
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::WRONG_METHOD_NAME);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  ThriftHiveMetastore_add_partition_presult result;
-=======
   ThriftHiveMetastore_append_partition_presult result;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   result.success = &_return;
   result.read(iprot_);
   iprot_->readMessageEnd();
@@ -12285,26 +9977,6 @@ void ThriftHiveMetastoreClient::recv_append_partition(Partition& _return)
   if (result.__isset.o3) {
     throw result.o3;
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "add_partition failed: unknown result");
-}
-
-void ThriftHiveMetastoreClient::append_partition(Partition& _return, const std::string& db_name, const std::string& tbl_name, const std::vector<std::string> & part_vals)
-{
-  send_append_partition(db_name, tbl_name, part_vals);
-  recv_append_partition(_return);
-}
-
-void ThriftHiveMetastoreClient::send_append_partition(const std::string& db_name, const std::string& tbl_name, const std::vector<std::string> & part_vals)
-{
-  int32_t cseqid = 0;
-  oprot_->writeMessageBegin("append_partition", apache::thrift::protocol::T_CALL, cseqid);
-
-  ThriftHiveMetastore_append_partition_pargs args;
-  args.db_name = &db_name;
-  args.tbl_name = &tbl_name;
-  args.part_vals = &part_vals;
-=======
   throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "append_partition failed: unknown result");
 }
 
@@ -12323,7 +9995,6 @@ void ThriftHiveMetastoreClient::send_append_partition_by_name(const std::string&
   args.db_name = &db_name;
   args.tbl_name = &tbl_name;
   args.part_name = &part_name;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   args.write(oprot_);
 
   oprot_->writeMessageEnd();
@@ -12331,11 +10002,7 @@ void ThriftHiveMetastoreClient::send_append_partition_by_name(const std::string&
   oprot_->getTransport()->writeEnd();
 }
 
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-void ThriftHiveMetastoreClient::recv_append_partition(Partition& _return)
-=======
 void ThriftHiveMetastoreClient::recv_append_partition_by_name(Partition& _return)
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
 {
 
   int32_t rseqid = 0;
@@ -12356,21 +10023,13 @@ void ThriftHiveMetastoreClient::recv_append_partition_by_name(Partition& _return
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::INVALID_MESSAGE_TYPE);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  if (fname.compare("append_partition") != 0) {
-=======
   if (fname.compare("append_partition_by_name") != 0) {
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
     iprot_->skip(apache::thrift::protocol::T_STRUCT);
     iprot_->readMessageEnd();
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::WRONG_METHOD_NAME);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  ThriftHiveMetastore_append_partition_presult result;
-=======
   ThriftHiveMetastore_append_partition_by_name_presult result;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   result.success = &_return;
   result.read(iprot_);
   iprot_->readMessageEnd();
@@ -12389,26 +10048,6 @@ void ThriftHiveMetastoreClient::recv_append_partition_by_name(Partition& _return
   if (result.__isset.o3) {
     throw result.o3;
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "append_partition failed: unknown result");
-}
-
-void ThriftHiveMetastoreClient::append_partition_by_name(Partition& _return, const std::string& db_name, const std::string& tbl_name, const std::string& part_name)
-{
-  send_append_partition_by_name(db_name, tbl_name, part_name);
-  recv_append_partition_by_name(_return);
-}
-
-void ThriftHiveMetastoreClient::send_append_partition_by_name(const std::string& db_name, const std::string& tbl_name, const std::string& part_name)
-{
-  int32_t cseqid = 0;
-  oprot_->writeMessageBegin("append_partition_by_name", apache::thrift::protocol::T_CALL, cseqid);
-
-  ThriftHiveMetastore_append_partition_by_name_pargs args;
-  args.db_name = &db_name;
-  args.tbl_name = &tbl_name;
-  args.part_name = &part_name;
-=======
   throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "append_partition_by_name failed: unknown result");
 }
 
@@ -12428,7 +10067,6 @@ void ThriftHiveMetastoreClient::send_drop_partition(const std::string& db_name, 
   args.tbl_name = &tbl_name;
   args.part_vals = &part_vals;
   args.deleteData = &deleteData;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   args.write(oprot_);
 
   oprot_->writeMessageEnd();
@@ -12436,11 +10074,7 @@ void ThriftHiveMetastoreClient::send_drop_partition(const std::string& db_name, 
   oprot_->getTransport()->writeEnd();
 }
 
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-void ThriftHiveMetastoreClient::recv_append_partition_by_name(Partition& _return)
-=======
 bool ThriftHiveMetastoreClient::recv_drop_partition()
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
 {
 
   int32_t rseqid = 0;
@@ -12461,22 +10095,14 @@ bool ThriftHiveMetastoreClient::recv_drop_partition()
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::INVALID_MESSAGE_TYPE);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  if (fname.compare("append_partition_by_name") != 0) {
-=======
   if (fname.compare("drop_partition") != 0) {
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
     iprot_->skip(apache::thrift::protocol::T_STRUCT);
     iprot_->readMessageEnd();
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::WRONG_METHOD_NAME);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  ThriftHiveMetastore_append_partition_by_name_presult result;
-=======
   bool _return;
   ThriftHiveMetastore_drop_partition_presult result;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   result.success = &_return;
   result.read(iprot_);
   iprot_->readMessageEnd();
@@ -12491,29 +10117,6 @@ bool ThriftHiveMetastoreClient::recv_drop_partition()
   if (result.__isset.o2) {
     throw result.o2;
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  if (result.__isset.o3) {
-    throw result.o3;
-  }
-  throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "append_partition_by_name failed: unknown result");
-}
-
-bool ThriftHiveMetastoreClient::drop_partition(const std::string& db_name, const std::string& tbl_name, const std::vector<std::string> & part_vals, const bool deleteData)
-{
-  send_drop_partition(db_name, tbl_name, part_vals, deleteData);
-  return recv_drop_partition();
-}
-
-void ThriftHiveMetastoreClient::send_drop_partition(const std::string& db_name, const std::string& tbl_name, const std::vector<std::string> & part_vals, const bool deleteData)
-{
-  int32_t cseqid = 0;
-  oprot_->writeMessageBegin("drop_partition", apache::thrift::protocol::T_CALL, cseqid);
-
-  ThriftHiveMetastore_drop_partition_pargs args;
-  args.db_name = &db_name;
-  args.tbl_name = &tbl_name;
-  args.part_vals = &part_vals;
-=======
   throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "drop_partition failed: unknown result");
 }
 
@@ -12532,7 +10135,6 @@ void ThriftHiveMetastoreClient::send_drop_partition_by_name(const std::string& d
   args.db_name = &db_name;
   args.tbl_name = &tbl_name;
   args.part_name = &part_name;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   args.deleteData = &deleteData;
   args.write(oprot_);
 
@@ -12541,11 +10143,7 @@ void ThriftHiveMetastoreClient::send_drop_partition_by_name(const std::string& d
   oprot_->getTransport()->writeEnd();
 }
 
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-bool ThriftHiveMetastoreClient::recv_drop_partition()
-=======
 bool ThriftHiveMetastoreClient::recv_drop_partition_by_name()
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
 {
 
   int32_t rseqid = 0;
@@ -12566,22 +10164,14 @@ bool ThriftHiveMetastoreClient::recv_drop_partition_by_name()
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::INVALID_MESSAGE_TYPE);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  if (fname.compare("drop_partition") != 0) {
-=======
   if (fname.compare("drop_partition_by_name") != 0) {
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
     iprot_->skip(apache::thrift::protocol::T_STRUCT);
     iprot_->readMessageEnd();
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::WRONG_METHOD_NAME);
   }
   bool _return;
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  ThriftHiveMetastore_drop_partition_presult result;
-=======
   ThriftHiveMetastore_drop_partition_by_name_presult result;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   result.success = &_return;
   result.read(iprot_);
   iprot_->readMessageEnd();
@@ -12596,27 +10186,6 @@ bool ThriftHiveMetastoreClient::recv_drop_partition_by_name()
   if (result.__isset.o2) {
     throw result.o2;
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "drop_partition failed: unknown result");
-}
-
-bool ThriftHiveMetastoreClient::drop_partition_by_name(const std::string& db_name, const std::string& tbl_name, const std::string& part_name, const bool deleteData)
-{
-  send_drop_partition_by_name(db_name, tbl_name, part_name, deleteData);
-  return recv_drop_partition_by_name();
-}
-
-void ThriftHiveMetastoreClient::send_drop_partition_by_name(const std::string& db_name, const std::string& tbl_name, const std::string& part_name, const bool deleteData)
-{
-  int32_t cseqid = 0;
-  oprot_->writeMessageBegin("drop_partition_by_name", apache::thrift::protocol::T_CALL, cseqid);
-
-  ThriftHiveMetastore_drop_partition_by_name_pargs args;
-  args.db_name = &db_name;
-  args.tbl_name = &tbl_name;
-  args.part_name = &part_name;
-  args.deleteData = &deleteData;
-=======
   throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "drop_partition_by_name failed: unknown result");
 }
 
@@ -12635,7 +10204,6 @@ void ThriftHiveMetastoreClient::send_get_partition(const std::string& db_name, c
   args.db_name = &db_name;
   args.tbl_name = &tbl_name;
   args.part_vals = &part_vals;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   args.write(oprot_);
 
   oprot_->writeMessageEnd();
@@ -12643,11 +10211,7 @@ void ThriftHiveMetastoreClient::send_get_partition(const std::string& db_name, c
   oprot_->getTransport()->writeEnd();
 }
 
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-bool ThriftHiveMetastoreClient::recv_drop_partition_by_name()
-=======
 void ThriftHiveMetastoreClient::recv_get_partition(Partition& _return)
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
 {
 
   int32_t rseqid = 0;
@@ -12668,34 +10232,21 @@ void ThriftHiveMetastoreClient::recv_get_partition(Partition& _return)
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::INVALID_MESSAGE_TYPE);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  if (fname.compare("drop_partition_by_name") != 0) {
-=======
   if (fname.compare("get_partition") != 0) {
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
     iprot_->skip(apache::thrift::protocol::T_STRUCT);
     iprot_->readMessageEnd();
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::WRONG_METHOD_NAME);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  bool _return;
-  ThriftHiveMetastore_drop_partition_by_name_presult result;
-=======
   ThriftHiveMetastore_get_partition_presult result;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   result.success = &_return;
   result.read(iprot_);
   iprot_->readMessageEnd();
   iprot_->getTransport()->readEnd();
 
   if (result.__isset.success) {
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-    return _return;
-=======
     // _return pointer has now been filled
     return;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   }
   if (result.__isset.o1) {
     throw result.o1;
@@ -12703,26 +10254,6 @@ void ThriftHiveMetastoreClient::recv_get_partition(Partition& _return)
   if (result.__isset.o2) {
     throw result.o2;
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "drop_partition_by_name failed: unknown result");
-}
-
-void ThriftHiveMetastoreClient::get_partition(Partition& _return, const std::string& db_name, const std::string& tbl_name, const std::vector<std::string> & part_vals)
-{
-  send_get_partition(db_name, tbl_name, part_vals);
-  recv_get_partition(_return);
-}
-
-void ThriftHiveMetastoreClient::send_get_partition(const std::string& db_name, const std::string& tbl_name, const std::vector<std::string> & part_vals)
-{
-  int32_t cseqid = 0;
-  oprot_->writeMessageBegin("get_partition", apache::thrift::protocol::T_CALL, cseqid);
-
-  ThriftHiveMetastore_get_partition_pargs args;
-  args.db_name = &db_name;
-  args.tbl_name = &tbl_name;
-  args.part_vals = &part_vals;
-=======
   throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "get_partition failed: unknown result");
 }
 
@@ -12741,7 +10272,6 @@ void ThriftHiveMetastoreClient::send_get_partition_by_name(const std::string& db
   args.db_name = &db_name;
   args.tbl_name = &tbl_name;
   args.part_name = &part_name;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   args.write(oprot_);
 
   oprot_->writeMessageEnd();
@@ -12749,11 +10279,7 @@ void ThriftHiveMetastoreClient::send_get_partition_by_name(const std::string& db
   oprot_->getTransport()->writeEnd();
 }
 
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-void ThriftHiveMetastoreClient::recv_get_partition(Partition& _return)
-=======
 void ThriftHiveMetastoreClient::recv_get_partition_by_name(Partition& _return)
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
 {
 
   int32_t rseqid = 0;
@@ -12774,21 +10300,13 @@ void ThriftHiveMetastoreClient::recv_get_partition_by_name(Partition& _return)
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::INVALID_MESSAGE_TYPE);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  if (fname.compare("get_partition") != 0) {
-=======
   if (fname.compare("get_partition_by_name") != 0) {
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
     iprot_->skip(apache::thrift::protocol::T_STRUCT);
     iprot_->readMessageEnd();
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::WRONG_METHOD_NAME);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  ThriftHiveMetastore_get_partition_presult result;
-=======
   ThriftHiveMetastore_get_partition_by_name_presult result;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   result.success = &_return;
   result.read(iprot_);
   iprot_->readMessageEnd();
@@ -12801,26 +10319,6 @@ void ThriftHiveMetastoreClient::recv_get_partition_by_name(Partition& _return)
   if (result.__isset.o1) {
     throw result.o1;
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "get_partition failed: unknown result");
-}
-
-void ThriftHiveMetastoreClient::get_partition_by_name(Partition& _return, const std::string& db_name, const std::string& tbl_name, const std::string& part_name)
-{
-  send_get_partition_by_name(db_name, tbl_name, part_name);
-  recv_get_partition_by_name(_return);
-}
-
-void ThriftHiveMetastoreClient::send_get_partition_by_name(const std::string& db_name, const std::string& tbl_name, const std::string& part_name)
-{
-  int32_t cseqid = 0;
-  oprot_->writeMessageBegin("get_partition_by_name", apache::thrift::protocol::T_CALL, cseqid);
-
-  ThriftHiveMetastore_get_partition_by_name_pargs args;
-  args.db_name = &db_name;
-  args.tbl_name = &tbl_name;
-  args.part_name = &part_name;
-=======
   if (result.__isset.o2) {
     throw result.o2;
   }
@@ -12842,7 +10340,6 @@ void ThriftHiveMetastoreClient::send_get_partitions(const std::string& db_name, 
   args.db_name = &db_name;
   args.tbl_name = &tbl_name;
   args.max_parts = &max_parts;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   args.write(oprot_);
 
   oprot_->writeMessageEnd();
@@ -12850,11 +10347,7 @@ void ThriftHiveMetastoreClient::send_get_partitions(const std::string& db_name, 
   oprot_->getTransport()->writeEnd();
 }
 
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-void ThriftHiveMetastoreClient::recv_get_partition_by_name(Partition& _return)
-=======
 void ThriftHiveMetastoreClient::recv_get_partitions(std::vector<Partition> & _return)
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
 {
 
   int32_t rseqid = 0;
@@ -12875,21 +10368,13 @@ void ThriftHiveMetastoreClient::recv_get_partitions(std::vector<Partition> & _re
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::INVALID_MESSAGE_TYPE);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  if (fname.compare("get_partition_by_name") != 0) {
-=======
   if (fname.compare("get_partitions") != 0) {
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
     iprot_->skip(apache::thrift::protocol::T_STRUCT);
     iprot_->readMessageEnd();
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::WRONG_METHOD_NAME);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  ThriftHiveMetastore_get_partition_by_name_presult result;
-=======
   ThriftHiveMetastore_get_partitions_presult result;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   result.success = &_return;
   result.read(iprot_);
   iprot_->readMessageEnd();
@@ -12905,23 +10390,6 @@ void ThriftHiveMetastoreClient::recv_get_partitions(std::vector<Partition> & _re
   if (result.__isset.o2) {
     throw result.o2;
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "get_partition_by_name failed: unknown result");
-}
-
-void ThriftHiveMetastoreClient::get_partitions(std::vector<Partition> & _return, const std::string& db_name, const std::string& tbl_name, const int16_t max_parts)
-{
-  send_get_partitions(db_name, tbl_name, max_parts);
-  recv_get_partitions(_return);
-}
-
-void ThriftHiveMetastoreClient::send_get_partitions(const std::string& db_name, const std::string& tbl_name, const int16_t max_parts)
-{
-  int32_t cseqid = 0;
-  oprot_->writeMessageBegin("get_partitions", apache::thrift::protocol::T_CALL, cseqid);
-
-  ThriftHiveMetastore_get_partitions_pargs args;
-=======
   throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "get_partitions failed: unknown result");
 }
 
@@ -12937,7 +10405,6 @@ void ThriftHiveMetastoreClient::send_get_partition_names(const std::string& db_n
   oprot_->writeMessageBegin("get_partition_names", apache::thrift::protocol::T_CALL, cseqid);
 
   ThriftHiveMetastore_get_partition_names_pargs args;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   args.db_name = &db_name;
   args.tbl_name = &tbl_name;
   args.max_parts = &max_parts;
@@ -12948,11 +10415,7 @@ void ThriftHiveMetastoreClient::send_get_partition_names(const std::string& db_n
   oprot_->getTransport()->writeEnd();
 }
 
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-void ThriftHiveMetastoreClient::recv_get_partitions(std::vector<Partition> & _return)
-=======
 void ThriftHiveMetastoreClient::recv_get_partition_names(std::vector<std::string> & _return)
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
 {
 
   int32_t rseqid = 0;
@@ -12973,21 +10436,13 @@ void ThriftHiveMetastoreClient::recv_get_partition_names(std::vector<std::string
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::INVALID_MESSAGE_TYPE);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  if (fname.compare("get_partitions") != 0) {
-=======
   if (fname.compare("get_partition_names") != 0) {
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
     iprot_->skip(apache::thrift::protocol::T_STRUCT);
     iprot_->readMessageEnd();
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::WRONG_METHOD_NAME);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  ThriftHiveMetastore_get_partitions_presult result;
-=======
   ThriftHiveMetastore_get_partition_names_presult result;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   result.success = &_return;
   result.read(iprot_);
   iprot_->readMessageEnd();
@@ -13000,25 +10455,6 @@ void ThriftHiveMetastoreClient::recv_get_partition_names(std::vector<std::string
   if (result.__isset.o2) {
     throw result.o2;
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "get_partitions failed: unknown result");
-}
-
-void ThriftHiveMetastoreClient::get_partition_names(std::vector<std::string> & _return, const std::string& db_name, const std::string& tbl_name, const int16_t max_parts)
-{
-  send_get_partition_names(db_name, tbl_name, max_parts);
-  recv_get_partition_names(_return);
-}
-
-void ThriftHiveMetastoreClient::send_get_partition_names(const std::string& db_name, const std::string& tbl_name, const int16_t max_parts)
-{
-  int32_t cseqid = 0;
-  oprot_->writeMessageBegin("get_partition_names", apache::thrift::protocol::T_CALL, cseqid);
-
-  ThriftHiveMetastore_get_partition_names_pargs args;
-  args.db_name = &db_name;
-  args.tbl_name = &tbl_name;
-=======
   throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "get_partition_names failed: unknown result");
 }
 
@@ -13037,7 +10473,6 @@ void ThriftHiveMetastoreClient::send_get_partitions_ps(const std::string& db_nam
   args.db_name = &db_name;
   args.tbl_name = &tbl_name;
   args.part_vals = &part_vals;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   args.max_parts = &max_parts;
   args.write(oprot_);
 
@@ -13046,11 +10481,7 @@ void ThriftHiveMetastoreClient::send_get_partitions_ps(const std::string& db_nam
   oprot_->getTransport()->writeEnd();
 }
 
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-void ThriftHiveMetastoreClient::recv_get_partition_names(std::vector<std::string> & _return)
-=======
 void ThriftHiveMetastoreClient::recv_get_partitions_ps(std::vector<Partition> & _return)
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
 {
 
   int32_t rseqid = 0;
@@ -13071,21 +10502,13 @@ void ThriftHiveMetastoreClient::recv_get_partitions_ps(std::vector<Partition> & 
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::INVALID_MESSAGE_TYPE);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  if (fname.compare("get_partition_names") != 0) {
-=======
   if (fname.compare("get_partitions_ps") != 0) {
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
     iprot_->skip(apache::thrift::protocol::T_STRUCT);
     iprot_->readMessageEnd();
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::WRONG_METHOD_NAME);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  ThriftHiveMetastore_get_partition_names_presult result;
-=======
   ThriftHiveMetastore_get_partitions_ps_presult result;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   result.success = &_return;
   result.read(iprot_);
   iprot_->readMessageEnd();
@@ -13094,27 +10517,6 @@ void ThriftHiveMetastoreClient::recv_get_partitions_ps(std::vector<Partition> & 
   if (result.__isset.success) {
     // _return pointer has now been filled
     return;
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  }
-  if (result.__isset.o2) {
-    throw result.o2;
-  }
-  throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "get_partition_names failed: unknown result");
-}
-
-void ThriftHiveMetastoreClient::get_partitions_ps(std::vector<Partition> & _return, const std::string& db_name, const std::string& tbl_name, const std::vector<std::string> & part_vals, const int16_t max_parts)
-{
-  send_get_partitions_ps(db_name, tbl_name, part_vals, max_parts);
-  recv_get_partitions_ps(_return);
-}
-
-void ThriftHiveMetastoreClient::send_get_partitions_ps(const std::string& db_name, const std::string& tbl_name, const std::vector<std::string> & part_vals, const int16_t max_parts)
-{
-  int32_t cseqid = 0;
-  oprot_->writeMessageBegin("get_partitions_ps", apache::thrift::protocol::T_CALL, cseqid);
-
-  ThriftHiveMetastore_get_partitions_ps_pargs args;
-=======
   }
   if (result.__isset.o1) {
     throw result.o1;
@@ -13134,7 +10536,6 @@ void ThriftHiveMetastoreClient::send_get_partition_names_ps(const std::string& d
   oprot_->writeMessageBegin("get_partition_names_ps", apache::thrift::protocol::T_CALL, cseqid);
 
   ThriftHiveMetastore_get_partition_names_ps_pargs args;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   args.db_name = &db_name;
   args.tbl_name = &tbl_name;
   args.part_vals = &part_vals;
@@ -13146,11 +10547,7 @@ void ThriftHiveMetastoreClient::send_get_partition_names_ps(const std::string& d
   oprot_->getTransport()->writeEnd();
 }
 
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-void ThriftHiveMetastoreClient::recv_get_partitions_ps(std::vector<Partition> & _return)
-=======
 void ThriftHiveMetastoreClient::recv_get_partition_names_ps(std::vector<std::string> & _return)
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
 {
 
   int32_t rseqid = 0;
@@ -13171,21 +10568,13 @@ void ThriftHiveMetastoreClient::recv_get_partition_names_ps(std::vector<std::str
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::INVALID_MESSAGE_TYPE);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  if (fname.compare("get_partitions_ps") != 0) {
-=======
   if (fname.compare("get_partition_names_ps") != 0) {
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
     iprot_->skip(apache::thrift::protocol::T_STRUCT);
     iprot_->readMessageEnd();
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::WRONG_METHOD_NAME);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  ThriftHiveMetastore_get_partitions_ps_presult result;
-=======
   ThriftHiveMetastore_get_partition_names_ps_presult result;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   result.success = &_return;
   result.read(iprot_);
   iprot_->readMessageEnd();
@@ -13198,26 +10587,6 @@ void ThriftHiveMetastoreClient::recv_get_partition_names_ps(std::vector<std::str
   if (result.__isset.o1) {
     throw result.o1;
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "get_partitions_ps failed: unknown result");
-}
-
-void ThriftHiveMetastoreClient::get_partition_names_ps(std::vector<std::string> & _return, const std::string& db_name, const std::string& tbl_name, const std::vector<std::string> & part_vals, const int16_t max_parts)
-{
-  send_get_partition_names_ps(db_name, tbl_name, part_vals, max_parts);
-  recv_get_partition_names_ps(_return);
-}
-
-void ThriftHiveMetastoreClient::send_get_partition_names_ps(const std::string& db_name, const std::string& tbl_name, const std::vector<std::string> & part_vals, const int16_t max_parts)
-{
-  int32_t cseqid = 0;
-  oprot_->writeMessageBegin("get_partition_names_ps", apache::thrift::protocol::T_CALL, cseqid);
-
-  ThriftHiveMetastore_get_partition_names_ps_pargs args;
-  args.db_name = &db_name;
-  args.tbl_name = &tbl_name;
-  args.part_vals = &part_vals;
-=======
   throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "get_partition_names_ps failed: unknown result");
 }
 
@@ -13236,7 +10605,6 @@ void ThriftHiveMetastoreClient::send_get_partitions_by_filter(const std::string&
   args.db_name = &db_name;
   args.tbl_name = &tbl_name;
   args.filter = &filter;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   args.max_parts = &max_parts;
   args.write(oprot_);
 
@@ -13245,11 +10613,7 @@ void ThriftHiveMetastoreClient::send_get_partitions_by_filter(const std::string&
   oprot_->getTransport()->writeEnd();
 }
 
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-void ThriftHiveMetastoreClient::recv_get_partition_names_ps(std::vector<std::string> & _return)
-=======
 void ThriftHiveMetastoreClient::recv_get_partitions_by_filter(std::vector<Partition> & _return)
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
 {
 
   int32_t rseqid = 0;
@@ -13270,21 +10634,13 @@ void ThriftHiveMetastoreClient::recv_get_partitions_by_filter(std::vector<Partit
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::INVALID_MESSAGE_TYPE);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  if (fname.compare("get_partition_names_ps") != 0) {
-=======
   if (fname.compare("get_partitions_by_filter") != 0) {
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
     iprot_->skip(apache::thrift::protocol::T_STRUCT);
     iprot_->readMessageEnd();
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::WRONG_METHOD_NAME);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  ThriftHiveMetastore_get_partition_names_ps_presult result;
-=======
   ThriftHiveMetastore_get_partitions_by_filter_presult result;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   result.success = &_return;
   result.read(iprot_);
   iprot_->readMessageEnd();
@@ -13556,15 +10912,6 @@ void ThriftHiveMetastoreClient::recv_partition_name_to_spec(std::map<std::string
   throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "partition_name_to_spec failed: unknown result");
 }
 
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-void ThriftHiveMetastoreClient::add_index(Index& _return, const Index& new_index)
-{
-  send_add_index(new_index);
-  recv_add_index(_return);
-}
-
-void ThriftHiveMetastoreClient::send_add_index(const Index& new_index)
-=======
 void ThriftHiveMetastoreClient::add_index(Index& _return, const Index& new_index, const Table& index_table)
 {
   send_add_index(new_index, index_table);
@@ -13572,17 +10919,13 @@ void ThriftHiveMetastoreClient::add_index(Index& _return, const Index& new_index
 }
 
 void ThriftHiveMetastoreClient::send_add_index(const Index& new_index, const Table& index_table)
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
 {
   int32_t cseqid = 0;
   oprot_->writeMessageBegin("add_index", apache::thrift::protocol::T_CALL, cseqid);
 
   ThriftHiveMetastore_add_index_pargs args;
   args.new_index = &new_index;
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-=======
   args.index_table = &index_table;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   args.write(oprot_);
 
   oprot_->writeMessageEnd();
@@ -13776,20 +11119,6 @@ void ThriftHiveMetastoreClient::recv_get_index_by_name(Index& _return)
   throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "get_index_by_name failed: unknown result");
 }
 
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-void ThriftHiveMetastoreClient::get_indexs(std::vector<Index> & _return, const std::string& db_name, const std::string& tbl_name, const int16_t max_indexes)
-{
-  send_get_indexs(db_name, tbl_name, max_indexes);
-  recv_get_indexs(_return);
-}
-
-void ThriftHiveMetastoreClient::send_get_indexs(const std::string& db_name, const std::string& tbl_name, const int16_t max_indexes)
-{
-  int32_t cseqid = 0;
-  oprot_->writeMessageBegin("get_indexs", apache::thrift::protocol::T_CALL, cseqid);
-
-  ThriftHiveMetastore_get_indexs_pargs args;
-=======
 void ThriftHiveMetastoreClient::get_indexes(std::vector<Index> & _return, const std::string& db_name, const std::string& tbl_name, const int16_t max_indexes)
 {
   send_get_indexes(db_name, tbl_name, max_indexes);
@@ -13802,7 +11131,6 @@ void ThriftHiveMetastoreClient::send_get_indexes(const std::string& db_name, con
   oprot_->writeMessageBegin("get_indexes", apache::thrift::protocol::T_CALL, cseqid);
 
   ThriftHiveMetastore_get_indexes_pargs args;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   args.db_name = &db_name;
   args.tbl_name = &tbl_name;
   args.max_indexes = &max_indexes;
@@ -13813,11 +11141,7 @@ void ThriftHiveMetastoreClient::send_get_indexes(const std::string& db_name, con
   oprot_->getTransport()->writeEnd();
 }
 
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-void ThriftHiveMetastoreClient::recv_get_indexs(std::vector<Index> & _return)
-=======
 void ThriftHiveMetastoreClient::recv_get_indexes(std::vector<Index> & _return)
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
 {
 
   int32_t rseqid = 0;
@@ -13838,21 +11162,13 @@ void ThriftHiveMetastoreClient::recv_get_indexes(std::vector<Index> & _return)
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::INVALID_MESSAGE_TYPE);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  if (fname.compare("get_indexs") != 0) {
-=======
   if (fname.compare("get_indexes") != 0) {
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
     iprot_->skip(apache::thrift::protocol::T_STRUCT);
     iprot_->readMessageEnd();
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::WRONG_METHOD_NAME);
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  ThriftHiveMetastore_get_indexs_presult result;
-=======
   ThriftHiveMetastore_get_indexes_presult result;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   result.success = &_return;
   result.read(iprot_);
   iprot_->readMessageEnd();
@@ -13868,11 +11184,7 @@ void ThriftHiveMetastoreClient::recv_get_indexes(std::vector<Index> & _return)
   if (result.__isset.o2) {
     throw result.o2;
   }
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "get_indexs failed: unknown result");
-=======
   throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "get_indexes failed: unknown result");
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
 }
 
 void ThriftHiveMetastoreClient::get_index_names(std::vector<std::string> & _return, const std::string& db_name, const std::string& tbl_name, const int16_t max_indexes)
@@ -15098,11 +12410,7 @@ void ThriftHiveMetastoreProcessor::process_add_index(int32_t seqid, apache::thri
 
   ThriftHiveMetastore_add_index_result result;
   try {
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-    iface_->add_index(result.success, args.new_index);
-=======
     iface_->add_index(result.success, args.new_index, args.index_table);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
     result.__isset.success = true;
   } catch (InvalidObjectException &o1) {
     result.o1 = o1;
@@ -15198,28 +12506,16 @@ void ThriftHiveMetastoreProcessor::process_get_index_by_name(int32_t seqid, apac
   oprot->getTransport()->writeEnd();
 }
 
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-void ThriftHiveMetastoreProcessor::process_get_indexs(int32_t seqid, apache::thrift::protocol::TProtocol* iprot, apache::thrift::protocol::TProtocol* oprot)
-{
-  ThriftHiveMetastore_get_indexs_args args;
-=======
 void ThriftHiveMetastoreProcessor::process_get_indexes(int32_t seqid, apache::thrift::protocol::TProtocol* iprot, apache::thrift::protocol::TProtocol* oprot)
 {
   ThriftHiveMetastore_get_indexes_args args;
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   args.read(iprot);
   iprot->readMessageEnd();
   iprot->getTransport()->readEnd();
 
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  ThriftHiveMetastore_get_indexs_result result;
-  try {
-    iface_->get_indexs(result.success, args.db_name, args.tbl_name, args.max_indexes);
-=======
   ThriftHiveMetastore_get_indexes_result result;
   try {
     iface_->get_indexes(result.success, args.db_name, args.tbl_name, args.max_indexes);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
     result.__isset.success = true;
   } catch (NoSuchObjectException &o1) {
     result.o1 = o1;
@@ -15229,11 +12525,7 @@ void ThriftHiveMetastoreProcessor::process_get_indexes(int32_t seqid, apache::th
     result.__isset.o2 = true;
   } catch (const std::exception& e) {
     apache::thrift::TApplicationException x(e.what());
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-    oprot->writeMessageBegin("get_indexs", apache::thrift::protocol::T_EXCEPTION, seqid);
-=======
     oprot->writeMessageBegin("get_indexes", apache::thrift::protocol::T_EXCEPTION, seqid);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
     x.write(oprot);
     oprot->writeMessageEnd();
     oprot->getTransport()->flush();
@@ -15241,11 +12533,7 @@ void ThriftHiveMetastoreProcessor::process_get_indexes(int32_t seqid, apache::th
     return;
   }
 
-<<<<<<< HEAD:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
-  oprot->writeMessageBegin("get_indexs", apache::thrift::protocol::T_REPLY, seqid);
-=======
   oprot->writeMessageBegin("get_indexes", apache::thrift::protocol::T_REPLY, seqid);
->>>>>>> apache_master/trunk:metastore/src/gen-cpp/ThriftHiveMetastore.cpp
   result.write(oprot);
   oprot->writeMessageEnd();
   oprot->getTransport()->flush();

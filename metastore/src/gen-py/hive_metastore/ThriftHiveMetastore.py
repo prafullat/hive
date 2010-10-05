@@ -286,18 +286,11 @@ class Iface(fb303.FacebookService.Iface):
     """
     pass
 
-<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-  def add_index(self, new_index):
-    """
-    Parameters:
-     - new_index
-=======
   def add_index(self, new_index, index_table):
     """
     Parameters:
      - new_index
      - index_table
->>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
     """
     pass
 
@@ -320,11 +313,7 @@ class Iface(fb303.FacebookService.Iface):
     """
     pass
 
-<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-  def get_indexs(self, db_name, tbl_name, max_indexes):
-=======
   def get_indexes(self, db_name, tbl_name, max_indexes):
->>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
     """
     Parameters:
      - db_name
@@ -1531,235 +1520,6 @@ class Client(fb303.FacebookService.Client, Iface):
       raise result.o1
     raise TApplicationException(TApplicationException.MISSING_RESULT, "partition_name_to_spec failed: unknown result");
 
-<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-  def add_index(self, new_index):
-    """
-    Parameters:
-     - new_index
-    """
-    self.send_add_index(new_index)
-    return self.recv_add_index()
-
-  def send_add_index(self, new_index):
-    self._oprot.writeMessageBegin('add_index', TMessageType.CALL, self._seqid)
-    args = add_index_args()
-    args.new_index = new_index
-    args.write(self._oprot)
-    self._oprot.writeMessageEnd()
-    self._oprot.trans.flush()
-
-  def recv_add_index(self, ):
-    (fname, mtype, rseqid) = self._iprot.readMessageBegin()
-    if mtype == TMessageType.EXCEPTION:
-      x = TApplicationException()
-      x.read(self._iprot)
-      self._iprot.readMessageEnd()
-      raise x
-    result = add_index_result()
-    result.read(self._iprot)
-    self._iprot.readMessageEnd()
-    if result.success != None:
-      return result.success
-    if result.o1 != None:
-      raise result.o1
-    if result.o2 != None:
-      raise result.o2
-    if result.o3 != None:
-      raise result.o3
-    raise TApplicationException(TApplicationException.MISSING_RESULT, "add_index failed: unknown result");
-
-  def drop_index_by_name(self, db_name, tbl_name, index_name, deleteData):
-    """
-    Parameters:
-     - db_name
-     - tbl_name
-     - index_name
-     - deleteData
-    """
-    self.send_drop_index_by_name(db_name, tbl_name, index_name, deleteData)
-    return self.recv_drop_index_by_name()
-
-  def send_drop_index_by_name(self, db_name, tbl_name, index_name, deleteData):
-    self._oprot.writeMessageBegin('drop_index_by_name', TMessageType.CALL, self._seqid)
-    args = drop_index_by_name_args()
-    args.db_name = db_name
-    args.tbl_name = tbl_name
-    args.index_name = index_name
-    args.deleteData = deleteData
-    args.write(self._oprot)
-    self._oprot.writeMessageEnd()
-    self._oprot.trans.flush()
-
-  def recv_drop_index_by_name(self, ):
-    (fname, mtype, rseqid) = self._iprot.readMessageBegin()
-    if mtype == TMessageType.EXCEPTION:
-      x = TApplicationException()
-      x.read(self._iprot)
-      self._iprot.readMessageEnd()
-      raise x
-    result = drop_index_by_name_result()
-    result.read(self._iprot)
-    self._iprot.readMessageEnd()
-    if result.success != None:
-      return result.success
-    if result.o1 != None:
-      raise result.o1
-    if result.o2 != None:
-      raise result.o2
-    raise TApplicationException(TApplicationException.MISSING_RESULT, "drop_index_by_name failed: unknown result");
-
-  def get_index_by_name(self, db_name, tbl_name, index_name):
-    """
-    Parameters:
-     - db_name
-     - tbl_name
-     - index_name
-    """
-    self.send_get_index_by_name(db_name, tbl_name, index_name)
-    return self.recv_get_index_by_name()
-
-  def send_get_index_by_name(self, db_name, tbl_name, index_name):
-    self._oprot.writeMessageBegin('get_index_by_name', TMessageType.CALL, self._seqid)
-    args = get_index_by_name_args()
-    args.db_name = db_name
-    args.tbl_name = tbl_name
-    args.index_name = index_name
-    args.write(self._oprot)
-    self._oprot.writeMessageEnd()
-    self._oprot.trans.flush()
-
-  def recv_get_index_by_name(self, ):
-    (fname, mtype, rseqid) = self._iprot.readMessageBegin()
-    if mtype == TMessageType.EXCEPTION:
-      x = TApplicationException()
-      x.read(self._iprot)
-      self._iprot.readMessageEnd()
-      raise x
-    result = get_index_by_name_result()
-    result.read(self._iprot)
-    self._iprot.readMessageEnd()
-    if result.success != None:
-      return result.success
-    if result.o1 != None:
-      raise result.o1
-    if result.o2 != None:
-      raise result.o2
-    raise TApplicationException(TApplicationException.MISSING_RESULT, "get_index_by_name failed: unknown result");
-
-  def get_indexs(self, db_name, tbl_name, max_indexes):
-    """
-    Parameters:
-     - db_name
-     - tbl_name
-     - max_indexes
-    """
-    self.send_get_indexs(db_name, tbl_name, max_indexes)
-    return self.recv_get_indexs()
-
-  def send_get_indexs(self, db_name, tbl_name, max_indexes):
-    self._oprot.writeMessageBegin('get_indexs', TMessageType.CALL, self._seqid)
-    args = get_indexs_args()
-    args.db_name = db_name
-    args.tbl_name = tbl_name
-    args.max_indexes = max_indexes
-    args.write(self._oprot)
-    self._oprot.writeMessageEnd()
-    self._oprot.trans.flush()
-
-  def recv_get_indexs(self, ):
-    (fname, mtype, rseqid) = self._iprot.readMessageBegin()
-    if mtype == TMessageType.EXCEPTION:
-      x = TApplicationException()
-      x.read(self._iprot)
-      self._iprot.readMessageEnd()
-      raise x
-    result = get_indexs_result()
-    result.read(self._iprot)
-    self._iprot.readMessageEnd()
-    if result.success != None:
-      return result.success
-    if result.o1 != None:
-      raise result.o1
-    if result.o2 != None:
-      raise result.o2
-    raise TApplicationException(TApplicationException.MISSING_RESULT, "get_indexs failed: unknown result");
-
-  def get_index_names(self, db_name, tbl_name, max_indexes):
-    """
-    Parameters:
-     - db_name
-     - tbl_name
-     - max_indexes
-    """
-    self.send_get_index_names(db_name, tbl_name, max_indexes)
-    return self.recv_get_index_names()
-
-  def send_get_index_names(self, db_name, tbl_name, max_indexes):
-    self._oprot.writeMessageBegin('get_index_names', TMessageType.CALL, self._seqid)
-    args = get_index_names_args()
-    args.db_name = db_name
-    args.tbl_name = tbl_name
-    args.max_indexes = max_indexes
-    args.write(self._oprot)
-    self._oprot.writeMessageEnd()
-    self._oprot.trans.flush()
-
-  def recv_get_index_names(self, ):
-    (fname, mtype, rseqid) = self._iprot.readMessageBegin()
-    if mtype == TMessageType.EXCEPTION:
-      x = TApplicationException()
-      x.read(self._iprot)
-      self._iprot.readMessageEnd()
-      raise x
-    result = get_index_names_result()
-    result.read(self._iprot)
-    self._iprot.readMessageEnd()
-    if result.success != None:
-      return result.success
-    if result.o2 != None:
-      raise result.o2
-    raise TApplicationException(TApplicationException.MISSING_RESULT, "get_index_names failed: unknown result");
-
-
-class Processor(fb303.FacebookService.Processor, Iface, TProcessor):
-  def __init__(self, handler):
-    fb303.FacebookService.Processor.__init__(self, handler)
-    self._processMap["create_database"] = Processor.process_create_database
-    self._processMap["get_database"] = Processor.process_get_database
-    self._processMap["drop_database"] = Processor.process_drop_database
-    self._processMap["get_databases"] = Processor.process_get_databases
-    self._processMap["get_type"] = Processor.process_get_type
-    self._processMap["create_type"] = Processor.process_create_type
-    self._processMap["drop_type"] = Processor.process_drop_type
-    self._processMap["get_type_all"] = Processor.process_get_type_all
-    self._processMap["get_fields"] = Processor.process_get_fields
-    self._processMap["get_schema"] = Processor.process_get_schema
-    self._processMap["create_table"] = Processor.process_create_table
-    self._processMap["drop_table"] = Processor.process_drop_table
-    self._processMap["get_tables"] = Processor.process_get_tables
-    self._processMap["get_table"] = Processor.process_get_table
-    self._processMap["alter_table"] = Processor.process_alter_table
-    self._processMap["add_partition"] = Processor.process_add_partition
-    self._processMap["append_partition"] = Processor.process_append_partition
-    self._processMap["append_partition_by_name"] = Processor.process_append_partition_by_name
-    self._processMap["drop_partition"] = Processor.process_drop_partition
-    self._processMap["drop_partition_by_name"] = Processor.process_drop_partition_by_name
-    self._processMap["get_partition"] = Processor.process_get_partition
-    self._processMap["get_partition_by_name"] = Processor.process_get_partition_by_name
-    self._processMap["get_partitions"] = Processor.process_get_partitions
-    self._processMap["get_partition_names"] = Processor.process_get_partition_names
-    self._processMap["get_partitions_ps"] = Processor.process_get_partitions_ps
-    self._processMap["get_partition_names_ps"] = Processor.process_get_partition_names_ps
-    self._processMap["alter_partition"] = Processor.process_alter_partition
-    self._processMap["get_config_value"] = Processor.process_get_config_value
-    self._processMap["partition_name_to_vals"] = Processor.process_partition_name_to_vals
-    self._processMap["partition_name_to_spec"] = Processor.process_partition_name_to_spec
-    self._processMap["add_index"] = Processor.process_add_index
-    self._processMap["drop_index_by_name"] = Processor.process_drop_index_by_name
-    self._processMap["get_index_by_name"] = Processor.process_get_index_by_name
-    self._processMap["get_indexs"] = Processor.process_get_indexs
-    self._processMap["get_index_names"] = Processor.process_get_index_names
-=======
   def add_index(self, new_index, index_table):
     """
     Parameters:
@@ -1797,7 +1557,6 @@ class Processor(fb303.FacebookService.Processor, Iface, TProcessor):
     if result.o3 != None:
       raise result.o3
     raise TApplicationException(TApplicationException.MISSING_RESULT, "add_index failed: unknown result");
->>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
 
   def drop_index_by_name(self, db_name, tbl_name, index_name, deleteData):
     """
@@ -2541,11 +2300,7 @@ class Processor(fb303.FacebookService.Processor, Iface, TProcessor):
     iprot.readMessageEnd()
     result = add_index_result()
     try:
-<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-      result.success = self._handler.add_index(args.new_index)
-=======
       result.success = self._handler.add_index(args.new_index, args.index_table)
->>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
     except InvalidObjectException, o1:
       result.o1 = o1
     except AlreadyExistsException, o2:
@@ -2556,72 +2311,6 @@ class Processor(fb303.FacebookService.Processor, Iface, TProcessor):
     result.write(oprot)
     oprot.writeMessageEnd()
     oprot.trans.flush()
-<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-
-  def process_drop_index_by_name(self, seqid, iprot, oprot):
-    args = drop_index_by_name_args()
-    args.read(iprot)
-    iprot.readMessageEnd()
-    result = drop_index_by_name_result()
-    try:
-      result.success = self._handler.drop_index_by_name(args.db_name, args.tbl_name, args.index_name, args.deleteData)
-    except NoSuchObjectException, o1:
-      result.o1 = o1
-    except MetaException, o2:
-      result.o2 = o2
-    oprot.writeMessageBegin("drop_index_by_name", TMessageType.REPLY, seqid)
-    result.write(oprot)
-    oprot.writeMessageEnd()
-    oprot.trans.flush()
-
-  def process_get_index_by_name(self, seqid, iprot, oprot):
-    args = get_index_by_name_args()
-    args.read(iprot)
-    iprot.readMessageEnd()
-    result = get_index_by_name_result()
-    try:
-      result.success = self._handler.get_index_by_name(args.db_name, args.tbl_name, args.index_name)
-    except MetaException, o1:
-      result.o1 = o1
-    except NoSuchObjectException, o2:
-      result.o2 = o2
-    oprot.writeMessageBegin("get_index_by_name", TMessageType.REPLY, seqid)
-    result.write(oprot)
-    oprot.writeMessageEnd()
-    oprot.trans.flush()
-
-  def process_get_indexs(self, seqid, iprot, oprot):
-    args = get_indexs_args()
-    args.read(iprot)
-    iprot.readMessageEnd()
-    result = get_indexs_result()
-    try:
-      result.success = self._handler.get_indexs(args.db_name, args.tbl_name, args.max_indexes)
-    except NoSuchObjectException, o1:
-      result.o1 = o1
-    except MetaException, o2:
-      result.o2 = o2
-    oprot.writeMessageBegin("get_indexs", TMessageType.REPLY, seqid)
-    result.write(oprot)
-    oprot.writeMessageEnd()
-    oprot.trans.flush()
-
-  def process_get_index_names(self, seqid, iprot, oprot):
-    args = get_index_names_args()
-    args.read(iprot)
-    iprot.readMessageEnd()
-    result = get_index_names_result()
-    try:
-      result.success = self._handler.get_index_names(args.db_name, args.tbl_name, args.max_indexes)
-    except MetaException, o2:
-      result.o2 = o2
-    oprot.writeMessageBegin("get_index_names", TMessageType.REPLY, seqid)
-    result.write(oprot)
-    oprot.writeMessageEnd()
-    oprot.trans.flush()
-
-=======
->>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
 
   def process_drop_index_by_name(self, seqid, iprot, oprot):
     args = drop_index_by_name_args()
@@ -3873,21 +3562,12 @@ class get_type_all_result:
       if fid == 0:
         if ftype == TType.MAP:
           self.success = {}
-<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-          (_ktype111, _vtype112, _size110 ) = iprot.readMapBegin() 
-          for _i114 in xrange(_size110):
-            _key115 = iprot.readString();
-            _val116 = Type()
-            _val116.read(iprot)
-            self.success[_key115] = _val116
-=======
           (_ktype118, _vtype119, _size117 ) = iprot.readMapBegin() 
           for _i121 in xrange(_size117):
             _key122 = iprot.readString();
             _val123 = Type()
             _val123.read(iprot)
             self.success[_key122] = _val123
->>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
           iprot.readMapEnd()
         else:
           iprot.skip(ftype)
@@ -3910,15 +3590,9 @@ class get_type_all_result:
     if self.success != None:
       oprot.writeFieldBegin('success', TType.MAP, 0)
       oprot.writeMapBegin(TType.STRING, TType.STRUCT, len(self.success))
-<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-      for kiter117,viter118 in self.success.items():
-        oprot.writeString(kiter117)
-        viter118.write(oprot)
-=======
       for kiter124,viter125 in self.success.items():
         oprot.writeString(kiter124)
         viter125.write(oprot)
->>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
       oprot.writeMapEnd()
       oprot.writeFieldEnd()
     if self.o2 != None:
@@ -4041,19 +3715,11 @@ class get_fields_result:
       if fid == 0:
         if ftype == TType.LIST:
           self.success = []
-<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-          (_etype122, _size119) = iprot.readListBegin()
-          for _i123 in xrange(_size119):
-            _elem124 = FieldSchema()
-            _elem124.read(iprot)
-            self.success.append(_elem124)
-=======
           (_etype129, _size126) = iprot.readListBegin()
           for _i130 in xrange(_size126):
             _elem131 = FieldSchema()
             _elem131.read(iprot)
             self.success.append(_elem131)
->>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
           iprot.readListEnd()
         else:
           iprot.skip(ftype)
@@ -4088,13 +3754,8 @@ class get_fields_result:
     if self.success != None:
       oprot.writeFieldBegin('success', TType.LIST, 0)
       oprot.writeListBegin(TType.STRUCT, len(self.success))
-<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-      for iter125 in self.success:
-        iter125.write(oprot)
-=======
       for iter132 in self.success:
         iter132.write(oprot)
->>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
       oprot.writeListEnd()
       oprot.writeFieldEnd()
     if self.o1 != None:
@@ -4225,19 +3886,11 @@ class get_schema_result:
       if fid == 0:
         if ftype == TType.LIST:
           self.success = []
-<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-          (_etype129, _size126) = iprot.readListBegin()
-          for _i130 in xrange(_size126):
-            _elem131 = FieldSchema()
-            _elem131.read(iprot)
-            self.success.append(_elem131)
-=======
           (_etype136, _size133) = iprot.readListBegin()
           for _i137 in xrange(_size133):
             _elem138 = FieldSchema()
             _elem138.read(iprot)
             self.success.append(_elem138)
->>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
           iprot.readListEnd()
         else:
           iprot.skip(ftype)
@@ -4272,13 +3925,8 @@ class get_schema_result:
     if self.success != None:
       oprot.writeFieldBegin('success', TType.LIST, 0)
       oprot.writeListBegin(TType.STRUCT, len(self.success))
-<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-      for iter132 in self.success:
-        iter132.write(oprot)
-=======
       for iter139 in self.success:
         iter139.write(oprot)
->>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
       oprot.writeListEnd()
       oprot.writeFieldEnd()
     if self.o1 != None:
@@ -4706,17 +4354,10 @@ class get_tables_result:
       if fid == 0:
         if ftype == TType.LIST:
           self.success = []
-<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-          (_etype136, _size133) = iprot.readListBegin()
-          for _i137 in xrange(_size133):
-            _elem138 = iprot.readString();
-            self.success.append(_elem138)
-=======
           (_etype143, _size140) = iprot.readListBegin()
           for _i144 in xrange(_size140):
             _elem145 = iprot.readString();
             self.success.append(_elem145)
->>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
           iprot.readListEnd()
         else:
           iprot.skip(ftype)
@@ -4739,13 +4380,8 @@ class get_tables_result:
     if self.success != None:
       oprot.writeFieldBegin('success', TType.LIST, 0)
       oprot.writeListBegin(TType.STRING, len(self.success))
-<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-      for iter139 in self.success:
-        oprot.writeString(iter139)
-=======
       for iter146 in self.success:
         oprot.writeString(iter146)
->>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
       oprot.writeListEnd()
       oprot.writeFieldEnd()
     if self.o1 != None:
@@ -5393,17 +5029,10 @@ class append_partition_args:
       elif fid == 3:
         if ftype == TType.LIST:
           self.part_vals = []
-<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-          (_etype143, _size140) = iprot.readListBegin()
-          for _i144 in xrange(_size140):
-            _elem145 = iprot.readString();
-            self.part_vals.append(_elem145)
-=======
           (_etype157, _size154) = iprot.readListBegin()
           for _i158 in xrange(_size154):
             _elem159 = iprot.readString();
             self.part_vals.append(_elem159)
->>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
           iprot.readListEnd()
         else:
           iprot.skip(ftype)
@@ -5428,13 +5057,8 @@ class append_partition_args:
     if self.part_vals != None:
       oprot.writeFieldBegin('part_vals', TType.LIST, 3)
       oprot.writeListBegin(TType.STRING, len(self.part_vals))
-<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-      for iter146 in self.part_vals:
-        oprot.writeString(iter146)
-=======
       for iter160 in self.part_vals:
         oprot.writeString(iter160)
->>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
       oprot.writeListEnd()
       oprot.writeFieldEnd()
     oprot.writeFieldStop()
@@ -5766,17 +5390,10 @@ class drop_partition_args:
       elif fid == 3:
         if ftype == TType.LIST:
           self.part_vals = []
-<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-          (_etype150, _size147) = iprot.readListBegin()
-          for _i151 in xrange(_size147):
-            _elem152 = iprot.readString();
-            self.part_vals.append(_elem152)
-=======
           (_etype164, _size161) = iprot.readListBegin()
           for _i165 in xrange(_size161):
             _elem166 = iprot.readString();
             self.part_vals.append(_elem166)
->>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
           iprot.readListEnd()
         else:
           iprot.skip(ftype)
@@ -5806,13 +5423,8 @@ class drop_partition_args:
     if self.part_vals != None:
       oprot.writeFieldBegin('part_vals', TType.LIST, 3)
       oprot.writeListBegin(TType.STRING, len(self.part_vals))
-<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-      for iter153 in self.part_vals:
-        oprot.writeString(iter153)
-=======
       for iter167 in self.part_vals:
         oprot.writeString(iter167)
->>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
       oprot.writeListEnd()
       oprot.writeFieldEnd()
     if self.deleteData != None:
@@ -6129,17 +5741,10 @@ class get_partition_args:
       elif fid == 3:
         if ftype == TType.LIST:
           self.part_vals = []
-<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-          (_etype157, _size154) = iprot.readListBegin()
-          for _i158 in xrange(_size154):
-            _elem159 = iprot.readString();
-            self.part_vals.append(_elem159)
-=======
           (_etype171, _size168) = iprot.readListBegin()
           for _i172 in xrange(_size168):
             _elem173 = iprot.readString();
             self.part_vals.append(_elem173)
->>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
           iprot.readListEnd()
         else:
           iprot.skip(ftype)
@@ -6164,13 +5769,8 @@ class get_partition_args:
     if self.part_vals != None:
       oprot.writeFieldBegin('part_vals', TType.LIST, 3)
       oprot.writeListBegin(TType.STRING, len(self.part_vals))
-<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-      for iter160 in self.part_vals:
-        oprot.writeString(iter160)
-=======
       for iter174 in self.part_vals:
         oprot.writeString(iter174)
->>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
       oprot.writeListEnd()
       oprot.writeFieldEnd()
     oprot.writeFieldStop()
@@ -6542,19 +6142,11 @@ class get_partitions_result:
       if fid == 0:
         if ftype == TType.LIST:
           self.success = []
-<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-          (_etype164, _size161) = iprot.readListBegin()
-          for _i165 in xrange(_size161):
-            _elem166 = Partition()
-            _elem166.read(iprot)
-            self.success.append(_elem166)
-=======
           (_etype178, _size175) = iprot.readListBegin()
           for _i179 in xrange(_size175):
             _elem180 = Partition()
             _elem180.read(iprot)
             self.success.append(_elem180)
->>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
           iprot.readListEnd()
         else:
           iprot.skip(ftype)
@@ -6583,13 +6175,8 @@ class get_partitions_result:
     if self.success != None:
       oprot.writeFieldBegin('success', TType.LIST, 0)
       oprot.writeListBegin(TType.STRUCT, len(self.success))
-<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-      for iter167 in self.success:
-        iter167.write(oprot)
-=======
       for iter181 in self.success:
         iter181.write(oprot)
->>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
       oprot.writeListEnd()
       oprot.writeFieldEnd()
     if self.o1 != None:
@@ -6722,17 +6309,10 @@ class get_partition_names_result:
       if fid == 0:
         if ftype == TType.LIST:
           self.success = []
-<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-          (_etype171, _size168) = iprot.readListBegin()
-          for _i172 in xrange(_size168):
-            _elem173 = iprot.readString();
-            self.success.append(_elem173)
-=======
           (_etype185, _size182) = iprot.readListBegin()
           for _i186 in xrange(_size182):
             _elem187 = iprot.readString();
             self.success.append(_elem187)
->>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
           iprot.readListEnd()
         else:
           iprot.skip(ftype)
@@ -6755,13 +6335,8 @@ class get_partition_names_result:
     if self.success != None:
       oprot.writeFieldBegin('success', TType.LIST, 0)
       oprot.writeListBegin(TType.STRING, len(self.success))
-<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-      for iter174 in self.success:
-        oprot.writeString(iter174)
-=======
       for iter188 in self.success:
         oprot.writeString(iter188)
->>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
       oprot.writeListEnd()
       oprot.writeFieldEnd()
     if self.o2 != None:
@@ -6827,17 +6402,10 @@ class get_partitions_ps_args:
       elif fid == 3:
         if ftype == TType.LIST:
           self.part_vals = []
-<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-          (_etype178, _size175) = iprot.readListBegin()
-          for _i179 in xrange(_size175):
-            _elem180 = iprot.readString();
-            self.part_vals.append(_elem180)
-=======
           (_etype192, _size189) = iprot.readListBegin()
           for _i193 in xrange(_size189):
             _elem194 = iprot.readString();
             self.part_vals.append(_elem194)
->>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
           iprot.readListEnd()
         else:
           iprot.skip(ftype)
@@ -6867,13 +6435,8 @@ class get_partitions_ps_args:
     if self.part_vals != None:
       oprot.writeFieldBegin('part_vals', TType.LIST, 3)
       oprot.writeListBegin(TType.STRING, len(self.part_vals))
-<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-      for iter181 in self.part_vals:
-        oprot.writeString(iter181)
-=======
       for iter195 in self.part_vals:
         oprot.writeString(iter195)
->>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
       oprot.writeListEnd()
       oprot.writeFieldEnd()
     if self.max_parts != None:
@@ -6922,19 +6485,11 @@ class get_partitions_ps_result:
       if fid == 0:
         if ftype == TType.LIST:
           self.success = []
-<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-          (_etype185, _size182) = iprot.readListBegin()
-          for _i186 in xrange(_size182):
-            _elem187 = Partition()
-            _elem187.read(iprot)
-            self.success.append(_elem187)
-=======
           (_etype199, _size196) = iprot.readListBegin()
           for _i200 in xrange(_size196):
             _elem201 = Partition()
             _elem201.read(iprot)
             self.success.append(_elem201)
->>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
           iprot.readListEnd()
         else:
           iprot.skip(ftype)
@@ -6957,13 +6512,8 @@ class get_partitions_ps_result:
     if self.success != None:
       oprot.writeFieldBegin('success', TType.LIST, 0)
       oprot.writeListBegin(TType.STRUCT, len(self.success))
-<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-      for iter188 in self.success:
-        iter188.write(oprot)
-=======
       for iter202 in self.success:
         iter202.write(oprot)
->>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
       oprot.writeListEnd()
       oprot.writeFieldEnd()
     if self.o1 != None:
@@ -7029,17 +6579,10 @@ class get_partition_names_ps_args:
       elif fid == 3:
         if ftype == TType.LIST:
           self.part_vals = []
-<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-          (_etype192, _size189) = iprot.readListBegin()
-          for _i193 in xrange(_size189):
-            _elem194 = iprot.readString();
-            self.part_vals.append(_elem194)
-=======
           (_etype206, _size203) = iprot.readListBegin()
           for _i207 in xrange(_size203):
             _elem208 = iprot.readString();
             self.part_vals.append(_elem208)
->>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
           iprot.readListEnd()
         else:
           iprot.skip(ftype)
@@ -7069,13 +6612,8 @@ class get_partition_names_ps_args:
     if self.part_vals != None:
       oprot.writeFieldBegin('part_vals', TType.LIST, 3)
       oprot.writeListBegin(TType.STRING, len(self.part_vals))
-<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-      for iter195 in self.part_vals:
-        oprot.writeString(iter195)
-=======
       for iter209 in self.part_vals:
         oprot.writeString(iter209)
->>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
       oprot.writeListEnd()
       oprot.writeFieldEnd()
     if self.max_parts != None:
@@ -7124,17 +6662,10 @@ class get_partition_names_ps_result:
       if fid == 0:
         if ftype == TType.LIST:
           self.success = []
-<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-          (_etype199, _size196) = iprot.readListBegin()
-          for _i200 in xrange(_size196):
-            _elem201 = iprot.readString();
-            self.success.append(_elem201)
-=======
           (_etype213, _size210) = iprot.readListBegin()
           for _i214 in xrange(_size210):
             _elem215 = iprot.readString();
             self.success.append(_elem215)
->>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
           iprot.readListEnd()
         else:
           iprot.skip(ftype)
@@ -8050,16 +7581,8 @@ class add_index_result:
       return
     oprot.writeStructBegin('add_index_result')
     if self.success != None:
-<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-      oprot.writeFieldBegin('success', TType.LIST, 0)
-      oprot.writeListBegin(TType.STRING, len(self.success))
-      for iter202 in self.success:
-        oprot.writeString(iter202)
-      oprot.writeListEnd()
-=======
       oprot.writeFieldBegin('success', TType.STRUCT, 0)
       self.success.write(oprot)
->>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
       oprot.writeFieldEnd()
     if self.o1 != None:
       oprot.writeFieldBegin('o1', TType.STRUCT, 1)
@@ -8533,18 +8056,11 @@ class get_indexes_result:
       if fid == 0:
         if ftype == TType.LIST:
           self.success = []
-<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-          (_etype206, _size203) = iprot.readListBegin()
-          for _i207 in xrange(_size203):
-            _elem208 = iprot.readString();
-            self.success.append(_elem208)
-=======
           (_etype243, _size240) = iprot.readListBegin()
           for _i244 in xrange(_size240):
             _elem245 = Index()
             _elem245.read(iprot)
             self.success.append(_elem245)
->>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
           iprot.readListEnd()
         else:
           iprot.skip(ftype)
@@ -8572,15 +8088,9 @@ class get_indexes_result:
     oprot.writeStructBegin('get_indexes_result')
     if self.success != None:
       oprot.writeFieldBegin('success', TType.LIST, 0)
-<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-      oprot.writeListBegin(TType.STRING, len(self.success))
-      for iter209 in self.success:
-        oprot.writeString(iter209)
-=======
       oprot.writeListBegin(TType.STRUCT, len(self.success))
       for iter246 in self.success:
         iter246.write(oprot)
->>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
       oprot.writeListEnd()
       oprot.writeFieldEnd()
     if self.o1 != None:
@@ -8711,16 +8221,6 @@ class get_index_names_result:
       if ftype == TType.STOP:
         break
       if fid == 0:
-<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-        if ftype == TType.MAP:
-          self.success = {}
-          (_ktype211, _vtype212, _size210 ) = iprot.readMapBegin() 
-          for _i214 in xrange(_size210):
-            _key215 = iprot.readString();
-            _val216 = iprot.readString();
-            self.success[_key215] = _val216
-          iprot.readMapEnd()
-=======
         if ftype == TType.LIST:
           self.success = []
           (_etype250, _size247) = iprot.readListBegin()
@@ -8728,7 +8228,6 @@ class get_index_names_result:
             _elem252 = iprot.readString();
             self.success.append(_elem252)
           iprot.readListEnd()
->>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
         else:
           iprot.skip(ftype)
       elif fid == 1:
@@ -8748,832 +8247,10 @@ class get_index_names_result:
       return
     oprot.writeStructBegin('get_index_names_result')
     if self.success != None:
-<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-      oprot.writeFieldBegin('success', TType.MAP, 0)
-      oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.success))
-      for kiter217,viter218 in self.success.items():
-        oprot.writeString(kiter217)
-        oprot.writeString(viter218)
-      oprot.writeMapEnd()
-=======
       oprot.writeFieldBegin('success', TType.LIST, 0)
       oprot.writeListBegin(TType.STRING, len(self.success))
       for iter253 in self.success:
         oprot.writeString(iter253)
-      oprot.writeListEnd()
->>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ThriftHiveMetastore.py
-      oprot.writeFieldEnd()
-    if self.o2 != None:
-      oprot.writeFieldBegin('o2', TType.STRUCT, 1)
-      self.o2.write(oprot)
-      oprot.writeFieldEnd()
-    oprot.writeFieldStop()
-    oprot.writeStructEnd()
-
-  def __repr__(self):
-    L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
-    return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
-
-  def __eq__(self, other):
-    return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
-
-  def __ne__(self, other):
-    return not (self == other)
-
-class add_index_args:
-  """
-  Attributes:
-   - new_index
-  """
-
-  thrift_spec = (
-    None, # 0
-    (1, TType.STRUCT, 'new_index', (Index, Index.thrift_spec), None, ), # 1
-  )
-
-  def __init__(self, new_index=None,):
-    self.new_index = new_index
-
-  def read(self, iprot):
-    if iprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None and fastbinary is not None:
-      fastbinary.decode_binary(self, iprot.trans, (self.__class__, self.thrift_spec))
-      return
-    iprot.readStructBegin()
-    while True:
-      (fname, ftype, fid) = iprot.readFieldBegin()
-      if ftype == TType.STOP:
-        break
-      if fid == 1:
-        if ftype == TType.STRUCT:
-          self.new_index = Index()
-          self.new_index.read(iprot)
-        else:
-          iprot.skip(ftype)
-      else:
-        iprot.skip(ftype)
-      iprot.readFieldEnd()
-    iprot.readStructEnd()
-
-  def write(self, oprot):
-    if oprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and self.thrift_spec is not None and fastbinary is not None:
-      oprot.trans.write(fastbinary.encode_binary(self, (self.__class__, self.thrift_spec)))
-      return
-    oprot.writeStructBegin('add_index_args')
-    if self.new_index != None:
-      oprot.writeFieldBegin('new_index', TType.STRUCT, 1)
-      self.new_index.write(oprot)
-      oprot.writeFieldEnd()
-    oprot.writeFieldStop()
-    oprot.writeStructEnd()
-
-  def __repr__(self):
-    L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
-    return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
-
-  def __eq__(self, other):
-    return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
-
-  def __ne__(self, other):
-    return not (self == other)
-
-class add_index_result:
-  """
-  Attributes:
-   - success
-   - o1
-   - o2
-   - o3
-  """
-
-  thrift_spec = (
-    (0, TType.STRUCT, 'success', (Index, Index.thrift_spec), None, ), # 0
-    (1, TType.STRUCT, 'o1', (InvalidObjectException, InvalidObjectException.thrift_spec), None, ), # 1
-    (2, TType.STRUCT, 'o2', (AlreadyExistsException, AlreadyExistsException.thrift_spec), None, ), # 2
-    (3, TType.STRUCT, 'o3', (MetaException, MetaException.thrift_spec), None, ), # 3
-  )
-
-  def __init__(self, success=None, o1=None, o2=None, o3=None,):
-    self.success = success
-    self.o1 = o1
-    self.o2 = o2
-    self.o3 = o3
-
-  def read(self, iprot):
-    if iprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None and fastbinary is not None:
-      fastbinary.decode_binary(self, iprot.trans, (self.__class__, self.thrift_spec))
-      return
-    iprot.readStructBegin()
-    while True:
-      (fname, ftype, fid) = iprot.readFieldBegin()
-      if ftype == TType.STOP:
-        break
-      if fid == 0:
-        if ftype == TType.STRUCT:
-          self.success = Index()
-          self.success.read(iprot)
-        else:
-          iprot.skip(ftype)
-      elif fid == 1:
-        if ftype == TType.STRUCT:
-          self.o1 = InvalidObjectException()
-          self.o1.read(iprot)
-        else:
-          iprot.skip(ftype)
-      elif fid == 2:
-        if ftype == TType.STRUCT:
-          self.o2 = AlreadyExistsException()
-          self.o2.read(iprot)
-        else:
-          iprot.skip(ftype)
-      elif fid == 3:
-        if ftype == TType.STRUCT:
-          self.o3 = MetaException()
-          self.o3.read(iprot)
-        else:
-          iprot.skip(ftype)
-      else:
-        iprot.skip(ftype)
-      iprot.readFieldEnd()
-    iprot.readStructEnd()
-
-  def write(self, oprot):
-    if oprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and self.thrift_spec is not None and fastbinary is not None:
-      oprot.trans.write(fastbinary.encode_binary(self, (self.__class__, self.thrift_spec)))
-      return
-    oprot.writeStructBegin('add_index_result')
-    if self.success != None:
-      oprot.writeFieldBegin('success', TType.STRUCT, 0)
-      self.success.write(oprot)
-      oprot.writeFieldEnd()
-    if self.o1 != None:
-      oprot.writeFieldBegin('o1', TType.STRUCT, 1)
-      self.o1.write(oprot)
-      oprot.writeFieldEnd()
-    if self.o2 != None:
-      oprot.writeFieldBegin('o2', TType.STRUCT, 2)
-      self.o2.write(oprot)
-      oprot.writeFieldEnd()
-    if self.o3 != None:
-      oprot.writeFieldBegin('o3', TType.STRUCT, 3)
-      self.o3.write(oprot)
-      oprot.writeFieldEnd()
-    oprot.writeFieldStop()
-    oprot.writeStructEnd()
-
-  def __repr__(self):
-    L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
-    return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
-
-  def __eq__(self, other):
-    return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
-
-  def __ne__(self, other):
-    return not (self == other)
-
-class drop_index_by_name_args:
-  """
-  Attributes:
-   - db_name
-   - tbl_name
-   - index_name
-   - deleteData
-  """
-
-  thrift_spec = (
-    None, # 0
-    (1, TType.STRING, 'db_name', None, None, ), # 1
-    (2, TType.STRING, 'tbl_name', None, None, ), # 2
-    (3, TType.STRING, 'index_name', None, None, ), # 3
-    (4, TType.BOOL, 'deleteData', None, None, ), # 4
-  )
-
-  def __init__(self, db_name=None, tbl_name=None, index_name=None, deleteData=None,):
-    self.db_name = db_name
-    self.tbl_name = tbl_name
-    self.index_name = index_name
-    self.deleteData = deleteData
-
-  def read(self, iprot):
-    if iprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None and fastbinary is not None:
-      fastbinary.decode_binary(self, iprot.trans, (self.__class__, self.thrift_spec))
-      return
-    iprot.readStructBegin()
-    while True:
-      (fname, ftype, fid) = iprot.readFieldBegin()
-      if ftype == TType.STOP:
-        break
-      if fid == 1:
-        if ftype == TType.STRING:
-          self.db_name = iprot.readString();
-        else:
-          iprot.skip(ftype)
-      elif fid == 2:
-        if ftype == TType.STRING:
-          self.tbl_name = iprot.readString();
-        else:
-          iprot.skip(ftype)
-      elif fid == 3:
-        if ftype == TType.STRING:
-          self.index_name = iprot.readString();
-        else:
-          iprot.skip(ftype)
-      elif fid == 4:
-        if ftype == TType.BOOL:
-          self.deleteData = iprot.readBool();
-        else:
-          iprot.skip(ftype)
-      else:
-        iprot.skip(ftype)
-      iprot.readFieldEnd()
-    iprot.readStructEnd()
-
-  def write(self, oprot):
-    if oprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and self.thrift_spec is not None and fastbinary is not None:
-      oprot.trans.write(fastbinary.encode_binary(self, (self.__class__, self.thrift_spec)))
-      return
-    oprot.writeStructBegin('drop_index_by_name_args')
-    if self.db_name != None:
-      oprot.writeFieldBegin('db_name', TType.STRING, 1)
-      oprot.writeString(self.db_name)
-      oprot.writeFieldEnd()
-    if self.tbl_name != None:
-      oprot.writeFieldBegin('tbl_name', TType.STRING, 2)
-      oprot.writeString(self.tbl_name)
-      oprot.writeFieldEnd()
-    if self.index_name != None:
-      oprot.writeFieldBegin('index_name', TType.STRING, 3)
-      oprot.writeString(self.index_name)
-      oprot.writeFieldEnd()
-    if self.deleteData != None:
-      oprot.writeFieldBegin('deleteData', TType.BOOL, 4)
-      oprot.writeBool(self.deleteData)
-      oprot.writeFieldEnd()
-    oprot.writeFieldStop()
-    oprot.writeStructEnd()
-
-  def __repr__(self):
-    L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
-    return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
-
-  def __eq__(self, other):
-    return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
-
-  def __ne__(self, other):
-    return not (self == other)
-
-class drop_index_by_name_result:
-  """
-  Attributes:
-   - success
-   - o1
-   - o2
-  """
-
-  thrift_spec = (
-    (0, TType.BOOL, 'success', None, None, ), # 0
-    (1, TType.STRUCT, 'o1', (NoSuchObjectException, NoSuchObjectException.thrift_spec), None, ), # 1
-    (2, TType.STRUCT, 'o2', (MetaException, MetaException.thrift_spec), None, ), # 2
-  )
-
-  def __init__(self, success=None, o1=None, o2=None,):
-    self.success = success
-    self.o1 = o1
-    self.o2 = o2
-
-  def read(self, iprot):
-    if iprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None and fastbinary is not None:
-      fastbinary.decode_binary(self, iprot.trans, (self.__class__, self.thrift_spec))
-      return
-    iprot.readStructBegin()
-    while True:
-      (fname, ftype, fid) = iprot.readFieldBegin()
-      if ftype == TType.STOP:
-        break
-      if fid == 0:
-        if ftype == TType.BOOL:
-          self.success = iprot.readBool();
-        else:
-          iprot.skip(ftype)
-      elif fid == 1:
-        if ftype == TType.STRUCT:
-          self.o1 = NoSuchObjectException()
-          self.o1.read(iprot)
-        else:
-          iprot.skip(ftype)
-      elif fid == 2:
-        if ftype == TType.STRUCT:
-          self.o2 = MetaException()
-          self.o2.read(iprot)
-        else:
-          iprot.skip(ftype)
-      else:
-        iprot.skip(ftype)
-      iprot.readFieldEnd()
-    iprot.readStructEnd()
-
-  def write(self, oprot):
-    if oprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and self.thrift_spec is not None and fastbinary is not None:
-      oprot.trans.write(fastbinary.encode_binary(self, (self.__class__, self.thrift_spec)))
-      return
-    oprot.writeStructBegin('drop_index_by_name_result')
-    if self.success != None:
-      oprot.writeFieldBegin('success', TType.BOOL, 0)
-      oprot.writeBool(self.success)
-      oprot.writeFieldEnd()
-    if self.o1 != None:
-      oprot.writeFieldBegin('o1', TType.STRUCT, 1)
-      self.o1.write(oprot)
-      oprot.writeFieldEnd()
-    if self.o2 != None:
-      oprot.writeFieldBegin('o2', TType.STRUCT, 2)
-      self.o2.write(oprot)
-      oprot.writeFieldEnd()
-    oprot.writeFieldStop()
-    oprot.writeStructEnd()
-
-  def __repr__(self):
-    L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
-    return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
-
-  def __eq__(self, other):
-    return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
-
-  def __ne__(self, other):
-    return not (self == other)
-
-class get_index_by_name_args:
-  """
-  Attributes:
-   - db_name
-   - tbl_name
-   - index_name
-  """
-
-  thrift_spec = (
-    None, # 0
-    (1, TType.STRING, 'db_name', None, None, ), # 1
-    (2, TType.STRING, 'tbl_name', None, None, ), # 2
-    (3, TType.STRING, 'index_name', None, None, ), # 3
-  )
-
-  def __init__(self, db_name=None, tbl_name=None, index_name=None,):
-    self.db_name = db_name
-    self.tbl_name = tbl_name
-    self.index_name = index_name
-
-  def read(self, iprot):
-    if iprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None and fastbinary is not None:
-      fastbinary.decode_binary(self, iprot.trans, (self.__class__, self.thrift_spec))
-      return
-    iprot.readStructBegin()
-    while True:
-      (fname, ftype, fid) = iprot.readFieldBegin()
-      if ftype == TType.STOP:
-        break
-      if fid == 1:
-        if ftype == TType.STRING:
-          self.db_name = iprot.readString();
-        else:
-          iprot.skip(ftype)
-      elif fid == 2:
-        if ftype == TType.STRING:
-          self.tbl_name = iprot.readString();
-        else:
-          iprot.skip(ftype)
-      elif fid == 3:
-        if ftype == TType.STRING:
-          self.index_name = iprot.readString();
-        else:
-          iprot.skip(ftype)
-      else:
-        iprot.skip(ftype)
-      iprot.readFieldEnd()
-    iprot.readStructEnd()
-
-  def write(self, oprot):
-    if oprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and self.thrift_spec is not None and fastbinary is not None:
-      oprot.trans.write(fastbinary.encode_binary(self, (self.__class__, self.thrift_spec)))
-      return
-    oprot.writeStructBegin('get_index_by_name_args')
-    if self.db_name != None:
-      oprot.writeFieldBegin('db_name', TType.STRING, 1)
-      oprot.writeString(self.db_name)
-      oprot.writeFieldEnd()
-    if self.tbl_name != None:
-      oprot.writeFieldBegin('tbl_name', TType.STRING, 2)
-      oprot.writeString(self.tbl_name)
-      oprot.writeFieldEnd()
-    if self.index_name != None:
-      oprot.writeFieldBegin('index_name', TType.STRING, 3)
-      oprot.writeString(self.index_name)
-      oprot.writeFieldEnd()
-    oprot.writeFieldStop()
-    oprot.writeStructEnd()
-
-  def __repr__(self):
-    L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
-    return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
-
-  def __eq__(self, other):
-    return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
-
-  def __ne__(self, other):
-    return not (self == other)
-
-class get_index_by_name_result:
-  """
-  Attributes:
-   - success
-   - o1
-   - o2
-  """
-
-  thrift_spec = (
-    (0, TType.STRUCT, 'success', (Index, Index.thrift_spec), None, ), # 0
-    (1, TType.STRUCT, 'o1', (MetaException, MetaException.thrift_spec), None, ), # 1
-    (2, TType.STRUCT, 'o2', (NoSuchObjectException, NoSuchObjectException.thrift_spec), None, ), # 2
-  )
-
-  def __init__(self, success=None, o1=None, o2=None,):
-    self.success = success
-    self.o1 = o1
-    self.o2 = o2
-
-  def read(self, iprot):
-    if iprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None and fastbinary is not None:
-      fastbinary.decode_binary(self, iprot.trans, (self.__class__, self.thrift_spec))
-      return
-    iprot.readStructBegin()
-    while True:
-      (fname, ftype, fid) = iprot.readFieldBegin()
-      if ftype == TType.STOP:
-        break
-      if fid == 0:
-        if ftype == TType.STRUCT:
-          self.success = Index()
-          self.success.read(iprot)
-        else:
-          iprot.skip(ftype)
-      elif fid == 1:
-        if ftype == TType.STRUCT:
-          self.o1 = MetaException()
-          self.o1.read(iprot)
-        else:
-          iprot.skip(ftype)
-      elif fid == 2:
-        if ftype == TType.STRUCT:
-          self.o2 = NoSuchObjectException()
-          self.o2.read(iprot)
-        else:
-          iprot.skip(ftype)
-      else:
-        iprot.skip(ftype)
-      iprot.readFieldEnd()
-    iprot.readStructEnd()
-
-  def write(self, oprot):
-    if oprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and self.thrift_spec is not None and fastbinary is not None:
-      oprot.trans.write(fastbinary.encode_binary(self, (self.__class__, self.thrift_spec)))
-      return
-    oprot.writeStructBegin('get_index_by_name_result')
-    if self.success != None:
-      oprot.writeFieldBegin('success', TType.STRUCT, 0)
-      self.success.write(oprot)
-      oprot.writeFieldEnd()
-    if self.o1 != None:
-      oprot.writeFieldBegin('o1', TType.STRUCT, 1)
-      self.o1.write(oprot)
-      oprot.writeFieldEnd()
-    if self.o2 != None:
-      oprot.writeFieldBegin('o2', TType.STRUCT, 2)
-      self.o2.write(oprot)
-      oprot.writeFieldEnd()
-    oprot.writeFieldStop()
-    oprot.writeStructEnd()
-
-  def __repr__(self):
-    L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
-    return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
-
-  def __eq__(self, other):
-    return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
-
-  def __ne__(self, other):
-    return not (self == other)
-
-class get_indexs_args:
-  """
-  Attributes:
-   - db_name
-   - tbl_name
-   - max_indexes
-  """
-
-  thrift_spec = (
-    None, # 0
-    (1, TType.STRING, 'db_name', None, None, ), # 1
-    (2, TType.STRING, 'tbl_name', None, None, ), # 2
-    (3, TType.I16, 'max_indexes', None, -1, ), # 3
-  )
-
-  def __init__(self, db_name=None, tbl_name=None, max_indexes=thrift_spec[3][4],):
-    self.db_name = db_name
-    self.tbl_name = tbl_name
-    self.max_indexes = max_indexes
-
-  def read(self, iprot):
-    if iprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None and fastbinary is not None:
-      fastbinary.decode_binary(self, iprot.trans, (self.__class__, self.thrift_spec))
-      return
-    iprot.readStructBegin()
-    while True:
-      (fname, ftype, fid) = iprot.readFieldBegin()
-      if ftype == TType.STOP:
-        break
-      if fid == 1:
-        if ftype == TType.STRING:
-          self.db_name = iprot.readString();
-        else:
-          iprot.skip(ftype)
-      elif fid == 2:
-        if ftype == TType.STRING:
-          self.tbl_name = iprot.readString();
-        else:
-          iprot.skip(ftype)
-      elif fid == 3:
-        if ftype == TType.I16:
-          self.max_indexes = iprot.readI16();
-        else:
-          iprot.skip(ftype)
-      else:
-        iprot.skip(ftype)
-      iprot.readFieldEnd()
-    iprot.readStructEnd()
-
-  def write(self, oprot):
-    if oprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and self.thrift_spec is not None and fastbinary is not None:
-      oprot.trans.write(fastbinary.encode_binary(self, (self.__class__, self.thrift_spec)))
-      return
-    oprot.writeStructBegin('get_indexs_args')
-    if self.db_name != None:
-      oprot.writeFieldBegin('db_name', TType.STRING, 1)
-      oprot.writeString(self.db_name)
-      oprot.writeFieldEnd()
-    if self.tbl_name != None:
-      oprot.writeFieldBegin('tbl_name', TType.STRING, 2)
-      oprot.writeString(self.tbl_name)
-      oprot.writeFieldEnd()
-    if self.max_indexes != None:
-      oprot.writeFieldBegin('max_indexes', TType.I16, 3)
-      oprot.writeI16(self.max_indexes)
-      oprot.writeFieldEnd()
-    oprot.writeFieldStop()
-    oprot.writeStructEnd()
-
-  def __repr__(self):
-    L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
-    return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
-
-  def __eq__(self, other):
-    return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
-
-  def __ne__(self, other):
-    return not (self == other)
-
-class get_indexs_result:
-  """
-  Attributes:
-   - success
-   - o1
-   - o2
-  """
-
-  thrift_spec = (
-    (0, TType.LIST, 'success', (TType.STRUCT,(Index, Index.thrift_spec)), None, ), # 0
-    (1, TType.STRUCT, 'o1', (NoSuchObjectException, NoSuchObjectException.thrift_spec), None, ), # 1
-    (2, TType.STRUCT, 'o2', (MetaException, MetaException.thrift_spec), None, ), # 2
-  )
-
-  def __init__(self, success=None, o1=None, o2=None,):
-    self.success = success
-    self.o1 = o1
-    self.o2 = o2
-
-  def read(self, iprot):
-    if iprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None and fastbinary is not None:
-      fastbinary.decode_binary(self, iprot.trans, (self.__class__, self.thrift_spec))
-      return
-    iprot.readStructBegin()
-    while True:
-      (fname, ftype, fid) = iprot.readFieldBegin()
-      if ftype == TType.STOP:
-        break
-      if fid == 0:
-        if ftype == TType.LIST:
-          self.success = []
-          (_etype222, _size219) = iprot.readListBegin()
-          for _i223 in xrange(_size219):
-            _elem224 = Index()
-            _elem224.read(iprot)
-            self.success.append(_elem224)
-          iprot.readListEnd()
-        else:
-          iprot.skip(ftype)
-      elif fid == 1:
-        if ftype == TType.STRUCT:
-          self.o1 = NoSuchObjectException()
-          self.o1.read(iprot)
-        else:
-          iprot.skip(ftype)
-      elif fid == 2:
-        if ftype == TType.STRUCT:
-          self.o2 = MetaException()
-          self.o2.read(iprot)
-        else:
-          iprot.skip(ftype)
-      else:
-        iprot.skip(ftype)
-      iprot.readFieldEnd()
-    iprot.readStructEnd()
-
-  def write(self, oprot):
-    if oprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and self.thrift_spec is not None and fastbinary is not None:
-      oprot.trans.write(fastbinary.encode_binary(self, (self.__class__, self.thrift_spec)))
-      return
-    oprot.writeStructBegin('get_indexs_result')
-    if self.success != None:
-      oprot.writeFieldBegin('success', TType.LIST, 0)
-      oprot.writeListBegin(TType.STRUCT, len(self.success))
-      for iter225 in self.success:
-        iter225.write(oprot)
-      oprot.writeListEnd()
-      oprot.writeFieldEnd()
-    if self.o1 != None:
-      oprot.writeFieldBegin('o1', TType.STRUCT, 1)
-      self.o1.write(oprot)
-      oprot.writeFieldEnd()
-    if self.o2 != None:
-      oprot.writeFieldBegin('o2', TType.STRUCT, 2)
-      self.o2.write(oprot)
-      oprot.writeFieldEnd()
-    oprot.writeFieldStop()
-    oprot.writeStructEnd()
-
-  def __repr__(self):
-    L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
-    return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
-
-  def __eq__(self, other):
-    return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
-
-  def __ne__(self, other):
-    return not (self == other)
-
-class get_index_names_args:
-  """
-  Attributes:
-   - db_name
-   - tbl_name
-   - max_indexes
-  """
-
-  thrift_spec = (
-    None, # 0
-    (1, TType.STRING, 'db_name', None, None, ), # 1
-    (2, TType.STRING, 'tbl_name', None, None, ), # 2
-    (3, TType.I16, 'max_indexes', None, -1, ), # 3
-  )
-
-  def __init__(self, db_name=None, tbl_name=None, max_indexes=thrift_spec[3][4],):
-    self.db_name = db_name
-    self.tbl_name = tbl_name
-    self.max_indexes = max_indexes
-
-  def read(self, iprot):
-    if iprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None and fastbinary is not None:
-      fastbinary.decode_binary(self, iprot.trans, (self.__class__, self.thrift_spec))
-      return
-    iprot.readStructBegin()
-    while True:
-      (fname, ftype, fid) = iprot.readFieldBegin()
-      if ftype == TType.STOP:
-        break
-      if fid == 1:
-        if ftype == TType.STRING:
-          self.db_name = iprot.readString();
-        else:
-          iprot.skip(ftype)
-      elif fid == 2:
-        if ftype == TType.STRING:
-          self.tbl_name = iprot.readString();
-        else:
-          iprot.skip(ftype)
-      elif fid == 3:
-        if ftype == TType.I16:
-          self.max_indexes = iprot.readI16();
-        else:
-          iprot.skip(ftype)
-      else:
-        iprot.skip(ftype)
-      iprot.readFieldEnd()
-    iprot.readStructEnd()
-
-  def write(self, oprot):
-    if oprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and self.thrift_spec is not None and fastbinary is not None:
-      oprot.trans.write(fastbinary.encode_binary(self, (self.__class__, self.thrift_spec)))
-      return
-    oprot.writeStructBegin('get_index_names_args')
-    if self.db_name != None:
-      oprot.writeFieldBegin('db_name', TType.STRING, 1)
-      oprot.writeString(self.db_name)
-      oprot.writeFieldEnd()
-    if self.tbl_name != None:
-      oprot.writeFieldBegin('tbl_name', TType.STRING, 2)
-      oprot.writeString(self.tbl_name)
-      oprot.writeFieldEnd()
-    if self.max_indexes != None:
-      oprot.writeFieldBegin('max_indexes', TType.I16, 3)
-      oprot.writeI16(self.max_indexes)
-      oprot.writeFieldEnd()
-    oprot.writeFieldStop()
-    oprot.writeStructEnd()
-
-  def __repr__(self):
-    L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
-    return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
-
-  def __eq__(self, other):
-    return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
-
-  def __ne__(self, other):
-    return not (self == other)
-
-class get_index_names_result:
-  """
-  Attributes:
-   - success
-   - o2
-  """
-
-  thrift_spec = (
-    (0, TType.LIST, 'success', (TType.STRING,None), None, ), # 0
-    (1, TType.STRUCT, 'o2', (MetaException, MetaException.thrift_spec), None, ), # 1
-  )
-
-  def __init__(self, success=None, o2=None,):
-    self.success = success
-    self.o2 = o2
-
-  def read(self, iprot):
-    if iprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None and fastbinary is not None:
-      fastbinary.decode_binary(self, iprot.trans, (self.__class__, self.thrift_spec))
-      return
-    iprot.readStructBegin()
-    while True:
-      (fname, ftype, fid) = iprot.readFieldBegin()
-      if ftype == TType.STOP:
-        break
-      if fid == 0:
-        if ftype == TType.LIST:
-          self.success = []
-          (_etype229, _size226) = iprot.readListBegin()
-          for _i230 in xrange(_size226):
-            _elem231 = iprot.readString();
-            self.success.append(_elem231)
-          iprot.readListEnd()
-        else:
-          iprot.skip(ftype)
-      elif fid == 1:
-        if ftype == TType.STRUCT:
-          self.o2 = MetaException()
-          self.o2.read(iprot)
-        else:
-          iprot.skip(ftype)
-      else:
-        iprot.skip(ftype)
-      iprot.readFieldEnd()
-    iprot.readStructEnd()
-
-  def write(self, oprot):
-    if oprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and self.thrift_spec is not None and fastbinary is not None:
-      oprot.trans.write(fastbinary.encode_binary(self, (self.__class__, self.thrift_spec)))
-      return
-    oprot.writeStructBegin('get_index_names_result')
-    if self.success != None:
-      oprot.writeFieldBegin('success', TType.LIST, 0)
-      oprot.writeListBegin(TType.STRING, len(self.success))
-      for iter232 in self.success:
-        oprot.writeString(iter232)
       oprot.writeListEnd()
       oprot.writeFieldEnd()
     if self.o2 != None:

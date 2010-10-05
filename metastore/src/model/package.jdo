@@ -293,11 +293,7 @@
       </field>
     </class>
     
-<<<<<<< HEAD:metastore/src/model/package.jdo
-    <class name="MIndex" table="INDEXS" identity-type="datastore" detachable="true">
-=======
     <class name="MIndex" table="IDXS" identity-type="datastore" detachable="true">
->>>>>>> apache_master/trunk:metastore/src/model/package.jdo
       <index name="UniqueINDEX" unique="true">
         <column name="INDEX_NAME"/>
         <column name="ORIG_TBL_ID"/>
@@ -307,11 +303,7 @@
         <column name="INDEX_ID"/>
       </datastore-identity>
       <field name="indexName">
-<<<<<<< HEAD:metastore/src/model/package.jdo
-        <column name="INDEX_NAME" length="767" jdbc-type="VARCHAR"/>
-=======
         <column name="INDEX_NAME" length="128" jdbc-type="VARCHAR"/>
->>>>>>> apache_master/trunk:metastore/src/model/package.jdo
       </field>
       <field name="origTable">
         <column name="ORIG_TBL_ID"/>
@@ -319,15 +311,12 @@
       <field name="indexTable">
         <column name="INDEX_TBL_ID"/>
       </field>
-<<<<<<< HEAD:metastore/src/model/package.jdo
-=======
       <field name="indexHandlerClass">
         <column name="INDEX_HANDLER_CLASS"/>
       </field>
       <field name="deferredRebuild">
         <column name="DEFERRED_REBUILD"/>
       </field>
->>>>>>> apache_master/trunk:metastore/src/model/package.jdo
       <field name="createTime">
         <column name="CREATE_TIME" jdbc-type="integer"/>
       </field>
