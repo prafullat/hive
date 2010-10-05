@@ -13,345 +13,13 @@ POSTHOOK: Input: default@src
 POSTHOOK: Output: default@src_index_test_rc
 POSTHOOK: Lineage: src_index_test_rc.key EXPRESSION [(src)src.FieldSchema(name:key, type:string, comment:default), ]
 POSTHOOK: Lineage: src_index_test_rc.value SIMPLE [(src)src.FieldSchema(name:value, type:string, comment:default), ]
-<<<<<<< HEAD:ql/src/test/results/clientpositive/index_compact_3.q.out
-PREHOOK: query: CREATE INDEX src_index TYPE COMPACT ON TABLE src_index_test_rc(key)
-PREHOOK: type: CREATEINDEX
-POSTHOOK: query: CREATE INDEX src_index TYPE COMPACT ON TABLE src_index_test_rc(key)
-=======
 PREHOOK: query: CREATE INDEX src_index ON TABLE src_index_test_rc(key) as 'COMPACT' WITH DEFERRED REBUILD
 PREHOOK: type: CREATEINDEX
 POSTHOOK: query: CREATE INDEX src_index ON TABLE src_index_test_rc(key) as 'COMPACT' WITH DEFERRED REBUILD
->>>>>>> apache_master/trunk:ql/src/test/results/clientpositive/index_compact_3.q.out
 POSTHOOK: type: CREATEINDEX
 POSTHOOK: Lineage: src_index_test_rc.key EXPRESSION [(src)src.FieldSchema(name:key, type:string, comment:default), ]
 POSTHOOK: Lineage: src_index_test_rc.value SIMPLE [(src)src.FieldSchema(name:value, type:string, comment:default), ]
 PREHOOK: query: ALTER INDEX src_index ON src_index_test_rc REBUILD
-<<<<<<< HEAD:ql/src/test/results/clientpositive/index_compact_3.q.out
-PREHOOK: type: ALTERINDEX_REBUILD
-POSTHOOK: query: ALTER INDEX src_index ON src_index_test_rc REBUILD
-POSTHOOK: type: ALTERINDEX_REBUILD
-POSTHOOK: Lineage: src_index_test_rc.key EXPRESSION [(src)src.FieldSchema(name:key, type:string, comment:default), ]
-POSTHOOK: Lineage: src_index_test_rc.value SIMPLE [(src)src.FieldSchema(name:value, type:string, comment:default), ]
-PREHOOK: query: SELECT x.* FROM default__src_index_test_rc_src_index__ x
-PREHOOK: type: QUERY
-PREHOOK: Input: default@default__src_index_test_rc_src_index__
-PREHOOK: Output: file:/var/folders/6g/6grtCwPMEf4sqHUPpy6xQG9ByHg/-Tmp-/heyongqiang/hive_2010-07-13_15-04-47_846_484517660624513730/10000
-POSTHOOK: query: SELECT x.* FROM default__src_index_test_rc_src_index__ x
-POSTHOOK: type: QUERY
-POSTHOOK: Input: default@default__src_index_test_rc_src_index__
-POSTHOOK: Output: file:/var/folders/6g/6grtCwPMEf4sqHUPpy6xQG9ByHg/-Tmp-/heyongqiang/hive_2010-07-13_15-04-47_846_484517660624513730/10000
-POSTHOOK: Lineage: src_index_test_rc.key EXPRESSION [(src)src.FieldSchema(name:key, type:string, comment:default), ]
-POSTHOOK: Lineage: src_index_test_rc.value SIMPLE [(src)src.FieldSchema(name:value, type:string, comment:default), ]
-0	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-10	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-100	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-103	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-104	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-105	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-11	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-111	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-113	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-114	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-116	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-118	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-119	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-12	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-120	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-125	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-126	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-128	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-129	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-131	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-133	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-134	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-136	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-137	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-138	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-143	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-145	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-146	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-149	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-15	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-150	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-152	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-153	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-155	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-156	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-157	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-158	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-160	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-162	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-163	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-164	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-165	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-166	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-167	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-168	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-169	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-17	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-170	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-172	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-174	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-175	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-176	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-177	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-178	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-179	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-18	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-180	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-181	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-183	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-186	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-187	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-189	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-19	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-190	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-191	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-192	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-193	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-194	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-195	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-196	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-197	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-199	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-2	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-20	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-200	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-201	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-202	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-203	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-205	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-207	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-208	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-209	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-213	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-214	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-216	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-217	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-218	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-219	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-221	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-222	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-223	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-224	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-226	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-228	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-229	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-230	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-233	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-235	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-237	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-238	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-239	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-24	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-241	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-242	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-244	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-247	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-248	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-249	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-252	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-255	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-256	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-257	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-258	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-26	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-260	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-262	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-263	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-265	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-266	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-27	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-272	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-273	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-274	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-275	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-277	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-278	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-28	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-280	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-281	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-282	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-283	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-284	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-285	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-286	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-287	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-288	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-289	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-291	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-292	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-296	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-298	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-30	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-302	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-305	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-306	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-307	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-308	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-309	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-310	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-311	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-315	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-316	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-317	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-318	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-321	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-322	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-323	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-325	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-327	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-33	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-331	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-332	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-333	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-335	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-336	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-338	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-339	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-34	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-341	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-342	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-344	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-345	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-348	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-35	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-351	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-353	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-356	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-360	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-362	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-364	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-365	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-366	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-367	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-368	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-369	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-37	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-373	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-374	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-375	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-377	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-378	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-379	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-382	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-384	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-386	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-389	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-392	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-393	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-394	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-395	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-396	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-397	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-399	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-4	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-400	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-401	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-402	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-403	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-404	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-406	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-407	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-409	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-41	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-411	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-413	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-414	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-417	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-418	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-419	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-42	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-421	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-424	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-427	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-429	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-43	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-430	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-431	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-432	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-435	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-436	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-437	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-438	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-439	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-44	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-443	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-444	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-446	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-448	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-449	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-452	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-453	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-454	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-455	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-457	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-458	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-459	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-460	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-462	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-463	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-466	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-467	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-468	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-469	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-47	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-470	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-472	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-475	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-477	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-478	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-479	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-480	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-481	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-482	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-483	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-484	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-485	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-487	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-489	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-490	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-491	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-492	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-493	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-494	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-495	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-496	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-497	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-498	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-5	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-51	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-53	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-54	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-57	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-58	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-64	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-65	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-66	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-67	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-69	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-70	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-72	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-74	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-76	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-77	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-78	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-8	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-80	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-82	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-83	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-84	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-85	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-86	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-87	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-9	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-90	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-92	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-95	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-96	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-97	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-98	file:/Users/heyongqiang/Documents/workspace/Hive-Index/build/ql/test/data/warehouse/src_index_test_rc/attempt_local_0001_m_000000_0	["151"]
-=======
 PREHOOK: type: QUERY
 PREHOOK: Input: default@src_index_test_rc
 PREHOOK: Output: default@default__src_index_test_rc_src_index__
@@ -686,7 +354,6 @@ POSTHOOK: Lineage: src_index_test_rc.value SIMPLE [(src)src.FieldSchema(name:val
 496	pfile:/data/users/njain/hive_commit2/hive_commit2/build/ql/test/data/warehouse/src_index_test_rc/000000_0	[151]
 497	pfile:/data/users/njain/hive_commit2/hive_commit2/build/ql/test/data/warehouse/src_index_test_rc/000000_0	[151]
 498	pfile:/data/users/njain/hive_commit2/hive_commit2/build/ql/test/data/warehouse/src_index_test_rc/000000_0	[151]
->>>>>>> apache_master/trunk:ql/src/test/results/clientpositive/index_compact_3.q.out
 PREHOOK: query: INSERT OVERWRITE DIRECTORY "/tmp/index_result" SELECT `_bucketname` ,  `_offsets` FROM default__src_index_test_rc_src_index__ WHERE key=100
 PREHOOK: type: QUERY
 PREHOOK: Input: default@default__src_index_test_rc_src_index__
@@ -695,18 +362,6 @@ POSTHOOK: query: INSERT OVERWRITE DIRECTORY "/tmp/index_result" SELECT `_bucketn
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@default__src_index_test_rc_src_index__
 POSTHOOK: Output: /tmp/index_result
-<<<<<<< HEAD:ql/src/test/results/clientpositive/index_compact_3.q.out
-POSTHOOK: Lineage: src_index_test_rc.key EXPRESSION [(src)src.FieldSchema(name:key, type:string, comment:default), ]
-POSTHOOK: Lineage: src_index_test_rc.value SIMPLE [(src)src.FieldSchema(name:value, type:string, comment:default), ]
-PREHOOK: query: SELECT key, value FROM src_index_test_rc WHERE key=100
-PREHOOK: type: QUERY
-PREHOOK: Input: default@src_index_test_rc
-PREHOOK: Output: file:/var/folders/6g/6grtCwPMEf4sqHUPpy6xQG9ByHg/-Tmp-/heyongqiang/hive_2010-07-13_15-04-52_023_5145733361622637919/10000
-POSTHOOK: query: SELECT key, value FROM src_index_test_rc WHERE key=100
-POSTHOOK: type: QUERY
-POSTHOOK: Input: default@src_index_test_rc
-POSTHOOK: Output: file:/var/folders/6g/6grtCwPMEf4sqHUPpy6xQG9ByHg/-Tmp-/heyongqiang/hive_2010-07-13_15-04-52_023_5145733361622637919/10000
-=======
 POSTHOOK: Lineage: default__src_index_test_rc_src_index__._bucketname SIMPLE [(src_index_test_rc)src_index_test_rc.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
 POSTHOOK: Lineage: default__src_index_test_rc_src_index__._offsets EXPRESSION [(src_index_test_rc)src_index_test_rc.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__src_index_test_rc_src_index__.key SIMPLE [(src_index_test_rc)src_index_test_rc.FieldSchema(name:key, type:int, comment:from deserializer), ]
@@ -723,21 +378,10 @@ POSTHOOK: Output: file:/tmp/njain/hive_2010-08-16_23-54-53_146_70754410745679067
 POSTHOOK: Lineage: default__src_index_test_rc_src_index__._bucketname SIMPLE [(src_index_test_rc)src_index_test_rc.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
 POSTHOOK: Lineage: default__src_index_test_rc_src_index__._offsets EXPRESSION [(src_index_test_rc)src_index_test_rc.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__src_index_test_rc_src_index__.key SIMPLE [(src_index_test_rc)src_index_test_rc.FieldSchema(name:key, type:int, comment:from deserializer), ]
->>>>>>> apache_master/trunk:ql/src/test/results/clientpositive/index_compact_3.q.out
 POSTHOOK: Lineage: src_index_test_rc.key EXPRESSION [(src)src.FieldSchema(name:key, type:string, comment:default), ]
 POSTHOOK: Lineage: src_index_test_rc.value SIMPLE [(src)src.FieldSchema(name:value, type:string, comment:default), ]
 100	val_100
 100	val_100
-<<<<<<< HEAD:ql/src/test/results/clientpositive/index_compact_3.q.out
-PREHOOK: query: SELECT key, value FROM src_index_test_rc WHERE key=100
-PREHOOK: type: QUERY
-PREHOOK: Input: default@src_index_test_rc
-PREHOOK: Output: file:/var/folders/6g/6grtCwPMEf4sqHUPpy6xQG9ByHg/-Tmp-/heyongqiang/hive_2010-07-13_15-04-55_359_7586342106662220129/10000
-POSTHOOK: query: SELECT key, value FROM src_index_test_rc WHERE key=100
-POSTHOOK: type: QUERY
-POSTHOOK: Input: default@src_index_test_rc
-POSTHOOK: Output: file:/var/folders/6g/6grtCwPMEf4sqHUPpy6xQG9ByHg/-Tmp-/heyongqiang/hive_2010-07-13_15-04-55_359_7586342106662220129/10000
-=======
 PREHOOK: query: SELECT key, value FROM src_index_test_rc WHERE key=100 ORDER BY key
 PREHOOK: type: QUERY
 PREHOOK: Input: default@src_index_test_rc
@@ -749,7 +393,6 @@ POSTHOOK: Output: file:/tmp/njain/hive_2010-08-16_23-54-56_454_12081693440715798
 POSTHOOK: Lineage: default__src_index_test_rc_src_index__._bucketname SIMPLE [(src_index_test_rc)src_index_test_rc.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
 POSTHOOK: Lineage: default__src_index_test_rc_src_index__._offsets EXPRESSION [(src_index_test_rc)src_index_test_rc.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__src_index_test_rc_src_index__.key SIMPLE [(src_index_test_rc)src_index_test_rc.FieldSchema(name:key, type:int, comment:from deserializer), ]
->>>>>>> apache_master/trunk:ql/src/test/results/clientpositive/index_compact_3.q.out
 POSTHOOK: Lineage: src_index_test_rc.key EXPRESSION [(src)src.FieldSchema(name:key, type:string, comment:default), ]
 POSTHOOK: Lineage: src_index_test_rc.value SIMPLE [(src)src.FieldSchema(name:value, type:string, comment:default), ]
 100	val_100
@@ -758,21 +401,13 @@ PREHOOK: query: DROP INDEX src_index on src_index_test_rc
 PREHOOK: type: DROPINDEX
 POSTHOOK: query: DROP INDEX src_index on src_index_test_rc
 POSTHOOK: type: DROPINDEX
-<<<<<<< HEAD:ql/src/test/results/clientpositive/index_compact_3.q.out
-=======
 POSTHOOK: Lineage: default__src_index_test_rc_src_index__._bucketname SIMPLE [(src_index_test_rc)src_index_test_rc.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
 POSTHOOK: Lineage: default__src_index_test_rc_src_index__._offsets EXPRESSION [(src_index_test_rc)src_index_test_rc.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__src_index_test_rc_src_index__.key SIMPLE [(src_index_test_rc)src_index_test_rc.FieldSchema(name:key, type:int, comment:from deserializer), ]
->>>>>>> apache_master/trunk:ql/src/test/results/clientpositive/index_compact_3.q.out
 POSTHOOK: Lineage: src_index_test_rc.key EXPRESSION [(src)src.FieldSchema(name:key, type:string, comment:default), ]
 POSTHOOK: Lineage: src_index_test_rc.value SIMPLE [(src)src.FieldSchema(name:value, type:string, comment:default), ]
 PREHOOK: query: DROP TABLE src_index_test_rc
 PREHOOK: type: DROPTABLE
-<<<<<<< HEAD:ql/src/test/results/clientpositive/index_compact_3.q.out
-POSTHOOK: query: DROP TABLE src_index_test_rc
-POSTHOOK: type: DROPTABLE
-POSTHOOK: Output: default@src_index_test_rc
-=======
 PREHOOK: Input: default@src_index_test_rc
 PREHOOK: Output: default@src_index_test_rc
 POSTHOOK: query: DROP TABLE src_index_test_rc
@@ -782,6 +417,5 @@ POSTHOOK: Output: default@src_index_test_rc
 POSTHOOK: Lineage: default__src_index_test_rc_src_index__._bucketname SIMPLE [(src_index_test_rc)src_index_test_rc.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
 POSTHOOK: Lineage: default__src_index_test_rc_src_index__._offsets EXPRESSION [(src_index_test_rc)src_index_test_rc.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__src_index_test_rc_src_index__.key SIMPLE [(src_index_test_rc)src_index_test_rc.FieldSchema(name:key, type:int, comment:from deserializer), ]
->>>>>>> apache_master/trunk:ql/src/test/results/clientpositive/index_compact_3.q.out
 POSTHOOK: Lineage: src_index_test_rc.key EXPRESSION [(src)src.FieldSchema(name:key, type:string, comment:default), ]
 POSTHOOK: Lineage: src_index_test_rc.value SIMPLE [(src)src.FieldSchema(name:value, type:string, comment:default), ]
