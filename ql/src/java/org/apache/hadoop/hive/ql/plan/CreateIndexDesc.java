@@ -20,10 +20,7 @@ package org.apache.hadoop.hive.ql.plan;
 
 import java.io.Serializable;
 import java.util.List;
-<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/plan/CreateIndexDesc.java
-=======
 import java.util.Map;
->>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/plan/CreateIndexDesc.java
 
 /**
  * create index descriptor
@@ -34,12 +31,6 @@ public class CreateIndexDesc extends DDLDesc implements Serializable {
   String tableName;
   String indexName;
   List<String> indexedCols;
-<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/plan/CreateIndexDesc.java
-  String inputFormat;
-  String outputFormat;
-  String serde;
-  String indexType;
-=======
   String indexTableName;
   boolean deferredRebuild;
   String inputFormat;
@@ -56,33 +47,22 @@ public class CreateIndexDesc extends DDLDesc implements Serializable {
   String lineDelim;
   String mapKeyDelim;
   
->>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/plan/CreateIndexDesc.java
 
   public CreateIndexDesc() {
     super();
   }
 
   public CreateIndexDesc(String tableName, String indexName,
-<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/plan/CreateIndexDesc.java
-      List<String> indexedCols,String inputFormat, String outputFormat, String serde, String indexType) {
-=======
       List<String> indexedCols, String indexTableName, boolean deferredRebuild,
       String inputFormat, String outputFormat, String storageHandler,
       String typeName, String location, Map<String, String> idxProps,
       String serde, Map<String, String> serdeProps, String collItemDelim,
       String fieldDelim, String fieldEscape, String lineDelim,
       String mapKeyDelim) {
->>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/plan/CreateIndexDesc.java
     super();
     this.tableName = tableName;
     this.indexName = indexName;
     this.indexedCols = indexedCols;
-<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/plan/CreateIndexDesc.java
-    this.indexType = indexType;
-    this.inputFormat = inputFormat;
-    this.outputFormat = outputFormat;
-    this.serde = serde;
-=======
     this.indexTableName = indexTableName;
     this.deferredRebuild = deferredRebuild;
     this.inputFormat = inputFormat;
@@ -99,7 +79,6 @@ public class CreateIndexDesc extends DDLDesc implements Serializable {
     this.fieldEscape = fieldEscape;
     this.lineDelim = lineDelim;
     this.mapKeyDelim = mapKeyDelim;
->>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/plan/CreateIndexDesc.java
   }
 
   public String getTableName() {
@@ -126,8 +105,6 @@ public class CreateIndexDesc extends DDLDesc implements Serializable {
     this.indexedCols = indexedCols;
   }
   
-<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/plan/CreateIndexDesc.java
-=======
   public String getIndexTableName() {
     return indexTableName;
   }
@@ -148,7 +125,6 @@ public class CreateIndexDesc extends DDLDesc implements Serializable {
     this.deferredRebuild = deferredRebuild;
   }
 
->>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/plan/CreateIndexDesc.java
   public String getInputFormat() {
     return inputFormat;
   }
@@ -172,15 +148,6 @@ public class CreateIndexDesc extends DDLDesc implements Serializable {
   public void setSerde(String serde) {
     this.serde = serde;
   }
-<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/plan/CreateIndexDesc.java
-  
-  public String getIndexType() {
-    return indexType;
-  }
-
-  public void setIndexType(String indexType) {
-    this.indexType = indexType;
-=======
 
   public String getStorageHandler() {
     return storageHandler;
@@ -260,7 +227,6 @@ public class CreateIndexDesc extends DDLDesc implements Serializable {
 
   public void setIndexTypeHandlerClass(String indexTypeHandlerClass) {
     this.indexTypeHandlerClass = indexTypeHandlerClass;
->>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/plan/CreateIndexDesc.java
   }
 
 }
