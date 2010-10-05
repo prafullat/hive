@@ -748,9 +748,7 @@ public class Table implements Serializable {
       != null;
   }
 
-  /**
-<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/metadata/Table.java
-   *
+   /**
    * @return Returns true if there is any index available on this basetable
    */
   public boolean hasIndex() {
@@ -771,12 +769,15 @@ public class Table implements Serializable {
     List<String> vIndexNames = null;
     try {
       Hive hive = Hive.get();
+
       vIndexNames = hive.getIndexNames(getTTable().getDbName(), getTTable().getTableName(), (short) 1024);
     } catch (HiveException e) {
     }
     return vIndexNames;
-=======
-   * @param protectMode
+
+    /*
+ *
+    * @param protectMode
    */
   public void setProtectMode(ProtectMode protectMode){
     Map<String, String> parameters = tTable.getParameters();
@@ -828,6 +829,5 @@ public class Table implements Serializable {
    */
   public String getCompleteName() {
     return getDbName() + "@" + getTableName();
->>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/metadata/Table.java
   }
 };

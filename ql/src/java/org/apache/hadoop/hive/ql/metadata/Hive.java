@@ -31,10 +31,7 @@ import static org.apache.hadoop.hive.serde.Constants.STRING_TYPE_NAME;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/metadata/Hive.java
-=======
 import java.util.Iterator;
->>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/metadata/Hive.java
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -62,10 +59,7 @@ import org.apache.hadoop.hive.metastore.api.InvalidOperationException;
 import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.NoSuchObjectException;
 import org.apache.hadoop.hive.metastore.api.Order;
-<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/metadata/Hive.java
-=======
 import org.apache.hadoop.hive.metastore.api.SerDeInfo;
->>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/metadata/Hive.java
 import org.apache.hadoop.hive.ql.exec.Utilities;
 import org.apache.hadoop.hive.ql.index.HiveIndexHandler;
 import org.apache.hadoop.hive.serde2.Deserializer;
@@ -74,7 +68,6 @@ import org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe;
 import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.thrift.TException;
-
 
 /**
  * The Hive class contains information about this instance of Hive. An instance
@@ -414,31 +407,6 @@ public class Hive {
   }
 
   /**
-<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/metadata/Hive.java
-   * Creates the index with the given objects
-   *
-   * @param indexName
-   *          the index name
-   * @param tableName
-   *          the table name that this index is built on
-   * @param indexType
-   *          the type of the index
-   * @param indexedCols
-   * @param inputFormat
-   * @param outputFormat
-   * @param serde
-   * @throws HiveException
-   */
-  public void createIndex(String indexName, String tableName, String indexType,
-      List<String> indexedCols, String inputFormat, String outputFormat,
-      String serde)
-      throws HiveException {
-    try {
-      String dbName = MetaStoreUtils.DEFAULT_DATABASE_NAME;
-      Index old_index = null;
-      try {
-        old_index = this.getMSC().getIndex(dbName, tableName, indexName);
-=======
    *
    * @param tableName
    *          table name
@@ -486,7 +454,6 @@ public class Hive {
       Index old_index = null;
       try {
         old_index = getIndex(dbName, tableName, indexName);
->>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/metadata/Hive.java
       } catch (Exception e) {
       }
       if (old_index != null) {
@@ -497,10 +464,6 @@ public class Hive {
       if (baseTbl.getTableType() == TableType.VIRTUAL_VIEW.toString()) {
         throw new HiveException("tableName="+ tableName +" is a VIRTUAL VIEW. Index on VIRTUAL VIEW is not supported.");
       }
-<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/metadata/Hive.java
-      org.apache.hadoop.hive.metastore.api.StorageDescriptor storageDescriptor = baseTbl.getSd().clone();
-      String indexTblName = MetaStoreUtils.getIndexTableName(dbName, tableName, indexName);
-=======
 
       if (indexTblName == null) {
         indexTblName = MetaStoreUtils.getIndexTableName(dbName, tableName, indexName);
@@ -564,7 +527,6 @@ public class Hive {
 
       Map<String, String> params = new HashMap<String,String>();
 
->>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/metadata/Hive.java
       List<FieldSchema> indexTblCols = new ArrayList<FieldSchema>();
       List<Order> sortCols = new ArrayList<Order>();
       storageDescriptor.setBucketCols(null);
@@ -582,38 +544,6 @@ public class Hive {
             "Check the index columns, they should appear in the table being indexed.");
       }
 
-<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/metadata/Hive.java
-      FieldSchema bucketFileName = new FieldSchema("_bucketname", "string", "");
-      indexTblCols.add(bucketFileName);
-      FieldSchema offSets = new FieldSchema("_offsets", "array<string>", "");
-      indexTblCols.add(offSets);
-      storageDescriptor.setCols(indexTblCols);
-      storageDescriptor.setLocation(null);
-      storageDescriptor.setNumBuckets(1);
-      storageDescriptor.setSortCols(sortCols);
-      if(inputFormat == null) {
-        inputFormat = "org.apache.hadoop.mapred.TextInputFormat";
-      }
-      storageDescriptor.setInputFormat(inputFormat);
-
-      if(outputFormat == null) {
-        outputFormat =
-          "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat";
-      }
-      storageDescriptor.setOutputFormat(outputFormat);
-
-      if(serde == null) {
-        serde = org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe.class.getName();
-      }
-
-      storageDescriptor.getSerdeInfo().setSerializationLib(serde);
-
-      Map<String, String> params = new HashMap<String,String>();
-      int time = (int) (System.currentTimeMillis() / 1000);
-      Index indexDesc = new Index(indexName, indexType, dbName, tableName, time, time, indexTblName,
-          storageDescriptor, params);
-      this.getMSC().createIndex(indexDesc);
-=======
       storageDescriptor.setCols(indexTblCols);
       storageDescriptor.setSortCols(sortCols);
 
@@ -637,58 +567,21 @@ public class Hive {
       indexHandler.analyzeIndexDefinition(baseTbl, indexDesc, tt);
 
       this.getMSC().createIndex(indexDesc, tt);
->>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/metadata/Hive.java
 
     } catch (Exception e) {
       throw new HiveException(e);
     }
   }
 
-<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/metadata/Hive.java
-  public Index getIndex(String defaultDatabaseName, String baseTableName,
-      String indexName) throws HiveException {
-    try {
-      return this.getMSC().getIndex(defaultDatabaseName, baseTableName, indexName);
-=======
   public Index getIndex(String dbName, String baseTableName,
       String indexName) throws HiveException {
     try {
       return this.getMSC().getIndex(dbName, baseTableName, indexName);
->>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/metadata/Hive.java
     } catch (Exception e) {
       throw new HiveException(e);
     }
   }
 
-<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/metadata/Hive.java
-  public List<String> getIndexNames(String defaultDatabaseName, String baseTableName,
-      short maxNumIndex) throws HiveException  {
-    try {
-      return this.getMSC().listIndexNames(defaultDatabaseName, baseTableName, maxNumIndex);
-    } catch (MetaException e) {
-      throw new HiveException("Unknow error. Please check logs.", e);
-    } catch (TException e) {
-      throw new HiveException("Unknow error. Please check logs.", e);
-    }
-  }
-
-  public List<Index> getIndexes(String defaultDatabaseName, String baseTableName,
-      short maxNumIndex) throws HiveException  {
-    try {
-      return this.getMSC().listIndexes(defaultDatabaseName, baseTableName, maxNumIndex);
-    } catch (MetaException e) {
-      throw new HiveException("Unknow error. Please check logs.", e);
-    } catch (TException e) {
-      throw new HiveException("Unknow error. Please check logs.", e);
-    } catch (NoSuchObjectException e) {
-      throw new HiveException("Unknow error. Please check logs.", e);
-    }
-  }
-
-
-
-=======
->>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/metadata/Hive.java
   public boolean dropIndex(String db_name, String tbl_name, String index_name, boolean deleteData) throws HiveException {
     try {
       return getMSC().dropIndex(db_name, tbl_name, index_name, deleteData);
@@ -705,8 +598,6 @@ public class Hive {
    * @param dbName database where the table lives
    * @param tableName table to drop
    * @throws HiveException thrown if the drop fails
-<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/metadata/Hive.java
-=======
    * Drops table along with the data in it. If the table doesn't exist then it
    * is a no-op
    *
@@ -727,7 +618,6 @@ public class Hive {
    * @param dbName database where the table lives
    * @param tableName table to drop
    * @throws HiveException thrown if the drop fails
->>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/metadata/Hive.java
    * Drops table along with the data in it. If the table doesn't exist then it
    * is a no-op
    *
