@@ -31,12 +31,13 @@ PREHOOK: query: DESCRIBE TEST10
 PREHOOK: type: DESCTABLE
 POSTHOOK: query: DESCRIBE TEST10
 POSTHOOK: type: DESCTABLE
-key	int	
-value	string	
-ds	string	
-hr	string	
-PREHOOK: query: DROP TABLE TEST10
-PREHOOK: type: DROPTABLE
-POSTHOOK: query: DROP TABLE TEST10
-POSTHOOK: type: DROPTABLE
-POSTHOOK: Output: default@test10
+col_name            	data_type           	comment             
+	 	 
+key                 	int                 	None                
+value               	string              	None                
+	 	 
+# Partition Information	 	 
+col_name            	data_type           	comment             
+	 	 
+ds                  	string              	None                
+hr                  	string              	None                

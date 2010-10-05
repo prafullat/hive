@@ -31,6 +31,7 @@ import org.apache.hadoop.hive.ql.plan.FetchWork;
 import org.apache.hadoop.hive.ql.plan.FunctionWork;
 import org.apache.hadoop.hive.ql.plan.MapredWork;
 import org.apache.hadoop.hive.ql.plan.MoveWork;
+import org.apache.hadoop.hive.ql.plan.StatsWork;
 
 /**
  * TaskFactory implementation.
@@ -65,10 +66,10 @@ public final class TaskFactory {
         .add(new taskTuple<ExplainWork>(ExplainWork.class, ExplainTask.class));
     taskvec.add(new taskTuple<ConditionalWork>(ConditionalWork.class,
         ConditionalTask.class));
-    // we are taking this out to allow us to instantiate either MapRedTask or
-    // ExecDriver dynamically at run time based on configuration
-    // taskvec.add(new taskTuple<mapredWork>(mapredWork.class,
-    // ExecDriver.class));
+    taskvec.add(new taskTuple<MapredWork>(MapredWork.class,
+                                          MapRedTask.class));
+    taskvec.add(new taskTuple<StatsWork>(StatsWork.class,
+        StatsTask.class));
   }
 
   private static ThreadLocal<Integer> tid = new ThreadLocal<Integer>() {
@@ -104,28 +105,6 @@ public final class TaskFactory {
       }
     }
 
-    if (workClass == MapredWork.class) {
-
-      boolean viachild = conf.getBoolVar(HiveConf.ConfVars.SUBMITVIACHILD);
-
-      try {
-
-        // in local mode - or if otherwise so configured - always submit
-        // jobs via separate jvm
-        Task<T> ret = null;
-        if (conf.getVar(HiveConf.ConfVars.HADOOPJT).equals("local") || viachild) {
-          ret = (Task<T>) MapRedTask.class.newInstance();
-        } else {
-          ret = (Task<T>) ExecDriver.class.newInstance();
-        }
-        ret.setId("Stage-" + Integer.toString(getAndIncrementId()));
-        return ret;
-      } catch (Exception e) {
-        throw new RuntimeException(e.getMessage(), e);
-      }
-
-    }
-
     throw new RuntimeException("No task for work class " + workClass.getName());
   }
 
@@ -154,7 +133,7 @@ public final class TaskFactory {
     }
 
     makeChild(ret, tasklist);
-    
+
     return (ret);
   }
 

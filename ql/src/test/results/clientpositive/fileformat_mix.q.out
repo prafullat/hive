@@ -1,16 +1,14 @@
-PREHOOK: query: drop table fileformat_mix_test
-PREHOOK: type: DROPTABLE
-POSTHOOK: query: drop table fileformat_mix_test
-POSTHOOK: type: DROPTABLE
 PREHOOK: query: create table fileformat_mix_test (src int, value string) partitioned by (ds string)
 PREHOOK: type: CREATETABLE
 POSTHOOK: query: create table fileformat_mix_test (src int, value string) partitioned by (ds string)
 POSTHOOK: type: CREATETABLE
 POSTHOOK: Output: default@fileformat_mix_test
 PREHOOK: query: alter table fileformat_mix_test set fileformat Sequencefile
-PREHOOK: type: null
+PREHOOK: type: ALTERTABLE_FILEFORMAT
+PREHOOK: Input: default@fileformat_mix_test
+PREHOOK: Output: default@fileformat_mix_test
 POSTHOOK: query: alter table fileformat_mix_test set fileformat Sequencefile
-POSTHOOK: type: null
+POSTHOOK: type: ALTERTABLE_FILEFORMAT
 POSTHOOK: Input: default@fileformat_mix_test
 POSTHOOK: Output: default@fileformat_mix_test
 PREHOOK: query: insert overwrite table fileformat_mix_test partition (ds='1')
@@ -27,15 +25,19 @@ POSTHOOK: Lineage: fileformat_mix_test PARTITION(ds=1).src EXPRESSION [(src)src.
 POSTHOOK: Lineage: fileformat_mix_test PARTITION(ds=1).value SIMPLE [(src)src.FieldSchema(name:value, type:string, comment:default), ]
 PREHOOK: query: alter table fileformat_mix_test add partition (ds='2')
 PREHOOK: type: ALTERTABLE_ADDPARTS
+PREHOOK: Input: default@fileformat_mix_test
 POSTHOOK: query: alter table fileformat_mix_test add partition (ds='2')
 POSTHOOK: type: ALTERTABLE_ADDPARTS
+POSTHOOK: Input: default@fileformat_mix_test
 POSTHOOK: Output: default@fileformat_mix_test@ds=2
 POSTHOOK: Lineage: fileformat_mix_test PARTITION(ds=1).src EXPRESSION [(src)src.FieldSchema(name:key, type:string, comment:default), ]
 POSTHOOK: Lineage: fileformat_mix_test PARTITION(ds=1).value SIMPLE [(src)src.FieldSchema(name:value, type:string, comment:default), ]
 PREHOOK: query: alter table fileformat_mix_test set fileformat rcfile
-PREHOOK: type: null
+PREHOOK: type: ALTERTABLE_FILEFORMAT
+PREHOOK: Input: default@fileformat_mix_test
+PREHOOK: Output: default@fileformat_mix_test
 POSTHOOK: query: alter table fileformat_mix_test set fileformat rcfile
-POSTHOOK: type: null
+POSTHOOK: type: ALTERTABLE_FILEFORMAT
 POSTHOOK: Input: default@fileformat_mix_test
 POSTHOOK: Output: default@fileformat_mix_test
 POSTHOOK: Lineage: fileformat_mix_test PARTITION(ds=1).src EXPRESSION [(src)src.FieldSchema(name:key, type:string, comment:default), ]
@@ -44,12 +46,12 @@ PREHOOK: query: select count(1) from fileformat_mix_test
 PREHOOK: type: QUERY
 PREHOOK: Input: default@fileformat_mix_test@ds=1
 PREHOOK: Input: default@fileformat_mix_test@ds=2
-PREHOOK: Output: file:/var/folders/6g/6grtCwPMEf4sqHUPpy6xQG9ByHg/-Tmp-/heyongqiang/hive_2010-06-20_21-21-12_115_4377005987442515283/10000
+PREHOOK: Output: file:/tmp/njain/hive_2010-08-16_23-43-49_631_586030129103591565/-mr-10000
 POSTHOOK: query: select count(1) from fileformat_mix_test
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@fileformat_mix_test@ds=1
 POSTHOOK: Input: default@fileformat_mix_test@ds=2
-POSTHOOK: Output: file:/var/folders/6g/6grtCwPMEf4sqHUPpy6xQG9ByHg/-Tmp-/heyongqiang/hive_2010-06-20_21-21-12_115_4377005987442515283/10000
+POSTHOOK: Output: file:/tmp/njain/hive_2010-08-16_23-43-49_631_586030129103591565/-mr-10000
 POSTHOOK: Lineage: fileformat_mix_test PARTITION(ds=1).src EXPRESSION [(src)src.FieldSchema(name:key, type:string, comment:default), ]
 POSTHOOK: Lineage: fileformat_mix_test PARTITION(ds=1).value SIMPLE [(src)src.FieldSchema(name:value, type:string, comment:default), ]
 500
@@ -57,12 +59,12 @@ PREHOOK: query: select src from fileformat_mix_test
 PREHOOK: type: QUERY
 PREHOOK: Input: default@fileformat_mix_test@ds=1
 PREHOOK: Input: default@fileformat_mix_test@ds=2
-PREHOOK: Output: file:/var/folders/6g/6grtCwPMEf4sqHUPpy6xQG9ByHg/-Tmp-/heyongqiang/hive_2010-06-20_21-21-17_269_3478340175683868925/10000
+PREHOOK: Output: file:/tmp/njain/hive_2010-08-16_23-43-54_961_7634672861039236238/-mr-10000
 POSTHOOK: query: select src from fileformat_mix_test
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@fileformat_mix_test@ds=1
 POSTHOOK: Input: default@fileformat_mix_test@ds=2
-POSTHOOK: Output: file:/var/folders/6g/6grtCwPMEf4sqHUPpy6xQG9ByHg/-Tmp-/heyongqiang/hive_2010-06-20_21-21-17_269_3478340175683868925/10000
+POSTHOOK: Output: file:/tmp/njain/hive_2010-08-16_23-43-54_961_7634672861039236238/-mr-10000
 POSTHOOK: Lineage: fileformat_mix_test PARTITION(ds=1).src EXPRESSION [(src)src.FieldSchema(name:key, type:string, comment:default), ]
 POSTHOOK: Lineage: fileformat_mix_test PARTITION(ds=1).value SIMPLE [(src)src.FieldSchema(name:value, type:string, comment:default), ]
 238
@@ -565,10 +567,3 @@ POSTHOOK: Lineage: fileformat_mix_test PARTITION(ds=1).value SIMPLE [(src)src.Fi
 400
 200
 97
-PREHOOK: query: drop table fileformat_mix_test
-PREHOOK: type: DROPTABLE
-POSTHOOK: query: drop table fileformat_mix_test
-POSTHOOK: type: DROPTABLE
-POSTHOOK: Output: default@fileformat_mix_test
-POSTHOOK: Lineage: fileformat_mix_test PARTITION(ds=1).src EXPRESSION [(src)src.FieldSchema(name:key, type:string, comment:default), ]
-POSTHOOK: Lineage: fileformat_mix_test PARTITION(ds=1).value SIMPLE [(src)src.FieldSchema(name:value, type:string, comment:default), ]

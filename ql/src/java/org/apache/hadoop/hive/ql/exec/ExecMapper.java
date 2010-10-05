@@ -102,8 +102,8 @@ public class ExecMapper extends MapReduceBase implements Mapper {
       }
 
       fetchOperators = new HashMap<String, FetchOperator>();
-      
-      Map<FetchOperator, JobConf> fetchOpJobConfMap = new HashMap<FetchOperator, JobConf>(); 
+
+      Map<FetchOperator, JobConf> fetchOpJobConfMap = new HashMap<FetchOperator, JobConf>();
       // create map local operators
       for (Map.Entry<String, FetchWork> entry : localWork.getAliasToFetchWork()
           .entrySet()) {
@@ -118,7 +118,7 @@ public class ExecMapper extends MapReduceBase implements Mapper {
             setColumnsNeeded = true;
           }
         }
-        
+
         if (!setColumnsNeeded) {
           ColumnProjectionUtils.setFullyReadColumns(jobClone);
         }
@@ -177,7 +177,7 @@ public class ExecMapper extends MapReduceBase implements Mapper {
       } else {
         // Since there is no concept of a group, we don't invoke
         // startGroup/endGroup for a mapper
-        mo.process((Writable) value);
+        mo.process((Writable)value);
         if (l4j.isInfoEnabled()) {
           numRows++;
           if (numRows == nextCntr) {
@@ -217,6 +217,11 @@ public class ExecMapper extends MapReduceBase implements Mapper {
     // No row was processed
     if (oc == null) {
       l4j.trace("Close called. no row processed by map.");
+    }
+
+    // check if there are IOExceptions
+    if (!abort) {
+      abort = execContext.getIoCxt().getIOExceptions();
     }
 
     // detecting failed executions by exceptions thrown by the operator tree

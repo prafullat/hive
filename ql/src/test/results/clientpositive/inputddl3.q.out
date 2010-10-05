@@ -33,10 +33,7 @@ PREHOOK: query: DESCRIBE INPUTDDL3
 PREHOOK: type: DESCTABLE
 POSTHOOK: query: DESCRIBE INPUTDDL3
 POSTHOOK: type: DESCTABLE
-key	int	
-value	string	
-PREHOOK: query: DROP TABLE INPUTDDL3
-PREHOOK: type: DROPTABLE
-POSTHOOK: query: DROP TABLE INPUTDDL3
-POSTHOOK: type: DROPTABLE
-POSTHOOK: Output: default@inputddl3
+col_name            	data_type           	comment             
+	 	 
+key                 	int                 	None                
+value               	string              	None                

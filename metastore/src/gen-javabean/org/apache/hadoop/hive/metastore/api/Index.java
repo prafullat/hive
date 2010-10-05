@@ -21,7 +21,7 @@ import org.apache.thrift.protocol.*;
 public class Index implements TBase, java.io.Serializable, Cloneable {
   private static final TStruct STRUCT_DESC = new TStruct("Index");
   private static final TField INDEX_NAME_FIELD_DESC = new TField("indexName", TType.STRING, (short)1);
-  private static final TField INDEX_TYPE_FIELD_DESC = new TField("indexType", TType.STRING, (short)2);
+  private static final TField INDEX_HANDLER_CLASS_FIELD_DESC = new TField("indexHandlerClass", TType.STRING, (short)2);
   private static final TField DB_NAME_FIELD_DESC = new TField("dbName", TType.STRING, (short)3);
   private static final TField ORIG_TABLE_NAME_FIELD_DESC = new TField("origTableName", TType.STRING, (short)4);
   private static final TField CREATE_TIME_FIELD_DESC = new TField("createTime", TType.I32, (short)5);
@@ -29,11 +29,12 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
   private static final TField INDEX_TABLE_NAME_FIELD_DESC = new TField("indexTableName", TType.STRING, (short)7);
   private static final TField SD_FIELD_DESC = new TField("sd", TType.STRUCT, (short)8);
   private static final TField PARAMETERS_FIELD_DESC = new TField("parameters", TType.MAP, (short)9);
+  private static final TField DEFERRED_REBUILD_FIELD_DESC = new TField("deferredRebuild", TType.BOOL, (short)10);
 
   private String indexName;
   public static final int INDEXNAME = 1;
-  private String indexType;
-  public static final int INDEXTYPE = 2;
+  private String indexHandlerClass;
+  public static final int INDEXHANDLERCLASS = 2;
   private String dbName;
   public static final int DBNAME = 3;
   private String origTableName;
@@ -48,17 +49,20 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
   public static final int SD = 8;
   private Map<String,String> parameters;
   public static final int PARAMETERS = 9;
+  private boolean deferredRebuild;
+  public static final int DEFERREDREBUILD = 10;
 
   private final Isset __isset = new Isset();
   private static final class Isset implements java.io.Serializable {
     public boolean createTime = false;
     public boolean lastAccessTime = false;
+    public boolean deferredRebuild = false;
   }
 
   public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
     put(INDEXNAME, new FieldMetaData("indexName", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.STRING)));
-    put(INDEXTYPE, new FieldMetaData("indexType", TFieldRequirementType.DEFAULT, 
+    put(INDEXHANDLERCLASS, new FieldMetaData("indexHandlerClass", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.STRING)));
     put(DBNAME, new FieldMetaData("dbName", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.STRING)));
@@ -76,6 +80,8 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
         new MapMetaData(TType.MAP, 
             new FieldValueMetaData(TType.STRING), 
             new FieldValueMetaData(TType.STRING))));
+    put(DEFERREDREBUILD, new FieldMetaData("deferredRebuild", TFieldRequirementType.DEFAULT, 
+        new FieldValueMetaData(TType.BOOL)));
   }});
 
   static {
@@ -87,18 +93,19 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
 
   public Index(
     String indexName,
-    String indexType,
+    String indexHandlerClass,
     String dbName,
     String origTableName,
     int createTime,
     int lastAccessTime,
     String indexTableName,
     StorageDescriptor sd,
-    Map<String,String> parameters)
+    Map<String,String> parameters,
+    boolean deferredRebuild)
   {
     this();
     this.indexName = indexName;
-    this.indexType = indexType;
+    this.indexHandlerClass = indexHandlerClass;
     this.dbName = dbName;
     this.origTableName = origTableName;
     this.createTime = createTime;
@@ -108,6 +115,8 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
     this.indexTableName = indexTableName;
     this.sd = sd;
     this.parameters = parameters;
+    this.deferredRebuild = deferredRebuild;
+    this.__isset.deferredRebuild = true;
   }
 
   /**
@@ -117,8 +126,8 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
     if (other.isSetIndexName()) {
       this.indexName = other.indexName;
     }
-    if (other.isSetIndexType()) {
-      this.indexType = other.indexType;
+    if (other.isSetIndexHandlerClass()) {
+      this.indexHandlerClass = other.indexHandlerClass;
     }
     if (other.isSetDbName()) {
       this.dbName = other.dbName;
@@ -151,6 +160,8 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
       }
       this.parameters = __this__parameters;
     }
+    __isset.deferredRebuild = other.__isset.deferredRebuild;
+    this.deferredRebuild = other.deferredRebuild;
   }
 
   @Override
@@ -175,21 +186,21 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
     return this.indexName != null;
   }
 
-  public String getIndexType() {
-    return this.indexType;
+  public String getIndexHandlerClass() {
+    return this.indexHandlerClass;
   }
 
-  public void setIndexType(String indexType) {
-    this.indexType = indexType;
+  public void setIndexHandlerClass(String indexHandlerClass) {
+    this.indexHandlerClass = indexHandlerClass;
   }
 
-  public void unsetIndexType() {
-    this.indexType = null;
+  public void unsetIndexHandlerClass() {
+    this.indexHandlerClass = null;
   }
 
-  // Returns true if field indexType is set (has been asigned a value) and false otherwise
-  public boolean isSetIndexType() {
-    return this.indexType != null;
+  // Returns true if field indexHandlerClass is set (has been asigned a value) and false otherwise
+  public boolean isSetIndexHandlerClass() {
+    return this.indexHandlerClass != null;
   }
 
   public String getDbName() {
@@ -324,6 +335,24 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
     return this.parameters != null;
   }
 
+  public boolean isDeferredRebuild() {
+    return this.deferredRebuild;
+  }
+
+  public void setDeferredRebuild(boolean deferredRebuild) {
+    this.deferredRebuild = deferredRebuild;
+    this.__isset.deferredRebuild = true;
+  }
+
+  public void unsetDeferredRebuild() {
+    this.__isset.deferredRebuild = false;
+  }
+
+  // Returns true if field deferredRebuild is set (has been asigned a value) and false otherwise
+  public boolean isSetDeferredRebuild() {
+    return this.__isset.deferredRebuild;
+  }
+
   public void setFieldValue(int fieldID, Object value) {
     switch (fieldID) {
     case INDEXNAME:
@@ -334,11 +363,11 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
       }
       break;
 
-    case INDEXTYPE:
+    case INDEXHANDLERCLASS:
       if (value == null) {
-        unsetIndexType();
+        unsetIndexHandlerClass();
       } else {
-        setIndexType((String)value);
+        setIndexHandlerClass((String)value);
       }
       break;
 
@@ -398,6 +427,14 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
       }
       break;
 
+    case DEFERREDREBUILD:
+      if (value == null) {
+        unsetDeferredRebuild();
+      } else {
+        setDeferredRebuild((Boolean)value);
+      }
+      break;
+
     default:
       throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
     }
@@ -408,8 +445,8 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
     case INDEXNAME:
       return getIndexName();
 
-    case INDEXTYPE:
-      return getIndexType();
+    case INDEXHANDLERCLASS:
+      return getIndexHandlerClass();
 
     case DBNAME:
       return getDbName();
@@ -432,6 +469,9 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
     case PARAMETERS:
       return getParameters();
 
+    case DEFERREDREBUILD:
+      return new Boolean(isDeferredRebuild());
+
     default:
       throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
     }
@@ -442,8 +482,8 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
     switch (fieldID) {
     case INDEXNAME:
       return isSetIndexName();
-    case INDEXTYPE:
-      return isSetIndexType();
+    case INDEXHANDLERCLASS:
+      return isSetIndexHandlerClass();
     case DBNAME:
       return isSetDbName();
     case ORIGTABLENAME:
@@ -458,6 +498,8 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
       return isSetSd();
     case PARAMETERS:
       return isSetParameters();
+    case DEFERREDREBUILD:
+      return isSetDeferredRebuild();
     default:
       throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
     }
@@ -485,12 +527,12 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
         return false;
     }
 
-    boolean this_present_indexType = true && this.isSetIndexType();
-    boolean that_present_indexType = true && that.isSetIndexType();
-    if (this_present_indexType || that_present_indexType) {
-      if (!(this_present_indexType && that_present_indexType))
+    boolean this_present_indexHandlerClass = true && this.isSetIndexHandlerClass();
+    boolean that_present_indexHandlerClass = true && that.isSetIndexHandlerClass();
+    if (this_present_indexHandlerClass || that_present_indexHandlerClass) {
+      if (!(this_present_indexHandlerClass && that_present_indexHandlerClass))
         return false;
-      if (!this.indexType.equals(that.indexType))
+      if (!this.indexHandlerClass.equals(that.indexHandlerClass))
         return false;
     }
 
@@ -557,6 +599,15 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
         return false;
     }
 
+    boolean this_present_deferredRebuild = true;
+    boolean that_present_deferredRebuild = true;
+    if (this_present_deferredRebuild || that_present_deferredRebuild) {
+      if (!(this_present_deferredRebuild && that_present_deferredRebuild))
+        return false;
+      if (this.deferredRebuild != that.deferredRebuild)
+        return false;
+    }
+
     return true;
   }
 
@@ -583,9 +634,9 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case INDEXTYPE:
+        case INDEXHANDLERCLASS:
           if (field.type == TType.STRING) {
-            this.indexType = iprot.readString();
+            this.indexHandlerClass = iprot.readString();
           } else { 
             TProtocolUtil.skip(iprot, field.type);
           }
@@ -654,6 +705,14 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
+        case DEFERREDREBUILD:
+          if (field.type == TType.BOOL) {
+            this.deferredRebuild = iprot.readBool();
+            this.__isset.deferredRebuild = true;
+          } else { 
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
         default:
           TProtocolUtil.skip(iprot, field.type);
           break;
@@ -674,9 +733,9 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
       oprot.writeString(this.indexName);
       oprot.writeFieldEnd();
     }
-    if (this.indexType != null) {
-      oprot.writeFieldBegin(INDEX_TYPE_FIELD_DESC);
-      oprot.writeString(this.indexType);
+    if (this.indexHandlerClass != null) {
+      oprot.writeFieldBegin(INDEX_HANDLER_CLASS_FIELD_DESC);
+      oprot.writeString(this.indexHandlerClass);
       oprot.writeFieldEnd();
     }
     if (this.dbName != null) {
@@ -717,6 +776,9 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
       }
       oprot.writeFieldEnd();
     }
+    oprot.writeFieldBegin(DEFERRED_REBUILD_FIELD_DESC);
+    oprot.writeBool(this.deferredRebuild);
+    oprot.writeFieldEnd();
     oprot.writeFieldStop();
     oprot.writeStructEnd();
   }
@@ -734,11 +796,11 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
     }
     first = false;
     if (!first) sb.append(", ");
-    sb.append("indexType:");
-    if (this.indexType == null) {
+    sb.append("indexHandlerClass:");
+    if (this.indexHandlerClass == null) {
       sb.append("null");
     } else {
-      sb.append(this.indexType);
+      sb.append(this.indexHandlerClass);
     }
     first = false;
     if (!first) sb.append(", ");
@@ -788,6 +850,10 @@ public class Index implements TBase, java.io.Serializable, Cloneable {
     } else {
       sb.append(this.parameters);
     }
+    first = false;
+    if (!first) sb.append(", ");
+    sb.append("deferredRebuild:");
+    sb.append(this.deferredRebuild);
     first = false;
     sb.append(")");
     return sb.toString();

@@ -33,7 +33,7 @@
     <pathelement location="${test.build.classes}" />
     <pathelement location="" />
     <pathelement location="${hadoop.conf.dir}"/>
-    <pathelement location="${test.data.dir}/conf"/>
+    <pathelement location="${test.src.data.dir}/conf"/>
     <pathelement location="${hive.conf.dir}"/>
     <pathelement location="${hive.root}/cli/lib/jline-0.9.94.jar"/>
     <pathelement location="${hadoop.test.jar}"/>
@@ -93,7 +93,9 @@
               clusterMode="${clustermode}"
               resultsDirectory="${contrib.test.results.dir}/clientpositive" className="TestContribCliDriver"
               logFile="${test.log.dir}/testcontribclidrivergen.log"
-              logDirectory="${test.log.dir}/contribclientpositive"/>
+              logDirectory="${test.log.dir}/contribclientpositive"
+              hadoopVersion="${hadoopVersion}"
+    />
 
     <qtestgen outputDirectory="${test.build.src}/org/apache/hadoop/hive/cli" 
               templatePath="${ql.test.template.dir}" template="TestNegativeCliDriver.vm" 

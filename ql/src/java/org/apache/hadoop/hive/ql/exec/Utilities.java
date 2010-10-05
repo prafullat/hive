@@ -26,6 +26,8 @@ import java.beans.Statement;
 import java.beans.XMLDecoder;
 import java.beans.XMLEncoder;
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.EOFException;
 import java.io.File;
@@ -37,6 +39,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.Serializable;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -47,11 +50,13 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -61,13 +66,17 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.filecache.DistributedCache;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hive.conf.HiveConf;
+import org.apache.hadoop.hive.metastore.Warehouse;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.Order;
+import org.apache.hadoop.hive.ql.Context;
 import org.apache.hadoop.hive.ql.QueryPlan;
 import org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat;
 import org.apache.hadoop.hive.ql.io.RCFile;
@@ -77,14 +86,18 @@ import org.apache.hadoop.hive.ql.metadata.Table;
 import org.apache.hadoop.hive.ql.parse.ErrorMsg;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
 import org.apache.hadoop.hive.ql.plan.DynamicPartitionCtx;
+import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
 import org.apache.hadoop.hive.ql.plan.GroupByDesc;
 import org.apache.hadoop.hive.ql.plan.MapredWork;
 import org.apache.hadoop.hive.ql.plan.PartitionDesc;
 import org.apache.hadoop.hive.ql.plan.PlanUtils;
 import org.apache.hadoop.hive.ql.plan.PlanUtils.ExpressionTypes;
 import org.apache.hadoop.hive.ql.plan.TableDesc;
+import org.apache.hadoop.hive.ql.stats.StatsFactory;
+import org.apache.hadoop.hive.ql.stats.StatsPublisher;
 import org.apache.hadoop.hive.serde.Constants;
 import org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe;
+import org.apache.hadoop.hive.shims.ShimLoader;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -127,7 +140,7 @@ public final class Utilities {
   public static void clearMapRedWork(Configuration job) {
     try {
       Path planPath = new Path(HiveConf.getVar(job, HiveConf.ConfVars.PLAN));
-      FileSystem fs = FileSystem.get(job);
+      FileSystem fs = planPath.getFileSystem(job);
       if (fs.exists(planPath)) {
         try {
           fs.delete(planPath, true);
@@ -139,21 +152,25 @@ public final class Utilities {
     } finally {
       // where a single process works with multiple plans - we must clear
       // the cache before working with the next plan.
-      gWorkMap.remove(getJobName(job));
+      String jobID = getHiveJobID(job);
+      if (jobID != null) {
+        gWorkMap.remove(jobID);
+      }
     }
   }
 
   public static MapredWork getMapRedWork(Configuration job) {
     MapredWork gWork = null;
     try {
-      gWork = gWorkMap.get(getJobName(job));
+      String jobID = getHiveJobID(job);
+      assert jobID != null;
+      gWork = gWorkMap.get(jobID);
       if (gWork == null) {
-        InputStream in = new FileInputStream("HIVE_PLAN"
-                                             + sanitizedJobId(job));
+        InputStream in = new FileInputStream("HIVE_PLAN" + jobID);
         MapredWork ret = deserializeMapRedWork(in, job);
         gWork = ret;
         gWork.initialize();
-        gWorkMap.put(getJobName(job), gWork);
+        gWorkMap.put(jobID, gWork);
       }
       return (gWork);
     } catch (Exception e) {
@@ -272,51 +289,74 @@ public final class Utilities {
   public static void setMapRedWork(Configuration job, MapredWork w, String hiveScratchDir) {
     try {
 
+      // this is the unique job ID, which is kept in JobConf as part of the plan file name
+      String jobID = UUID.randomUUID().toString();
+      Path planPath = new Path(hiveScratchDir, jobID);
+      HiveConf.setVar(job, HiveConf.ConfVars.PLAN, planPath.toUri().toString());
+
       // Serialize the plan to the default hdfs instance
       // Except for hadoop local mode execution where we should be
       // able to get the plan directly from the cache
-
       if(!HiveConf.getVar(job, HiveConf.ConfVars.HADOOPJT).equals("local")) {
         // use the default file system of the job
-        Path planPath = new Path(hiveScratchDir, "plan." + randGen.nextInt());
         FileSystem fs = planPath.getFileSystem(job);
         FSDataOutputStream out = fs.create(planPath);
         serializeMapRedWork(w, out);
-        HiveConf.setVar(job, HiveConf.ConfVars.PLAN, planPath.toString());
         // Set up distributed cache
         DistributedCache.createSymlink(job);
-        String uriWithLink = planPath.toUri().toString() + "#HIVE_PLAN"
-          + sanitizedJobId(job);
+        String uriWithLink = planPath.toUri().toString() + "#HIVE_PLAN" + jobID;
         DistributedCache.addCacheFile(new URI(uriWithLink), job);
       }
 
       // Cache the plan in this process
       w.initialize();
-      gWorkMap.put(getJobName(job), w);
+      gWorkMap.put(jobID, w);
     } catch (Exception e) {
       e.printStackTrace();
       throw new RuntimeException(e);
     }
   }
 
-  public static String getJobName(Configuration job) {
-    String s = HiveConf.getVar(job, HiveConf.ConfVars.HADOOPJOBNAME);
-    // This is just a backup case. We would like Hive to always have jobnames.
-    if (s == null) {
-      // There is no job name => we set one
-      s = "JOB" + randGen.nextInt();
-      HiveConf.setVar(job, HiveConf.ConfVars.HADOOPJOBNAME, s);
+  public static String getHiveJobID(Configuration job) {
+    String planPath= HiveConf.getVar(job, HiveConf.ConfVars.PLAN);
+    if (planPath != null) {
+      return (new Path(planPath)).getName();
     }
-    return s;
+    return null;
   }
 
-  /**
-   * Returns a unique ID for the job.
-   */
+  public static String serializeExpression(ExprNodeDesc expr) {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    XMLEncoder encoder = new XMLEncoder(baos);
+    try {
+      encoder.writeObject(expr);
+    } finally {
+      encoder.close();
+    }
+    try {
+      return baos.toString("UTF-8");
+    } catch (UnsupportedEncodingException ex) {
+      throw new RuntimeException("UTF-8 support required", ex);
+    }
+  }
 
-  public static int sanitizedJobId(Configuration job) {
-    String s = getJobName(job);
-    return s.hashCode();
+  public static ExprNodeDesc deserializeExpression(
+    String s, Configuration conf) {
+    byte [] bytes;
+    try {
+      bytes = s.getBytes("UTF-8");
+    } catch (UnsupportedEncodingException ex) {
+      throw new RuntimeException("UTF-8 support required", ex);
+    }
+    ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
+    XMLDecoder decoder = new XMLDecoder(
+      bais, null, null, conf.getClassLoader());
+    try {
+      ExprNodeDesc expr = (ExprNodeDesc) decoder.readObject();
+      return expr;
+    } finally {
+      decoder.close();
+    }
   }
 
   /**
@@ -372,8 +412,8 @@ public final class Utilities {
     e.setPersistenceDelegate(Operator.ProgressCounter.class,
         new EnumDelegate());
 
-    e.setPersistenceDelegate(org.datanucleus.sco.backed.Map.class, new MapDelegate());
-    e.setPersistenceDelegate(org.datanucleus.sco.backed.List.class, new ListDelegate());
+    e.setPersistenceDelegate(org.datanucleus.store.types.sco.backed.Map.class, new MapDelegate());
+    e.setPersistenceDelegate(org.datanucleus.store.types.sco.backed.List.class, new ListDelegate());
 
     e.writeObject(plan);
     e.close();
@@ -471,7 +511,7 @@ public final class Utilities {
     } else {
        /* extract the task and attempt id from the hadoop taskid.
           in version 17 the leading component was 'task_'. thereafter
-          the leading component is 'attempt_'. in 17 - hadoop also 
+          the leading component is 'attempt_'. in 17 - hadoop also
           seems to have used _map_ and _reduce_ to denote map/reduce
           task types
        */
@@ -980,8 +1020,9 @@ public final class Utilities {
   public static String getTaskIdFromFilename(String filename) {
     String taskId = filename;
     int dirEnd = filename.lastIndexOf(Path.SEPARATOR);
-    if (dirEnd != -1)
+    if (dirEnd != -1) {
       taskId = filename.substring(dirEnd + 1);
+    }
 
     Matcher m = fileNameTaskIdRegex.matcher(taskId);
     if (!m.matches()) {
@@ -1097,6 +1138,16 @@ public final class Utilities {
       for (int i = 0; i < parts.length; ++i) {
         assert parts[i].isDir(): "dynamic partition " + parts[i].getPath() + " is not a direcgtory";
         FileStatus[] items = fs.listStatus(parts[i].getPath());
+
+        // remove empty directory since DP insert should not generate empty partitions.
+        // empty directories could be generated by crashed Task/ScriptOperator
+        if (items.length == 0) {
+          if (!fs.delete(parts[i].getPath(), true)) {
+            LOG.error("Cannot delete empty directory " + parts[i].getPath());
+            throw new IOException("Cannot delete empty directory " + parts[i].getPath());
+          }
+        }
+
         taskIDToFile = removeTempOrDuplicateFiles(items, fs);
         // if the table is bucketed and enforce bucketing, we should check and generate all buckets
         if (dpCtx.getNumBuckets() > 0 && taskIDToFile != null) {
@@ -1143,12 +1194,26 @@ public final class Utilities {
         if (otherFile == null) {
           taskIdToFile.put(taskId, one);
         } else {
-          if (!fs.delete(one.getPath(), true)) {
-            throw new IOException("Unable to delete duplicate file: "
-                + one.getPath() + ". Existing file: " + otherFile.getPath());
+          // Compare the file sizes of all the attempt files for the same task, the largest win
+          // any attempt files could contain partial results (due to task failures or
+          // speculative runs), but the largest should be the correct one since the result
+          // of a successful run should never be smaller than a failed/speculative run.
+          FileStatus toDelete = null;
+          if (otherFile.getLen() >= one.getLen()) {
+            toDelete = one;
           } else {
-            LOG.warn("Duplicate taskid file removed: " + one.getPath()
-                + ". Existing file: " + otherFile.getPath());
+            toDelete = otherFile;
+            taskIdToFile.put(taskId, one);
+          }
+          long len1 = toDelete.getLen();
+          long len2 = taskIdToFile.get(taskId).getLen();
+          if (!fs.delete(toDelete.getPath(), true)) {
+            throw new IOException("Unable to delete duplicate file: "
+                + toDelete.getPath() + ". Existing file: " + taskIdToFile.get(taskId).getPath());
+          } else {
+            LOG.warn("Duplicate taskid file removed: " + toDelete.getPath() + " with length "
+                + len1 + ". Existing file: " +  taskIdToFile.get(taskId).getPath()
+                + " with length " + len2);
           }
         }
       }
@@ -1332,4 +1397,156 @@ public final class Utilities {
     }
   }
 
+  /**
+   * Calculate the total size of input files.
+   *
+   * @param job  the hadoop job conf.
+   * @param work map reduce job plan
+   * @param filter filter to apply to the input paths before calculating size
+   * @return the summary of all the input paths.
+   * @throws IOException
+   */
+  public static ContentSummary getInputSummary
+    (Context ctx, MapredWork work, PathFilter filter) throws IOException {
+
+    long[] summary = {0, 0, 0};
+
+    // For each input path, calculate the total size.
+    for (String path : work.getPathToAliases().keySet()) {
+      try {
+        Path p = new Path(path);
+
+        if(filter != null && !filter.accept(p)) {
+          continue;
+        }
+
+        ContentSummary cs = ctx.getCS(path);
+        if (cs == null) {
+          FileSystem fs = p.getFileSystem(ctx.getConf());
+          cs = fs.getContentSummary(p);
+          ctx.addCS(path, cs);
+        }
+
+        summary[0] += cs.getLength();
+        summary[1] += cs.getFileCount();
+        summary[2] += cs.getDirectoryCount();
+
+      } catch (IOException e) {
+        LOG.info("Cannot get size of " + path + ". Safely ignored.");
+        if (path != null) {
+          ctx.addCS(path, new ContentSummary(0, 0, 0));
+        }
+      }
+    }
+    return new ContentSummary(summary[0], summary[1], summary[2]);
+  }
+
+  public static boolean isEmptyPath(JobConf job, Path dirPath) throws Exception {
+    FileSystem inpFs = dirPath.getFileSystem(job);
+
+    if (inpFs.exists(dirPath)) {
+      FileStatus[] fStats = inpFs.listStatus(dirPath);
+      if (fStats.length > 0) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  public static List<ExecDriver> getMRTasks (List<Task<? extends Serializable>> tasks) {
+    List<ExecDriver> mrTasks = new ArrayList<ExecDriver> ();
+    if(tasks !=  null) {
+      getMRTasks(tasks, mrTasks);
+    }
+    return mrTasks;
+  }
+
+  private static void getMRTasks (List<Task<? extends Serializable>> tasks,
+                                  List<ExecDriver> mrTasks) {
+    for (Task<? extends Serializable> task : tasks) {
+      if (task instanceof ExecDriver && !mrTasks.contains((ExecDriver)task)) {
+        mrTasks.add((ExecDriver)task);
+      }
+
+      if (task.getDependentTasks() != null) {
+        getMRTasks(task.getDependentTasks(), mrTasks);
+      }
+    }
+  }
+
+  public static boolean supportCombineFileInputFormat() {
+    return ShimLoader.getHadoopShims().getCombineFileInputFormat() != null;
+  }
+
+  /**
+   * Construct a list of full partition spec from Dynamic Partition Context and
+   * the directory names corresponding to these dynamic partitions.
+   */
+  public static List<LinkedHashMap<String, String>> getFullDPSpecs(Configuration conf,
+      DynamicPartitionCtx dpCtx)
+      throws HiveException {
+
+    try {
+      Path loadPath = new Path(dpCtx.getRootPath());
+      FileSystem fs = loadPath.getFileSystem(conf);
+    	int numDPCols = dpCtx.getNumDPCols();
+    	FileStatus[] status = Utilities.getFileStatusRecurse(loadPath, numDPCols, fs);
+
+    	if (status.length == 0) {
+    	  LOG.warn("No partition is genereated by dynamic partitioning");
+    	  return null;
+    	}
+
+    	// partial partition specification
+    	Map<String, String> partSpec = dpCtx.getPartSpec();
+
+    	// list of full partition specification
+    	List<LinkedHashMap<String, String>> fullPartSpecs =
+    	  new ArrayList<LinkedHashMap<String, String>>();
+
+    	// for each dynamically created DP directory, construct a full partition spec
+    	// and load the partition based on that
+    	for (int i= 0; i < status.length; ++i) {
+    	  // get the dynamically created directory
+    	  Path partPath = status[i].getPath();
+    	  assert fs.getFileStatus(partPath).isDir():
+    	    "partitions " + partPath + " is not a directory !";
+
+    	  // generate a full partition specification
+    	  LinkedHashMap<String, String> fullPartSpec = new LinkedHashMap<String, String>(partSpec);
+      	Warehouse.makeSpecFromName(fullPartSpec, partPath);
+      	fullPartSpecs.add(fullPartSpec);
+    	}
+    	return fullPartSpecs;
+    } catch (IOException e) {
+      throw new HiveException(e);
+    }
+  }
+
+  public static StatsPublisher getStatsPublisher(JobConf jc) {
+    String statsImplementationClass = HiveConf.getVar(jc, HiveConf.ConfVars.HIVESTATSDBCLASS);
+    if (StatsFactory.setImplementation(statsImplementationClass, jc)) {
+      return StatsFactory.getStatsPublisher();
+    } else {
+      return null;
+    }
+  }
+
+  public static void setColumnNameList(JobConf jobConf, Operator op) {
+    RowSchema rowSchema = op.getSchema();
+    if (rowSchema == null) {
+      return;
+    }
+    StringBuilder columnNames = new StringBuilder();
+    for (ColumnInfo colInfo : rowSchema.getSignature()) {
+      if (columnNames.length() > 0) {
+        columnNames.append(",");
+      }
+      columnNames.append(colInfo.getInternalName());
+    }
+    String columnNamesString = columnNames.toString();
+    jobConf.set(
+      Constants.LIST_COLUMNS,
+      columnNamesString);
+  }
 }

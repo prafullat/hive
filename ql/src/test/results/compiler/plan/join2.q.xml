@@ -8,9 +8,41 @@
       <void property="childTasks"> 
        <object class="java.util.ArrayList"> 
         <void method="add"> 
-         <object class="org.apache.hadoop.hive.ql.exec.MoveTask"> 
+         <object id="MoveTask0" class="org.apache.hadoop.hive.ql.exec.MoveTask"> 
+          <void property="childTasks"> 
+           <object class="java.util.ArrayList"> 
+            <void method="add"> 
+             <object id="StatsTask0" class="org.apache.hadoop.hive.ql.exec.StatsTask"> 
+              <void property="id"> 
+               <string>Stage-5</string> 
+              </void> 
+              <void property="parentTasks"> 
+               <object class="java.util.ArrayList"> 
+                <void method="add"> 
+                 <object idref="MoveTask0"/> 
+                </void> 
+               </object> 
+              </void> 
+              <void property="work"> 
+               <object class="org.apache.hadoop.hive.ql.plan.StatsWork"> 
+                <void property="aggKey"> 
+                 <string>pfile:/data/users/nzhang/work/784/apache-hive/build/ql/scratchdir/hive_2010-09-21_02-08-56_863_827918457303958748/-ext-10000/</string> 
+                </void> 
+               </object> 
+              </void> 
+             </object> 
+            </void> 
+           </object> 
+          </void> 
+          <void property="feedSubscribers"> 
+           <object class="java.util.LinkedList"> 
+            <void method="add"> 
+             <object idref="StatsTask0"/> 
+            </void> 
+           </object> 
+          </void> 
           <void property="id"> 
-           <string>Stage-1</string> 
+           <string>Stage-2</string> 
           </void> 
           <void property="parentTasks"> 
            <object class="java.util.ArrayList"> 
@@ -30,7 +62,7 @@
                <boolean>true</boolean> 
               </void> 
               <void property="sourceDir"> 
-               <string>file:/data/users/nzhang/work/876/apache-hive/build/ql/scratchdir/hive_2010-03-30_13-19-02_013_726916774855452695/10000</string> 
+               <string>pfile:/data/users/nzhang/work/784/apache-hive/build/ql/scratchdir/hive_2010-09-21_02-08-56_863_827918457303958748/-ext-10000</string> 
               </void> 
               <void property="table"> 
                <object id="TableDesc0" class="org.apache.hadoop.hive.ql.plan.TableDesc"> 
@@ -83,11 +115,11 @@
                   </void> 
                   <void method="put"> 
                    <string>location</string> 
-                   <string>file:/data/users/nzhang/work/876/apache-hive/build/ql/test/data/warehouse/dest1</string> 
+                   <string>pfile:/data/users/nzhang/work/784/apache-hive/build/ql/test/data/warehouse/dest1</string> 
                   </void> 
                   <void method="put"> 
                    <string>transient_lastDdlTime</string> 
-                   <string>1269980341</string> 
+                   <string>1285060136</string> 
                   </void> 
                  </object> 
                 </void> 
@@ -97,7 +129,7 @@
                </object> 
               </void> 
               <void property="tmpDir"> 
-               <string>file:/data/users/nzhang/work/876/apache-hive/build/ql/scratchdir/hive_2010-03-30_13-19-02_013_726916774855452695/10001</string> 
+               <string>pfile:/data/users/nzhang/work/784/apache-hive/build/ql/scratchdir/hive_2010-09-21_02-08-56_863_827918457303958748/-ext-10001</string> 
               </void> 
              </object> 
             </void> 
@@ -108,7 +140,7 @@
        </object> 
       </void> 
       <void property="id"> 
-       <string>Stage-3</string> 
+       <string>Stage-4</string> 
       </void> 
       <void property="parentTasks"> 
        <object class="java.util.ArrayList"> 
@@ -175,11 +207,11 @@
              </void> 
              <void method="put"> 
               <string>location</string> 
-              <string>file:/data/users/nzhang/work/876/apache-hive/build/ql/test/data/warehouse/src</string> 
+              <string>pfile:/data/users/nzhang/work/784/apache-hive/build/ql/test/data/warehouse/src</string> 
              </void> 
              <void method="put"> 
               <string>transient_lastDdlTime</string> 
-              <string>1269980341</string> 
+              <string>1285060133</string> 
              </void> 
             </object> 
            </void> 
@@ -220,7 +252,7 @@
                 <void property="columnExprMap"> 
                  <object class="java.util.HashMap"> 
                   <void method="put"> 
-                   <string>VALUE._col2</string> 
+                   <string>VALUE._col4</string> 
                    <object id="ExprNodeColumnDesc0" class="org.apache.hadoop.hive.ql.plan.ExprNodeColumnDesc"> 
                     <void property="column"> 
                      <string>_col0</string> 
@@ -263,7 +295,7 @@
                         <void method="add"> 
                          <object class="org.apache.hadoop.hive.ql.plan.ExprNodeColumnDesc"> 
                           <void property="column"> 
-                           <string>_col2</string> 
+                           <string>_col4</string> 
                           </void> 
                           <void property="tabAlias"> 
                            <string>src2</string> 
@@ -341,7 +373,7 @@
                   <void property="outputValueColumnNames"> 
                    <object class="java.util.ArrayList"> 
                     <void method="add"> 
-                     <string>_col2</string> 
+                     <string>_col4</string> 
                     </void> 
                    </object> 
                   </void> 
@@ -370,7 +402,7 @@
                      <object class="java.util.Properties"> 
                       <void method="put"> 
                        <string>columns</string> 
-                       <string>_col2</string> 
+                       <string>_col4</string> 
                       </void> 
                       <void method="put"> 
                        <string>columns.types</string> 
@@ -419,7 +451,7 @@
                     <void method="add"> 
                      <object class="org.apache.hadoop.hive.ql.exec.ColumnInfo"> 
                       <void property="internalName"> 
-                       <string>VALUE._col2</string> 
+                       <string>VALUE._col4</string> 
                       </void> 
                       <void property="type"> 
                        <object idref="PrimitiveTypeInfo0"/> 
@@ -470,7 +502,7 @@
                 <void method="add"> 
                  <object class="org.apache.hadoop.hive.ql.exec.ColumnInfo"> 
                   <void property="internalName"> 
-                   <string>_col2</string> 
+                   <string>_col4</string> 
                   </void> 
                   <void property="type"> 
                    <object idref="PrimitiveTypeInfo0"/> 
@@ -691,6 +723,9 @@
               <void property="alias"> 
                <string>src3</string> 
               </void> 
+              <void property="virtualCols"> 
+               <object class="java.util.ArrayList"/> 
+              </void> 
              </object> 
             </void> 
             <void property="counterNames"> 
@@ -746,6 +781,30 @@
                   </void> 
                  </object> 
                 </void> 
+                <void method="add"> 
+                 <object class="org.apache.hadoop.hive.ql.exec.ColumnInfo"> 
+                  <void property="internalName"> 
+                   <string>BLOCK__OFFSET__INSIDE__FILE</string> 
+                  </void> 
+                  <void property="type"> 
+                   <object id="PrimitiveTypeInfo2" class="org.apache.hadoop.hive.serde2.typeinfo.PrimitiveTypeInfo"> 
+                    <void property="typeName"> 
+                     <string>bigint</string> 
+                    </void> 
+                   </object> 
+                  </void> 
+                 </object> 
+                </void> 
+                <void method="add"> 
+                 <object class="org.apache.hadoop.hive.ql.exec.ColumnInfo"> 
+                  <void property="internalName"> 
+                   <string>INPUT__FILE__NAME</string> 
+                  </void> 
+                  <void property="type"> 
+                   <object idref="PrimitiveTypeInfo0"/> 
+                  </void> 
+                 </object> 
+                </void> 
                </object> 
               </void> 
              </object> 
@@ -753,6 +812,9 @@
            </object> 
           </void> 
          </object> 
+        </void> 
+        <void property="gatheringStats"> 
+         <boolean>true</boolean> 
         </void> 
         <void property="keyDesc"> 
          <object idref="TableDesc2"/> 
@@ -766,7 +828,7 @@
         <void property="pathToAliases"> 
          <object class="java.util.LinkedHashMap"> 
           <void method="put"> 
-           <string>file:/data/users/nzhang/work/876/apache-hive/build/ql/scratchdir/hive_2010-03-30_13-19-02_013_726916774855452695/10002</string> 
+           <string>file:/tmp/nzhang/hive_2010-09-21_02-08-56_863_827918457303958748/-mr-10002</string> 
            <object class="java.util.ArrayList"> 
             <void method="add"> 
              <string>$INTNAME</string> 
@@ -774,7 +836,7 @@
            </object> 
           </void> 
           <void method="put"> 
-           <string>file:/data/users/nzhang/work/876/apache-hive/build/ql/test/data/warehouse/src</string> 
+           <string>pfile:/data/users/nzhang/work/784/apache-hive/build/ql/test/data/warehouse/src</string> 
            <object class="java.util.ArrayList"> 
             <void method="add"> 
              <string>src3</string> 
@@ -786,10 +848,10 @@
         <void property="pathToPartitionInfo"> 
          <object class="java.util.LinkedHashMap"> 
           <void method="put"> 
-           <string>file:/data/users/nzhang/work/876/apache-hive/build/ql/scratchdir/hive_2010-03-30_13-19-02_013_726916774855452695/10002</string> 
+           <string>file:/tmp/nzhang/hive_2010-09-21_02-08-56_863_827918457303958748/-mr-10002</string> 
            <object class="org.apache.hadoop.hive.ql.plan.PartitionDesc"> 
             <void property="baseFileName"> 
-             <string>10002</string> 
+             <string>-mr-10002</string> 
             </void> 
             <void property="deserializerClass"> 
              <class>org.apache.hadoop.hive.serde2.lazybinary.LazyBinarySerDe</class> 
@@ -804,7 +866,7 @@
              <object id="Properties1" class="java.util.Properties"> 
               <void method="put"> 
                <string>columns</string> 
-               <string>_col0,_col2</string> 
+               <string>_col0,_col4</string> 
               </void> 
               <void method="put"> 
                <string>columns.types</string> 
@@ -835,7 +897,7 @@
            </object> 
           </void> 
           <void method="put"> 
-           <string>file:/data/users/nzhang/work/876/apache-hive/build/ql/test/data/warehouse/src</string> 
+           <string>pfile:/data/users/nzhang/work/784/apache-hive/build/ql/test/data/warehouse/src</string> 
            <object class="org.apache.hadoop.hive.ql.plan.PartitionDesc"> 
             <void property="baseFileName"> 
              <string>src</string> 
@@ -892,11 +954,11 @@
               </void> 
               <void method="put"> 
                <string>location</string> 
-               <string>file:/data/users/nzhang/work/876/apache-hive/build/ql/test/data/warehouse/src</string> 
+               <string>pfile:/data/users/nzhang/work/784/apache-hive/build/ql/test/data/warehouse/src</string> 
               </void> 
               <void method="put"> 
                <string>transient_lastDdlTime</string> 
-               <string>1269980341</string> 
+               <string>1285060133</string> 
               </void> 
              </object> 
             </void> 
@@ -942,10 +1004,16 @@
                      <int>1</int> 
                     </void> 
                     <void property="dirName"> 
-                     <string>file:/data/users/nzhang/work/876/apache-hive/build/ql/scratchdir/hive_2010-03-30_13-19-02_013_726916774855452695/10000</string> 
+                     <string>pfile:/data/users/nzhang/work/784/apache-hive/build/ql/scratchdir/hive_2010-09-21_02-08-56_863_827918457303958748/-ext-10000</string> 
+                    </void> 
+                    <void property="gatherStats"> 
+                     <boolean>true</boolean> 
                     </void> 
                     <void property="numFiles"> 
                      <int>1</int> 
+                    </void> 
+                    <void property="statsAggPrefix"> 
+                     <string>pfile:/data/users/nzhang/work/784/apache-hive/build/ql/scratchdir/hive_2010-09-21_02-08-56_863_827918457303958748/-ext-10000/</string> 
                     </void> 
                     <void property="tableInfo"> 
                      <object idref="TableDesc0"/> 
@@ -1019,7 +1087,7 @@
                  <string>_col1</string> 
                  <object id="ExprNodeColumnDesc2" class="org.apache.hadoop.hive.ql.plan.ExprNodeColumnDesc"> 
                   <void property="column"> 
-                   <string>_col5</string> 
+                   <string>_col9</string> 
                   </void> 
                   <void property="tabAlias"> 
                    <string>src3</string> 
@@ -1033,7 +1101,7 @@
                  <string>_col0</string> 
                  <object id="ExprNodeColumnDesc3" class="org.apache.hadoop.hive.ql.plan.ExprNodeColumnDesc"> 
                   <void property="column"> 
-                   <string>_col2</string> 
+                   <string>_col4</string> 
                   </void> 
                   <void property="tabAlias"> 
                    <string>src1</string> 
@@ -1130,13 +1198,13 @@
           <void property="columnExprMap"> 
            <object class="java.util.HashMap"> 
             <void method="put"> 
-             <string>_col5</string> 
+             <string>_col4</string> 
              <object id="ExprNodeColumnDesc4" class="org.apache.hadoop.hive.ql.plan.ExprNodeColumnDesc"> 
               <void property="column"> 
-               <string>VALUE._col1</string> 
+               <string>VALUE._col4</string> 
               </void> 
               <void property="tabAlias"> 
-               <string>src3</string> 
+               <string>src1</string> 
               </void> 
               <void property="typeInfo"> 
                <object idref="PrimitiveTypeInfo0"/> 
@@ -1144,13 +1212,13 @@
              </object> 
             </void> 
             <void method="put"> 
-             <string>_col2</string> 
+             <string>_col9</string> 
              <object id="ExprNodeColumnDesc5" class="org.apache.hadoop.hive.ql.plan.ExprNodeColumnDesc"> 
               <void property="column"> 
-               <string>VALUE._col2</string> 
+               <string>VALUE._col1</string> 
               </void> 
               <void property="tabAlias"> 
-               <string>src1</string> 
+               <string>src3</string> 
               </void> 
               <void property="typeInfo"> 
                <object idref="PrimitiveTypeInfo0"/> 
@@ -1178,7 +1246,7 @@
                <byte>0</byte> 
                <object class="java.util.ArrayList"> 
                 <void method="add"> 
-                 <object idref="ExprNodeColumnDesc5"/> 
+                 <object idref="ExprNodeColumnDesc4"/> 
                 </void> 
                </object> 
               </void> 
@@ -1186,31 +1254,66 @@
                <byte>1</byte> 
                <object class="java.util.ArrayList"> 
                 <void method="add"> 
-                 <object idref="ExprNodeColumnDesc4"/> 
+                 <object idref="ExprNodeColumnDesc5"/> 
                 </void> 
                </object> 
               </void> 
              </object> 
             </void> 
+            <void property="filters"> 
+             <object class="java.util.HashMap"> 
+              <void method="put"> 
+               <byte>0</byte> 
+               <object class="java.util.ArrayList"/> 
+              </void> 
+              <void method="put"> 
+               <byte>1</byte> 
+               <object class="java.util.ArrayList"/> 
+              </void> 
+             </object> 
+            </void> 
+            <void property="noOuterJoin"> 
+             <boolean>true</boolean> 
+            </void> 
             <void property="outputColumnNames"> 
              <object class="java.util.ArrayList"> 
               <void method="add"> 
-               <string>_col2</string> 
+               <string>_col4</string> 
               </void> 
               <void method="add"> 
-               <string>_col5</string> 
+               <string>_col9</string> 
               </void> 
              </object> 
             </void> 
             <void property="reversedExprs"> 
              <object class="java.util.HashMap"> 
               <void method="put"> 
-               <string>_col5</string> 
+               <string>_col8</string> 
                <byte>1</byte> 
               </void> 
               <void method="put"> 
-               <string>_col4</string> 
+               <string>_col7</string> 
+               <byte>0</byte> 
+              </void> 
+              <void method="put"> 
+               <string>_col11</string> 
                <byte>1</byte> 
+              </void> 
+              <void method="put"> 
+               <string>_col6</string> 
+               <byte>0</byte> 
+              </void> 
+              <void method="put"> 
+               <string>_col10</string> 
+               <byte>1</byte> 
+              </void> 
+              <void method="put"> 
+               <string>_col5</string> 
+               <byte>0</byte> 
+              </void> 
+              <void method="put"> 
+               <string>_col4</string> 
+               <byte>0</byte> 
               </void> 
               <void method="put"> 
                <string>_col3</string> 
@@ -1227,6 +1330,10 @@
               <void method="put"> 
                <string>_col0</string> 
                <byte>0</byte> 
+              </void> 
+              <void method="put"> 
+               <string>_col9</string> 
+               <byte>1</byte> 
               </void> 
              </object> 
             </void> 
@@ -1301,7 +1408,7 @@
               <void method="add"> 
                <object class="org.apache.hadoop.hive.ql.exec.ColumnInfo"> 
                 <void property="internalName"> 
-                 <string>_col2</string> 
+                 <string>_col4</string> 
                 </void> 
                 <void property="type"> 
                  <object idref="PrimitiveTypeInfo0"/> 
@@ -1311,7 +1418,7 @@
               <void method="add"> 
                <object class="org.apache.hadoop.hive.ql.exec.ColumnInfo"> 
                 <void property="internalName"> 
-                 <string>_col5</string> 
+                 <string>_col9</string> 
                 </void> 
                 <void property="type"> 
                  <object idref="PrimitiveTypeInfo0"/> 
@@ -1341,7 +1448,7 @@
    </object> 
   </void> 
   <void property="id"> 
-   <string>Stage-2</string> 
+   <string>Stage-3</string> 
   </void> 
   <void property="work"> 
    <object class="org.apache.hadoop.hive.ql.plan.MapredWork"> 
@@ -1401,11 +1508,11 @@
          </void> 
          <void method="put"> 
           <string>location</string> 
-          <string>file:/data/users/nzhang/work/876/apache-hive/build/ql/test/data/warehouse/src</string> 
+          <string>pfile:/data/users/nzhang/work/784/apache-hive/build/ql/test/data/warehouse/src</string> 
          </void> 
          <void method="put"> 
           <string>transient_lastDdlTime</string> 
-          <string>1269980341</string> 
+          <string>1285060133</string> 
          </void> 
         </object> 
        </void> 
@@ -1488,11 +1595,11 @@
          </void> 
          <void method="put"> 
           <string>location</string> 
-          <string>file:/data/users/nzhang/work/876/apache-hive/build/ql/test/data/warehouse/src</string> 
+          <string>pfile:/data/users/nzhang/work/784/apache-hive/build/ql/test/data/warehouse/src</string> 
          </void> 
          <void method="put"> 
           <string>transient_lastDdlTime</string> 
-          <string>1269980341</string> 
+          <string>1285060133</string> 
          </void> 
         </object> 
        </void> 
@@ -1710,6 +1817,9 @@
           <void property="alias"> 
            <string>src2</string> 
           </void> 
+          <void property="virtualCols"> 
+           <object class="java.util.ArrayList"/> 
+          </void> 
          </object> 
         </void> 
         <void property="counterNames"> 
@@ -1756,6 +1866,26 @@
              <object class="org.apache.hadoop.hive.ql.exec.ColumnInfo"> 
               <void property="internalName"> 
                <string>value</string> 
+              </void> 
+              <void property="type"> 
+               <object idref="PrimitiveTypeInfo0"/> 
+              </void> 
+             </object> 
+            </void> 
+            <void method="add"> 
+             <object class="org.apache.hadoop.hive.ql.exec.ColumnInfo"> 
+              <void property="internalName"> 
+               <string>BLOCK__OFFSET__INSIDE__FILE</string> 
+              </void> 
+              <void property="type"> 
+               <object idref="PrimitiveTypeInfo2"/> 
+              </void> 
+             </object> 
+            </void> 
+            <void method="add"> 
+             <object class="org.apache.hadoop.hive.ql.exec.ColumnInfo"> 
+              <void property="internalName"> 
+               <string>INPUT__FILE__NAME</string> 
               </void> 
               <void property="type"> 
                <object idref="PrimitiveTypeInfo0"/> 
@@ -1952,6 +2082,9 @@
           <void property="alias"> 
            <string>src1</string> 
           </void> 
+          <void property="virtualCols"> 
+           <object class="java.util.ArrayList"/> 
+          </void> 
          </object> 
         </void> 
         <void property="counterNames"> 
@@ -2004,6 +2137,26 @@
               </void> 
              </object> 
             </void> 
+            <void method="add"> 
+             <object class="org.apache.hadoop.hive.ql.exec.ColumnInfo"> 
+              <void property="internalName"> 
+               <string>BLOCK__OFFSET__INSIDE__FILE</string> 
+              </void> 
+              <void property="type"> 
+               <object idref="PrimitiveTypeInfo2"/> 
+              </void> 
+             </object> 
+            </void> 
+            <void method="add"> 
+             <object class="org.apache.hadoop.hive.ql.exec.ColumnInfo"> 
+              <void property="internalName"> 
+               <string>INPUT__FILE__NAME</string> 
+              </void> 
+              <void property="type"> 
+               <object idref="PrimitiveTypeInfo0"/> 
+              </void> 
+             </object> 
+            </void> 
            </object> 
           </void> 
          </object> 
@@ -2024,7 +2177,7 @@
     <void property="pathToAliases"> 
      <object class="java.util.LinkedHashMap"> 
       <void method="put"> 
-       <string>file:/data/users/nzhang/work/876/apache-hive/build/ql/test/data/warehouse/src</string> 
+       <string>pfile:/data/users/nzhang/work/784/apache-hive/build/ql/test/data/warehouse/src</string> 
        <object class="java.util.ArrayList"> 
         <void method="add"> 
          <string>src2</string> 
@@ -2039,7 +2192,7 @@
     <void property="pathToPartitionInfo"> 
      <object class="java.util.LinkedHashMap"> 
       <void method="put"> 
-       <string>file:/data/users/nzhang/work/876/apache-hive/build/ql/test/data/warehouse/src</string> 
+       <string>pfile:/data/users/nzhang/work/784/apache-hive/build/ql/test/data/warehouse/src</string> 
        <object class="org.apache.hadoop.hive.ql.plan.PartitionDesc"> 
         <void property="baseFileName"> 
          <string>src</string> 
@@ -2096,11 +2249,11 @@
           </void> 
           <void method="put"> 
            <string>location</string> 
-           <string>file:/data/users/nzhang/work/876/apache-hive/build/ql/test/data/warehouse/src</string> 
+           <string>pfile:/data/users/nzhang/work/784/apache-hive/build/ql/test/data/warehouse/src</string> 
           </void> 
           <void method="put"> 
            <string>transient_lastDdlTime</string> 
-           <string>1269980341</string> 
+           <string>1285060133</string> 
           </void> 
          </object> 
         </void> 
@@ -2139,7 +2292,7 @@
           <void property="conf"> 
            <object class="org.apache.hadoop.hive.ql.plan.FileSinkDesc"> 
             <void property="dirName"> 
-             <string>file:/data/users/nzhang/work/876/apache-hive/build/ql/scratchdir/hive_2010-03-30_13-19-02_013_726916774855452695/10002</string> 
+             <string>file:/tmp/nzhang/hive_2010-09-21_02-08-56_863_827918457303958748/-mr-10002</string> 
             </void> 
             <void property="numFiles"> 
              <int>1</int> 
@@ -2188,7 +2341,7 @@
       <void property="columnExprMap"> 
        <object class="java.util.HashMap"> 
         <void method="put"> 
-         <string>_col2</string> 
+         <string>_col4</string> 
          <object id="ExprNodeColumnDesc8" class="org.apache.hadoop.hive.ql.plan.ExprNodeColumnDesc"> 
           <void property="column"> 
            <string>VALUE._col0</string> 
@@ -2250,25 +2403,56 @@
           </void> 
          </object> 
         </void> 
+        <void property="filters"> 
+         <object class="java.util.HashMap"> 
+          <void method="put"> 
+           <byte>0</byte> 
+           <object class="java.util.ArrayList"/> 
+          </void> 
+          <void method="put"> 
+           <byte>1</byte> 
+           <object class="java.util.ArrayList"/> 
+          </void> 
+         </object> 
+        </void> 
+        <void property="noOuterJoin"> 
+         <boolean>true</boolean> 
+        </void> 
         <void property="outputColumnNames"> 
          <object class="java.util.ArrayList"> 
           <void method="add"> 
            <string>_col0</string> 
           </void> 
           <void method="add"> 
-           <string>_col2</string> 
+           <string>_col4</string> 
           </void> 
          </object> 
         </void> 
         <void property="reversedExprs"> 
          <object class="java.util.HashMap"> 
           <void method="put"> 
-           <string>_col3</string> 
+           <string>_col7</string> 
            <byte>1</byte> 
           </void> 
           <void method="put"> 
-           <string>_col2</string> 
+           <string>_col6</string> 
            <byte>1</byte> 
+          </void> 
+          <void method="put"> 
+           <string>_col5</string> 
+           <byte>1</byte> 
+          </void> 
+          <void method="put"> 
+           <string>_col4</string> 
+           <byte>1</byte> 
+          </void> 
+          <void method="put"> 
+           <string>_col3</string> 
+           <byte>0</byte> 
+          </void> 
+          <void method="put"> 
+           <string>_col2</string> 
+           <byte>0</byte> 
           </void> 
           <void method="put"> 
            <string>_col1</string> 

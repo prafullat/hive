@@ -6,10 +6,6 @@ PREHOOK: query: DROP VIEW xxx9
 PREHOOK: type: DROPVIEW
 POSTHOOK: query: DROP VIEW xxx9
 POSTHOOK: type: DROPVIEW
-PREHOOK: query: DROP TABLE xxx10
-PREHOOK: type: DROPTABLE
-POSTHOOK: query: DROP TABLE xxx10
-POSTHOOK: type: DROPTABLE
 PREHOOK: query: -- create two levels of view reference, then invalidate intermediate view
 -- by dropping a column from underlying table, and verify that
 -- querying outermost view results in full error context
@@ -23,20 +19,22 @@ POSTHOOK: type: CREATETABLE
 POSTHOOK: Output: default@xxx10
 PREHOOK: query: CREATE VIEW xxx9 AS SELECT * FROM xxx10
 PREHOOK: type: CREATEVIEW
-PREHOOK: Output: file:/Users/jsichi/open/hive-trunk/build/ql/tmp/1720348561/10000
+PREHOOK: Output: file:/tmp/njain/hive_2010-08-16_23-08-55_315_6053999460183300682/-mr-10000
 POSTHOOK: query: CREATE VIEW xxx9 AS SELECT * FROM xxx10
 POSTHOOK: type: CREATEVIEW
-POSTHOOK: Output: file:/Users/jsichi/open/hive-trunk/build/ql/tmp/1720348561/10000
+POSTHOOK: Output: file:/tmp/njain/hive_2010-08-16_23-08-55_315_6053999460183300682/-mr-10000
 POSTHOOK: Output: default@xxx9
 PREHOOK: query: CREATE VIEW xxx8 AS SELECT * FROM xxx9 xxx
 PREHOOK: type: CREATEVIEW
-PREHOOK: Output: file:/Users/jsichi/open/hive-trunk/build/ql/tmp/1891844844/10000
+PREHOOK: Output: file:/tmp/njain/hive_2010-08-16_23-08-55_367_8780672183290065174/-mr-10000
 POSTHOOK: query: CREATE VIEW xxx8 AS SELECT * FROM xxx9 xxx
 POSTHOOK: type: CREATEVIEW
-POSTHOOK: Output: file:/Users/jsichi/open/hive-trunk/build/ql/tmp/1891844844/10000
+POSTHOOK: Output: file:/tmp/njain/hive_2010-08-16_23-08-55_367_8780672183290065174/-mr-10000
 POSTHOOK: Output: default@xxx8
 PREHOOK: query: ALTER TABLE xxx10 REPLACE COLUMNS (key int)
 PREHOOK: type: ALTERTABLE_REPLACECOLS
+PREHOOK: Input: default@xxx10
+PREHOOK: Output: default@xxx10
 POSTHOOK: query: ALTER TABLE xxx10 REPLACE COLUMNS (key int)
 POSTHOOK: type: ALTERTABLE_REPLACECOLS
 POSTHOOK: Input: default@xxx10

@@ -32,7 +32,8 @@ public class MIndex {
   private Map<String, String> parameters;
   private MTable indexTable;
   private MStorageDescriptor sd;
-  private String indexType;
+  private String indexHandlerClass;
+  private boolean deferredRebuild;
 
   public MIndex() {}
   
@@ -47,7 +48,7 @@ public class MIndex {
  */
   public MIndex(String indexName, MTable baseTable, int createTime,
       int lastAccessTime, Map<String, String> parameters, MTable indexTable,
-      MStorageDescriptor sd, String indexType) {
+      MStorageDescriptor sd, String indexHandlerClass, boolean deferredRebuild) {
     super();
     this.indexName = indexName;
     this.origTable = baseTable;
@@ -56,7 +57,8 @@ public class MIndex {
     this.parameters = parameters;
     this.indexTable = indexTable;
     this.sd = sd;
-    this.indexType = indexType;
+    this.indexHandlerClass = indexHandlerClass;
+    this.deferredRebuild = deferredRebuild;
   }
 
 
@@ -158,13 +160,39 @@ public class MIndex {
   public void setSd(MStorageDescriptor sd) {
     this.sd = sd;
   }
+
+  /**
+   * @return indexHandlerClass
+   */
+  public String getIndexHandlerClass() {
+    return indexHandlerClass;
+  }
+
+  /**
+   * @param indexHandlerClass
+   */
+  public void setIndexHandlerClass(String indexHandlerClass) {
+    this.indexHandlerClass = indexHandlerClass;
+  }
   
-  public String getIndexType() {
-    return indexType;
+  /**
+   * @return auto rebuild
+   */
+  public boolean isDeferredRebuild() {
+    return deferredRebuild;
+  }
+  
+  /**
+   * @return auto rebuild
+   */
+  public boolean getDeferredRebuild() {
+    return deferredRebuild;
   }
 
-  public void setIndexType(String indexType) {
-    this.indexType = indexType;
+  /**
+   * @param autoRebuild
+   */
+  public void setDeferredRebuild(boolean deferredRebuild) {
+    this.deferredRebuild = deferredRebuild;
   }
-
 }

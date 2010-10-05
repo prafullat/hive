@@ -29,6 +29,7 @@ ABSTRACT SYNTAX TREE:
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
   Stage-0 depends on stages: Stage-1
+  Stage-2 depends on stages: Stage-0
 
 STAGE PLANS:
   Stage: Stage-1
@@ -88,6 +89,9 @@ STAGE PLANS:
               serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
               name: dest1
 
+  Stage: Stage-2
+    Stats-Aggr Operator
+
 
 PREHOOK: query: FROM src_thrift
 INSERT OVERWRITE TABLE dest1 SELECT src_thrift.lint, src_thrift.lstring, src_thrift.mstringstring, src_thrift.aint, src_thrift.astring DISTRIBUTE BY 1
@@ -107,11 +111,11 @@ POSTHOOK: Lineage: dest1.e SIMPLE [(src_thrift)src_thrift.FieldSchema(name:astri
 PREHOOK: query: SELECT dest1.* FROM dest1 DISTRIBUTE BY 1
 PREHOOK: type: QUERY
 PREHOOK: Input: default@dest1
-PREHOOK: Output: file:/data/users/athusoo/apache_workspaces/hive_trunk_ws1/.ptest_1/build/ql/scratchdir/hive_2010-04-05_18-16-15_939_1440433246542522104/10000
+PREHOOK: Output: file:/tmp/nzhang/hive_2010-09-14_16-33-25_073_8539790003663419019/-mr-10000
 POSTHOOK: query: SELECT dest1.* FROM dest1 DISTRIBUTE BY 1
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@dest1
-POSTHOOK: Output: file:/data/users/athusoo/apache_workspaces/hive_trunk_ws1/.ptest_1/build/ql/scratchdir/hive_2010-04-05_18-16-15_939_1440433246542522104/10000
+POSTHOOK: Output: file:/tmp/nzhang/hive_2010-09-14_16-33-25_073_8539790003663419019/-mr-10000
 POSTHOOK: Lineage: dest1.a SIMPLE [(src_thrift)src_thrift.FieldSchema(name:lint, type:array<int>, comment:from deserializer), ]
 POSTHOOK: Lineage: dest1.b SIMPLE [(src_thrift)src_thrift.FieldSchema(name:lstring, type:array<string>, comment:from deserializer), ]
 POSTHOOK: Lineage: dest1.c SIMPLE [(src_thrift)src_thrift.FieldSchema(name:mstringstring, type:map<string,string>, comment:from deserializer), ]
@@ -131,11 +135,11 @@ null	null	null	0	NULL
 PREHOOK: query: SELECT dest1.a[0], dest1.b[0], dest1.c['key2'], dest1.d, dest1.e FROM dest1 DISTRIBUTE BY 1
 PREHOOK: type: QUERY
 PREHOOK: Input: default@dest1
-PREHOOK: Output: file:/data/users/athusoo/apache_workspaces/hive_trunk_ws1/.ptest_1/build/ql/scratchdir/hive_2010-04-05_18-16-20_841_920219133158979282/10000
+PREHOOK: Output: file:/tmp/nzhang/hive_2010-09-14_16-33-28_671_2104052666178146727/-mr-10000
 POSTHOOK: query: SELECT dest1.a[0], dest1.b[0], dest1.c['key2'], dest1.d, dest1.e FROM dest1 DISTRIBUTE BY 1
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@dest1
-POSTHOOK: Output: file:/data/users/athusoo/apache_workspaces/hive_trunk_ws1/.ptest_1/build/ql/scratchdir/hive_2010-04-05_18-16-20_841_920219133158979282/10000
+POSTHOOK: Output: file:/tmp/nzhang/hive_2010-09-14_16-33-28_671_2104052666178146727/-mr-10000
 POSTHOOK: Lineage: dest1.a SIMPLE [(src_thrift)src_thrift.FieldSchema(name:lint, type:array<int>, comment:from deserializer), ]
 POSTHOOK: Lineage: dest1.b SIMPLE [(src_thrift)src_thrift.FieldSchema(name:lstring, type:array<string>, comment:from deserializer), ]
 POSTHOOK: Lineage: dest1.c SIMPLE [(src_thrift)src_thrift.FieldSchema(name:mstringstring, type:map<string,string>, comment:from deserializer), ]
@@ -154,8 +158,11 @@ POSTHOOK: Lineage: dest1.e SIMPLE [(src_thrift)src_thrift.FieldSchema(name:astri
 NULL	NULL	NULL	0	NULL
 PREHOOK: query: DROP TABLE dest1
 PREHOOK: type: DROPTABLE
+PREHOOK: Input: default@dest1
+PREHOOK: Output: default@dest1
 POSTHOOK: query: DROP TABLE dest1
 POSTHOOK: type: DROPTABLE
+POSTHOOK: Input: default@dest1
 POSTHOOK: Output: default@dest1
 POSTHOOK: Lineage: dest1.a SIMPLE [(src_thrift)src_thrift.FieldSchema(name:lint, type:array<int>, comment:from deserializer), ]
 POSTHOOK: Lineage: dest1.b SIMPLE [(src_thrift)src_thrift.FieldSchema(name:lstring, type:array<string>, comment:from deserializer), ]
@@ -189,11 +196,11 @@ POSTHOOK: Lineage: dest1.e SIMPLE [(src_thrift)src_thrift.FieldSchema(name:astri
 PREHOOK: query: SELECT * from dest1
 PREHOOK: type: QUERY
 PREHOOK: Input: default@dest1
-PREHOOK: Output: file:/data/users/athusoo/apache_workspaces/hive_trunk_ws1/.ptest_1/build/ql/scratchdir/hive_2010-04-05_18-16-29_834_2453314592950577513/10000
+PREHOOK: Output: file:/tmp/nzhang/hive_2010-09-14_16-33-39_265_3585210195406224800/-mr-10000
 POSTHOOK: query: SELECT * from dest1
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@dest1
-POSTHOOK: Output: file:/data/users/athusoo/apache_workspaces/hive_trunk_ws1/.ptest_1/build/ql/scratchdir/hive_2010-04-05_18-16-29_834_2453314592950577513/10000
+POSTHOOK: Output: file:/tmp/nzhang/hive_2010-09-14_16-33-39_265_3585210195406224800/-mr-10000
 POSTHOOK: Lineage: dest1.a SIMPLE [(src_thrift)src_thrift.FieldSchema(name:lint, type:array<int>, comment:from deserializer), ]
 POSTHOOK: Lineage: dest1.a SIMPLE [(src_thrift)src_thrift.FieldSchema(name:lint, type:array<int>, comment:from deserializer), ]
 POSTHOOK: Lineage: dest1.b SIMPLE [(src_thrift)src_thrift.FieldSchema(name:lstring, type:array<string>, comment:from deserializer), ]
@@ -213,8 +220,11 @@ POSTHOOK: Lineage: dest1.e SIMPLE [(src_thrift)src_thrift.FieldSchema(name:astri
 null
 PREHOOK: query: DROP TABLE dest1
 PREHOOK: type: DROPTABLE
+PREHOOK: Input: default@dest1
+PREHOOK: Output: default@dest1
 POSTHOOK: query: DROP TABLE dest1
 POSTHOOK: type: DROPTABLE
+POSTHOOK: Input: default@dest1
 POSTHOOK: Output: default@dest1
 POSTHOOK: Lineage: dest1.a SIMPLE [(src_thrift)src_thrift.FieldSchema(name:lint, type:array<int>, comment:from deserializer), ]
 POSTHOOK: Lineage: dest1.a SIMPLE [(src_thrift)src_thrift.FieldSchema(name:lint, type:array<int>, comment:from deserializer), ]
@@ -251,11 +261,11 @@ POSTHOOK: Lineage: dest1.e SIMPLE [(src_thrift)src_thrift.FieldSchema(name:astri
 PREHOOK: query: SELECT * from dest1
 PREHOOK: type: QUERY
 PREHOOK: Input: default@dest1
-PREHOOK: Output: file:/data/users/athusoo/apache_workspaces/hive_trunk_ws1/.ptest_1/build/ql/scratchdir/hive_2010-04-05_18-16-33_807_4626246450052288822/10000
+PREHOOK: Output: file:/tmp/nzhang/hive_2010-09-14_16-33-46_712_2519354046309726594/-mr-10000
 POSTHOOK: query: SELECT * from dest1
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@dest1
-POSTHOOK: Output: file:/data/users/athusoo/apache_workspaces/hive_trunk_ws1/.ptest_1/build/ql/scratchdir/hive_2010-04-05_18-16-33_807_4626246450052288822/10000
+POSTHOOK: Output: file:/tmp/nzhang/hive_2010-09-14_16-33-46_712_2519354046309726594/-mr-10000
 POSTHOOK: Lineage: dest1.a SIMPLE [(src_thrift)src_thrift.FieldSchema(name:lint, type:array<int>, comment:from deserializer), ]
 POSTHOOK: Lineage: dest1.a SIMPLE [(src_thrift)src_thrift.FieldSchema(name:lint, type:array<int>, comment:from deserializer), ]
 POSTHOOK: Lineage: dest1.a SIMPLE [(src_thrift)src_thrift.FieldSchema(name:mstringstring, type:map<string,string>, comment:from deserializer), ]
@@ -274,15 +284,3 @@ POSTHOOK: Lineage: dest1.e SIMPLE [(src_thrift)src_thrift.FieldSchema(name:astri
 {"key_8":"value_8"}
 {"key_9":"value_9"}
 null
-PREHOOK: query: DROP TABLE dest1
-PREHOOK: type: DROPTABLE
-POSTHOOK: query: DROP TABLE dest1
-POSTHOOK: type: DROPTABLE
-POSTHOOK: Output: default@dest1
-POSTHOOK: Lineage: dest1.a SIMPLE [(src_thrift)src_thrift.FieldSchema(name:lint, type:array<int>, comment:from deserializer), ]
-POSTHOOK: Lineage: dest1.a SIMPLE [(src_thrift)src_thrift.FieldSchema(name:lint, type:array<int>, comment:from deserializer), ]
-POSTHOOK: Lineage: dest1.a SIMPLE [(src_thrift)src_thrift.FieldSchema(name:mstringstring, type:map<string,string>, comment:from deserializer), ]
-POSTHOOK: Lineage: dest1.b SIMPLE [(src_thrift)src_thrift.FieldSchema(name:lstring, type:array<string>, comment:from deserializer), ]
-POSTHOOK: Lineage: dest1.c SIMPLE [(src_thrift)src_thrift.FieldSchema(name:mstringstring, type:map<string,string>, comment:from deserializer), ]
-POSTHOOK: Lineage: dest1.d SIMPLE [(src_thrift)src_thrift.FieldSchema(name:aint, type:int, comment:from deserializer), ]
-POSTHOOK: Lineage: dest1.e SIMPLE [(src_thrift)src_thrift.FieldSchema(name:astring, type:string, comment:from deserializer), ]

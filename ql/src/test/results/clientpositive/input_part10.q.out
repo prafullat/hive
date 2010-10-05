@@ -29,6 +29,7 @@ ABSTRACT SYNTAX TREE:
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
   Stage-0 depends on stages: Stage-1
+  Stage-2 depends on stages: Stage-0
 
 STAGE PLANS:
   Stage: Stage-1
@@ -78,6 +79,9 @@ STAGE PLANS:
               serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
               name: part_special
 
+  Stage: Stage-2
+    Stats-Aggr Operator
+
 
 PREHOOK: query: INSERT OVERWRITE TABLE part_special PARTITION(ds='2008 04 08', ts = '10:11:12=455')
 SELECT 1, 2 FROM src LIMIT 1
@@ -97,27 +101,50 @@ POSTHOOK: query: DESCRIBE EXTENDED part_special PARTITION(ds='2008 04 08', ts = 
 POSTHOOK: type: DESCTABLE
 POSTHOOK: Lineage: part_special PARTITION(ds=2008 04 08,ts=10:11:12=455).a SIMPLE []
 POSTHOOK: Lineage: part_special PARTITION(ds=2008 04 08,ts=10:11:12=455).b SIMPLE []
-a	string	
-b	string	
-ds	string	
-ts	string	
+col_name            	data_type           	comment             
 	 	 
-Detailed Partition Information	Partition(values:[2008 04 08, 10:11:12=455], dbName:default, tableName:part_special, createTime:1270516600, lastAccessTime:0, sd:StorageDescriptor(cols:[FieldSchema(name:a, type:string, comment:null), FieldSchema(name:b, type:string, comment:null)], location:file:/data/users/athusoo/apache_workspaces/hive_trunk_ws1/.ptest_1/build/ql/test/data/warehouse/part_special/ds=2008 04 08/ts=10%3A11%3A12%3D455, inputFormat:org.apache.hadoop.mapred.TextInputFormat, outputFormat:org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat, compressed:false, numBuckets:-1, serdeInfo:SerDeInfo(name:null, serializationLib:org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe, parameters:{serialization.format=1}), bucketCols:[], sortCols:[], parameters:{}), parameters:{transient_lastDdlTime=1270516600})	
+a                   	string              	None                
+b                   	string              	None                
+	 	 
+# Partition Information	 	 
+col_name            	data_type           	comment             
+	 	 
+ds                  	string              	None                
+ts                  	string              	None                
+	 	 
+# Detailed Partition Information	 	 
+Partition Value:    	[2008 04 08, 10:11:12=455]	 
+Database:           	default             	 
+Table:              	part_special        	 
+CreateTime:         	Mon Sep 20 23:55:13 PDT 2010	 
+LastAccessTime:     	Wed Dec 31 16:00:00 PST 1969	 
+Protect Mode:       	None                	 
+Location:           	pfile:/data/users/nzhang/work/784/apache-hive/build/ql/test/data/warehouse/part_special/ds=2008 04 08/ts=10%3A11%3A12%3D455	 
+Partition Parameters:	 	 
+	numFiles            	1                   
+	transient_lastDdlTime	1285052113          
+	numRows             	1                   
+	totalSize           	4                   
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe	 
+InputFormat:        	org.apache.hadoop.mapred.TextInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	-1                  	 
+Bucket Columns:     	[]                  	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	serialization.format	1                   
+	 	 
 PREHOOK: query: SELECT * FROM part_special WHERE ds='2008 04 08' AND ts = '10:11:12=455'
 PREHOOK: type: QUERY
 PREHOOK: Input: default@part_special@ds=2008 04 08/ts=10%3A11%3A12%3D455
-PREHOOK: Output: file:/data/users/athusoo/apache_workspaces/hive_trunk_ws1/.ptest_1/build/ql/scratchdir/hive_2010-04-05_18-16-40_448_5970205880764458638/10000
+PREHOOK: Output: file:/tmp/nzhang/hive_2010-09-20_23-55-13_931_8974375359528209894/-mr-10000
 POSTHOOK: query: SELECT * FROM part_special WHERE ds='2008 04 08' AND ts = '10:11:12=455'
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@part_special@ds=2008 04 08/ts=10%3A11%3A12%3D455
-POSTHOOK: Output: file:/data/users/athusoo/apache_workspaces/hive_trunk_ws1/.ptest_1/build/ql/scratchdir/hive_2010-04-05_18-16-40_448_5970205880764458638/10000
+POSTHOOK: Output: file:/tmp/nzhang/hive_2010-09-20_23-55-13_931_8974375359528209894/-mr-10000
 POSTHOOK: Lineage: part_special PARTITION(ds=2008 04 08,ts=10:11:12=455).a SIMPLE []
 POSTHOOK: Lineage: part_special PARTITION(ds=2008 04 08,ts=10:11:12=455).b SIMPLE []
 1	2	2008 04 08	10:11:12=455
-PREHOOK: query: DROP TABLE part_special
-PREHOOK: type: DROPTABLE
-POSTHOOK: query: DROP TABLE part_special
-POSTHOOK: type: DROPTABLE
-POSTHOOK: Output: default@part_special
-POSTHOOK: Lineage: part_special PARTITION(ds=2008 04 08,ts=10:11:12=455).a SIMPLE []
-POSTHOOK: Lineage: part_special PARTITION(ds=2008 04 08,ts=10:11:12=455).b SIMPLE []

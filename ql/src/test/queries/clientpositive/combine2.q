@@ -5,8 +5,8 @@ set mapred.min.split.size.per.rack=256;
 set mapred.max.split.size=256;
 set hive.exec.dynamic.partition=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
-
-drop table combine2;
+set mapred.cache.shared.enabled=false;
+set hive.merge.smallfiles.avgsize=0;
 
 create table combine2(key string) partitioned by (value string);
 
@@ -34,6 +34,3 @@ explain
 select ds, count(1) from srcpart where ds is not null group by ds;
 
 select ds, count(1) from srcpart where ds is not null group by ds;
-
-drop table combine2;
-

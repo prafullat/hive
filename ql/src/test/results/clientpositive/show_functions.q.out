@@ -34,11 +34,16 @@ case
 ceil
 ceiling
 coalesce
+collect_set
 concat
 concat_ws
+context_ngrams
 conv
+corr
 cos
 count
+covar_pop
+covar_samp
 date_add
 date_sub
 datediff
@@ -68,6 +73,7 @@ instr
 int
 isnotnull
 isnull
+json_tuple
 lcase
 length
 like
@@ -85,9 +91,11 @@ min
 minute
 month
 negative
+ngrams
 not
 or
 parse_url
+parse_url_tuple
 percentile
 percentile_approx
 pi
@@ -97,6 +105,7 @@ pow
 power
 radians
 rand
+reflect
 regexp
 regexp_extract
 regexp_replace
@@ -157,11 +166,16 @@ case
 ceil
 ceiling
 coalesce
+collect_set
 concat
 concat_ws
+context_ngrams
 conv
+corr
 cos
 count
+covar_pop
+covar_samp
 PREHOOK: query: SHOW FUNCTIONS '.*e$'
 PREHOOK: type: SHOWFUNCTIONS
 POSTHOOK: query: SHOW FUNCTIONS '.*e$'
@@ -172,11 +186,13 @@ double
 e
 explode
 from_unixtime
+json_tuple
 lcase
 like
 locate
 minute
 negative
+parse_url_tuple
 percentile
 positive
 regexp_replace

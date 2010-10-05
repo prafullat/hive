@@ -173,7 +173,7 @@ public class QB {
   }
 
   public boolean isSelectStarQuery() {
-    return qbp.isSelectStarQuery() && aliasToSubq.isEmpty() && !isCTAS();
+    return qbp.isSelectStarQuery() && aliasToSubq.isEmpty() && !isCTAS() && !qbp.isAnalyzeCommand();
   }
 
   public CreateTableDesc getTableDesc() {

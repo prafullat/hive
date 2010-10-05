@@ -1,19 +1,3 @@
-PREHOOK: query: drop table alter3_src
-PREHOOK: type: DROPTABLE
-POSTHOOK: query: drop table alter3_src
-POSTHOOK: type: DROPTABLE
-PREHOOK: query: drop table alter3
-PREHOOK: type: DROPTABLE
-POSTHOOK: query: drop table alter3
-POSTHOOK: type: DROPTABLE
-PREHOOK: query: drop table alter3_renamed
-PREHOOK: type: DROPTABLE
-POSTHOOK: query: drop table alter3_renamed
-POSTHOOK: type: DROPTABLE
-PREHOOK: query: drop table alter3_like_renamed
-PREHOOK: type: DROPTABLE
-POSTHOOK: query: drop table alter3_like_renamed
-POSTHOOK: type: DROPTABLE
 PREHOOK: query: create table alter3_src ( col1 string ) stored as textfile
 PREHOOK: type: CREATETABLE
 POSTHOOK: query: create table alter3_src ( col1 string ) stored as textfile
@@ -46,11 +30,11 @@ POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE
 PREHOOK: query: select * from alter3 where pcol1='test_part' and pcol2='test_part'
 PREHOOK: type: QUERY
 PREHOOK: Input: default@alter3@pcol1=test_part/pcol2=test_part
-PREHOOK: Output: file:/Users/jsichi/open/hive-trunk/build/ql/scratchdir/hive_2010-05-03_13-59-16_257_4588179538253670650/10000
+PREHOOK: Output: file:/tmp/nzhang/hive_2010-09-20_23-08-57_327_5944493503891814458/-mr-10000
 POSTHOOK: query: select * from alter3 where pcol1='test_part' and pcol2='test_part'
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@alter3@pcol1=test_part/pcol2=test_part
-POSTHOOK: Output: file:/Users/jsichi/open/hive-trunk/build/ql/scratchdir/hive_2010-05-03_13-59-16_257_4588179538253670650/10000
+POSTHOOK: Output: file:/tmp/nzhang/hive_2010-09-20_23-08-57_327_5944493503891814458/-mr-10000
 POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
 1	test_part	test_part
 2	test_part	test_part
@@ -60,9 +44,12 @@ POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE
 6	test_part	test_part
 PREHOOK: query: alter table alter3 rename to alter3_renamed
 PREHOOK: type: ALTERTABLE_RENAME
+PREHOOK: Input: default@alter3
+PREHOOK: Output: default@alter3
 POSTHOOK: query: alter table alter3 rename to alter3_renamed
 POSTHOOK: type: ALTERTABLE_RENAME
 POSTHOOK: Input: default@alter3
+POSTHOOK: Output: default@alter3
 POSTHOOK: Output: default@alter3_renamed
 POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
 PREHOOK: query: describe extended alter3_renamed
@@ -70,29 +57,93 @@ PREHOOK: type: DESCTABLE
 POSTHOOK: query: describe extended alter3_renamed
 POSTHOOK: type: DESCTABLE
 POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
-col1	string	
-pcol1	string	
-pcol2	string	
+col_name            	data_type           	comment             
 	 	 
-Detailed Table Information	Table(tableName:alter3_renamed, dbName:default, owner:jsichi, createTime:1272920351, lastAccessTime:0, retention:0, sd:StorageDescriptor(cols:[FieldSchema(name:col1, type:string, comment:null)], location:file:/Users/jsichi/open/hive-trunk/build/ql/test/data/warehouse/alter3_renamed, inputFormat:org.apache.hadoop.mapred.SequenceFileInputFormat, outputFormat:org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat, compressed:false, numBuckets:-1, serdeInfo:SerDeInfo(name:null, serializationLib:org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe, parameters:{serialization.format=1}), bucketCols:[], sortCols:[], parameters:{}), partitionKeys:[FieldSchema(name:pcol1, type:string, comment:null), FieldSchema(name:pcol2, type:string, comment:null)], parameters:{last_modified_by=jsichi,last_modified_time=1272920356,transient_lastDdlTime=1272920356}, viewOriginalText:null, viewExpandedText:null, tableType:MANAGED_TABLE)	
+col1                	string              	None                
+	 	 
+# Partition Information	 	 
+col_name            	data_type           	comment             
+	 	 
+pcol1               	string              	None                
+pcol2               	string              	None                
+	 	 
+# Detailed Table Information	 	 
+Database:           	default             	 
+Owner:              	nzhang              	 
+CreateTime:         	Mon Sep 20 23:08:51 PDT 2010	 
+LastAccessTime:     	Wed Dec 31 16:00:00 PST 1969	 
+Protect Mode:       	None                	 
+Retention:          	0                   	 
+Location:           	pfile:/data/users/nzhang/work/784/apache-hive/build/ql/test/data/warehouse/alter3_renamed	 
+Table Type:         	MANAGED_TABLE       	 
+Table Parameters:	 	 
+	numPartitions       	1                   
+	numFiles            	1                   
+	last_modified_by    	nzhang              
+	last_modified_time  	1285049337          
+	transient_lastDdlTime	1285049337          
+	numRows             	6                   
+	totalSize           	171                 
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe	 
+InputFormat:        	org.apache.hadoop.mapred.SequenceFileInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	-1                  	 
+Bucket Columns:     	[]                  	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	serialization.format	1                   
+	 	 
 PREHOOK: query: describe extended alter3_renamed partition (pCol1='test_part', pcol2='test_part')
 PREHOOK: type: DESCTABLE
 POSTHOOK: query: describe extended alter3_renamed partition (pCol1='test_part', pcol2='test_part')
 POSTHOOK: type: DESCTABLE
 POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
-col1	string	
-pcol1	string	
-pcol2	string	
+col_name            	data_type           	comment             
 	 	 
-Detailed Partition Information	Partition(values:[test_part, test_part], dbName:default, tableName:alter3_renamed, createTime:1272920356, lastAccessTime:0, sd:StorageDescriptor(cols:[FieldSchema(name:col1, type:string, comment:null)], location:file:/Users/jsichi/open/hive-trunk/build/ql/test/data/warehouse/alter3_renamed/pcol1=test_part/pcol2=test_part, inputFormat:org.apache.hadoop.mapred.SequenceFileInputFormat, outputFormat:org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat, compressed:false, numBuckets:-1, serdeInfo:SerDeInfo(name:null, serializationLib:org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe, parameters:{serialization.format=1}), bucketCols:[], sortCols:[], parameters:{}), parameters:{transient_lastDdlTime=1272920356})	
+col1                	string              	None                
+	 	 
+# Partition Information	 	 
+col_name            	data_type           	comment             
+	 	 
+pcol1               	string              	None                
+pcol2               	string              	None                
+	 	 
+# Detailed Partition Information	 	 
+Partition Value:    	[test_part, test_part]	 
+Database:           	default             	 
+Table:              	alter3_renamed      	 
+CreateTime:         	Mon Sep 20 23:08:56 PDT 2010	 
+LastAccessTime:     	Wed Dec 31 16:00:00 PST 1969	 
+Protect Mode:       	None                	 
+Location:           	pfile:/data/users/nzhang/work/784/apache-hive/build/ql/test/data/warehouse/alter3_renamed/pcol1=test_part/pcol2=test_part	 
+Partition Parameters:	 	 
+	numFiles            	1                   
+	transient_lastDdlTime	1285049337          
+	numRows             	6                   
+	totalSize           	171                 
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe	 
+InputFormat:        	org.apache.hadoop.mapred.SequenceFileInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	-1                  	 
+Bucket Columns:     	[]                  	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	serialization.format	1                   
+	 	 
 PREHOOK: query: select * from alter3_renamed where pcol1='test_part' and pcol2='test_part'
 PREHOOK: type: QUERY
 PREHOOK: Input: default@alter3_renamed@pcol1=test_part/pcol2=test_part
-PREHOOK: Output: file:/Users/jsichi/open/hive-trunk/build/ql/scratchdir/hive_2010-05-03_13-59-16_800_7077748274776018895/10000
+PREHOOK: Output: file:/tmp/nzhang/hive_2010-09-20_23-08-58_285_926659329473097768/-mr-10000
 POSTHOOK: query: select * from alter3_renamed where pcol1='test_part' and pcol2='test_part'
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@alter3_renamed@pcol1=test_part/pcol2=test_part
-POSTHOOK: Output: file:/Users/jsichi/open/hive-trunk/build/ql/scratchdir/hive_2010-05-03_13-59-16_800_7077748274776018895/10000
+POSTHOOK: Output: file:/tmp/nzhang/hive_2010-09-20_23-08-58_285_926659329473097768/-mr-10000
 POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
 1	test_part	test_part
 2	test_part	test_part
@@ -116,9 +167,12 @@ POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE
 POSTHOOK: Lineage: alter3_like PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
 PREHOOK: query: alter table alter3_like rename to alter3_like_renamed
 PREHOOK: type: ALTERTABLE_RENAME
+PREHOOK: Input: default@alter3_like
+PREHOOK: Output: default@alter3_like
 POSTHOOK: query: alter table alter3_like rename to alter3_like_renamed
 POSTHOOK: type: ALTERTABLE_RENAME
 POSTHOOK: Input: default@alter3_like
+POSTHOOK: Output: default@alter3_like
 POSTHOOK: Output: default@alter3_like_renamed
 POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
 POSTHOOK: Lineage: alter3_like PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
@@ -128,35 +182,361 @@ POSTHOOK: query: describe extended alter3_like_renamed
 POSTHOOK: type: DESCTABLE
 POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
 POSTHOOK: Lineage: alter3_like PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
-col1	string	
-pcol1	string	
-pcol2	string	
+col_name            	data_type           	comment             
 	 	 
-Detailed Table Information	Table(tableName:alter3_like_renamed, dbName:default, owner:jsichi, createTime:1272920352, lastAccessTime:0, retention:0, sd:StorageDescriptor(cols:[FieldSchema(name:col1, type:string, comment:null)], location:file:/Users/jsichi/open/hive-trunk/build/ql/test/data/warehouse/alter3_like_renamed, inputFormat:org.apache.hadoop.mapred.SequenceFileInputFormat, outputFormat:org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat, compressed:false, numBuckets:-1, serdeInfo:SerDeInfo(name:null, serializationLib:org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe, parameters:{serialization.format=1}), bucketCols:[], sortCols:[], parameters:{}), partitionKeys:[FieldSchema(name:pcol1, type:string, comment:null), FieldSchema(name:pcol2, type:string, comment:null)], parameters:{EXTERNAL=FALSE,last_modified_by=jsichi,last_modified_time=1272920360,transient_lastDdlTime=1272920360}, viewOriginalText:null, viewExpandedText:null, tableType:MANAGED_TABLE)	
-PREHOOK: query: drop table alter3_src
+col1                	string              	None                
+	 	 
+# Partition Information	 	 
+col_name            	data_type           	comment             
+	 	 
+pcol1               	string              	None                
+pcol2               	string              	None                
+	 	 
+# Detailed Table Information	 	 
+Database:           	default             	 
+Owner:              	nzhang              	 
+CreateTime:         	Mon Sep 20 23:08:51 PDT 2010	 
+LastAccessTime:     	Wed Dec 31 16:00:00 PST 1969	 
+Protect Mode:       	None                	 
+Retention:          	0                   	 
+Location:           	pfile:/data/users/nzhang/work/784/apache-hive/build/ql/test/data/warehouse/alter3_like_renamed	 
+Table Type:         	MANAGED_TABLE       	 
+Table Parameters:	 	 
+	numPartitions       	1                   
+	EXTERNAL            	FALSE               
+	numFiles            	1                   
+	last_modified_by    	nzhang              
+	last_modified_time  	1285049344          
+	transient_lastDdlTime	1285049344          
+	numRows             	6                   
+	totalSize           	171                 
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe	 
+InputFormat:        	org.apache.hadoop.mapred.SequenceFileInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	-1                  	 
+Bucket Columns:     	[]                  	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	serialization.format	1                   
+	 	 
+PREHOOK: query: -- Cleanup
+DROP TABLE alter3_src
 PREHOOK: type: DROPTABLE
-POSTHOOK: query: drop table alter3_src
+PREHOOK: Input: default@alter3_src
+PREHOOK: Output: default@alter3_src
+POSTHOOK: query: -- Cleanup
+DROP TABLE alter3_src
 POSTHOOK: type: DROPTABLE
+POSTHOOK: Input: default@alter3_src
 POSTHOOK: Output: default@alter3_src
 POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
 POSTHOOK: Lineage: alter3_like PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
-PREHOOK: query: drop table alter3
+PREHOOK: query: DROP TABLE alter3_renamed
 PREHOOK: type: DROPTABLE
-POSTHOOK: query: drop table alter3
+PREHOOK: Input: default@alter3_renamed
+PREHOOK: Output: default@alter3_renamed
+POSTHOOK: query: DROP TABLE alter3_renamed
 POSTHOOK: type: DROPTABLE
-POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
-POSTHOOK: Lineage: alter3_like PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
-PREHOOK: query: drop table alter3_renamed
-PREHOOK: type: DROPTABLE
-POSTHOOK: query: drop table alter3_renamed
-POSTHOOK: type: DROPTABLE
+POSTHOOK: Input: default@alter3_renamed
 POSTHOOK: Output: default@alter3_renamed
 POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
 POSTHOOK: Lineage: alter3_like PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
-PREHOOK: query: drop table alter3_like_renamed
+PREHOOK: query: DROP TABLE alter3_like_renamed
 PREHOOK: type: DROPTABLE
-POSTHOOK: query: drop table alter3_like_renamed
+PREHOOK: Input: default@alter3_like_renamed
+PREHOOK: Output: default@alter3_like_renamed
+POSTHOOK: query: DROP TABLE alter3_like_renamed
 POSTHOOK: type: DROPTABLE
+POSTHOOK: Input: default@alter3_like_renamed
 POSTHOOK: Output: default@alter3_like_renamed
 POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
 POSTHOOK: Lineage: alter3_like PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+PREHOOK: query: SHOW TABLES
+PREHOOK: type: SHOWTABLES
+POSTHOOK: query: SHOW TABLES
+POSTHOOK: type: SHOWTABLES
+POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+POSTHOOK: Lineage: alter3_like PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+src
+src1
+src_json
+src_sequencefile
+src_thrift
+srcbucket
+srcbucket2
+srcpart
+PREHOOK: query: -- With non-default Database
+
+CREATE DATABASE alter3_db
+PREHOOK: type: CREATEDATABASE
+POSTHOOK: query: -- With non-default Database
+
+CREATE DATABASE alter3_db
+POSTHOOK: type: CREATEDATABASE
+POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+POSTHOOK: Lineage: alter3_like PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+PREHOOK: query: USE alter3_db
+PREHOOK: type: SWITCHDATABASE
+POSTHOOK: query: USE alter3_db
+POSTHOOK: type: SWITCHDATABASE
+POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+POSTHOOK: Lineage: alter3_like PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+PREHOOK: query: SHOW TABLES
+PREHOOK: type: SHOWTABLES
+POSTHOOK: query: SHOW TABLES
+POSTHOOK: type: SHOWTABLES
+POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+POSTHOOK: Lineage: alter3_like PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+PREHOOK: query: CREATE TABLE alter3_src (col1 STRING) STORED AS TEXTFILE
+PREHOOK: type: CREATETABLE
+POSTHOOK: query: CREATE TABLE alter3_src (col1 STRING) STORED AS TEXTFILE
+POSTHOOK: type: CREATETABLE
+POSTHOOK: Output: alter3_db@alter3_src
+POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+POSTHOOK: Lineage: alter3_like PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+PREHOOK: query: LOAD DATA LOCAL INPATH '../data/files/test.dat' OVERWRITE INTO TABLE alter3_src
+PREHOOK: type: LOAD
+POSTHOOK: query: LOAD DATA LOCAL INPATH '../data/files/test.dat' OVERWRITE INTO TABLE alter3_src
+POSTHOOK: type: LOAD
+POSTHOOK: Output: alter3_db@alter3_src
+POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+POSTHOOK: Lineage: alter3_like PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+PREHOOK: query: CREATE TABLE alter3 (col1 STRING) PARTITIONED BY (pcol1 STRING, pcol2 STRING) STORED AS SEQUENCEFILE
+PREHOOK: type: CREATETABLE
+POSTHOOK: query: CREATE TABLE alter3 (col1 STRING) PARTITIONED BY (pcol1 STRING, pcol2 STRING) STORED AS SEQUENCEFILE
+POSTHOOK: type: CREATETABLE
+POSTHOOK: Output: alter3_db@alter3
+POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+POSTHOOK: Lineage: alter3_like PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+PREHOOK: query: CREATE TABLE alter3_like LIKE alter3
+PREHOOK: type: CREATETABLE
+POSTHOOK: query: CREATE TABLE alter3_like LIKE alter3
+POSTHOOK: type: CREATETABLE
+POSTHOOK: Output: alter3_db@alter3_like
+POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+POSTHOOK: Lineage: alter3_like PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+PREHOOK: query: INSERT OVERWRITE TABLE alter3 PARTITION (pCol1='test_part', pcol2='test_part') SELECT col1 FROM alter3_src
+PREHOOK: type: QUERY
+PREHOOK: Input: alter3_db@alter3_src
+PREHOOK: Output: alter3_db@alter3@pcol1=test_part/pcol2=test_part
+POSTHOOK: query: INSERT OVERWRITE TABLE alter3 PARTITION (pCol1='test_part', pcol2='test_part') SELECT col1 FROM alter3_src
+POSTHOOK: type: QUERY
+POSTHOOK: Input: alter3_db@alter3_src
+POSTHOOK: Output: alter3_db@alter3@pcol1=test_part/pcol2=test_part
+POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+POSTHOOK: Lineage: alter3_like PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+PREHOOK: query: SELECT * FROM alter3 WHERE pcol1='test_part' AND pcol2='test_part'
+PREHOOK: type: QUERY
+PREHOOK: Input: alter3_db@alter3@pcol1=test_part/pcol2=test_part
+PREHOOK: Output: file:/tmp/nzhang/hive_2010-09-20_23-09-12_328_7205460480200294317/-mr-10000
+POSTHOOK: query: SELECT * FROM alter3 WHERE pcol1='test_part' AND pcol2='test_part'
+POSTHOOK: type: QUERY
+POSTHOOK: Input: alter3_db@alter3@pcol1=test_part/pcol2=test_part
+POSTHOOK: Output: file:/tmp/nzhang/hive_2010-09-20_23-09-12_328_7205460480200294317/-mr-10000
+POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+POSTHOOK: Lineage: alter3_like PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+1	test_part	test_part
+2	test_part	test_part
+3	test_part	test_part
+4	test_part	test_part
+5	test_part	test_part
+6	test_part	test_part
+PREHOOK: query: ALTER TABLE alter3 RENAME TO alter3_renamed
+PREHOOK: type: ALTERTABLE_RENAME
+PREHOOK: Input: alter3_db@alter3
+PREHOOK: Output: alter3_db@alter3
+POSTHOOK: query: ALTER TABLE alter3 RENAME TO alter3_renamed
+POSTHOOK: type: ALTERTABLE_RENAME
+POSTHOOK: Input: alter3_db@alter3
+POSTHOOK: Output: alter3_db@alter3
+POSTHOOK: Output: alter3_db@alter3_renamed
+POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+POSTHOOK: Lineage: alter3_like PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+PREHOOK: query: DESCRIBE EXTENDED alter3_renamed
+PREHOOK: type: DESCTABLE
+POSTHOOK: query: DESCRIBE EXTENDED alter3_renamed
+POSTHOOK: type: DESCTABLE
+POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+POSTHOOK: Lineage: alter3_like PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+col_name            	data_type           	comment             
+	 	 
+col1                	string              	None                
+	 	 
+# Partition Information	 	 
+col_name            	data_type           	comment             
+	 	 
+pcol1               	string              	None                
+pcol2               	string              	None                
+	 	 
+# Detailed Table Information	 	 
+Database:           	alter3_db           	 
+Owner:              	nzhang              	 
+CreateTime:         	Mon Sep 20 23:09:06 PDT 2010	 
+LastAccessTime:     	Wed Dec 31 16:00:00 PST 1969	 
+Protect Mode:       	None                	 
+Retention:          	0                   	 
+Location:           	pfile:/data/users/nzhang/work/784/apache-hive/build/ql/test/data/warehouse/alter3_db.db/alter3_renamed	 
+Table Type:         	MANAGED_TABLE       	 
+Table Parameters:	 	 
+	numPartitions       	1                   
+	numFiles            	1                   
+	last_modified_by    	nzhang              
+	last_modified_time  	1285049352          
+	transient_lastDdlTime	1285049352          
+	numRows             	6                   
+	totalSize           	171                 
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe	 
+InputFormat:        	org.apache.hadoop.mapred.SequenceFileInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	-1                  	 
+Bucket Columns:     	[]                  	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	serialization.format	1                   
+	 	 
+PREHOOK: query: DESCRIBE EXTENDED alter3_renamed PARTITION (pCol1='test_part', pcol2='test_part')
+PREHOOK: type: DESCTABLE
+POSTHOOK: query: DESCRIBE EXTENDED alter3_renamed PARTITION (pCol1='test_part', pcol2='test_part')
+POSTHOOK: type: DESCTABLE
+POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+POSTHOOK: Lineage: alter3_like PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+col_name            	data_type           	comment             
+	 	 
+col1                	string              	None                
+	 	 
+# Partition Information	 	 
+col_name            	data_type           	comment             
+	 	 
+pcol1               	string              	None                
+pcol2               	string              	None                
+	 	 
+# Detailed Partition Information	 	 
+Partition Value:    	[test_part, test_part]	 
+Database:           	alter3_db           	 
+Table:              	alter3_renamed      	 
+CreateTime:         	Mon Sep 20 23:09:11 PDT 2010	 
+LastAccessTime:     	Wed Dec 31 16:00:00 PST 1969	 
+Protect Mode:       	None                	 
+Location:           	pfile:/data/users/nzhang/work/784/apache-hive/build/ql/test/data/warehouse/alter3_db.db/alter3_renamed/pcol1=test_part/pcol2=test_part	 
+Partition Parameters:	 	 
+	numFiles            	1                   
+	transient_lastDdlTime	1285049352          
+	numRows             	6                   
+	totalSize           	171                 
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe	 
+InputFormat:        	org.apache.hadoop.mapred.SequenceFileInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	-1                  	 
+Bucket Columns:     	[]                  	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	serialization.format	1                   
+	 	 
+PREHOOK: query: SELECT * FROM alter3_renamed WHERE pcol1='test_part' AND pcol2='test_part'
+PREHOOK: type: QUERY
+PREHOOK: Input: alter3_db@alter3_renamed@pcol1=test_part/pcol2=test_part
+PREHOOK: Output: file:/tmp/nzhang/hive_2010-09-20_23-09-13_149_6501372199049102565/-mr-10000
+POSTHOOK: query: SELECT * FROM alter3_renamed WHERE pcol1='test_part' AND pcol2='test_part'
+POSTHOOK: type: QUERY
+POSTHOOK: Input: alter3_db@alter3_renamed@pcol1=test_part/pcol2=test_part
+POSTHOOK: Output: file:/tmp/nzhang/hive_2010-09-20_23-09-13_149_6501372199049102565/-mr-10000
+POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+POSTHOOK: Lineage: alter3_like PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+1	test_part	test_part
+2	test_part	test_part
+3	test_part	test_part
+4	test_part	test_part
+5	test_part	test_part
+6	test_part	test_part
+PREHOOK: query: INSERT OVERWRITE TABLE alter3_like
+PARTITION (pCol1='test_part', pcol2='test_part')
+SELECT col1 FROM alter3_src
+PREHOOK: type: QUERY
+PREHOOK: Input: alter3_db@alter3_src
+PREHOOK: Output: alter3_db@alter3_like@pcol1=test_part/pcol2=test_part
+POSTHOOK: query: INSERT OVERWRITE TABLE alter3_like
+PARTITION (pCol1='test_part', pcol2='test_part')
+SELECT col1 FROM alter3_src
+POSTHOOK: type: QUERY
+POSTHOOK: Input: alter3_db@alter3_src
+POSTHOOK: Output: alter3_db@alter3_like@pcol1=test_part/pcol2=test_part
+POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+POSTHOOK: Lineage: alter3_like PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+POSTHOOK: Lineage: alter3_like PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+PREHOOK: query: ALTER TABLE alter3_like RENAME TO alter3_like_renamed
+PREHOOK: type: ALTERTABLE_RENAME
+PREHOOK: Input: alter3_db@alter3_like
+PREHOOK: Output: alter3_db@alter3_like
+POSTHOOK: query: ALTER TABLE alter3_like RENAME TO alter3_like_renamed
+POSTHOOK: type: ALTERTABLE_RENAME
+POSTHOOK: Input: alter3_db@alter3_like
+POSTHOOK: Output: alter3_db@alter3_like
+POSTHOOK: Output: alter3_db@alter3_like_renamed
+POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+POSTHOOK: Lineage: alter3_like PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+POSTHOOK: Lineage: alter3_like PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+PREHOOK: query: DESCRIBE EXTENDED alter3_like_renamed
+PREHOOK: type: DESCTABLE
+POSTHOOK: query: DESCRIBE EXTENDED alter3_like_renamed
+POSTHOOK: type: DESCTABLE
+POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+POSTHOOK: Lineage: alter3 PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+POSTHOOK: Lineage: alter3_like PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+POSTHOOK: Lineage: alter3_like PARTITION(pcol1=test_part,pcol2=test_part).col1 SIMPLE [(alter3_src)alter3_src.FieldSchema(name:col1, type:string, comment:null), ]
+col_name            	data_type           	comment             
+	 	 
+col1                	string              	None                
+	 	 
+# Partition Information	 	 
+col_name            	data_type           	comment             
+	 	 
+pcol1               	string              	None                
+pcol2               	string              	None                
+	 	 
+# Detailed Table Information	 	 
+Database:           	alter3_db           	 
+Owner:              	nzhang              	 
+CreateTime:         	Mon Sep 20 23:09:06 PDT 2010	 
+LastAccessTime:     	Wed Dec 31 16:00:00 PST 1969	 
+Protect Mode:       	None                	 
+Retention:          	0                   	 
+Location:           	pfile:/data/users/nzhang/work/784/apache-hive/build/ql/test/data/warehouse/alter3_db.db/alter3_like_renamed	 
+Table Type:         	MANAGED_TABLE       	 
+Table Parameters:	 	 
+	numPartitions       	1                   
+	EXTERNAL            	FALSE               
+	numFiles            	1                   
+	last_modified_by    	nzhang              
+	last_modified_time  	1285049360          
+	transient_lastDdlTime	1285049360          
+	numRows             	6                   
+	totalSize           	171                 
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe	 
+InputFormat:        	org.apache.hadoop.mapred.SequenceFileInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	-1                  	 
+Bucket Columns:     	[]                  	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	serialization.format	1                   
+	 	 

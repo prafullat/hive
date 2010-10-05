@@ -20,6 +20,10 @@ package org.apache.hadoop.hive.ql.plan;
 
 import java.io.Serializable;
 import java.util.List;
+<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/plan/CreateIndexDesc.java
+=======
+import java.util.Map;
+>>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/plan/CreateIndexDesc.java
 
 /**
  * create index descriptor
@@ -30,25 +34,72 @@ public class CreateIndexDesc extends DDLDesc implements Serializable {
   String tableName;
   String indexName;
   List<String> indexedCols;
+<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/plan/CreateIndexDesc.java
   String inputFormat;
   String outputFormat;
   String serde;
   String indexType;
+=======
+  String indexTableName;
+  boolean deferredRebuild;
+  String inputFormat;
+  String outputFormat;
+  String serde;
+  String storageHandler;
+  String indexTypeHandlerClass;
+  String location;
+  Map<String, String> idxProps;
+  Map<String, String> serdeProps;
+  String collItemDelim;
+  String fieldDelim;
+  String fieldEscape;
+  String lineDelim;
+  String mapKeyDelim;
+  
+>>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/plan/CreateIndexDesc.java
 
   public CreateIndexDesc() {
     super();
   }
 
   public CreateIndexDesc(String tableName, String indexName,
+<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/plan/CreateIndexDesc.java
       List<String> indexedCols,String inputFormat, String outputFormat, String serde, String indexType) {
+=======
+      List<String> indexedCols, String indexTableName, boolean deferredRebuild,
+      String inputFormat, String outputFormat, String storageHandler,
+      String typeName, String location, Map<String, String> idxProps,
+      String serde, Map<String, String> serdeProps, String collItemDelim,
+      String fieldDelim, String fieldEscape, String lineDelim,
+      String mapKeyDelim) {
+>>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/plan/CreateIndexDesc.java
     super();
     this.tableName = tableName;
     this.indexName = indexName;
     this.indexedCols = indexedCols;
+<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/plan/CreateIndexDesc.java
     this.indexType = indexType;
     this.inputFormat = inputFormat;
     this.outputFormat = outputFormat;
     this.serde = serde;
+=======
+    this.indexTableName = indexTableName;
+    this.deferredRebuild = deferredRebuild;
+    this.inputFormat = inputFormat;
+    this.outputFormat = outputFormat;
+    this.serde = serde;
+    this.storageHandler = storageHandler;
+    this.indexTypeHandlerClass = typeName;
+    this.location = location;
+    this.idxProps = idxProps;
+    this.serde = serde;
+    this.serdeProps = serdeProps;
+    this.collItemDelim = collItemDelim;
+    this.fieldDelim = fieldDelim;
+    this.fieldEscape = fieldEscape;
+    this.lineDelim = lineDelim;
+    this.mapKeyDelim = mapKeyDelim;
+>>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/plan/CreateIndexDesc.java
   }
 
   public String getTableName() {
@@ -75,6 +126,29 @@ public class CreateIndexDesc extends DDLDesc implements Serializable {
     this.indexedCols = indexedCols;
   }
   
+<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/plan/CreateIndexDesc.java
+=======
+  public String getIndexTableName() {
+    return indexTableName;
+  }
+
+  public void setIndexTableName(String indexTableName) {
+    this.indexTableName = indexTableName;
+  }
+  
+  public boolean isDeferredRebuild() {
+    return deferredRebuild;
+  }
+  
+  public boolean getDeferredRebuild() {
+    return deferredRebuild;
+  }
+
+  public void setDeferredRebuild(boolean deferredRebuild) {
+    this.deferredRebuild = deferredRebuild;
+  }
+
+>>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/plan/CreateIndexDesc.java
   public String getInputFormat() {
     return inputFormat;
   }
@@ -98,6 +172,7 @@ public class CreateIndexDesc extends DDLDesc implements Serializable {
   public void setSerde(String serde) {
     this.serde = serde;
   }
+<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/plan/CreateIndexDesc.java
   
   public String getIndexType() {
     return indexType;
@@ -105,6 +180,87 @@ public class CreateIndexDesc extends DDLDesc implements Serializable {
 
   public void setIndexType(String indexType) {
     this.indexType = indexType;
+=======
+
+  public String getStorageHandler() {
+    return storageHandler;
+  }
+
+  public void setStorageHandler(String storageHandler) {
+    this.storageHandler = storageHandler;
+  }
+
+  public String getLocation() {
+    return location;
+  }
+
+  public void setLocation(String location) {
+    this.location = location;
+  }
+
+  public Map<String, String> getIdxProps() {
+    return idxProps;
+  }
+
+  public void setIdxProps(Map<String, String> idxProps) {
+    this.idxProps = idxProps;
+  }
+
+  public Map<String, String> getSerdeProps() {
+    return serdeProps;
+  }
+
+  public void setSerdeProps(Map<String, String> serdeProps) {
+    this.serdeProps = serdeProps;
+  }
+
+  public String getCollItemDelim() {
+    return collItemDelim;
+  }
+
+  public void setCollItemDelim(String collItemDelim) {
+    this.collItemDelim = collItemDelim;
+  }
+
+  public String getFieldDelim() {
+    return fieldDelim;
+  }
+
+  public void setFieldDelim(String fieldDelim) {
+    this.fieldDelim = fieldDelim;
+  }
+
+  public String getFieldEscape() {
+    return fieldEscape;
+  }
+
+  public void setFieldEscape(String fieldEscape) {
+    this.fieldEscape = fieldEscape;
+  }
+
+  public String getLineDelim() {
+    return lineDelim;
+  }
+
+  public void setLineDelim(String lineDelim) {
+    this.lineDelim = lineDelim;
+  }
+
+  public String getMapKeyDelim() {
+    return mapKeyDelim;
+  }
+
+  public void setMapKeyDelim(String mapKeyDelim) {
+    this.mapKeyDelim = mapKeyDelim;
+  }
+  
+  public String getIndexTypeHandlerClass() {
+    return indexTypeHandlerClass;
+  }
+
+  public void setIndexTypeHandlerClass(String indexTypeHandlerClass) {
+    this.indexTypeHandlerClass = indexTypeHandlerClass;
+>>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/plan/CreateIndexDesc.java
   }
 
 }

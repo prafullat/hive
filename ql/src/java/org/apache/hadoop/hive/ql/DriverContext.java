@@ -22,8 +22,8 @@ import java.io.Serializable;
 import java.util.LinkedList;
 import java.util.Queue;
 
-import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.exec.Task;
+import org.apache.hadoop.mapred.JobConf;
 
 /**
  * DriverContext.
@@ -82,4 +82,5 @@ public class DriverContext {
   public void incCurJobNo(int amount) {
     this.curJobNo = this.curJobNo + amount;
   }
+  
 }

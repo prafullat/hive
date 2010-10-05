@@ -377,6 +377,7 @@ class metastore_Database {
 
   public $name = null;
   public $description = null;
+  public $locationUri = null;
 
   public function __construct($vals=null) {
     if (!isset(self::$_TSPEC)) {
@@ -389,6 +390,10 @@ class metastore_Database {
           'var' => 'description',
           'type' => TType::STRING,
           ),
+        3 => array(
+          'var' => 'locationUri',
+          'type' => TType::STRING,
+          ),
         );
     }
     if (is_array($vals)) {
@@ -397,6 +402,9 @@ class metastore_Database {
       }
       if (isset($vals['description'])) {
         $this->description = $vals['description'];
+      }
+      if (isset($vals['locationUri'])) {
+        $this->locationUri = $vals['locationUri'];
       }
     }
   }
@@ -434,6 +442,13 @@ class metastore_Database {
             $xfer += $input->skip($ftype);
           }
           break;
+        case 3:
+          if ($ftype == TType::STRING) {
+            $xfer += $input->readString($this->locationUri);
+          } else {
+            $xfer += $input->skip($ftype);
+          }
+          break;
         default:
           $xfer += $input->skip($ftype);
           break;
@@ -455,6 +470,11 @@ class metastore_Database {
     if ($this->description !== null) {
       $xfer += $output->writeFieldBegin('description', TType::STRING, 2);
       $xfer += $output->writeString($this->description);
+      $xfer += $output->writeFieldEnd();
+    }
+    if ($this->locationUri !== null) {
+      $xfer += $output->writeFieldBegin('locationUri', TType::STRING, 3);
+      $xfer += $output->writeString($this->locationUri);
       $xfer += $output->writeFieldEnd();
     }
     $xfer += $output->writeFieldStop();
@@ -1695,7 +1715,11 @@ class metastore_Index {
   static $_TSPEC;
 
   public $indexName = null;
+<<<<<<< HEAD:metastore/src/gen-php/hive_metastore_types.php
   public $indexType = null;
+=======
+  public $indexHandlerClass = null;
+>>>>>>> apache_master/trunk:metastore/src/gen-php/hive_metastore_types.php
   public $dbName = null;
   public $origTableName = null;
   public $createTime = null;
@@ -1703,6 +1727,10 @@ class metastore_Index {
   public $indexTableName = null;
   public $sd = null;
   public $parameters = null;
+<<<<<<< HEAD:metastore/src/gen-php/hive_metastore_types.php
+=======
+  public $deferredRebuild = null;
+>>>>>>> apache_master/trunk:metastore/src/gen-php/hive_metastore_types.php
 
   public function __construct($vals=null) {
     if (!isset(self::$_TSPEC)) {
@@ -1712,7 +1740,11 @@ class metastore_Index {
           'type' => TType::STRING,
           ),
         2 => array(
+<<<<<<< HEAD:metastore/src/gen-php/hive_metastore_types.php
           'var' => 'indexType',
+=======
+          'var' => 'indexHandlerClass',
+>>>>>>> apache_master/trunk:metastore/src/gen-php/hive_metastore_types.php
           'type' => TType::STRING,
           ),
         3 => array(
@@ -1752,20 +1784,33 @@ class metastore_Index {
             'type' => TType::STRING,
             ),
           ),
+<<<<<<< HEAD:metastore/src/gen-php/hive_metastore_types.php
+=======
+        10 => array(
+          'var' => 'deferredRebuild',
+          'type' => TType::BOOL,
+          ),
+>>>>>>> apache_master/trunk:metastore/src/gen-php/hive_metastore_types.php
         );
     }
     if (is_array($vals)) {
       if (isset($vals['indexName'])) {
         $this->indexName = $vals['indexName'];
       }
+<<<<<<< HEAD:metastore/src/gen-php/hive_metastore_types.php
       if (isset($vals['indexType'])) {
         $this->indexType = $vals['indexType'];
+=======
+      if (isset($vals['indexHandlerClass'])) {
+        $this->indexHandlerClass = $vals['indexHandlerClass'];
+>>>>>>> apache_master/trunk:metastore/src/gen-php/hive_metastore_types.php
       }
       if (isset($vals['dbName'])) {
         $this->dbName = $vals['dbName'];
       }
       if (isset($vals['origTableName'])) {
         $this->origTableName = $vals['origTableName'];
+<<<<<<< HEAD:metastore/src/gen-php/hive_metastore_types.php
       }
       if (isset($vals['createTime'])) {
         $this->createTime = $vals['createTime'];
@@ -1773,6 +1818,15 @@ class metastore_Index {
       if (isset($vals['lastAccessTime'])) {
         $this->lastAccessTime = $vals['lastAccessTime'];
       }
+=======
+      }
+      if (isset($vals['createTime'])) {
+        $this->createTime = $vals['createTime'];
+      }
+      if (isset($vals['lastAccessTime'])) {
+        $this->lastAccessTime = $vals['lastAccessTime'];
+      }
+>>>>>>> apache_master/trunk:metastore/src/gen-php/hive_metastore_types.php
       if (isset($vals['indexTableName'])) {
         $this->indexTableName = $vals['indexTableName'];
       }
@@ -1781,6 +1835,12 @@ class metastore_Index {
       }
       if (isset($vals['parameters'])) {
         $this->parameters = $vals['parameters'];
+<<<<<<< HEAD:metastore/src/gen-php/hive_metastore_types.php
+=======
+      }
+      if (isset($vals['deferredRebuild'])) {
+        $this->deferredRebuild = $vals['deferredRebuild'];
+>>>>>>> apache_master/trunk:metastore/src/gen-php/hive_metastore_types.php
       }
     }
   }
@@ -1813,7 +1873,11 @@ class metastore_Index {
           break;
         case 2:
           if ($ftype == TType::STRING) {
+<<<<<<< HEAD:metastore/src/gen-php/hive_metastore_types.php
             $xfer += $input->readString($this->indexType);
+=======
+            $xfer += $input->readString($this->indexHandlerClass);
+>>>>>>> apache_master/trunk:metastore/src/gen-php/hive_metastore_types.php
           } else {
             $xfer += $input->skip($ftype);
           }
@@ -1835,6 +1899,8 @@ class metastore_Index {
         case 5:
           if ($ftype == TType::I32) {
             $xfer += $input->readI32($this->createTime);
+<<<<<<< HEAD:metastore/src/gen-php/hive_metastore_types.php
+=======
           } else {
             $xfer += $input->skip($ftype);
           }
@@ -1877,6 +1943,55 @@ class metastore_Index {
               $this->parameters[$key83] = $val84;
             }
             $xfer += $input->readMapEnd();
+>>>>>>> apache_master/trunk:metastore/src/gen-php/hive_metastore_types.php
+          } else {
+            $xfer += $input->skip($ftype);
+          }
+          break;
+<<<<<<< HEAD:metastore/src/gen-php/hive_metastore_types.php
+        case 6:
+          if ($ftype == TType::I32) {
+            $xfer += $input->readI32($this->lastAccessTime);
+          } else {
+            $xfer += $input->skip($ftype);
+          }
+          break;
+        case 7:
+          if ($ftype == TType::STRING) {
+            $xfer += $input->readString($this->indexTableName);
+          } else {
+            $xfer += $input->skip($ftype);
+          }
+          break;
+        case 8:
+          if ($ftype == TType::STRUCT) {
+            $this->sd = new metastore_StorageDescriptor();
+            $xfer += $this->sd->read($input);
+          } else {
+            $xfer += $input->skip($ftype);
+          }
+          break;
+        case 9:
+          if ($ftype == TType::MAP) {
+            $this->parameters = array();
+            $_size78 = 0;
+            $_ktype79 = 0;
+            $_vtype80 = 0;
+            $xfer += $input->readMapBegin($_ktype79, $_vtype80, $_size78);
+            for ($_i82 = 0; $_i82 < $_size78; ++$_i82)
+            {
+              $key83 = '';
+              $val84 = '';
+              $xfer += $input->readString($key83);
+              $xfer += $input->readString($val84);
+              $this->parameters[$key83] = $val84;
+            }
+            $xfer += $input->readMapEnd();
+=======
+        case 10:
+          if ($ftype == TType::BOOL) {
+            $xfer += $input->readBool($this->deferredRebuild);
+>>>>>>> apache_master/trunk:metastore/src/gen-php/hive_metastore_types.php
           } else {
             $xfer += $input->skip($ftype);
           }
@@ -1899,9 +2014,15 @@ class metastore_Index {
       $xfer += $output->writeString($this->indexName);
       $xfer += $output->writeFieldEnd();
     }
+<<<<<<< HEAD:metastore/src/gen-php/hive_metastore_types.php
     if ($this->indexType !== null) {
       $xfer += $output->writeFieldBegin('indexType', TType::STRING, 2);
       $xfer += $output->writeString($this->indexType);
+=======
+    if ($this->indexHandlerClass !== null) {
+      $xfer += $output->writeFieldBegin('indexHandlerClass', TType::STRING, 2);
+      $xfer += $output->writeString($this->indexHandlerClass);
+>>>>>>> apache_master/trunk:metastore/src/gen-php/hive_metastore_types.php
       $xfer += $output->writeFieldEnd();
     }
     if ($this->dbName !== null) {
@@ -1955,6 +2076,14 @@ class metastore_Index {
       }
       $xfer += $output->writeFieldEnd();
     }
+<<<<<<< HEAD:metastore/src/gen-php/hive_metastore_types.php
+=======
+    if ($this->deferredRebuild !== null) {
+      $xfer += $output->writeFieldBegin('deferredRebuild', TType::BOOL, 10);
+      $xfer += $output->writeBool($this->deferredRebuild);
+      $xfer += $output->writeFieldEnd();
+    }
+>>>>>>> apache_master/trunk:metastore/src/gen-php/hive_metastore_types.php
     $xfer += $output->writeFieldStop();
     $xfer += $output->writeStructEnd();
     return $xfer;

@@ -70,6 +70,7 @@ public class MapredWork implements Serializable {
 
   private MapredLocalWork mapLocalWork;
   private String inputformat;
+<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/plan/MapredWork.java
   
   //theses fields are used for building indexing.
   private Class<? extends Mapper> mapperClass;
@@ -90,6 +91,10 @@ public class MapredWork implements Serializable {
   */
   private String indexCols;
   
+=======
+  private boolean gatheringStats;
+
+>>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/plan/MapredWork.java
   public MapredWork() {
     aliasToPartnInfo = new LinkedHashMap<String, PartitionDesc>();
   }
@@ -450,4 +455,11 @@ public class MapredWork implements Serializable {
     this.indexTableDesc = indexTableDesc;
   }
 
+  public void setGatheringStats(boolean gatherStats) {
+    this.gatheringStats = gatherStats;
+  }
+
+  public boolean isGatheringStats() {
+    return this.gatheringStats;
+  }
 }

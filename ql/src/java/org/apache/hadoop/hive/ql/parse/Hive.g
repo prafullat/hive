@@ -85,33 +85,50 @@ TOK_STRING;
 TOK_LIST;
 TOK_STRUCT;
 TOK_MAP;
+TOK_CREATEDATABASE;
 TOK_CREATETABLE;
 TOK_CREATEINDEX;
+<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/parse/Hive.g
+=======
+TOK_CREATEINDEX_INDEXTBLNAME;
+TOK_DEFERRED_REBUILDINDEX;
+>>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/parse/Hive.g
 TOK_DROPINDEX;
 TOK_LIKETABLE;
 TOK_DESCTABLE;
 TOK_DESCFUNCTION;
+TOK_ALTERTABLE_PARTITION;
 TOK_ALTERTABLE_RENAME;
 TOK_ALTERTABLE_ADDCOLS;
 TOK_ALTERTABLE_RENAMECOL;
 TOK_ALTERTABLE_REPLACECOLS;
 TOK_ALTERTABLE_ADDPARTS;
 TOK_ALTERTABLE_DROPPARTS;
+TOK_ALTERTABLE_ALTERPARTS_PROTECTMODE;
 TOK_ALTERTABLE_TOUCH;
 TOK_ALTERTABLE_ARCHIVE;
 TOK_ALTERTABLE_UNARCHIVE;
 TOK_ALTERTABLE_SERDEPROPERTIES;
 TOK_ALTERTABLE_SERIALIZER;
+TOK_TABLE_PARTITION;
 TOK_ALTERTABLE_FILEFORMAT;
+TOK_ALTERTABLE_LOCATION;
 TOK_ALTERTABLE_PROPERTIES;
 TOK_ALTERTABLE_CHANGECOL_AFTER_POSITION;
 TOK_ALTERINDEX_REBUILD;
 TOK_MSCK;
+TOK_SHOWDATABASES;
 TOK_SHOWTABLES;
 TOK_SHOWFUNCTIONS;
 TOK_SHOWPARTITIONS;
 TOK_SHOW_TABLESTATUS;
+TOK_SHOWLOCKS;
+TOK_LOCKTABLE;
+TOK_UNLOCKTABLE;
+TOK_SWITCHDATABASE;
+TOK_DROPDATABASE;
 TOK_DROPTABLE;
+TOK_DATABASECOMMENT;
 TOK_TABCOLLIST;
 TOK_TABCOL;
 TOK_TABLECOMMENT;
@@ -126,6 +143,11 @@ TOK_TBLSEQUENCEFILE;
 TOK_TBLTEXTFILE;
 TOK_TBLRCFILE;
 TOK_TABLEFILEFORMAT;
+TOK_OFFLINE;
+TOK_ENABLE;
+TOK_DISABLE;
+TOK_READONLY;
+TOK_NO_DROP;
 TOK_STORAGEHANDLER;
 TOK_ALTERTABLE_CLUSTER_SORT;
 TOK_TABCOLNAME;
@@ -148,6 +170,7 @@ TOK_TABLEPROPLIST;
 TOK_TABTYPE;
 TOK_LIMIT;
 TOK_TABLEPROPERTY;
+TOK_IFEXISTS;
 TOK_IFNOTEXISTS;
 TOK_HINTLIST;
 TOK_HINT;
@@ -162,6 +185,7 @@ TOK_RECORDWRITER;
 TOK_LEFTSEMIJOIN;
 TOK_LATERAL_VIEW;
 TOK_TABALIAS;
+TOK_ANALYZE;
 }
 
 
@@ -213,7 +237,10 @@ loadStatement
 ddlStatement
 @init { msgs.push("ddl statement"); }
 @after { msgs.pop(); }
-    : createTableStatement
+    : createDatabaseStatement
+    | switchDatabaseStatement
+    | dropDatabaseStatement
+    | createTableStatement
     | dropTableStatement
     | alterStatement
     | descStatement
@@ -226,6 +253,16 @@ ddlStatement
     | dropIndexStatement
     | alterIndexRebuild
     | dropFunctionStatement
+    | analyzeStatement
+    | lockStatement
+    | unlockStatement
+    ;
+
+ifExists
+@init { msgs.push("if exists clause"); }
+@after { msgs.pop(); }
+    : KW_IF KW_EXISTS
+    -> ^(TOK_IFEXISTS)
     ;
 
 ifNotExists
@@ -233,6 +270,38 @@ ifNotExists
 @after { msgs.pop(); }
     : KW_IF KW_NOT KW_EXISTS
     -> ^(TOK_IFNOTEXISTS)
+    ;
+
+
+createDatabaseStatement
+@init { msgs.push("create database statement"); }
+@after { msgs.pop(); }
+    : KW_CREATE (KW_DATABASE|KW_SCHEMA)
+        ifNotExists?
+        name=Identifier
+        databaseComment?
+    -> ^(TOK_CREATEDATABASE $name ifNotExists? databaseComment?)
+    ;
+
+switchDatabaseStatement
+@init { msgs.push("switch database statement"); }
+@after { msgs.pop(); }
+    : KW_USE Identifier
+    -> ^(TOK_SWITCHDATABASE Identifier)
+    ;
+
+dropDatabaseStatement
+@init { msgs.push("drop database statement"); }
+@after { msgs.pop(); }
+    : KW_DROP (KW_DATABASE|KW_SCHEMA) ifExists? Identifier
+    -> ^(TOK_DROPDATABASE Identifier ifExists?)
+    ;
+
+databaseComment
+@init { msgs.push("database's comment"); }
+@after { msgs.pop(); }
+    : KW_COMMENT comment=StringLiteral
+    -> ^(TOK_DATABASECOMMENT $comment)
     ;
 
 createTableStatement
@@ -268,8 +337,53 @@ createTableStatement
 createIndexStatement
 @init { msgs.push("create index statement");}
 @after {msgs.pop();}
+<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/parse/Hive.g
     : KW_CREATE KW_INDEX indexName=Identifier KW_TYPE typeName=Identifier KW_ON KW_TABLE tab=Identifier LPAREN indexedCols=columnNameList RPAREN tableFileFormat?
     ->^(TOK_CREATEINDEX $indexName $typeName $tab $indexedCols tableFileFormat?)
+=======
+    : KW_CREATE KW_INDEX indexName=Identifier 
+      KW_ON KW_TABLE tab=Identifier LPAREN indexedCols=columnNameList RPAREN 
+      KW_AS typeName=StringLiteral
+      autoRebuild?
+      indexTblName?
+      tableRowFormat?
+      tableFileFormat?
+      tableLocation?
+    ->^(TOK_CREATEINDEX $indexName $typeName $tab $indexedCols 
+        autoRebuild?
+        indexTblName?
+        tableRowFormat?
+        tableFileFormat?
+        tableLocation?)
+    ;
+
+autoRebuild
+@init { msgs.push("auto rebuild index");}
+@after {msgs.pop();}
+    : KW_WITH KW_DEFERRED KW_REBUILD
+    ->^(TOK_DEFERRED_REBUILDINDEX)
+    ;
+
+indexTblName
+@init { msgs.push("index table name");}
+@after {msgs.pop();}
+    : KW_IN KW_TABLE indexTbl=Identifier
+    ->^(TOK_CREATEINDEX_INDEXTBLNAME $indexTbl)
+    ;
+
+indexPropertiesPrefixed
+@init { msgs.push("table properties with prefix"); }
+@after { msgs.pop(); }
+    :
+        KW_IDXPROPERTIES! indexProperties
+    ;
+
+indexProperties
+@init { msgs.push("table properties"); }
+@after { msgs.pop(); }
+    :
+      LPAREN propertiesList RPAREN -> ^(TOK_TABLEPROPERTIES propertiesList)
+>>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/parse/Hive.g
     ;
 
 dropIndexStatement
@@ -309,7 +423,7 @@ alterTableStatementSuffix
     | alterStatementSuffixUnArchive
     | alterStatementSuffixProperties
     | alterStatementSuffixSerdeProperties
-    | alterStatementSuffixFileFormat
+    | alterTblPartitionStatement
     | alterStatementSuffixClusterbySortby
     ;
 
@@ -353,7 +467,7 @@ alterStatementSuffixAddPartitions
     : Identifier KW_ADD ifNotExists? partitionSpec partitionLocation? (partitionSpec partitionLocation?)*
     -> ^(TOK_ALTERTABLE_ADDPARTS Identifier ifNotExists? (partitionSpec partitionLocation?)+)
     ;
-
+    
 alterStatementSuffixTouch
 @init { msgs.push("touch statement"); }
 @after { msgs.pop(); }
@@ -412,12 +526,64 @@ alterStatementSuffixSerdeProperties
     -> ^(TOK_ALTERTABLE_SERDEPROPERTIES $name tableProperties)
     ;
 
+tablePartitionPrefix
+@init {msgs.push("table partition prefix");}
+@after {msgs.pop();}
+  :name=Identifier partitionSpec? 
+  ->^(TOK_TABLE_PARTITION $name partitionSpec?)
+  ;
+
+alterTblPartitionStatement
+@init {msgs.push("alter table partition statement");}
+@after {msgs.pop();}
+  :  tablePartitionPrefix alterTblPartitionStatementSuffix
+  -> ^(TOK_ALTERTABLE_PARTITION tablePartitionPrefix alterTblPartitionStatementSuffix)
+  ;
+
+alterTblPartitionStatementSuffix
+@init {msgs.push("alter table partition statement suffix");}
+@after {msgs.pop();}
+  : alterStatementSuffixFileFormat
+  | alterStatementSuffixLocation
+  | alterStatementSuffixProtectMode
+  ;
+
 alterStatementSuffixFileFormat
 @init {msgs.push("alter fileformat statement"); }
-@after {msgs.pop(); }
-	:name=Identifier KW_SET KW_FILEFORMAT fileFormat
-	-> ^(TOK_ALTERTABLE_FILEFORMAT $name fileFormat)
+@after {msgs.pop();}
+	: KW_SET KW_FILEFORMAT fileFormat
+	-> ^(TOK_ALTERTABLE_FILEFORMAT fileFormat)
 	;
+
+alterStatementSuffixLocation
+@init {msgs.push("alter location");}
+@after {msgs.pop();}
+  : KW_SET KW_LOCATION newLoc=StringLiteral
+  -> ^(TOK_ALTERTABLE_LOCATION $newLoc)
+  ;
+
+alterStatementSuffixProtectMode
+@init { msgs.push("alter partition protect mode statement"); }
+@after { msgs.pop(); }
+    : alterProtectMode
+    -> ^(TOK_ALTERTABLE_ALTERPARTS_PROTECTMODE alterProtectMode)
+    ;
+
+alterProtectMode
+@init { msgs.push("protect mode specification enable"); }
+@after { msgs.pop(); }
+    : KW_ENABLE alterProtectModeMode  -> ^(TOK_ENABLE alterProtectModeMode)
+    | KW_DISABLE alterProtectModeMode  -> ^(TOK_DISABLE alterProtectModeMode)
+    ;
+
+alterProtectModeMode
+@init { msgs.push("protect mode specification enable"); }
+@after { msgs.pop(); }
+    : KW_OFFLINE  -> ^(TOK_OFFLINE)
+    | KW_NO_DROP  -> ^(TOK_NO_DROP)
+    | KW_READONLY  -> ^(TOK_READONLY)
+    ;
+
 
 alterStatementSuffixClusterbySortby
 @init {msgs.push("alter cluster by sort by statement");}
@@ -433,7 +599,11 @@ alterIndexRebuild
 @init { msgs.push("update index statement");}
 @after {msgs.pop();}
     : KW_ALTER KW_INDEX indexName=Identifier KW_ON base_table_name=Identifier partitionSpec? KW_REBUILD
+<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/parse/Hive.g
     ->^(TOK_ALTERINDEX_REBUILD $ base_table_name $indexName partitionSpec?)
+=======
+    ->^(TOK_ALTERINDEX_REBUILD $base_table_name $indexName partitionSpec?)
+>>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/parse/Hive.g
     ;
 
 fileFormat
@@ -465,15 +635,41 @@ descStatement
     : (KW_DESCRIBE|KW_DESC) (isExtended=KW_EXTENDED)? (parttype=partTypeExpr) -> ^(TOK_DESCTABLE $parttype $isExtended?)
     | (KW_DESCRIBE|KW_DESC) KW_FUNCTION KW_EXTENDED? (name=descFuncNames) -> ^(TOK_DESCFUNCTION $name KW_EXTENDED?)
     ;
+    
+analyzeStatement
+@init { msgs.push("analyze statement"); }
+@after { msgs.pop(); }
+    : KW_ANALYZE KW_TABLE (parttype=partTypeExpr) KW_COMPUTE KW_STATISTICS -> ^(TOK_ANALYZE $parttype)
+    ;
 
 showStatement
 @init { msgs.push("show statement"); }
 @after { msgs.pop(); }
-    : KW_SHOW KW_TABLES showStmtIdentifier?  -> ^(TOK_SHOWTABLES showStmtIdentifier?)
+    : KW_SHOW (KW_DATABASES|KW_SCHEMAS) (KW_LIKE showStmtIdentifier)? -> ^(TOK_SHOWDATABASES showStmtIdentifier?)
+    | KW_SHOW KW_TABLES showStmtIdentifier?  -> ^(TOK_SHOWTABLES showStmtIdentifier?)
     | KW_SHOW KW_FUNCTIONS showStmtIdentifier?  -> ^(TOK_SHOWFUNCTIONS showStmtIdentifier?)
     | KW_SHOW KW_PARTITIONS Identifier partitionSpec? -> ^(TOK_SHOWPARTITIONS Identifier partitionSpec?)
     | KW_SHOW KW_TABLE KW_EXTENDED ((KW_FROM|KW_IN) db_name=Identifier)? KW_LIKE showStmtIdentifier partitionSpec?
     -> ^(TOK_SHOW_TABLESTATUS showStmtIdentifier $db_name? partitionSpec?)
+    | KW_SHOW KW_LOCKS -> ^(TOK_SHOWLOCKS)
+    ;
+
+lockStatement
+@init { msgs.push("lock statement"); }
+@after { msgs.pop(); }
+    : KW_LOCK KW_TABLE Identifier partitionSpec? lockMode -> ^(TOK_LOCKTABLE Identifier lockMode partitionSpec?)
+    ;
+
+lockMode
+@init { msgs.push("lock mode"); }
+@after { msgs.pop(); }
+    : KW_SHARED | KW_EXCLUSIVE
+    ;
+
+unlockStatement
+@init { msgs.push("unlock statement"); }
+@after { msgs.pop(); }
+    : KW_UNLOCK KW_TABLE Identifier partitionSpec?  -> ^(TOK_UNLOCKTABLE Identifier partitionSpec?)
     ;
 
 metastoreCheck
@@ -909,7 +1105,7 @@ selectClause
 @init { msgs.push("select clause"); }
 @after { msgs.pop(); }
     :
-    KW_SELECT hintClause? (((KW_ALL | dist=KW_DISTINCT)? selectList) 
+    KW_SELECT hintClause? (((KW_ALL | dist=KW_DISTINCT)? selectList)
                           | (transform=KW_TRANSFORM selectTrfmClause))
      -> {$transform == null && $dist == null}? ^(TOK_SELECT hintClause? selectList)
      -> {$transform == null && $dist != null}? ^(TOK_SELECTDI hintClause? selectList)
@@ -924,7 +1120,7 @@ selectList
     :
     selectItem ( COMMA  selectItem )* -> selectItem+
     ;
-    
+
 selectTrfmClause
 @init { msgs.push("transform clause"); }
 @after { msgs.pop(); }
@@ -1542,7 +1738,10 @@ KW_TABLE: 'TABLE';
 KW_TABLES: 'TABLES';
 KW_INDEX: 'INDEX';
 KW_REBUILD: 'REBUILD';
+<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/parse/Hive.g
 KW_TYPE: 'TYPE';
+=======
+>>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/parse/Hive.g
 KW_FUNCTIONS: 'FUNCTIONS';
 KW_SHOW: 'SHOW';
 KW_MSCK: 'MSCK';
@@ -1611,6 +1810,11 @@ KW_TEXTFILE: 'TEXTFILE';
 KW_RCFILE: 'RCFILE';
 KW_INPUTFORMAT: 'INPUTFORMAT';
 KW_OUTPUTFORMAT: 'OUTPUTFORMAT';
+KW_OFFLINE: 'OFFLINE';
+KW_ENABLE: 'ENABLE';
+KW_DISABLE: 'DISABLE';
+KW_READONLY: 'READONLY';
+KW_NO_DROP: 'NO_DROP';
 KW_LOCATION: 'LOCATION';
 KW_TABLESAMPLE: 'TABLESAMPLE';
 KW_BUCKET: 'BUCKET';
@@ -1628,10 +1832,12 @@ KW_EXPLAIN: 'EXPLAIN';
 KW_EXTENDED: 'EXTENDED';
 KW_SERDE: 'SERDE';
 KW_WITH: 'WITH';
+KW_DEFERRED: 'DEFERRED';
 KW_SERDEPROPERTIES: 'SERDEPROPERTIES';
 KW_LIMIT: 'LIMIT';
 KW_SET: 'SET';
 KW_TBLPROPERTIES: 'TBLPROPERTIES';
+KW_IDXPROPERTIES: 'INDEXPROPERTIES';
 KW_VALUE_TYPE: '$VALUE$';
 KW_ELEM_TYPE: '$ELEM$';
 KW_CASE: 'CASE';
@@ -1654,6 +1860,7 @@ KW_INTERSECT: 'INTERSECT';
 KW_VIEW: 'VIEW';
 KW_IN: 'IN';
 KW_DATABASE: 'DATABASE';
+KW_DATABASES: 'DATABASES';
 KW_MATERIALIZED: 'MATERIALIZED';
 KW_SCHEMA: 'SCHEMA';
 KW_SCHEMAS: 'SCHEMAS';
@@ -1662,7 +1869,10 @@ KW_REVOKE: 'REVOKE';
 KW_SSL: 'SSL';
 KW_UNDO: 'UNDO';
 KW_LOCK: 'LOCK';
+KW_LOCKS: 'LOCKS';
 KW_UNLOCK: 'UNLOCK';
+KW_SHARED: 'SHARED';
+KW_EXCLUSIVE: 'EXCLUSIVE';
 KW_PROCEDURE: 'PROCEDURE';
 KW_UNSIGNED: 'UNSIGNED';
 KW_WHILE: 'WHILE';
@@ -1686,6 +1896,9 @@ KW_LATERAL: 'LATERAL';
 KW_TOUCH: 'TOUCH';
 KW_ARCHIVE: 'ARCHIVE';
 KW_UNARCHIVE: 'UNARCHIVE';
+KW_COMPUTE: 'COMPUTE';
+KW_STATISTICS: 'STATISTICS';
+KW_USE: 'USE';
 
 // Operators
 // NOTE: if you add a new function/operator, add it to sysFuncNames so that describe function _FUNC_ will work.

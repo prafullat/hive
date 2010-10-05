@@ -1,15 +1,3 @@
-PREHOOK: query: DROP TABLE table1
-PREHOOK: type: DROPTABLE
-POSTHOOK: query: DROP TABLE table1
-POSTHOOK: type: DROPTABLE
-PREHOOK: query: DROP TABLE table2
-PREHOOK: type: DROPTABLE
-POSTHOOK: query: DROP TABLE table2
-POSTHOOK: type: DROPTABLE
-PREHOOK: query: DROP TABLE table3
-PREHOOK: type: DROPTABLE
-POSTHOOK: query: DROP TABLE table3
-POSTHOOK: type: DROPTABLE
 PREHOOK: query: CREATE TABLE table1 (a STRING, b STRING) STORED AS TEXTFILE
 PREHOOK: type: CREATETABLE
 POSTHOOK: query: CREATE TABLE table1 (a STRING, b STRING) STORED AS TEXTFILE
@@ -19,16 +7,42 @@ PREHOOK: query: DESCRIBE table1
 PREHOOK: type: DESCTABLE
 POSTHOOK: query: DESCRIBE table1
 POSTHOOK: type: DESCTABLE
-a	string	
-b	string	
+col_name            	data_type           	comment             
+	 	 
+a                   	string              	None                
+b                   	string              	None                
 PREHOOK: query: DESCRIBE EXTENDED table1
 PREHOOK: type: DESCTABLE
 POSTHOOK: query: DESCRIBE EXTENDED table1
 POSTHOOK: type: DESCTABLE
-a	string	
-b	string	
+col_name            	data_type           	comment             
 	 	 
-Detailed Table Information	Table(tableName:table1, dbName:default, owner:nzhang, createTime:1254242350, lastAccessTime:0, retention:0, sd:StorageDescriptor(cols:[FieldSchema(name:a, type:string, comment:null), FieldSchema(name:b, type:string, comment:null)], location:file:/data/users/nzhang/work/31/apache-hive-trunk/build/ql/test/data/warehouse/table1, inputFormat:org.apache.hadoop.mapred.TextInputFormat, outputFormat:org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat, compressed:false, numBuckets:-1, serdeInfo:SerDeInfo(name:null, serializationLib:org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe, parameters:{serialization.format=1}), bucketCols:[], sortCols:[], parameters:{}), partitionKeys:[], parameters:{})	
+a                   	string              	None                
+b                   	string              	None                
+	 	 
+# Detailed Table Information	 	 
+Database:           	default             	 
+Owner:              	heyongqiang         	 
+CreateTime:         	Wed Sep 29 13:05:33 PDT 2010	 
+LastAccessTime:     	Wed Dec 31 16:00:00 PST 1969	 
+Protect Mode:       	None                	 
+Retention:          	0                   	 
+Location:           	pfile:/Users/heyongqiang/Documents/workspace/Hive-2/build/ql/test/data/warehouse/table1	 
+Table Type:         	MANAGED_TABLE       	 
+Table Parameters:	 	 
+	transient_lastDdlTime	1285790733          
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe	 
+InputFormat:        	org.apache.hadoop.mapred.TextInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	-1                  	 
+Bucket Columns:     	[]                  	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	serialization.format	1                   
+	 	 
 PREHOOK: query: CREATE TABLE IF NOT EXISTS table1 (a STRING, b STRING) STORED AS TEXTFILE
 PREHOOK: type: CREATETABLE
 POSTHOOK: query: CREATE TABLE IF NOT EXISTS table1 (a STRING, b STRING) STORED AS TEXTFILE
@@ -42,16 +56,42 @@ PREHOOK: query: DESCRIBE table2
 PREHOOK: type: DESCTABLE
 POSTHOOK: query: DESCRIBE table2
 POSTHOOK: type: DESCTABLE
-a	string	
-b	int	
+col_name            	data_type           	comment             
+	 	 
+a                   	string              	None                
+b                   	int                 	None                
 PREHOOK: query: DESCRIBE EXTENDED table2
 PREHOOK: type: DESCTABLE
 POSTHOOK: query: DESCRIBE EXTENDED table2
 POSTHOOK: type: DESCTABLE
-a	string	
-b	int	
+col_name            	data_type           	comment             
 	 	 
-Detailed Table Information	Table(tableName:table2, dbName:default, owner:nzhang, createTime:1254242351, lastAccessTime:0, retention:0, sd:StorageDescriptor(cols:[FieldSchema(name:a, type:string, comment:null), FieldSchema(name:b, type:int, comment:null)], location:file:/data/users/nzhang/work/31/apache-hive-trunk/build/ql/test/data/warehouse/table2, inputFormat:org.apache.hadoop.mapred.TextInputFormat, outputFormat:org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat, compressed:false, numBuckets:-1, serdeInfo:SerDeInfo(name:null, serializationLib:org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe, parameters:{serialization.format=1}), bucketCols:[], sortCols:[], parameters:{}), partitionKeys:[], parameters:{})	
+a                   	string              	None                
+b                   	int                 	None                
+	 	 
+# Detailed Table Information	 	 
+Database:           	default             	 
+Owner:              	heyongqiang         	 
+CreateTime:         	Wed Sep 29 13:05:33 PDT 2010	 
+LastAccessTime:     	Wed Dec 31 16:00:00 PST 1969	 
+Protect Mode:       	None                	 
+Retention:          	0                   	 
+Location:           	pfile:/Users/heyongqiang/Documents/workspace/Hive-2/build/ql/test/data/warehouse/table2	 
+Table Type:         	MANAGED_TABLE       	 
+Table Parameters:	 	 
+	transient_lastDdlTime	1285790733          
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe	 
+InputFormat:        	org.apache.hadoop.mapred.TextInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	-1                  	 
+Bucket Columns:     	[]                  	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	serialization.format	1                   
+	 	 
 PREHOOK: query: CREATE TABLE table3 (a STRING, b STRING)
 ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t'
 STORED AS TEXTFILE
@@ -65,28 +105,140 @@ PREHOOK: query: DESCRIBE table3
 PREHOOK: type: DESCTABLE
 POSTHOOK: query: DESCRIBE table3
 POSTHOOK: type: DESCTABLE
-a	string	
-b	string	
+col_name            	data_type           	comment             
+	 	 
+a                   	string              	None                
+b                   	string              	None                
 PREHOOK: query: DESCRIBE EXTENDED table3
 PREHOOK: type: DESCTABLE
 POSTHOOK: query: DESCRIBE EXTENDED table3
 POSTHOOK: type: DESCTABLE
-a	string	
-b	string	
+col_name            	data_type           	comment             
 	 	 
-Detailed Table Information	Table(tableName:table3, dbName:default, owner:nzhang, createTime:1254242351, lastAccessTime:0, retention:0, sd:StorageDescriptor(cols:[FieldSchema(name:a, type:string, comment:null), FieldSchema(name:b, type:string, comment:null)], location:file:/data/users/nzhang/work/31/apache-hive-trunk/build/ql/test/data/warehouse/table3, inputFormat:org.apache.hadoop.mapred.TextInputFormat, outputFormat:org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat, compressed:false, numBuckets:-1, serdeInfo:SerDeInfo(name:null, serializationLib:org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe, parameters:{serialization.format=9,field.delim=	}), bucketCols:[], sortCols:[], parameters:{}), partitionKeys:[], parameters:{})
-PREHOOK: query: DROP TABLE table1
-PREHOOK: type: DROPTABLE
-POSTHOOK: query: DROP TABLE table1
-POSTHOOK: type: DROPTABLE
-POSTHOOK: Output: default@table1
-PREHOOK: query: DROP TABLE table2
-PREHOOK: type: DROPTABLE
-POSTHOOK: query: DROP TABLE table2
-POSTHOOK: type: DROPTABLE
-POSTHOOK: Output: default@table2
-PREHOOK: query: DROP TABLE table3
-PREHOOK: type: DROPTABLE
-POSTHOOK: query: DROP TABLE table3
-POSTHOOK: type: DROPTABLE
-POSTHOOK: Output: default@table3
+a                   	string              	None                
+b                   	string              	None                
+	 	 
+# Detailed Table Information	 	 
+Database:           	default             	 
+Owner:              	heyongqiang         	 
+CreateTime:         	Wed Sep 29 13:05:33 PDT 2010	 
+LastAccessTime:     	Wed Dec 31 16:00:00 PST 1969	 
+Protect Mode:       	None                	 
+Retention:          	0                   	 
+Location:           	pfile:/Users/heyongqiang/Documents/workspace/Hive-2/build/ql/test/data/warehouse/table3	 
+Table Type:         	MANAGED_TABLE       	 
+Table Parameters:	 	 
+	transient_lastDdlTime	1285790733          
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe	 
+InputFormat:        	org.apache.hadoop.mapred.TextInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	-1                  	 
+Bucket Columns:     	[]                  	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	serialization.format	\t                  
+	field.delim         	\t                  
+	 	 
+PREHOOK: query: CREATE TABLE table4 (a STRING, b STRING)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t'
+STORED AS SEQUENCEFILE
+PREHOOK: type: CREATETABLE
+POSTHOOK: query: CREATE TABLE table4 (a STRING, b STRING)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t'
+STORED AS SEQUENCEFILE
+POSTHOOK: type: CREATETABLE
+POSTHOOK: Output: default@table4
+PREHOOK: query: DESCRIBE table4
+PREHOOK: type: DESCTABLE
+POSTHOOK: query: DESCRIBE table4
+POSTHOOK: type: DESCTABLE
+col_name            	data_type           	comment             
+	 	 
+a                   	string              	None                
+b                   	string              	None                
+PREHOOK: query: DESCRIBE EXTENDED table4
+PREHOOK: type: DESCTABLE
+POSTHOOK: query: DESCRIBE EXTENDED table4
+POSTHOOK: type: DESCTABLE
+col_name            	data_type           	comment             
+	 	 
+a                   	string              	None                
+b                   	string              	None                
+	 	 
+# Detailed Table Information	 	 
+Database:           	default             	 
+Owner:              	heyongqiang         	 
+CreateTime:         	Wed Sep 29 13:05:34 PDT 2010	 
+LastAccessTime:     	Wed Dec 31 16:00:00 PST 1969	 
+Protect Mode:       	None                	 
+Retention:          	0                   	 
+Location:           	pfile:/Users/heyongqiang/Documents/workspace/Hive-2/build/ql/test/data/warehouse/table4	 
+Table Type:         	MANAGED_TABLE       	 
+Table Parameters:	 	 
+	transient_lastDdlTime	1285790734          
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe	 
+InputFormat:        	org.apache.hadoop.mapred.SequenceFileInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	-1                  	 
+Bucket Columns:     	[]                  	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	serialization.format	\t                  
+	field.delim         	\t                  
+	 	 
+PREHOOK: query: CREATE TABLE table5 (a STRING, b STRING)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t'
+STORED AS RCFILE
+PREHOOK: type: CREATETABLE
+POSTHOOK: query: CREATE TABLE table5 (a STRING, b STRING)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t'
+STORED AS RCFILE
+POSTHOOK: type: CREATETABLE
+POSTHOOK: Output: default@table5
+PREHOOK: query: DESCRIBE table5
+PREHOOK: type: DESCTABLE
+POSTHOOK: query: DESCRIBE table5
+POSTHOOK: type: DESCTABLE
+col_name            	data_type           	comment             
+	 	 
+a                   	string              	from deserializer   
+b                   	string              	from deserializer   
+PREHOOK: query: DESCRIBE EXTENDED table5
+PREHOOK: type: DESCTABLE
+POSTHOOK: query: DESCRIBE EXTENDED table5
+POSTHOOK: type: DESCTABLE
+col_name            	data_type           	comment             
+	 	 
+a                   	string              	from deserializer   
+b                   	string              	from deserializer   
+	 	 
+# Detailed Table Information	 	 
+Database:           	default             	 
+Owner:              	heyongqiang         	 
+CreateTime:         	Wed Sep 29 13:05:34 PDT 2010	 
+LastAccessTime:     	Wed Dec 31 16:00:00 PST 1969	 
+Protect Mode:       	None                	 
+Retention:          	0                   	 
+Location:           	pfile:/Users/heyongqiang/Documents/workspace/Hive-2/build/ql/test/data/warehouse/table5	 
+Table Type:         	MANAGED_TABLE       	 
+Table Parameters:	 	 
+	transient_lastDdlTime	1285790734          
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.serde2.columnar.ColumnarSerDe	 
+InputFormat:        	org.apache.hadoop.hive.ql.io.RCFileInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.RCFileOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	-1                  	 
+Bucket Columns:     	[]                  	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	serialization.format	\t                  
+	field.delim         	\t                  
+	 	 

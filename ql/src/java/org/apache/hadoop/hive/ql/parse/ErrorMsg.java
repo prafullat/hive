@@ -150,6 +150,10 @@ public enum ErrorMsg {
       + "STRING instead."),
   CREATE_NON_NATIVE_AS("CREATE TABLE AS SELECT cannot be used for a non-native table"),
   LOAD_INTO_NON_NATIVE("A non-native table cannot be used as target for LOAD"),
+  LOCKMGR_NOT_SPECIFIED("lock manager not specified correctly, set hive.lock.manager"),
+  LOCKMGR_NOT_INITIALIZED("lock manager could not be initialized, check hive.lock.manager "),
+  LOCK_CANNOT_BE_ACQUIRED("locks on the underlying objects cannot be acquired. retry after some time"),
+  ZOOKEEPER_CLIENT_COULD_NOT_BE_INITIALIZED("Check hive.zookeeper.quorum and hive.zookeeper.client.port"),
   OVERWRITE_ARCHIVED_PART("Cannot overwrite an archived partition. " +
       "Unarchive before running this command."),
   ARCHIVE_METHODS_DISABLED("Archiving methods are currently disabled. " +
@@ -160,6 +164,10 @@ public enum ErrorMsg {
   RESERVED_PART_VAL("Partition value contains a reserved substring"),
   HOLD_DDLTIME_ON_NONEXIST_PARTITIONS("HOLD_DDLTIME hint cannot be applied to dynamic " +
   		"partitions or non-existent partitions"),
+  OFFLINE_TABLE_OR_PARTITION("Query against an offline table or partition"),
+  OUTERJOIN_USES_FILTERS("The query results could be wrong. " +
+  		"Turn on hive.outerjoin.supports.filters"),
+  NEED_PARTITION_SPECIFICATION("Table is partitioned and partition specification is needed"),
       ;
 
   private String mesg;

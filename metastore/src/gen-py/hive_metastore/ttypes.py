@@ -270,17 +270,20 @@ class Database:
   Attributes:
    - name
    - description
+   - locationUri
   """
 
   thrift_spec = (
     None, # 0
     (1, TType.STRING, 'name', None, None, ), # 1
     (2, TType.STRING, 'description', None, None, ), # 2
+    (3, TType.STRING, 'locationUri', None, None, ), # 3
   )
 
-  def __init__(self, name=None, description=None,):
+  def __init__(self, name=None, description=None, locationUri=None,):
     self.name = name
     self.description = description
+    self.locationUri = locationUri
 
   def read(self, iprot):
     if iprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None and fastbinary is not None:
@@ -301,6 +304,11 @@ class Database:
           self.description = iprot.readString();
         else:
           iprot.skip(ftype)
+      elif fid == 3:
+        if ftype == TType.STRING:
+          self.locationUri = iprot.readString();
+        else:
+          iprot.skip(ftype)
       else:
         iprot.skip(ftype)
       iprot.readFieldEnd()
@@ -318,6 +326,10 @@ class Database:
     if self.description != None:
       oprot.writeFieldBegin('description', TType.STRING, 2)
       oprot.writeString(self.description)
+      oprot.writeFieldEnd()
+    if self.locationUri != None:
+      oprot.writeFieldBegin('locationUri', TType.STRING, 3)
+      oprot.writeString(self.locationUri)
       oprot.writeFieldEnd()
     oprot.writeFieldStop()
     oprot.writeStructEnd()
@@ -1051,7 +1063,11 @@ class Index:
   """
   Attributes:
    - indexName
+<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ttypes.py
    - indexType
+=======
+   - indexHandlerClass
+>>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ttypes.py
    - dbName
    - origTableName
    - createTime
@@ -1059,12 +1075,20 @@ class Index:
    - indexTableName
    - sd
    - parameters
+<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ttypes.py
+=======
+   - deferredRebuild
+>>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ttypes.py
   """
 
   thrift_spec = (
     None, # 0
     (1, TType.STRING, 'indexName', None, None, ), # 1
+<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ttypes.py
     (2, TType.STRING, 'indexType', None, None, ), # 2
+=======
+    (2, TType.STRING, 'indexHandlerClass', None, None, ), # 2
+>>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ttypes.py
     (3, TType.STRING, 'dbName', None, None, ), # 3
     (4, TType.STRING, 'origTableName', None, None, ), # 4
     (5, TType.I32, 'createTime', None, None, ), # 5
@@ -1072,11 +1096,20 @@ class Index:
     (7, TType.STRING, 'indexTableName', None, None, ), # 7
     (8, TType.STRUCT, 'sd', (StorageDescriptor, StorageDescriptor.thrift_spec), None, ), # 8
     (9, TType.MAP, 'parameters', (TType.STRING,None,TType.STRING,None), None, ), # 9
+<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ttypes.py
   )
 
   def __init__(self, indexName=None, indexType=None, dbName=None, origTableName=None, createTime=None, lastAccessTime=None, indexTableName=None, sd=None, parameters=None,):
     self.indexName = indexName
     self.indexType = indexType
+=======
+    (10, TType.BOOL, 'deferredRebuild', None, None, ), # 10
+  )
+
+  def __init__(self, indexName=None, indexHandlerClass=None, dbName=None, origTableName=None, createTime=None, lastAccessTime=None, indexTableName=None, sd=None, parameters=None, deferredRebuild=None,):
+    self.indexName = indexName
+    self.indexHandlerClass = indexHandlerClass
+>>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ttypes.py
     self.dbName = dbName
     self.origTableName = origTableName
     self.createTime = createTime
@@ -1084,6 +1117,10 @@ class Index:
     self.indexTableName = indexTableName
     self.sd = sd
     self.parameters = parameters
+<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ttypes.py
+=======
+    self.deferredRebuild = deferredRebuild
+>>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ttypes.py
 
   def read(self, iprot):
     if iprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None and fastbinary is not None:
@@ -1101,7 +1138,11 @@ class Index:
           iprot.skip(ftype)
       elif fid == 2:
         if ftype == TType.STRING:
+<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ttypes.py
           self.indexType = iprot.readString();
+=======
+          self.indexHandlerClass = iprot.readString();
+>>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ttypes.py
         else:
           iprot.skip(ftype)
       elif fid == 3:
@@ -1144,6 +1185,14 @@ class Index:
             _val84 = iprot.readString();
             self.parameters[_key83] = _val84
           iprot.readMapEnd()
+<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ttypes.py
+=======
+        else:
+          iprot.skip(ftype)
+      elif fid == 10:
+        if ftype == TType.BOOL:
+          self.deferredRebuild = iprot.readBool();
+>>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ttypes.py
         else:
           iprot.skip(ftype)
       else:
@@ -1160,9 +1209,15 @@ class Index:
       oprot.writeFieldBegin('indexName', TType.STRING, 1)
       oprot.writeString(self.indexName)
       oprot.writeFieldEnd()
+<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ttypes.py
     if self.indexType != None:
       oprot.writeFieldBegin('indexType', TType.STRING, 2)
       oprot.writeString(self.indexType)
+=======
+    if self.indexHandlerClass != None:
+      oprot.writeFieldBegin('indexHandlerClass', TType.STRING, 2)
+      oprot.writeString(self.indexHandlerClass)
+>>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ttypes.py
       oprot.writeFieldEnd()
     if self.dbName != None:
       oprot.writeFieldBegin('dbName', TType.STRING, 3)
@@ -1171,6 +1226,7 @@ class Index:
     if self.origTableName != None:
       oprot.writeFieldBegin('origTableName', TType.STRING, 4)
       oprot.writeString(self.origTableName)
+<<<<<<< HEAD:metastore/src/gen-py/hive_metastore/ttypes.py
       oprot.writeFieldEnd()
     if self.createTime != None:
       oprot.writeFieldBegin('createTime', TType.I32, 5)
@@ -1195,6 +1251,36 @@ class Index:
         oprot.writeString(kiter85)
         oprot.writeString(viter86)
       oprot.writeMapEnd()
+=======
+      oprot.writeFieldEnd()
+    if self.createTime != None:
+      oprot.writeFieldBegin('createTime', TType.I32, 5)
+      oprot.writeI32(self.createTime)
+      oprot.writeFieldEnd()
+    if self.lastAccessTime != None:
+      oprot.writeFieldBegin('lastAccessTime', TType.I32, 6)
+      oprot.writeI32(self.lastAccessTime)
+      oprot.writeFieldEnd()
+    if self.indexTableName != None:
+      oprot.writeFieldBegin('indexTableName', TType.STRING, 7)
+      oprot.writeString(self.indexTableName)
+      oprot.writeFieldEnd()
+    if self.sd != None:
+      oprot.writeFieldBegin('sd', TType.STRUCT, 8)
+      self.sd.write(oprot)
+      oprot.writeFieldEnd()
+    if self.parameters != None:
+      oprot.writeFieldBegin('parameters', TType.MAP, 9)
+      oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.parameters))
+      for kiter85,viter86 in self.parameters.items():
+        oprot.writeString(kiter85)
+        oprot.writeString(viter86)
+      oprot.writeMapEnd()
+      oprot.writeFieldEnd()
+    if self.deferredRebuild != None:
+      oprot.writeFieldBegin('deferredRebuild', TType.BOOL, 10)
+      oprot.writeBool(self.deferredRebuild)
+>>>>>>> apache_master/trunk:metastore/src/gen-py/hive_metastore/ttypes.py
       oprot.writeFieldEnd()
     oprot.writeFieldStop()
     oprot.writeStructEnd()

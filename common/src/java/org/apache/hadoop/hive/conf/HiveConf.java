@@ -91,7 +91,21 @@ public class HiveConf extends Configuration {
     DYNAMICPARTITIONINGMODE("hive.exec.dynamic.partition.mode", "strict"),
     DYNAMICPARTITIONMAXPARTS("hive.exec.max.dynamic.partitions", 1000),
     DYNAMICPARTITIONMAXPARTSPERNODE("hive.exec.max.dynamic.partitions.pernode", 100),
+    MAXCREATEDFILES("hive.exec.max.created.files", 100000L),
+    DOWNLOADED_RESOURCES_DIR("hive.downloaded.resources.dir", "/tmp/"+System.getProperty("user.name")+"/hive_resources"),
     DEFAULTPARTITIONNAME("hive.exec.default.partition.name", "__HIVE_DEFAULT_PARTITION__"),
+    DEFAULT_ZOOKEEPER_PARTITION_NAME("hive.lockmgr.zookeeper.default.partition.name", "__HIVE_DEFAULT_ZOOKEEPER_PARTITION__"),
+    // Whether to show a link to the most failed task + debugging tips
+    SHOW_JOB_FAIL_DEBUG_INFO("hive.exec.show.job.failure.debug.info", true),
+
+    // should hive determine whether to run in local mode automatically ?
+    LOCALMODEAUTO("hive.exec.mode.local.auto", false),
+    // if yes:
+    // run in local mode only if input bytes is less than this. 128MB by default
+    LOCALMODEMAXBYTES("hive.exec.mode.local.auto.inputbytes.max", 134217728L),
+    // run in local mode only if number of tasks (for map and reduce each) is
+    // less than this
+    LOCALMODEMAXTASKS("hive.exec.mode.local.auto.tasks.max", 4),
 
     // hadoop stuff
     HADOOPBIN("hadoop.bin.path", System.getenv("HADOOP_HOME") + "/bin/hadoop"),
@@ -138,6 +152,9 @@ public class HiveConf extends Configuration {
     METASTORE_INT_EXTRACTED("hive.metastore.archive.intermediate.extracted",
         "_INTERMEDIATE_EXTRACTED"),
 
+    // Default parameters for creating tables
+    NEWTABLEDEFAULTPARA("hive.table.parameters.default",""),
+
     // CLI
     CLIIGNOREERRORS("hive.cli.errors.ignore", false),
 
@@ -169,6 +186,7 @@ public class HiveConf extends Configuration {
     HIVEADDEDARCHIVES("hive.added.archives.path", ""),
 
     // for hive script operator
+    HIVES_AUTO_PROGRESS_TIMEOUT("hive.auto.progress.timeout", 0),
     HIVETABLENAME("hive.table.name", ""),
     HIVEPARTITIONNAME("hive.partition.name", ""),
     HIVESCRIPTAUTOPROGRESS("hive.script.auto.progress", false),
@@ -192,6 +210,7 @@ public class HiveConf extends Configuration {
     // Default file format for CREATE TABLE statement
     // Options: TextFile, SequenceFile
     HIVEDEFAULTFILEFORMAT("hive.default.fileformat", "TextFile"),
+    HIVEQUERYRESULTFILEFORMAT("hive.query.result.fileformat", "TextFile"),
     HIVECHECKFILEFORMAT("hive.fileformat.check", true),
 
     //Location of Hive run time structured log file
@@ -228,6 +247,7 @@ public class HiveConf extends Configuration {
     HIVESKEWJOINMAPJOINNUMMAPTASK("hive.skewjoin.mapjoin.map.tasks", 10000),
     HIVESKEWJOINMAPJOINMINSPLIT("hive.skewjoin.mapjoin.min.split", 33554432), //32M
     MAPREDMINSPLITSIZE("mapred.min.split.size", 1),
+    HIVEMERGEMAPONLY("hive.mergejob.maponly", true),
 
     HIVESENDHEARTBEAT("hive.heartbeat.interval", 1000),
     HIVEMAXMAPJOINSIZE("hive.mapjoin.maxsize", 100000),
@@ -247,10 +267,32 @@ public class HiveConf extends Configuration {
     // Optimizer
     HIVEOPTCP("hive.optimize.cp", true), // column pruner
     HIVEOPTPPD("hive.optimize.ppd", true), // predicate pushdown
+    // push predicates down to storage handlers
+    HIVEOPTPPD_STORAGE("hive.optimize.ppd.storage", true),
     HIVEOPTGROUPBY("hive.optimize.groupby", true), // optimize group by
     HIVEOPTBUCKETMAPJOIN("hive.optimize.bucketmapjoin", false), // optimize bucket map join
     HIVEOPTSORTMERGEBUCKETMAPJOIN("hive.optimize.bucketmapjoin.sortedmerge", false), // try to use sorted merge bucket map join
     HIVEOPTREDUCEDEDUPLICATION("hive.optimize.reducededuplication", true),
+
+    // Statistics
+    HIVESTATSAUTOGATHER("hive.stats.autogather", true),
+    HIVESTATSDBCLASS("hive.stats.dbclass",
+        "jdbc:derby"), // other options are jdbc:mysql and hbase as defined in StatsSetupConst.java
+    HIVESTATSJDBCDRIVER("hive.stats.jdbcdriver",
+        "org.apache.derby.jdbc.EmbeddedDriver"), // JDBC driver specific to the dbclass
+    HIVESTATSDBCONNECTIONSTRING("hive.stats.dbconnectionstring",
+        "jdbc:derby:;databaseName=TempStatsStore;create=true"), // automatically create database
+
+    // Concurrency
+    HIVE_SUPPORT_CONCURRENCY("hive.support.concurrency", false),
+    HIVE_LOCK_MANAGER("hive.lock.manager", "org.apache.hadoop.hive.ql.lockmgr.zookeeper.ZooKeeperHiveLockManager"),
+    HIVE_LOCK_NUMRETRIES("hive.lock.numretries", 100),
+    HIVE_LOCK_SLEEP_BETWEEN_RETRIES("hive.lock.sleep.between.retries", 60),
+
+    HIVE_ZOOKEEPER_QUORUM("hive.zookeeper.quorum", ""),
+    HIVE_ZOOKEEPER_CLIENT_PORT("hive.zookeeper.client.port", ""),
+    HIVE_ZOOKEEPER_SESSION_TIMEOUT("hive.zookeeper.session.timeout", 600*1000),
+    HIVE_ZOOKEEPER_NAMESPACE("hive.zookeeper.namespace", "hive_zookeeper_namespace"),
 
     // For HBase storage handler
     HIVE_HBASE_WAL_ENABLED("hive.hbase.wal.enabled", true),
@@ -258,13 +300,19 @@ public class HiveConf extends Configuration {
     // For har files
     HIVEARCHIVEENABLED("hive.archive.enabled", false),
     HIVEHARPARENTDIRSETTABLE("hive.archive.har.parentdir.settable", false),
-
     //QL rewrites related flags.
     //Enable/Disable rewrites
     HIVE_QL_REWRITE("hive.ql.rewrites", true),
     //Enable/Disable gbToIdx rewrite rule
-    HIVE_QL_RW_GB_TO_IDX("hive.ql.rw.gb_to_idx", false)
+    HIVE_QL_RW_GB_TO_IDX("hive.ql.rw.gb_to_idx", false),
+
+    HIVEOUTERJOINSUPPORTSFILTERS("hive.outerjoin.supports.filters", true),
+
+    // Serde for FetchTask
+    HIVEFETCHOUTPUTSERDE("hive.fetch.output.serde", "org.apache.hadoop.hive.serde2.DelimitedJSONSerDe")
+
     ;
+
 
     public final String varname;
     public final String defaultVal;

@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hive.ql;
 
+import static org.apache.hadoop.hive.metastore.MetaStoreUtils.DEFAULT_DATABASE_NAME;
+
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.File;
@@ -28,6 +30,7 @@ import java.io.PrintStream;
 import java.io.Serializable;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -37,6 +40,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import junit.framework.Test;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -58,12 +62,19 @@ import org.apache.hadoop.hive.ql.parse.ParseException;
 import org.apache.hadoop.hive.ql.parse.SemanticAnalyzer;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
 import org.apache.hadoop.hive.ql.session.SessionState;
+import org.apache.hadoop.hive.serde.Constants;
+import org.apache.hadoop.hive.serde2.thrift.ThriftDeserializer;
+import org.apache.hadoop.hive.serde2.thrift.test.Complex;
 import org.apache.hadoop.hive.shims.HadoopShims;
 import org.apache.hadoop.hive.shims.ShimLoader;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.SequenceFileInputFormat;
 import org.apache.hadoop.mapred.SequenceFileOutputFormat;
 import org.apache.hadoop.mapred.TextInputFormat;
+import org.apache.thrift.protocol.TBinaryProtocol;
+import org.apache.hadoop.hbase.MiniZooKeeperCluster;
+import org.apache.zookeeper.ZooKeeper;
+import org.apache.hadoop.hive.ql.lockmgr.zookeeper.ZooKeeperHiveLockManager;
 
 /**
  * QTestUtil.
@@ -80,11 +91,15 @@ public class QTestUtil {
   private final String logDir;
   private final TreeMap<String, String> qMap;
   private final Set<String> qSkipSet;
-  private final LinkedList<String> srcTables;
+  public static final HashSet<String> srcTables = new HashSet<String>
+    (Arrays.asList(new String [] {
+        "src", "src1", "srcbucket", "srcbucket2", "src_json", "src_thrift",
+        "src_sequencefile", "srcpart"
+      }));
 
   private ParseDriver pd;
   private Hive db;
-  protected final HiveConf conf;
+  protected HiveConf conf;
   private Driver drv;
   private SemanticAnalyzer sem;
   private FileSystem fs;
@@ -94,6 +109,7 @@ public class QTestUtil {
   private HadoopShims.MiniDFSShim dfs = null;
   private boolean miniMr = false;
   private String hadoopVer = null;
+  private QTestSetup setup = null;
 
   public boolean deleteDirectory(File path) {
     if (path.exists()) {
@@ -180,7 +196,22 @@ public class QTestUtil {
     return null;
   }
 
-  public QTestUtil(String outDir, String logDir, boolean miniMr, String hadoopVer) throws Exception {
+  public void initConf() throws Exception {
+    if (miniMr) {
+      assert dfs != null;
+      assert mr != null;
+      // set fs.default.name to the uri of mini-dfs
+      conf.setVar(HiveConf.ConfVars.HADOOPFS, dfs.getFileSystem().getUri().toString());
+      // hive.metastore.warehouse.dir needs to be set relative to the mini-dfs
+      conf.setVar(HiveConf.ConfVars.METASTOREWAREHOUSE, 
+                  (new Path(dfs.getFileSystem().getUri().toString(),
+                            "/build/ql/test/data/warehouse/")).toString());
+      conf.setVar(HiveConf.ConfVars.HADOOPJT, "localhost:" + mr.getJobTrackerPort());
+    }
+  }
+
+  public QTestUtil(String outDir, String logDir, boolean miniMr, String hadoopVer)
+    throws Exception {
     this.outDir = outDir;
     this.logDir = logDir;
     conf = new HiveConf(Driver.class);
@@ -193,17 +224,10 @@ public class QTestUtil {
       dfs = ShimLoader.getHadoopShims().getMiniDfs(conf, 4, true, null);
       FileSystem fs = dfs.getFileSystem();
       mr = new MiniMRCluster(4, fs.getUri().toString(), 1);
-
-      // hive.metastore.warehouse.dir needs to be set relative to the jobtracker
-      String fsName = conf.get("fs.default.name");
-      assert fsName != null;
-      conf.set("hive.metastore.warehouse.dir", fsName
-          .concat("/build/ql/test/data/warehouse/"));
-
-      conf.set("mapred.job.tracker", "localhost:" + mr.getJobTrackerPort());
     }
 
-    // System.out.println(conf.toString());
+    initConf();
+
     testFiles = conf.get("test.data.files").replace('\\', '/')
         .replace("c:", "");
 
@@ -213,8 +237,8 @@ public class QTestUtil {
       overWrite = true;
     }
 
-    srcTables = new LinkedList<String>();
-
+    setup = new QTestSetup();
+    setup.preTest(conf);
     init();
   }
 
@@ -286,8 +310,40 @@ public class QTestUtil {
     dis.close();
   }
 
+  /**
+   * Clear out any side effects of running tests
+   */
+  public void clearPostTestEffects () throws Exception {
+    setup.postTest(conf);
+  }
+
+  /**
+   * Clear out any side effects of running tests
+   */
+  public void clearTestSideEffects () throws Exception {
+    // Delete any tables other than the source tables
+    // and any databases other than the default database.
+    for (String dbName : db.getAllDatabases()) {
+      db.setCurrentDatabase(dbName);
+      for (String tblName : db.getAllTables()) {
+        if (!DEFAULT_DATABASE_NAME.equals(dbName) || !srcTables.contains(tblName)) {
+          db.dropTable(dbName, tblName);
+        }
+      }
+      if (!DEFAULT_DATABASE_NAME.equals(dbName)) {
+        db.dropDatabase(dbName);
+      }
+    }
+    db.setCurrentDatabase(DEFAULT_DATABASE_NAME);
+
+    // allocate and initialize a new conf since a test can
+    // modify conf by using 'set' commands
+    conf = new HiveConf (Driver.class);
+    initConf();
+    setup.preTest(conf);
+  }
+
   public void cleanUp() throws Exception {
-    String warehousePath = ((new URI(testWarehouse)).getPath());
     // Drop any tables that remain due to unsuccessful runs
     for (String s : new String[] {"src", "src1", "src_json", "src_thrift",
         "src_sequencefile", "srcpart", "srcbucket", "srcbucket2", "dest1",
@@ -295,21 +351,28 @@ public class QTestUtil {
         "dest_g1", "dest_g2", "fetchtask_ioexception"}) {
       db.dropTable(MetaStoreUtils.DEFAULT_DATABASE_NAME, s);
     }
-    for (String s : new String[] {"dest4.out", "union.out"}) {
-      deleteDirectory(new File(warehousePath, s));
+
+    // delete any contents in the warehouse dir
+    Path p = new Path(testWarehouse);
+    FileSystem fs = p.getFileSystem(conf);
+    FileStatus [] ls = fs.listStatus(p);
+    for (int i=0; (ls != null) && (i<ls.length); i++) {
+      fs.delete(ls[i].getPath(), true);
     }
+
     FunctionRegistry.unregisterTemporaryUDF("test_udaf");
     FunctionRegistry.unregisterTemporaryUDF("test_error");
+    setup.tearDown();
   }
 
   private void runLoadCmd(String loadCmd) throws Exception {
     int ecode = 0;
     ecode = drv.run(loadCmd).getResponseCode();
+    drv.close();
     if (ecode != 0) {
       throw new Exception("load command: " + loadCmd
           + " failed with exit code= " + ecode);
     }
-
     return;
   }
 
@@ -324,9 +387,8 @@ public class QTestUtil {
     return;
   }
 
-  public void createSources() throws Exception { /*
-    // Next create the three tables src, dest1 and dest2 each with two columns
-    // key and value
+  public void createSources() throws Exception {
+    // Create a bunch of tables with columns key and value
     LinkedList<String> cols = new LinkedList<String>();
     cols.add("key");
     cols.add("value");
@@ -336,10 +398,8 @@ public class QTestUtil {
     part_cols.add("hr");
     db.createTable("srcpart", cols, part_cols, TextInputFormat.class,
         IgnoreKeyTextOutputFormat.class);
-    srcTables.add("srcpart");
 
     Path fpath;
-    Path newfpath;
     HashMap<String, String> part_spec = new HashMap<String, String>();
     for (String ds : new String[] {"2008-04-08", "2008-04-09"}) {
       for (String hr : new String[] {"11", "12"}) {
@@ -349,11 +409,8 @@ public class QTestUtil {
         // System.out.println("Loading partition with spec: " + part_spec);
         // db.createPartition(srcpart, part_spec);
         fpath = new Path(testFiles, "kv1.txt");
-        newfpath = new Path(tmppath, "kv1.txt");
-        fs.copyFromLocalFile(false, true, fpath, newfpath);
-        fpath = newfpath;
         // db.loadPartition(fpath, srcpart.getName(), part_spec, true);
-        runLoadCmd("LOAD DATA INPATH '" + newfpath.toString()
+        runLoadCmd("LOAD DATA LOCAL INPATH '" + fpath.toString()
             + "' OVERWRITE INTO TABLE srcpart PARTITION (ds='" + ds + "',hr='"
             + hr + "')");
       }
@@ -363,12 +420,9 @@ public class QTestUtil {
     runCreateTableCmd("CREATE TABLE srcbucket(key int, value string) CLUSTERED BY (key) INTO 2 BUCKETS STORED AS TEXTFILE");
     // db.createTable("srcbucket", cols, null, TextInputFormat.class,
     // IgnoreKeyTextOutputFormat.class, 2, bucketCols);
-    srcTables.add("srcbucket");
     for (String fname : new String[] {"srcbucket0.txt", "srcbucket1.txt"}) {
       fpath = new Path(testFiles, fname);
-      newfpath = new Path(tmppath, fname);
-      fs.copyFromLocalFile(false, true, fpath, newfpath);
-      runLoadCmd("LOAD DATA INPATH '" + newfpath.toString()
+      runLoadCmd("LOAD DATA LOCAL INPATH '" + fpath.toString()
           + "' INTO TABLE srcbucket");
     }
 
@@ -376,26 +430,21 @@ public class QTestUtil {
         + "CLUSTERED BY (key) INTO 4 BUCKETS STORED AS TEXTFILE");
     // db.createTable("srcbucket", cols, null, TextInputFormat.class,
     // IgnoreKeyTextOutputFormat.class, 2, bucketCols);
-    srcTables.add("srcbucket2");
     for (String fname : new String[] {"srcbucket20.txt", "srcbucket21.txt",
         "srcbucket22.txt", "srcbucket23.txt"}) {
       fpath = new Path(testFiles, fname);
-      newfpath = new Path(tmppath, fname);
-      fs.copyFromLocalFile(false, true, fpath, newfpath);
-      runLoadCmd("LOAD DATA INPATH '" + newfpath.toString()
+      runLoadCmd("LOAD DATA LOCAL INPATH '" + fpath.toString()
           + "' INTO TABLE srcbucket2");
     }
 
     for (String tname : new String[] {"src", "src1"}) {
       db.createTable(tname, cols, null, TextInputFormat.class,
           IgnoreKeyTextOutputFormat.class);
-      srcTables.add(tname);
     }
     db.createTable("src_sequencefile", cols, null,
         SequenceFileInputFormat.class, SequenceFileOutputFormat.class);
-    srcTables.add("src_sequencefile");
 
-    Table srcThrift = new Table("src_thrift");
+    Table srcThrift = new Table(db.getCurrentDatabase(), "src_thrift");
     srcThrift.setInputFormatClass(SequenceFileInputFormat.class.getName());
     srcThrift.setOutputFormatClass(SequenceFileOutputFormat.class.getName());
     srcThrift.setSerializationLib(ThriftDeserializer.class.getName());
@@ -404,52 +453,35 @@ public class QTestUtil {
     srcThrift.setSerdeParam(Constants.SERIALIZATION_FORMAT,
         TBinaryProtocol.class.getName());
     db.createTable(srcThrift);
-    srcTables.add("src_thrift");
 
     LinkedList<String> json_cols = new LinkedList<String>();
     json_cols.add("json");
     db.createTable("src_json", json_cols, null, TextInputFormat.class,
         IgnoreKeyTextOutputFormat.class);
-    srcTables.add("src_json");
 
     // load the input data into the src table
     fpath = new Path(testFiles, "kv1.txt");
-    newfpath = new Path(tmppath, "kv1.txt");
-    fs.copyFromLocalFile(false, true, fpath, newfpath);
-    // db.loadTable(newfpath, "src", false);
-    runLoadCmd("LOAD DATA INPATH '" + newfpath.toString() + "' INTO TABLE src");
+    runLoadCmd("LOAD DATA LOCAL INPATH '" + fpath.toString() + "' INTO TABLE src");
 
     // load the input data into the src table
     fpath = new Path(testFiles, "kv3.txt");
-    newfpath = new Path(tmppath, "kv3.txt");
-    fs.copyFromLocalFile(false, true, fpath, newfpath);
-    // db.loadTable(newfpath, "src1", false);
-    runLoadCmd("LOAD DATA INPATH '" + newfpath.toString() + "' INTO TABLE src1");
+    runLoadCmd("LOAD DATA LOCAL INPATH '" + fpath.toString() + "' INTO TABLE src1");
 
     // load the input data into the src_sequencefile table
     fpath = new Path(testFiles, "kv1.seq");
-    newfpath = new Path(tmppath, "kv1.seq");
-    fs.copyFromLocalFile(false, true, fpath, newfpath);
-    // db.loadTable(newfpath, "src_sequencefile", true);
-    runLoadCmd("LOAD DATA INPATH '" + newfpath.toString()
+    runLoadCmd("LOAD DATA LOCAL INPATH '" + fpath.toString()
         + "' INTO TABLE src_sequencefile");
 
     // load the input data into the src_thrift table
     fpath = new Path(testFiles, "complex.seq");
-    newfpath = new Path(tmppath, "complex.seq");
-    fs.copyFromLocalFile(false, true, fpath, newfpath);
-    // db.loadTable(newfpath, "src_thrift", true);
-    runLoadCmd("LOAD DATA INPATH '" + newfpath.toString()
+    runLoadCmd("LOAD DATA LOCAL INPATH '" + fpath.toString()
         + "' INTO TABLE src_thrift");
 
     // load the json data into the src_json table
     fpath = new Path(testFiles, "json.txt");
-    newfpath = new Path(tmppath, "json.txt");
-    fs.copyFromLocalFile(false, true, fpath, newfpath);
-    // db.loadTable(newfpath, "src_json", false);
-    runLoadCmd("LOAD DATA INPATH '" + newfpath.toString()
+    runLoadCmd("LOAD DATA LOCAL INPATH '" + fpath.toString()
         + "' INTO TABLE src_json");
-*/
+
   }
 
   public void init() throws Exception {
@@ -485,7 +517,7 @@ public class QTestUtil {
 
     db.createTable("dest3", cols, part_cols, TextInputFormat.class,
         IgnoreKeyTextOutputFormat.class);
-    Table dest3 = db.getTable(MetaStoreUtils.DEFAULT_DATABASE_NAME, "dest3");
+    Table dest3 = db.getTable("dest3");
 
     HashMap<String, String> part_spec = new HashMap<String, String>();
     part_spec.put("ds", "2008-04-08");
@@ -503,7 +535,7 @@ public class QTestUtil {
   }
 
   public void cliInit(String tname, boolean recreate) throws Exception {
-    if (miniMr || recreate) {
+    if (recreate) {
       cleanUp();
       createSources();
     }
@@ -525,6 +557,7 @@ public class QTestUtil {
       oldSs.out.close();
     }
     SessionState.start(ss);
+
     cliDriver = new CliDriver();
     if (tname.equals("init_file.q")) {
       ss.initFiles.add("../data/scripts/test_init_file.sql");
@@ -580,8 +613,7 @@ public class QTestUtil {
   public int checkNegativeResults(String tname, Exception e) throws Exception {
 
     File qf = new File(outDir, tname);
-    File expf = new File(outDir);
-    expf = new File(expf, qf.getName().concat(".out"));
+    String expf = outPath(outDir.toString(), tname.concat(".out"));
 
     File outf = null;
     outf = new File(logDir);
@@ -599,7 +631,7 @@ public class QTestUtil {
     outfd.write(e.getMessage());
     outfd.close();
 
-    String cmdLine = "diff " + outf.getPath() + " " + expf.getPath();
+    String cmdLine = "diff " + outf.getPath() + " " + expf;
     System.out.println(cmdLine);
 
     Process executor = Runtime.getRuntime().exec(cmdLine);
@@ -616,7 +648,7 @@ public class QTestUtil {
 
     if (exitVal != 0 && overWrite) {
       System.out.println("Overwriting results");
-      cmdLine = "cp " + outf.getPath() + " " + expf.getPath();
+      cmdLine = "cp " + outf.getPath() + " " + expf;
       executor = Runtime.getRuntime().exec(cmdLine);
       exitVal = executor.waitFor();
     }
@@ -628,7 +660,7 @@ public class QTestUtil {
 
     if (tree != null) {
       File parseDir = new File(outDir, "parse");
-      File expf = new File(parseDir, tname.concat(".out"));
+      String expf = outPath(parseDir.toString(), tname.concat(".out"));
 
       File outf = null;
       outf = new File(logDir);
@@ -638,7 +670,7 @@ public class QTestUtil {
       outfd.write(tree.toStringTree());
       outfd.close();
 
-      String cmdLine = "diff " + outf.getPath() + " " + expf.getPath();
+      String cmdLine = "diff " + outf.getPath() + " " + expf;
       System.out.println(cmdLine);
 
       Process executor = Runtime.getRuntime().exec(cmdLine);
@@ -655,7 +687,7 @@ public class QTestUtil {
 
       if (exitVal != 0 && overWrite) {
         System.out.println("Overwriting results");
-        cmdLine = "cp " + outf.getPath() + " " + expf.getPath();
+        cmdLine = "cp " + outf.getPath() + " " + expf;
         executor = Runtime.getRuntime().exec(cmdLine);
         exitVal = executor.waitFor();
       }
@@ -670,7 +702,7 @@ public class QTestUtil {
 
     if (tasks != null) {
       File planDir = new File(outDir, "plan");
-      File planFile = new File(planDir, tname.concat(".xml"));
+      String planFile = outPath(planDir.toString(), tname + ".xml");
 
       File outf = null;
       outf = new File(logDir);
@@ -688,10 +720,11 @@ public class QTestUtil {
       cmdArray[3] = "\\(\\(<java version=\".*\" class=\"java.beans.XMLDecoder\">\\)"
           + "\\|\\(<string>.*/tmp/.*</string>\\)"
           + "\\|\\(<string>file:.*</string>\\)"
+          + "\\|\\(<string>pfile:.*</string>\\)"
           + "\\|\\(<string>[0-9]\\{10\\}</string>\\)"
           + "\\|\\(<string>/.*/warehouse/.*</string>\\)\\)";
       cmdArray[4] = outf.getPath();
-      cmdArray[5] = planFile.getPath();
+      cmdArray[5] = planFile;
       System.out.println(cmdArray[0] + " " + cmdArray[1] + " " + cmdArray[2]
           + "\'" + cmdArray[3] + "\'" + " " + cmdArray[4] + " " + cmdArray[5]);
 
@@ -709,7 +742,7 @@ public class QTestUtil {
 
       if (exitVal != 0 && overWrite) {
         System.out.println("Overwriting results");
-        String cmdLine = "cp " + outf.getPath() + " " + planFile.getPath();
+        String cmdLine = "cp " + outf.getPath() + " " + planFile;
         executor = Runtime.getRuntime().exec(cmdLine);
         exitVal = executor.waitFor();
       }
@@ -722,6 +755,7 @@ public class QTestUtil {
   }
 
 
+  /* This seems unused. Comment out first in case it is used somewhere.
   public int checkResults(String tname) throws Exception {
     Path warehousePath = new Path(FileSystem.get(conf).getUri().getPath());
     warehousePath = new Path(warehousePath, (new URI(testWarehouse)).getPath());
@@ -798,6 +832,7 @@ public class QTestUtil {
 
     return exitVal;
   }
+  */
 
   /**
    * Given the current configurations (e.g., hadoop version and execution mode), return
@@ -807,7 +842,7 @@ public class QTestUtil {
    * @return The file name appended with the configuration values if it exists.
    */
   public String outPath(String outDir, String testName) {
-    String ret = testName;
+    String ret = (new File(outDir, testName)).getPath();
     // List of configurations. Currently the list consists of hadoop version and execution mode only
     List<String> configs = new ArrayList<String>();
     configs.add(this.hadoopVer);
@@ -843,12 +878,18 @@ public class QTestUtil {
     cmdArray = new String[] {
         "diff", "-a",
         "-I", "file:",
+        "-I", "pfile:",
+        "-I", "hdfs:",
         "-I", "/tmp/",
         "-I", "invalidscheme:",
         "-I", "lastUpdateTime",
         "-I", "lastAccessTime",
-        "-I", "owner",
+        "-I", "[Oo]wner",
+        "-I", "CreateTime",
+        "-I", "LastAccessTime",
+        "-I", "Location",
         "-I", "transient_lastDdlTime",
+        "-I", "last_modified_",
         "-I", "java.lang.RuntimeException",
         "-I", "at org",
         "-I", "at sun",
@@ -887,9 +928,15 @@ public class QTestUtil {
   }
 
   public ASTNode parseQuery(String tname) throws Exception {
-
     return pd.parse(qMap.get(tname));
   }
+
+  public void resetParser() throws SemanticException {
+    drv.init();
+    pd = new ParseDriver();
+    sem = new SemanticAnalyzer(conf);
+  }
+
 
   public List<Task<? extends Serializable>> analyzeAST(ASTNode ast) throws Exception {
 
@@ -906,6 +953,59 @@ public class QTestUtil {
 
   public TreeMap<String, String> getQMap() {
     return qMap;
+  }
+
+  /**
+   * QTestSetup defines test fixtures which are reused across testcases,
+   * and are needed before any test can be run
+   */
+  public static class QTestSetup
+  {
+    private MiniZooKeeperCluster zooKeeperCluster = null;
+    private int zkPort;
+    private ZooKeeper zooKeeper;
+
+    public QTestSetup() {
+    }
+
+    public void preTest(HiveConf conf) throws Exception {
+
+      if (zooKeeperCluster == null) {
+        String tmpdir =  System.getProperty("user.dir")+"/../build/ql/tmp";
+        zooKeeperCluster = new MiniZooKeeperCluster();
+        zkPort = zooKeeperCluster.startup(new File(tmpdir, "zookeeper"));
+      }
+
+      if (zooKeeper != null) {
+        zooKeeper.close();
+      }
+
+      int sessionTimeout = conf.getIntVar(HiveConf.ConfVars.HIVE_ZOOKEEPER_SESSION_TIMEOUT);
+      zooKeeper = new ZooKeeper("localhost:" + zkPort, sessionTimeout, null);
+
+      String zkServer = "localhost";
+      conf.set("hive.zookeeper.quorum", zkServer);
+      conf.set("hive.zookeeper.client.port", "" + zkPort);
+    }
+
+    public void postTest(HiveConf conf) throws Exception {
+      if (zooKeeperCluster == null) {
+        return;
+      }
+
+      if (zooKeeper != null) {
+        zooKeeper.close();
+      }
+
+      ZooKeeperHiveLockManager.releaseAllLocks(conf);
+    }
+
+    public void tearDown() throws Exception {
+      if (zooKeeperCluster != null) {
+        zooKeeperCluster.shutdown();
+        zooKeeperCluster = null;
+      }
+    }
   }
 
   /**
@@ -955,17 +1055,18 @@ public class QTestUtil {
    *         (in terms of destination tables)
    */
   public static boolean queryListRunner(File[] qfiles, String[] resDirs,
-      String[] logDirs, boolean mt) {
+                                        String[] logDirs, boolean mt, Test test) {
 
     assert (qfiles.length == resDirs.length);
     assert (qfiles.length == logDirs.length);
     boolean failed = false;
-
     try {
       QTestUtil[] qt = new QTestUtil[qfiles.length];
+      QTestSetup[] qsetup = new QTestSetup[qfiles.length];
       for (int i = 0; i < qfiles.length; i++) {
-        qt[i] = new QTestUtil(resDirs[i], logDirs[i]);
+        qt[i] = new QTestUtil(resDirs[i], logDirs[i], false, "0.20");
         qt[i].addFile(qfiles[i]);
+        qt[i].clearTestSideEffects();
       }
 
       if (mt) {
@@ -973,6 +1074,7 @@ public class QTestUtil {
 
         qt[0].cleanUp();
         qt[0].createSources();
+        qt[0].clearTestSideEffects();
 
         QTRunner[] qtRunners = new QTestUtil.QTRunner[qfiles.length];
         Thread[] qtThread = new Thread[qfiles.length];

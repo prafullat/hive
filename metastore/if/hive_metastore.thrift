@@ -33,6 +33,7 @@ struct Type {
 struct Database {
   1: string name,
   2: string description,
+  3: string locationUri,
 }
 
 // This object holds the information needed by SerDes
@@ -90,14 +91,23 @@ struct Partition {
 
 struct Index {
   1: string       indexName, // unique with in the whole database namespace
+<<<<<<< HEAD:metastore/if/hive_metastore.thrift
   2: string       indexType, // reserved
+=======
+  2: string       indexHandlerClass, // reserved
+>>>>>>> apache_master/trunk:metastore/if/hive_metastore.thrift
   3: string       dbName,
   4: string       origTableName,
   5: i32          createTime,
   6: i32          lastAccessTime,
   7: string       indexTableName,
   8: StorageDescriptor   sd,
+<<<<<<< HEAD:metastore/if/hive_metastore.thrift
   9: map<string, string> parameters
+=======
+  9: map<string, string> parameters,
+  10: bool         deferredRebuild
+>>>>>>> apache_master/trunk:metastore/if/hive_metastore.thrift
 }
 
 // schema of the table/query results etc.
@@ -149,16 +159,16 @@ exception ConfigValSecurityException {
 */
 service ThriftHiveMetastore extends fb303.FacebookService
 {
-  bool create_database(1:string name, 2:string description)
-                                       throws(1:AlreadyExistsException o1, 2:MetaException o2)
+  void create_database(1:Database database) throws(1:AlreadyExistsException o1, 2:InvalidObjectException o2, 3:MetaException o3)
   Database get_database(1:string name) throws(1:NoSuchObjectException o1, 2:MetaException o2)
-  bool drop_database(1:string name)    throws(2:MetaException o2)
-  list<string> get_databases()         throws(1:MetaException o1)
+  void drop_database(1:string name, 2:bool deleteData) throws(1:NoSuchObjectException o1, 2:InvalidOperationException o2, 3:MetaException o3)
+  list<string> get_databases(1:string pattern) throws(1:MetaException o1)
+  list<string> get_all_databases() throws(1:MetaException o1)
 
   // returns the type with given name (make seperate calls for the dependent types if needed)
-  Type get_type(1:string name)  throws(1:MetaException o2)
+  Type get_type(1:string name)  throws(1:MetaException o1, 2:NoSuchObjectException o2)
   bool create_type(1:Type type) throws(1:AlreadyExistsException o1, 2:InvalidObjectException o2, 3:MetaException o3)
-  bool drop_type(1:string type) throws(1:MetaException o2)
+  bool drop_type(1:string type) throws(1:MetaException o1, 2:NoSuchObjectException o2)
   map<string, Type> get_type_all(1:string name)
                                 throws(1:MetaException o2)
 
@@ -181,8 +191,8 @@ service ThriftHiveMetastore extends fb303.FacebookService
   // delete data (including partitions) if deleteData is set to true
   void drop_table(1:string dbname, 2:string name, 3:bool deleteData)
                        throws(1:NoSuchObjectException o1, 2:MetaException o3)
-  list<string> get_tables(1: string db_name, 2: string pattern)
-                       throws (1: MetaException o1)
+  list<string> get_tables(1: string db_name, 2: string pattern) throws (1: MetaException o1)
+  list<string> get_all_tables(1: string db_name) throws (1: MetaException o1)
 
   Table get_table(1:string dbname, 2:string tbl_name)
                        throws (1:MetaException o1, 2:NoSuchObjectException o2)
@@ -226,6 +236,11 @@ service ThriftHiveMetastore extends fb303.FacebookService
   	2:string tbl_name, 3:list<string> part_vals, 4:i16 max_parts=-1)
   	                   throws(1:MetaException o1)
 
+  // get the partitions matching the given partition filter
+  list<Partition> get_partitions_by_filter(1:string db_name 2:string tbl_name
+    3:string filter, 4:i16 max_parts=-1)
+                       throws(1:MetaException o1, 2:NoSuchObjectException o2)
+
   // changes the partition to the new partition object. partition is identified from the part values
   // in the new_part
   void alter_partition(1:string db_name, 2:string tbl_name, 3:Partition new_part)
@@ -247,14 +262,22 @@ service ThriftHiveMetastore extends fb303.FacebookService
                           throws(1: MetaException o1)
   
   //index
+<<<<<<< HEAD:metastore/if/hive_metastore.thrift
   Index add_index(1:Index new_index)
+=======
+  Index add_index(1:Index new_index, 2: Table index_table)
+>>>>>>> apache_master/trunk:metastore/if/hive_metastore.thrift
                        throws(1:InvalidObjectException o1, 2:AlreadyExistsException o2, 3:MetaException o3)
   bool drop_index_by_name(1:string db_name, 2:string tbl_name, 3:string index_name, 4:bool deleteData)
                        throws(1:NoSuchObjectException o1, 2:MetaException o2) 
   Index get_index_by_name(1:string db_name 2:string tbl_name, 3:string index_name)
                        throws(1:MetaException o1, 2:NoSuchObjectException o2)
 
+<<<<<<< HEAD:metastore/if/hive_metastore.thrift
   list<Index> get_indexs(1:string db_name, 2:string tbl_name, 3:i16 max_indexes=-1)
+=======
+  list<Index> get_indexes(1:string db_name, 2:string tbl_name, 3:i16 max_indexes=-1)
+>>>>>>> apache_master/trunk:metastore/if/hive_metastore.thrift
                        throws(1:NoSuchObjectException o1, 2:MetaException o2)
   list<string> get_index_names(1:string db_name, 2:string tbl_name, 3:i16 max_indexes=-1)
                        throws(1:MetaException o2)

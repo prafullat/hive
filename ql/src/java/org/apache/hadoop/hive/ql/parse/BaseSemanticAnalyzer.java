@@ -28,10 +28,11 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
+import org.antlr.runtime.tree.CommonTree;
+import org.antlr.runtime.tree.Tree;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.conf.HiveConf;
-import org.apache.hadoop.hive.metastore.MetaStoreUtils;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.Order;
 import org.apache.hadoop.hive.ql.Context;
@@ -99,6 +100,116 @@ public abstract class BaseSemanticAnalyzer {
   protected static final String RCFILE_OUTPUT = RCFileOutputFormat.class
       .getName();
   protected static final String COLUMNAR_SERDE = ColumnarSerDe.class.getName();
+
+  class RowFormatParams {
+    String fieldDelim = null;
+    String fieldEscape = null;
+    String collItemDelim = null;
+    String mapKeyDelim = null;
+    String lineDelim = null;
+
+    protected void analyzeRowFormat(AnalyzeCreateCommonVars shared, ASTNode child) throws SemanticException {
+      child = (ASTNode) child.getChild(0);
+      int numChildRowFormat = child.getChildCount();
+      for (int numC = 0; numC < numChildRowFormat; numC++) {
+        ASTNode rowChild = (ASTNode) child.getChild(numC);
+        switch (rowChild.getToken().getType()) {
+        case HiveParser.TOK_TABLEROWFORMATFIELD:
+          fieldDelim = unescapeSQLString(rowChild.getChild(0)
+              .getText());
+          if (rowChild.getChildCount() >= 2) {
+            fieldEscape = unescapeSQLString(rowChild
+                .getChild(1).getText());
+          }
+          break;
+        case HiveParser.TOK_TABLEROWFORMATCOLLITEMS:
+          collItemDelim = unescapeSQLString(rowChild
+              .getChild(0).getText());
+          break;
+        case HiveParser.TOK_TABLEROWFORMATMAPKEYS:
+          mapKeyDelim = unescapeSQLString(rowChild.getChild(0)
+              .getText());
+          break;
+        case HiveParser.TOK_TABLEROWFORMATLINES:
+          lineDelim = unescapeSQLString(rowChild.getChild(0)
+              .getText());
+          if (!lineDelim.equals("\n")
+              && !lineDelim.equals("10")) {
+            throw new SemanticException(
+                ErrorMsg.LINES_TERMINATED_BY_NON_NEWLINE.getMsg());
+          }
+          break;
+        default:
+          assert false;
+        }
+      }
+    }
+  }
+
+  class AnalyzeCreateCommonVars {
+    String serde = null;
+    Map<String, String> serdeProps = new HashMap<String, String>();
+  }
+
+  class StorageFormat {
+    String inputFormat = null;
+    String outputFormat = null;
+    String storageHandler = null;
+
+    protected boolean fillStorageFormat(ASTNode child, AnalyzeCreateCommonVars shared) {
+      boolean storageFormat = false;
+      switch(child.getToken().getType()) {
+      case HiveParser.TOK_TBLSEQUENCEFILE:
+        inputFormat = SEQUENCEFILE_INPUT;
+        outputFormat = SEQUENCEFILE_OUTPUT;
+        storageFormat = true;
+        break;
+      case HiveParser.TOK_TBLTEXTFILE:
+        inputFormat = TEXTFILE_INPUT;
+        outputFormat = TEXTFILE_OUTPUT;
+        storageFormat = true;
+        break;
+      case HiveParser.TOK_TBLRCFILE:
+        inputFormat = RCFILE_INPUT;
+        outputFormat = RCFILE_OUTPUT;
+        shared.serde = COLUMNAR_SERDE;
+        storageFormat = true;
+        break;
+      case HiveParser.TOK_TABLEFILEFORMAT:
+        inputFormat = unescapeSQLString(child.getChild(0).getText());
+        outputFormat = unescapeSQLString(child.getChild(1).getText());
+        storageFormat = true;
+        break;
+      case HiveParser.TOK_STORAGEHANDLER:
+        storageHandler = unescapeSQLString(child.getChild(0).getText());
+        if (child.getChildCount() == 2) {
+          readProps(
+            (ASTNode) (child.getChild(1).getChild(0)),
+            shared.serdeProps);
+        }
+        storageFormat = true;
+        break;
+      }
+      return storageFormat;
+    }
+
+    protected void fillDefaultStorageFormat(AnalyzeCreateCommonVars shared) {
+      if ((inputFormat == null) && (storageHandler == null)) {
+        if ("SequenceFile".equalsIgnoreCase(conf.getVar(HiveConf.ConfVars.HIVEDEFAULTFILEFORMAT))) {
+          inputFormat = SEQUENCEFILE_INPUT;
+          outputFormat = SEQUENCEFILE_OUTPUT;
+        } else if ("RCFile".equalsIgnoreCase(conf.getVar(HiveConf.ConfVars.HIVEDEFAULTFILEFORMAT))) {
+          inputFormat = RCFILE_INPUT;
+          outputFormat = RCFILE_OUTPUT;
+          shared.serde = COLUMNAR_SERDE;
+        } else {
+          inputFormat = TEXTFILE_INPUT;
+          outputFormat = TEXTFILE_OUTPUT;
+        }
+      }
+    }
+
+  }
 
   public BaseSemanticAnalyzer(HiveConf conf) throws SemanticException {
     try {
@@ -440,11 +551,12 @@ public abstract class BaseSemanticAnalyzer {
     public Map<String, String> partSpec; // has to use LinkedHashMap to enforce order
     public Partition partHandle;
     public int numDynParts; // number of dynamic partition columns
+    private List<Partition> partitions; // involved partitions in TableScanOperator/FileSinkOperator
 
     public tableSpec(Hive db, HiveConf conf, ASTNode ast)
         throws SemanticException {
 
-      assert (ast.getToken().getType() == HiveParser.TOK_TAB);
+      assert (ast.getToken().getType() == HiveParser.TOK_TAB || ast.getToken().getType() == HiveParser.TOK_TABTYPE);
       int childIndex = 0;
       numDynParts = 0;
 
@@ -457,8 +569,7 @@ public abstract class BaseSemanticAnalyzer {
               + tableName;
         }
 
-        tableHandle = db.getTable(MetaStoreUtils.DEFAULT_DATABASE_NAME,
-            tableName);
+        tableHandle = db.getTable(tableName);
       } catch (InvalidTableException ite) {
         throw new SemanticException(ErrorMsg.INVALID_TABLE.getMsg(ast
             .getChild(0)), ite);
@@ -549,4 +660,16 @@ public abstract class BaseSemanticAnalyzer {
   public void setLineageInfo(LineageInfo linfo) {
     this.linfo = linfo;
   }
+
+  protected HashMap<String, String> extractPartitionSpecs(Tree partspec)
+      throws SemanticException {
+    HashMap<String, String> partSpec = new LinkedHashMap<String, String>();
+    for (int i = 0; i < partspec.getChildCount(); ++i) {
+      CommonTree partspec_val = (CommonTree) partspec.getChild(i);
+      String val = stripQuotes(partspec_val.getChild(1).getText());
+      partSpec.put(partspec_val.getChild(0).getText().toLowerCase(), val);
+    }
+    return partSpec;
+  }
+
 }

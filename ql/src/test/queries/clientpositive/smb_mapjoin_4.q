@@ -1,6 +1,6 @@
-drop table smb_bucket_3;
-drop table smb_bucket_2;
-drop table smb_bucket_1;
+
+
+
 
 create table smb_bucket_1(key int, value string) CLUSTERED BY (key) SORTED BY (key) INTO 1 BUCKETS STORED AS RCFILE; 
 create table smb_bucket_2(key int, value string) CLUSTERED BY (key) SORTED BY (key) INTO 1 BUCKETS STORED AS RCFILE; 
@@ -12,6 +12,7 @@ load data local inpath '../data/files/smbbucket_3.rc' overwrite into table smb_b
 
 set hive.optimize.bucketmapjoin = true;
 set hive.optimize.bucketmapjoin.sortedmerge = true;
+set hive.input.format = org.apache.hadoop.hive.ql.io.BucketizedHiveInputFormat;
  
 explain
 select /*+mapjoin(a,b)*/ * from smb_bucket_1 a join smb_bucket_2 b on a.key = b.key join smb_bucket_3 c on b.key=c.key;
@@ -66,6 +67,6 @@ select /*+mapjoin(a,b)*/ * from smb_bucket_1 a full outer join smb_bucket_2 b on
 select /*+mapjoin(a,b)*/ * from smb_bucket_1 a full outer join smb_bucket_2 b on a.key = b.key full outer join smb_bucket_3 c on b.key=c.key;
 
  
-drop table smb_bucket_3;
-drop table smb_bucket_2;
-drop table smb_bucket_1;
+
+
+

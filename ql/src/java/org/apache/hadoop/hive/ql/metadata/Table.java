@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.common.JavaUtils;
 import org.apache.hadoop.hive.metastore.MetaStoreUtils;
+import org.apache.hadoop.hive.metastore.ProtectMode;
 import org.apache.hadoop.hive.metastore.TableType;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.MetaException;
@@ -96,8 +97,8 @@ public class Table implements Serializable {
     }
   }
 
-  public Table(String name) {
-    this(getEmptyTable(name));
+  public Table(String databaseName, String tableName) {
+    this(getEmptyTable(databaseName, tableName));
   }
 
   /**
@@ -119,7 +120,8 @@ public class Table implements Serializable {
   /**
    * Initialize an emtpy table.
    */
-  static org.apache.hadoop.hive.metastore.api.Table getEmptyTable(String name) {
+  static org.apache.hadoop.hive.metastore.api.Table
+  getEmptyTable(String databaseName, String tableName) {
     StorageDescriptor sd = new StorageDescriptor();
     {
       sd.setSerdeInfo(new SerDeInfo());
@@ -143,8 +145,8 @@ public class Table implements Serializable {
       t.setPartitionKeys(new ArrayList<FieldSchema>());
       t.setParameters(new HashMap<String, String>());
       t.setTableType(TableType.MANAGED_TABLE.toString());
-      t.setTableName(name);
-      t.setDbName(MetaStoreUtils.DEFAULT_DATABASE_NAME);
+      t.setDbName(databaseName);
+      t.setTableName(tableName);
     }
     return t;
   }
@@ -747,6 +749,7 @@ public class Table implements Serializable {
   }
 
   /**
+<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/metadata/Table.java
    *
    * @return Returns true if there is any index available on this basetable
    */
@@ -772,5 +775,59 @@ public class Table implements Serializable {
     } catch (HiveException e) {
     }
     return vIndexNames;
+=======
+   * @param protectMode
+   */
+  public void setProtectMode(ProtectMode protectMode){
+    Map<String, String> parameters = tTable.getParameters();
+    parameters.put(ProtectMode.PARAMETER_NAME, protectMode.toString());
+    tTable.setParameters(parameters);
+  }
+
+  /**
+   * @return protect mode
+   */
+  public ProtectMode getProtectMode(){
+    Map<String, String> parameters = tTable.getParameters();
+
+    if (!parameters.containsKey(ProtectMode.PARAMETER_NAME)) {
+      return new ProtectMode();
+    } else {
+      return ProtectMode.getProtectModeFromString(
+          parameters.get(ProtectMode.PARAMETER_NAME));
+    }
+  }
+
+  /**
+   * @return True protect mode indicates the table if offline.
+   */
+  public boolean isOffline(){
+    return getProtectMode().offline;
+  }
+
+  /**
+   * @return True if protect mode attribute of the partition indicate
+   * that it is OK to drop the partition
+   */
+  public boolean canDrop() {
+    ProtectMode mode = getProtectMode();
+    return (!mode.noDrop && !mode.offline && !mode.readOnly);
+  }
+
+  /**
+   * @return True if protect mode attribute of the table indicate
+   * that it is OK to write the table
+   */
+  public boolean canWrite() {
+    ProtectMode mode = getProtectMode();
+    return (!mode.offline && !mode.readOnly);
+  }
+
+  /**
+   * @return include the db name
+   */
+  public String getCompleteName() {
+    return getDbName() + "@" + getTableName();
+>>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/metadata/Table.java
   }
 };

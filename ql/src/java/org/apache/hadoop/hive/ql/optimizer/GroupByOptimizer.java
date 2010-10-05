@@ -173,14 +173,14 @@ public class GroupByOptimizer implements Transform {
       if (groupByCols.size() == 0) {
         return;
       }
-
+      curr.getConf().setBucketGroup(bucketGroupBy);
       for (String table : tblNames) {
         Operator<? extends Serializable> topOp = pGraphContext.getTopOps().get(
             table);
         if (topOp == null || (!(topOp instanceof TableScanOperator))) {
           // this is in a sub-query.
           // In future, we need to infer subq's columns propery. For example
-          // "select key, count(1) 
+          // "select key, count(1)
           // from (from clustergroupbyselect key, value where ds='210') group by key, 3;",
           // even though the group by op is in a subquery, it can be changed to
           // bucket groupby.
@@ -233,14 +233,14 @@ public class GroupByOptimizer implements Transform {
     /**
      * Given the group by keys, bucket columns, sort column, this method
      * determines if we can use sorted group by or not.
-     * 
+     *
      * We use bucket columns only when the sorted column set is empty and if all
      * group by columns are contained in bucket columns.
-     * 
+     *
      * If we can can not determine by looking at bucketed columns and the table
      * has sort columns, we resort to sort columns. We can use bucket group by
      * if the groupby column set is an exact prefix match of sort columns.
-     * 
+     *
      * @param groupByCols
      * @param bucketCols
      * @param sortCols

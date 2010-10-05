@@ -153,21 +153,23 @@ class Type {
 class Database {
  public:
 
-  static const char* ascii_fingerprint; // = "07A9615F837F7D0A952B595DD3020972";
-  static const uint8_t binary_fingerprint[16]; // = {0x07,0xA9,0x61,0x5F,0x83,0x7F,0x7D,0x0A,0x95,0x2B,0x59,0x5D,0xD3,0x02,0x09,0x72};
+  static const char* ascii_fingerprint; // = "AB879940BD15B6B25691265F7384B271";
+  static const uint8_t binary_fingerprint[16]; // = {0xAB,0x87,0x99,0x40,0xBD,0x15,0xB6,0xB2,0x56,0x91,0x26,0x5F,0x73,0x84,0xB2,0x71};
 
-  Database() : name(""), description("") {
+  Database() : name(""), description(""), locationUri("") {
   }
 
   virtual ~Database() throw() {}
 
   std::string name;
   std::string description;
+  std::string locationUri;
 
   struct __isset {
-    __isset() : name(false), description(false) {}
+    __isset() : name(false), description(false), locationUri(false) {}
     bool name;
     bool description;
+    bool locationUri;
   } __isset;
 
   bool operator == (const Database & rhs) const
@@ -175,6 +177,8 @@ class Database {
     if (!(name == rhs.name))
       return false;
     if (!(description == rhs.description))
+      return false;
+    if (!(locationUri == rhs.locationUri))
       return false;
     return true;
   }
@@ -483,16 +487,27 @@ class Partition {
 class Index {
  public:
 
+<<<<<<< HEAD:metastore/src/gen-cpp/hive_metastore_types.h
   static const char* ascii_fingerprint; // = "A4E842FF5A6136E0F82B26551E846244";
   static const uint8_t binary_fingerprint[16]; // = {0xA4,0xE8,0x42,0xFF,0x5A,0x61,0x36,0xE0,0xF8,0x2B,0x26,0x55,0x1E,0x84,0x62,0x44};
 
   Index() : indexName(""), indexType(""), dbName(""), origTableName(""), createTime(0), lastAccessTime(0), indexTableName("") {
+=======
+  static const char* ascii_fingerprint; // = "5FEE4F7E28935B644F207D74459F6A29";
+  static const uint8_t binary_fingerprint[16]; // = {0x5F,0xEE,0x4F,0x7E,0x28,0x93,0x5B,0x64,0x4F,0x20,0x7D,0x74,0x45,0x9F,0x6A,0x29};
+
+  Index() : indexName(""), indexHandlerClass(""), dbName(""), origTableName(""), createTime(0), lastAccessTime(0), indexTableName(""), deferredRebuild(0) {
+>>>>>>> apache_master/trunk:metastore/src/gen-cpp/hive_metastore_types.h
   }
 
   virtual ~Index() throw() {}
 
   std::string indexName;
+<<<<<<< HEAD:metastore/src/gen-cpp/hive_metastore_types.h
   std::string indexType;
+=======
+  std::string indexHandlerClass;
+>>>>>>> apache_master/trunk:metastore/src/gen-cpp/hive_metastore_types.h
   std::string dbName;
   std::string origTableName;
   int32_t createTime;
@@ -500,11 +515,20 @@ class Index {
   std::string indexTableName;
   StorageDescriptor sd;
   std::map<std::string, std::string>  parameters;
+<<<<<<< HEAD:metastore/src/gen-cpp/hive_metastore_types.h
 
   struct __isset {
     __isset() : indexName(false), indexType(false), dbName(false), origTableName(false), createTime(false), lastAccessTime(false), indexTableName(false), sd(false), parameters(false) {}
     bool indexName;
     bool indexType;
+=======
+  bool deferredRebuild;
+
+  struct __isset {
+    __isset() : indexName(false), indexHandlerClass(false), dbName(false), origTableName(false), createTime(false), lastAccessTime(false), indexTableName(false), sd(false), parameters(false), deferredRebuild(false) {}
+    bool indexName;
+    bool indexHandlerClass;
+>>>>>>> apache_master/trunk:metastore/src/gen-cpp/hive_metastore_types.h
     bool dbName;
     bool origTableName;
     bool createTime;
@@ -512,13 +536,21 @@ class Index {
     bool indexTableName;
     bool sd;
     bool parameters;
+<<<<<<< HEAD:metastore/src/gen-cpp/hive_metastore_types.h
+=======
+    bool deferredRebuild;
+>>>>>>> apache_master/trunk:metastore/src/gen-cpp/hive_metastore_types.h
   } __isset;
 
   bool operator == (const Index & rhs) const
   {
     if (!(indexName == rhs.indexName))
       return false;
+<<<<<<< HEAD:metastore/src/gen-cpp/hive_metastore_types.h
     if (!(indexType == rhs.indexType))
+=======
+    if (!(indexHandlerClass == rhs.indexHandlerClass))
+>>>>>>> apache_master/trunk:metastore/src/gen-cpp/hive_metastore_types.h
       return false;
     if (!(dbName == rhs.dbName))
       return false;
@@ -529,10 +561,19 @@ class Index {
     if (!(lastAccessTime == rhs.lastAccessTime))
       return false;
     if (!(indexTableName == rhs.indexTableName))
+<<<<<<< HEAD:metastore/src/gen-cpp/hive_metastore_types.h
       return false;
     if (!(sd == rhs.sd))
       return false;
     if (!(parameters == rhs.parameters))
+=======
+      return false;
+    if (!(sd == rhs.sd))
+      return false;
+    if (!(parameters == rhs.parameters))
+      return false;
+    if (!(deferredRebuild == rhs.deferredRebuild))
+>>>>>>> apache_master/trunk:metastore/src/gen-cpp/hive_metastore_types.h
       return false;
     return true;
   }

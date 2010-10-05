@@ -60,7 +60,7 @@
 <property>
   <!--  this should eventually be deprecated since the metastore should supply this -->
   <name>hive.metastore.warehouse.dir</name>
-  <value>file://${build.dir}/test/data/warehouse/</value>
+  <value>${test.warehouse.dir}</value>
   <description></description>
 </property>
 
@@ -70,18 +70,6 @@
   <description>
   Required by metastore server or if the uris argument below is not supplied
   </description>
-</property>
-
-<property>
-  <name>fs.default.name</name>
-  <value>file:///</value>
-  <description></description>
-</property>
-
-<property>
-  <name>mapred.job.tracker</name>
-  <value>local</value>
-  <description></description>
 </property>
 
 <property>
@@ -129,7 +117,7 @@
 
 <property>
   <name>hive.exec.pre.hooks</name>
-  <value>org.apache.hadoop.hive.ql.hooks.PreExecutePrinter</value>
+  <value>org.apache.hadoop.hive.ql.hooks.PreExecutePrinter, org.apache.hadoop.hive.ql.hooks.EnforceReadOnlyTables</value>
   <description>Pre Execute Hook for Tests</description>
 </property>
 
@@ -143,6 +131,27 @@
   <name>hive.task.progress</name>
   <value>false</value>
   <description>Track progress of a task</description>
+</property>
+
+<property>
+  <name>hive.support.concurrency</name>
+  <value>true</value>
+  <description>Whether hive supports concurrency or not. A zookeeper instance must be up and running for the default hive lock manager to support read-write locks.</description>
+</property>
+
+<property>
+  <name>fs.pfile.impl</name>
+  <value>org.apache.hadoop.fs.ProxyLocalFileSystem</value>
+  <description>A proxy for local file system used for cross file system testing</description>
+</property>
+
+<property>
+  <name>hive.exec.mode.local.auto</name>
+  <value>false</value>
+  <description>
+    Let hive determine whether to run in local mode automatically
+    Disabling this for tests so that minimr is not affected
+  </description>
 </property>
 
 </configuration>

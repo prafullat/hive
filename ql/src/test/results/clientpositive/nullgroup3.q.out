@@ -1,7 +1,3 @@
-PREHOOK: query: DROP TABLE tstparttbl
-PREHOOK: type: DROPTABLE
-POSTHOOK: query: DROP TABLE tstparttbl
-POSTHOOK: type: DROPTABLE
 PREHOOK: query: CREATE TABLE tstparttbl(KEY STRING, VALUE STRING) PARTITIONED BY(ds string) STORED AS TEXTFILE
 PREHOOK: type: CREATETABLE
 POSTHOOK: query: CREATE TABLE tstparttbl(KEY STRING, VALUE STRING) PARTITIONED BY(ds string) STORED AS TEXTFILE
@@ -78,17 +74,13 @@ PREHOOK: query: select count(1) from tstparttbl
 PREHOOK: type: QUERY
 PREHOOK: Input: default@tstparttbl@ds=2008-04-08
 PREHOOK: Input: default@tstparttbl@ds=2008-04-09
-PREHOOK: Output: file:/data/users/heyongqiang/hive-trunk-commit/build/ql/tmp/429292939/10000
+PREHOOK: Output: file:/tmp/njain/hive_2010-08-17_00-26-16_782_400043420949497617/-mr-10000
 POSTHOOK: query: select count(1) from tstparttbl
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@tstparttbl@ds=2008-04-08
 POSTHOOK: Input: default@tstparttbl@ds=2008-04-09
-POSTHOOK: Output: file:/data/users/heyongqiang/hive-trunk-commit/build/ql/tmp/429292939/10000
+POSTHOOK: Output: file:/tmp/njain/hive_2010-08-17_00-26-16_782_400043420949497617/-mr-10000
 500
-PREHOOK: query: DROP TABLE tstparttbl2
-PREHOOK: type: DROPTABLE
-POSTHOOK: query: DROP TABLE tstparttbl2
-POSTHOOK: type: DROPTABLE
 PREHOOK: query: CREATE TABLE tstparttbl2(KEY STRING, VALUE STRING) PARTITIONED BY(ds string) STORED AS TEXTFILE
 PREHOOK: type: CREATETABLE
 POSTHOOK: query: CREATE TABLE tstparttbl2(KEY STRING, VALUE STRING) PARTITIONED BY(ds string) STORED AS TEXTFILE
@@ -165,17 +157,20 @@ PREHOOK: query: select count(1) from tstparttbl2
 PREHOOK: type: QUERY
 PREHOOK: Input: default@tstparttbl2@ds=2008-04-08
 PREHOOK: Input: default@tstparttbl2@ds=2008-04-09
-PREHOOK: Output: file:/data/users/heyongqiang/hive-trunk-commit/build/ql/tmp/675788842/10000
+PREHOOK: Output: file:/tmp/njain/hive_2010-08-17_00-26-22_475_3755322603416219894/-mr-10000
 POSTHOOK: query: select count(1) from tstparttbl2
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@tstparttbl2@ds=2008-04-08
 POSTHOOK: Input: default@tstparttbl2@ds=2008-04-09
-POSTHOOK: Output: file:/data/users/heyongqiang/hive-trunk-commit/build/ql/tmp/675788842/10000
+POSTHOOK: Output: file:/tmp/njain/hive_2010-08-17_00-26-22_475_3755322603416219894/-mr-10000
 0
 PREHOOK: query: DROP TABLE tstparttbl
 PREHOOK: type: DROPTABLE
+PREHOOK: Input: default@tstparttbl
+PREHOOK: Output: default@tstparttbl
 POSTHOOK: query: DROP TABLE tstparttbl
 POSTHOOK: type: DROPTABLE
+POSTHOOK: Input: default@tstparttbl
 POSTHOOK: Output: default@tstparttbl
 PREHOOK: query: CREATE TABLE tstparttbl(KEY STRING, VALUE STRING) PARTITIONED BY(ds string) STORED AS TEXTFILE
 PREHOOK: type: CREATETABLE
@@ -253,17 +248,20 @@ PREHOOK: query: select count(1) from tstparttbl
 PREHOOK: type: QUERY
 PREHOOK: Input: default@tstparttbl@ds=2008-04-08
 PREHOOK: Input: default@tstparttbl@ds=2008-04-09
-PREHOOK: Output: file:/data/users/heyongqiang/hive-trunk-commit/build/ql/tmp/1506435272/10000
+PREHOOK: Output: file:/tmp/njain/hive_2010-08-17_00-26-28_557_293556059240399525/-mr-10000
 POSTHOOK: query: select count(1) from tstparttbl
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@tstparttbl@ds=2008-04-08
 POSTHOOK: Input: default@tstparttbl@ds=2008-04-09
-POSTHOOK: Output: file:/data/users/heyongqiang/hive-trunk-commit/build/ql/tmp/1506435272/10000
+POSTHOOK: Output: file:/tmp/njain/hive_2010-08-17_00-26-28_557_293556059240399525/-mr-10000
 500
 PREHOOK: query: DROP TABLE tstparttbl2
 PREHOOK: type: DROPTABLE
+PREHOOK: Input: default@tstparttbl2
+PREHOOK: Output: default@tstparttbl2
 POSTHOOK: query: DROP TABLE tstparttbl2
 POSTHOOK: type: DROPTABLE
+POSTHOOK: Input: default@tstparttbl2
 POSTHOOK: Output: default@tstparttbl2
 PREHOOK: query: CREATE TABLE tstparttbl2(KEY STRING, VALUE STRING) PARTITIONED BY(ds string) STORED AS TEXTFILE
 PREHOOK: type: CREATETABLE
@@ -341,20 +339,10 @@ PREHOOK: query: select count(1) from tstparttbl2
 PREHOOK: type: QUERY
 PREHOOK: Input: default@tstparttbl2@ds=2008-04-08
 PREHOOK: Input: default@tstparttbl2@ds=2008-04-09
-PREHOOK: Output: file:/data/users/heyongqiang/hive-trunk-commit/build/ql/tmp/1727986109/10000
+PREHOOK: Output: file:/tmp/njain/hive_2010-08-17_00-26-35_611_7617453415628310797/-mr-10000
 POSTHOOK: query: select count(1) from tstparttbl2
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@tstparttbl2@ds=2008-04-08
 POSTHOOK: Input: default@tstparttbl2@ds=2008-04-09
-POSTHOOK: Output: file:/data/users/heyongqiang/hive-trunk-commit/build/ql/tmp/1727986109/10000
+POSTHOOK: Output: file:/tmp/njain/hive_2010-08-17_00-26-35_611_7617453415628310797/-mr-10000
 0
-PREHOOK: query: DROP TABLE tstparttbl
-PREHOOK: type: DROPTABLE
-POSTHOOK: query: DROP TABLE tstparttbl
-POSTHOOK: type: DROPTABLE
-POSTHOOK: Output: default@tstparttbl
-PREHOOK: query: DROP TABLE tstparttbl2
-PREHOOK: type: DROPTABLE
-POSTHOOK: query: DROP TABLE tstparttbl2
-POSTHOOK: type: DROPTABLE
-POSTHOOK: Output: default@tstparttbl2
