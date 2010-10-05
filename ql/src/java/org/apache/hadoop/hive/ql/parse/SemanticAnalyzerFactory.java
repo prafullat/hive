@@ -120,15 +120,9 @@ public final class SemanticAnalyzerFactory {
       case HiveParser.TOK_SHOW_TABLESTATUS:
       case HiveParser.TOK_SHOWFUNCTIONS:
       case HiveParser.TOK_SHOWPARTITIONS:
-<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/parse/SemanticAnalyzerFactory.java
-      case HiveParser.TOK_CREATEINDEX:
-      case HiveParser.TOK_DROPINDEX:
-      case HiveParser.TOK_ALTERTABLE_FILEFORMAT:
-=======
       case HiveParser.TOK_SHOWLOCKS:
       case HiveParser.TOK_CREATEINDEX:
       case HiveParser.TOK_DROPINDEX:
->>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/parse/SemanticAnalyzerFactory.java
       case HiveParser.TOK_ALTERTABLE_CLUSTER_SORT:
       case HiveParser.TOK_ALTERTABLE_TOUCH:
       case HiveParser.TOK_ALTERTABLE_ARCHIVE:

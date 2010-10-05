@@ -30,16 +30,11 @@ import org.apache.hadoop.hive.ql.hooks.WriteEntity;
  */
 public class DDLWork implements Serializable {
   private static final long serialVersionUID = 1L;
-<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/plan/DDLWork.java
-  private CreateIndexDesc      createIndexDesc;
-  private DropIndexDesc dropIdxDesc;
-=======
   private CreateIndexDesc createIndexDesc;
   private DropIndexDesc dropIdxDesc;
   private CreateDatabaseDesc createDatabaseDesc;
   private SwitchDatabaseDesc switchDatabaseDesc;
   private DropDatabaseDesc dropDatabaseDesc;
->>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/plan/DDLWork.java
   private CreateTableDesc createTblDesc;
   private CreateTableLikeDesc createTblLikeDesc;
   private CreateViewDesc createVwDesc;
@@ -80,8 +75,6 @@ public class DDLWork implements Serializable {
     this.createIndexDesc = createIndex;
   }
   
-<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/plan/DDLWork.java
-=======
   /**
    * @param createDatabaseDesc
    *          Create Database descriptor
@@ -112,7 +105,6 @@ public class DDLWork implements Serializable {
     this.switchDatabaseDesc = switchDatabaseDesc;
   }
 
->>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/plan/DDLWork.java
   /**
    * @param alterTblDesc
    *          alter table descriptor
@@ -303,8 +295,6 @@ public class DDLWork implements Serializable {
     this.dropIdxDesc = dropIndexDesc;
   }
 
-<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/plan/DDLWork.java
-=======
   /**
    * @return Create Database descriptor
    */
@@ -350,7 +340,6 @@ public class DDLWork implements Serializable {
     this.switchDatabaseDesc = switchDatabaseDesc;
   }
 
->>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/plan/DDLWork.java
   /**
    * @return the createTblDesc
    */

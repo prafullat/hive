@@ -444,7 +444,7 @@ public class QBParseInfo {
     lateralViews.add(lateralView);
   }
 
-<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/parse/QBParseInfo.java
+
   public void replaceTable(String sOrigBaseTableAliase, String sNewTableName, String sClauseName) {
     ASTNode astNode = getSrcForAlias(sOrigBaseTableAliase);
     if( astNode == null ) {
@@ -459,7 +459,6 @@ public class QBParseInfo {
     rootSelExpr.getToken().setText("TOK_SELECT");
   }
 
-=======
   public void setIsAnalyzeCommand(boolean isAnalyzeCommand) {
     this.isAnalyzeCommand = isAnalyzeCommand;
   }
@@ -492,6 +491,6 @@ public class QBParseInfo {
     Iterator<String> tName = tableSpecs.keySet().iterator();
     return tableSpecs.get(tName.next());
   }
->>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/parse/QBParseInfo.java
+
 
 }

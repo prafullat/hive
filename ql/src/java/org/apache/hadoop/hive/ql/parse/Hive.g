@@ -88,11 +88,8 @@ TOK_MAP;
 TOK_CREATEDATABASE;
 TOK_CREATETABLE;
 TOK_CREATEINDEX;
-<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/parse/Hive.g
-=======
 TOK_CREATEINDEX_INDEXTBLNAME;
 TOK_DEFERRED_REBUILDINDEX;
->>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/parse/Hive.g
 TOK_DROPINDEX;
 TOK_LIKETABLE;
 TOK_DESCTABLE;
@@ -337,10 +334,6 @@ createTableStatement
 createIndexStatement
 @init { msgs.push("create index statement");}
 @after {msgs.pop();}
-<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/parse/Hive.g
-    : KW_CREATE KW_INDEX indexName=Identifier KW_TYPE typeName=Identifier KW_ON KW_TABLE tab=Identifier LPAREN indexedCols=columnNameList RPAREN tableFileFormat?
-    ->^(TOK_CREATEINDEX $indexName $typeName $tab $indexedCols tableFileFormat?)
-=======
     : KW_CREATE KW_INDEX indexName=Identifier 
       KW_ON KW_TABLE tab=Identifier LPAREN indexedCols=columnNameList RPAREN 
       KW_AS typeName=StringLiteral
@@ -383,7 +376,6 @@ indexProperties
 @after { msgs.pop(); }
     :
       LPAREN propertiesList RPAREN -> ^(TOK_TABLEPROPERTIES propertiesList)
->>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/parse/Hive.g
     ;
 
 dropIndexStatement
@@ -599,11 +591,7 @@ alterIndexRebuild
 @init { msgs.push("update index statement");}
 @after {msgs.pop();}
     : KW_ALTER KW_INDEX indexName=Identifier KW_ON base_table_name=Identifier partitionSpec? KW_REBUILD
-<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/parse/Hive.g
-    ->^(TOK_ALTERINDEX_REBUILD $ base_table_name $indexName partitionSpec?)
-=======
     ->^(TOK_ALTERINDEX_REBUILD $base_table_name $indexName partitionSpec?)
->>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/parse/Hive.g
     ;
 
 fileFormat
@@ -1738,10 +1726,6 @@ KW_TABLE: 'TABLE';
 KW_TABLES: 'TABLES';
 KW_INDEX: 'INDEX';
 KW_REBUILD: 'REBUILD';
-<<<<<<< HEAD:ql/src/java/org/apache/hadoop/hive/ql/parse/Hive.g
-KW_TYPE: 'TYPE';
-=======
->>>>>>> apache_master/trunk:ql/src/java/org/apache/hadoop/hive/ql/parse/Hive.g
 KW_FUNCTIONS: 'FUNCTIONS';
 KW_SHOW: 'SHOW';
 KW_MSCK: 'MSCK';
@@ -1760,7 +1744,6 @@ KW_INPATH: 'INPATH';
 KW_IS: 'IS';
 KW_NULL: 'NULL';
 KW_CREATE: 'CREATE';
-KW_UPDATE: 'UPDATE';
 KW_EXTERNAL: 'EXTERNAL';
 KW_ALTER: 'ALTER';
 KW_CHANGE: 'CHANGE';
