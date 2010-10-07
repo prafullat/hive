@@ -179,37 +179,25 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
   }
 
 
-  private List<Index> getIndexTable(Table baseTableMetaData, List<String> vValidIndexType)  {
-    List<String> vIndexTableName = baseTableMetaData.getIndexTableNames();
-    List<Index> vIndexTable = new ArrayList<Index>();
-    for( int i = 0; i < vIndexTableName.size(); i++) {
-      Index indexTable = null;
-      try {
-        indexTable =
-          m_hiveInstance.getIndex(MetaStoreUtils.DEFAULT_DATABASE_NAME,
-                            baseTableMetaData.getTableName(),
-                            vIndexTableName.get(i));
-
-        if( indexTable == null ) {
-          getLogger().info("Index " + vIndexTableName.get(i) + " could not be found");
-          continue;
+  private List<Index> getIndexes(Table baseTableMetaData, List<String> matchIndexTypes) {
+    List<Index> indexesOnTable = baseTableMetaData.getAllIndexes();
+    List<Index> matchingIndexes = new ArrayList<Index>();
+    for( int i = 0; i < indexesOnTable.size(); i++) {
+      Index index = null;
+      index = indexesOnTable.get(i);
+      // The handler class implies the type of the index (e.g. compact
+      // summary index would be:
+      // "org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler").
+      String indexType = index.getIndexHandlerClass();
+      for( int  j = 0; j < matchIndexTypes.size(); j++ ) {
+        if( indexType.equals(matchIndexTypes.get(j)) ) {
+          matchingIndexes.add(index);
+          break;
         }
-        String sIndexType = indexTable.getIndexType();
-        boolean bValidIndex = false;
-        for( int  j = 0; j < vValidIndexType.size(); j++ ) {
-          if( sIndexType.equalsIgnoreCase(vValidIndexType.get(j)) ) {
-            bValidIndex = true;
-          }
-        }
-        if( bValidIndex ) {
-          vIndexTable.add(indexTable);
-        }
-      } catch (HiveException e) {
       }
     }
-    return vIndexTable;
+    return matchingIndexes;
   }
-
 
   private List<String> getChildColRefNames(ASTNode rootExpr, boolean bOnlyDirectChildren)  {
     return new CollectColRefNames(rootExpr, bOnlyDirectChildren).getColRefs();
@@ -310,8 +298,9 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
     }
 
     List<String> vIdxType = new ArrayList<String>();
-    vIdxType.add(HiveIndex.IndexType.COMPACT_SUMMARY_TABLE.getName());
-    List<Index> vIndexTable = getIndexTable(tableQlMetaData, vIdxType);
+    // XTODO: Hardcoding
+    vIdxType.add("org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler");
+    List<Index> vIndexTable = getIndexes(tableQlMetaData, vIdxType);
     if( vIndexTable.size() == 0 ) {
       getLogger().debug("Table " + sTableName + " does not have compat summary " +
           "index. Cannot apply rewrite " + getName());
@@ -466,7 +455,6 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
       rwContext.m_vIdxKeys = new ArrayList<String>();
       rwContext.m_vIdxKeys.addAll(idxKeyColsNames);
       rwContext.m_bIsDistinct = bIsDistinct;
-      String sIndexType = indexTable.getIndexType();
       rwContext.m_sOrigBaseTableAlias = sTableAlias;
       rwContext.m_bRemoveGroupBy = bRemoveGroupBy;
       if( bOptimizeCount )  {

@@ -592,6 +592,17 @@ public class Hive {
     }
   }
 
+  public List<Index> getIndexesOnTable(String db_name, String tbl_name,
+    short max) throws HiveException {
+    try {
+      return getMSC().listIndexes(db_name, tbl_name, max);
+    } catch (NoSuchObjectException e) {
+      throw new HiveException("Partition or table doesn't exist.", e);
+    } catch (Exception e) {
+      throw new HiveException("Unknow error. Please check logs.", e);
+    }
+  }
+
   /**
    * Drops table along with the data in it. If the table doesn't exist
    * then it is a no-op

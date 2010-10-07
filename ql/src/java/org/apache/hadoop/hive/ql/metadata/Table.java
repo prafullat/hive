@@ -38,6 +38,7 @@ import org.apache.hadoop.hive.metastore.MetaStoreUtils;
 import org.apache.hadoop.hive.metastore.ProtectMode;
 import org.apache.hadoop.hive.metastore.TableType;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
+import org.apache.hadoop.hive.metastore.api.Index;
 import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.Order;
 import org.apache.hadoop.hive.metastore.api.SerDeInfo;
@@ -748,36 +749,42 @@ public class Table implements Serializable {
       != null;
   }
 
-   /**
+  /**
    * @return Returns true if there is any index available on this basetable
    */
   public boolean hasIndex() {
-     return getNumIndexes() > 0;
+     return (getNumIndexes() > 0);
   }
+
   /**
    *
    * @return Returns number of indexes on this table
    */
   public int getNumIndexes()  {
-    return getIndexTableNames().size();
+    return getAllIndexes().size();
   }
+
   /**
-   * @return List containing Index Table names if there is exists indexes on this table
+   * @return List containing Index Table names if there is exists indexes
+   * on this table
    * @throws HiveException
-   **/
-  public List<String> getIndexTableNames() {
-    List<String> vIndexNames = null;
+   */
+  public List<Index> getAllIndexes() {
+    List<Index> indexes = null;
     try {
       Hive hive = Hive.get();
-
-      vIndexNames = hive.getIndexNames(getTTable().getDbName(), getTTable().getTableName(), (short) 1024);
+      indexes = hive.getIndexesOnTable(getTTable().getDbName(),
+                                       getTTable().getTableName(),
+                                       (short) 1024 // max XTODO: Hardcoding
+                                      );
     } catch (HiveException e) {
+      // XTODO: Log error? Re-throw or don't catch?
     }
-    return vIndexNames;
+    return indexes;
+  }
 
-    /*
- *
-    * @param protectMode
+  /**
+   * @param protectMode
    */
   public void setProtectMode(ProtectMode protectMode){
     Map<String, String> parameters = tTable.getParameters();
