@@ -1,11 +1,4 @@
-drop table t;
-create table t(i int, j int) ROW FORMAT DELIMITED FIELDS TERMINATED BY '|';
-LOAD DATA LOCAL INPATH '/home/prafulla/projects/hive-data/t1_data' OVERWRITE INTO TABLE t;
-select * from t where i = 1;
-prafulla
-
 DROP TABLE lineitem;
-drop index lineitem_lshipdate_idx on lineitem;
 CREATE TABLE lineitem (L_ORDERKEY      INT,
                                 L_PARTKEY       INT,
                                 L_SUPPKEY       INT,
@@ -25,8 +18,8 @@ CREATE TABLE lineitem (L_ORDERKEY      INT,
 ROW FORMAT DELIMITED
 FIELDS TERMINATED BY '|';
 
-CREATE INDEX lineitem_lshipdate_idx TYPE COMPACT ON TABLE lineitem(l_shipdate) STORED AS textfile; 
-
+CREATE INDEX lineitem_lshipdate_idx ON TABLE lineitem(l_shipdate) AS 'org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler' WITH DEFERRED REBUILD;
+ALTER INDEX lineitem_lshipdate_idx ON lineitem REBUILD;
 
 set hive.ql.rw.gb_to_idx=true;
 
@@ -93,7 +86,7 @@ group by year(l_shipdate), month(l_shipdate);
 
 
 
-exp select year(l_shipdate) as year,
+explain select year(l_shipdate) as year,
         month(l_shipdate) as month,
         sum(sz)
 from (
@@ -101,19 +94,6 @@ select l_shipdate, size(`_offsets`) as sz
 from default__lineitem_lineitem_lshipdate_idx__
 ) t
 group by year(l_shipdate), month(l_shipdate);
-
-
-
-
-select year(l_shipdate) as year,
-        month(l_shipdate) as month,
-        sum(sz)
-from (
-select l_shipdate, size(`_offsets`) as sz
-from default__tpch10g_lineitem_tpch10g_lineitem_shipdate_idx__
-) t
-group by year(l_shipdate), month(l_shipdate);
-Time taken: 36.005 seconds
 
 
 explain select year(L_SHIPDATE), month(L_SHIPDATE) as month_bkt, COUNT(1)
@@ -143,45 +123,41 @@ lastyear.monthly_shipments as monthly_shipments_delta
     and lastyear.year = thisyear.year;
 
 
+DROP TABLE tbl;
+CREATE TABLE tbl(key int, value int);
+CREATE INDEX tbl_key_idx ON TABLE tbl(key) AS 'org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler' WITH DEFERRED REBUILD;
+ALTER INDEX tbl_key_idx ON tbl REBUILD;
 
-create table src(key int, value int);
-DROP INDEX src_cmpt_sum_idx on src;
-DROP INDEX src1_cmpt_sum_idx on src;
-CREATE INDEX src_cmpt_sum_idx TYPE COMPACT ON TABLE src(key) STORED AS textfile; 
-CREATE INDEX src1_cmpt_sum_idx TYPE COMPACT ON TABLE src(key, value) STORED AS textfile; 
-EXPLAIN select key, count(key) from src where key = 1 group by key;
-EXPLAIN SELECT DISTINCT key FROM src;
-EXPLAIN select count(1) from src;
-EXPLAIN select key, count(key) from src group by key;
-EXPLAIN select count(key) from src;
-EXPLAIN SELECT DISTINCT key FROM src;
-EXPLAIN SELECT key FROM src GROUP BY key;
+EXPLAIN select key, count(key) from tbl where key = 1 group by key;
+EXPLAIN SELECT DISTINCT key FROM tbl;
+EXPLAIN select count(1) from tbl;
+EXPLAIN select key, count(key) from tbl group by key;
+EXPLAIN select count(key) from tbl;
+EXPLAIN SELECT DISTINCT key FROM tbl;
+EXPLAIN SELECT key FROM tbl GROUP BY key;
 
 set hive.ql.rw.gb_to_idx=true;
 
-EXPLAIN SELECT DISTINCT key FROM src;
-EXPLAIN SELECT DISTINCT key, value FROM src;
+EXPLAIN SELECT DISTINCT key FROM tbl;
+EXPLAIN SELECT DISTINCT key, value FROM tbl;
 
-EXPLAIN SELECT key FROM src GROUP BY key;
-EXPLAIN SELECT key FROM src GROUP BY value, key;
-EXPLAIN SELECT key, value FROM src GROUP BY value, key;
+EXPLAIN SELECT key FROM tbl GROUP BY key;
+EXPLAIN SELECT key FROM tbl GROUP BY value, key;
+EXPLAIN SELECT key, value FROM tbl GROUP BY value, key;
 
-EXPLAIN SELECT DISTINCT key, value FROM src WHERE value = 2;
-EXPLAIN SELECT DISTINCT key, value FROM src WHERE value = 2 AND key = 3;
-EXPLAIN SELECT DISTINCT key, value FROM src WHERE value = key;
-
-
-EXPLAIN SELECT key FROM src WHERE key = 3 GROUP BY key;
-EXPLAIN SELECT key, value FROM src WHERE value = 1 GROUP BY key, value;
-
-EXPLAIN SELECT * FROM (SELECT DISTINCT key, value FROM src) v1 WHERE v1.value = 2;
-
-EXPLAIN SELECT key FROM src WHERE value = 2 GROUP BY key;
-EXPLAIN SELECT DISTINCT key, substr(value,2,3) FROM src WHERE value = key;
-EXPLAIN SELECT DISTINCT key, substr(value,2,3) FROM src;
-EXPLAIN SELECT key FROM src GROUP BY key, substr(key,2,3);
+EXPLAIN SELECT DISTINCT key, value FROM tbl WHERE value = 2;
+EXPLAIN SELECT DISTINCT key, value FROM tbl WHERE value = 2 AND key = 3;
+EXPLAIN SELECT DISTINCT key, value FROM tbl WHERE value = key;
 
 
+EXPLAIN SELECT key FROM tbl WHERE key = 3 GROUP BY key;
+EXPLAIN SELECT key, value FROM tbl WHERE value = 1 GROUP BY key, value;
 
-DROP INDEX src_cmpt_sum_idx on src;
-DROP INDEX src1_cmpt_sum_idx on src;
+EXPLAIN SELECT * FROM (SELECT DISTINCT key, value FROM tbl) v1 WHERE v1.value = 2;
+
+EXPLAIN SELECT key FROM tbl WHERE value = 2 GROUP BY key;
+EXPLAIN SELECT DISTINCT key, substr(value,2,3) FROM tbl WHERE value = key;
+EXPLAIN SELECT DISTINCT key, substr(value,2,3) FROM tbl;
+EXPLAIN SELECT key FROM tbl GROUP BY key, substr(key,2,3);
+
+DROP TABLE tbl;

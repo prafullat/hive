@@ -35,7 +35,6 @@ import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.MetaStoreUtils;
 import org.apache.hadoop.hive.metastore.api.Index;
 import org.apache.hadoop.hive.metastore.api.Order;
-import org.apache.hadoop.hive.ql.index.HiveIndex;
 import org.apache.hadoop.hive.ql.lib.DefaultGraphWalker;
 import org.apache.hadoop.hive.ql.lib.DefaultRuleDispatcher;
 import org.apache.hadoop.hive.ql.lib.Node;
@@ -430,7 +429,7 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
             }
 
             //If we have count on some key, check if key is same as idex key,
-            // we can replace it with size(__offset) only in that case
+            // we can replace it with size(`__offset`) only in that case
             if( vvColRefAggFuncInput.get(iAggFuncIdx).size() > 0 )  {
               if( vvColRefAggFuncInput.get(iAggFuncIdx).containsAll(idxKeyColsNames) )  {
                 bOptimizeCount = true;
@@ -459,7 +458,7 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
       rwContext.m_bRemoveGroupBy = bRemoveGroupBy;
       if( bOptimizeCount )  {
         rwContext.m_countAstNode = aggAstNodesList.get(0);
-        rwContext.m_sInputToSize ="_offsets";
+        rwContext.m_sInputToSize ="`_offsets`";
         if( !bRemoveGroupBy )  {
           rwContext.m_bOptimizeCountWithCmplxGbKey = true  ;
           rwContext.m_bRemoveGroupBy = false;
@@ -526,6 +525,10 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
         else  {
           astNode.addChild(colRefNode);
         }
+        if( rwContext.m_bRemoveGroupBy == true ) {
+          // Make the agg func expr list empty
+          qbParseInfo.setAggregationExprsForClause(sClauseName, new LinkedHashMap<String, ASTNode>());
+        }
       }
     }
 
@@ -557,13 +560,13 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
       List<String> vSumInput = new ArrayList<String>();
       vSumInput.add(rwContext.m_sInputToSize);
       ASTNode sumNode = subqueryBlock.newSelectListExpr(true, "size", vSumInput);
-      sumNode.addChild(new ASTNode(new CommonToken(HiveParser.Identifier,"_offset_count")));
+      sumNode.addChild(new ASTNode(new CommonToken(HiveParser.Identifier,"`_offset_count`")));
       selNode.addChild(sumNode);
       if( rwContext.m_countAstNode != null )  {
         ASTNode astNode = rwContext.m_countAstNode;
         astNode.setChild(0, new ASTNode(new CommonToken(HiveParser.Identifier,"sum")));
         ASTNode colRefNode = new ASTNode(new CommonToken(HiveParser.TOK_TABLE_OR_COL, "TOK_TABLE_OR_COL"));
-        colRefNode.addChild(new ASTNode(new CommonToken(HiveParser.Identifier,"_offset_count")));
+        colRefNode.addChild(new ASTNode(new CommonToken(HiveParser.Identifier,"`_offset_count`")));
         astNode.setChild(1, colRefNode);
       }
       subqueryBlock.getParseInfo().setAggregationExprsForClause(sClauseName, new LinkedHashMap<String, ASTNode>());
