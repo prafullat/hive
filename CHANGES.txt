@@ -89,6 +89,15 @@ Trunk -  Unreleased
     HIVE-1624. Patch to allows scripts in S3 location
     (Vaibhav Aggarwal via He Yongqiang)
 
+    HIVE-1427. Add metastore schema migration scripts (0.5 -> 0.6)
+    (Carl Steinback via namit)
+
+    HIVE-1546. Ability to plug custom Semantic Analyzers for Hive Grammar
+    (Ashutosh Chauhan via namit)
+
+    HIVE-537. Hive TypeInfo/ObjectInspector to support union
+    (Amareshwari Sriramadasu via namit)
+
   IMPROVEMENTS
 
     HIVE-1394. Do not update transient_lastDdlTime if the partition is modified by a housekeeping
@@ -162,6 +171,21 @@ Trunk -  Unreleased
 
     HIVE-1378. Return value for map, array, and struct needs to return a string
     (Steven Wong via Ning Zhang)
+
+    HIVE-1364 Increase the maximum length of various metastore fields, and
+    remove TYPE_NAME from COLUMNS primary key (Carl Steinbach via namit)
+
+    HIVE-1693 Make the compile target depend on thrift.home
+    (Eli Collins via namit)
+
+    HIVE-1697. Migration scripts should increase size of PARAM_VALUE in
+    PARTITION_PARAMS (Paul Yang via namit)
+
+    HIVE-1264. Make Hive work with Hadoop security
+    (Todd Lipcon via jvs)
+
+    HIVE-1701. drop support for pre-0.20 Hadoop versions
+    (jvs via Ning Zhang)
 
   OPTIMIZATIONS
 
@@ -321,6 +345,18 @@ Trunk -  Unreleased
     HIVE-1678 Bug in mapjoin followed by another mapjoin
     (Amareshwari Sriramadasu via namit)
 
+    HIVE-1691 Validate partition spec in analyze
+    (Ning Zhang via namit)
+
+    HIVE-1674 count(*) returns wrong result when a mapper returns empty results
+    (Ning Zhang via He Yongqiang)
+
+    HIVE-1376 Simple UDAFs with more than 1 parameter crash on empty row query
+    (Ning Zhang via He Yongqiang)
+
+    HIVE-1699 Incorrect partition pruning ANALYZE TABLE
+    (Ning Zhang via namit)
+
   TESTS
 
     HIVE-1464. improve  test query performance
@@ -336,6 +372,9 @@ Trunk -  Unreleased
 
     HIVE-1601. Hadoop 0.17 ant test broken by HIVE-1523
     (Joydeep Sen Sarma via jvs)
+
+    HIVE-1658. Fix describe [extended] column formatting
+    (Thiruvel Thirumoolan via Ning Zhang)
 
 Release 0.6.0 -  Unreleased
 
@@ -921,6 +960,9 @@ Release 0.6.0 -  Unreleased
     HIVE-1615. Web Interface JSP needs Refactoring for removed
     metastore methods
     (Edward Capriolo via jvs)
+
+    HIVE-1570 referencing an added file by it's name in a transform script does
+    not work in hive local mode (Joydeep Sen Sarma via namit)
 
 Release 0.5.0 -  Unreleased
 

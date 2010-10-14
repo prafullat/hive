@@ -309,8 +309,9 @@ public class HiveConf extends Configuration {
     HIVEOUTERJOINSUPPORTSFILTERS("hive.outerjoin.supports.filters", true),
 
     // Serde for FetchTask
-    HIVEFETCHOUTPUTSERDE("hive.fetch.output.serde", "org.apache.hadoop.hive.serde2.DelimitedJSONSerDe")
+    HIVEFETCHOUTPUTSERDE("hive.fetch.output.serde", "org.apache.hadoop.hive.serde2.DelimitedJSONSerDe"),
 
+    SEMANTIC_ANALYZER_HOOK("hive.semantic.analyzer.hook",null),
     ;
 
 
@@ -596,13 +597,11 @@ public class HiveConf extends Configuration {
    */
   public String getUser() throws IOException {
     try {
-      UserGroupInformation ugi = UserGroupInformation.readFrom(this);
-      if (ugi == null) {
-        ugi = UserGroupInformation.login(this);
-      }
+      UserGroupInformation ugi = ShimLoader.getHadoopShims()
+        .getUGIForConf(this);
       return ugi.getUserName();
-    } catch (LoginException e) {
-      throw (IOException) new IOException().initCause(e);
+    } catch (LoginException le) {
+      throw new IOException(le);
     }
   }
 

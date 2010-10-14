@@ -75,17 +75,17 @@ import org.apache.hadoop.hive.ql.plan.DropDatabaseDesc;
 import org.apache.hadoop.hive.ql.plan.DropIndexDesc;
 import org.apache.hadoop.hive.ql.plan.DropTableDesc;
 import org.apache.hadoop.hive.ql.plan.FetchWork;
+import org.apache.hadoop.hive.ql.plan.LockTableDesc;
 import org.apache.hadoop.hive.ql.plan.MsckDesc;
 import org.apache.hadoop.hive.ql.plan.ShowDatabasesDesc;
 import org.apache.hadoop.hive.ql.plan.ShowFunctionsDesc;
+import org.apache.hadoop.hive.ql.plan.ShowLocksDesc;
 import org.apache.hadoop.hive.ql.plan.ShowPartitionsDesc;
 import org.apache.hadoop.hive.ql.plan.ShowTableStatusDesc;
 import org.apache.hadoop.hive.ql.plan.ShowTablesDesc;
-import org.apache.hadoop.hive.ql.plan.ShowLocksDesc;
-import org.apache.hadoop.hive.ql.plan.LockTableDesc;
-import org.apache.hadoop.hive.ql.plan.UnlockTableDesc;
 import org.apache.hadoop.hive.ql.plan.SwitchDatabaseDesc;
 import org.apache.hadoop.hive.ql.plan.TableDesc;
+import org.apache.hadoop.hive.ql.plan.UnlockTableDesc;
 import org.apache.hadoop.hive.ql.plan.AlterTableDesc.AlterTableTypes;
 import org.apache.hadoop.hive.serde.Constants;
 import org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe;
@@ -593,6 +593,9 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
       outputFormat = RCFILE_OUTPUT;
       serde = COLUMNAR_SERDE;
       break;
+    case HiveParser.TOK_FILEFORMAT_GENERIC:
+      handleGenericFileFormat(child);
+      break;
     }
 
     AlterTableDesc alterTblDesc = new AlterTableDesc(tableName, inputFormat,
@@ -787,9 +790,12 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
       partSpec = getPartSpec(partspec);
     }
 
-    boolean isExt = ast.getChildCount() > 1;
-    DescTableDesc descTblDesc = new DescTableDesc(ctx.getResFile(), tableName,
-        partSpec, isExt);
+    DescTableDesc descTblDesc = new DescTableDesc(ctx.getResFile(), tableName, partSpec);
+    if (ast.getChildCount() == 2) {
+      int descOptions = ast.getChild(1).getType();
+      descTblDesc.setFormatted(descOptions == HiveParser.KW_FORMATTED);
+      descTblDesc.setExt(descOptions == HiveParser.KW_EXTENDED);
+    }
     rootTasks.add(TaskFactory.get(new DDLWork(getInputs(), getOutputs(),
         descTblDesc), conf));
     setFetchTask(createFetchTask(DescTableDesc.getSchema()));

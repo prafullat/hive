@@ -38,6 +38,7 @@ import org.apache.hadoop.hive.metastore.api.Order;
 import org.apache.hadoop.hive.ql.Context;
 import org.apache.hadoop.hive.ql.exec.FetchTask;
 import org.apache.hadoop.hive.ql.exec.Task;
+import org.apache.hadoop.hive.ql.exec.Utilities;
 import org.apache.hadoop.hive.ql.hooks.LineageInfo;
 import org.apache.hadoop.hive.ql.hooks.ReadEntity;
 import org.apache.hadoop.hive.ql.hooks.WriteEntity;
@@ -448,10 +449,17 @@ public abstract class BaseSemanticAnalyzer {
     return getColumns(ast, true);
   }
 
+  protected void handleGenericFileFormat(ASTNode node) throws SemanticException{
+
+  ASTNode child = (ASTNode)node.getChild(0);
+  throw new SemanticException("Unrecognized file format in STORED AS clause:"+
+         " "+ (child == null ? "" : child.getText()));
+  }
+
   /**
    * Get the list of FieldSchema out of the ASTNode.
    */
-  protected List<FieldSchema> getColumns(ASTNode ast, boolean lowerCase) throws SemanticException {
+  public static List<FieldSchema> getColumns(ASTNode ast, boolean lowerCase) throws SemanticException {
     List<FieldSchema> colList = new ArrayList<FieldSchema>();
     int numCh = ast.getChildCount();
     for (int i = 0; i < numCh; i++) {
@@ -515,6 +523,8 @@ public abstract class BaseSemanticAnalyzer {
           + getTypeStringFromAST((ASTNode) typeNode.getChild(1)) + ">";
     case HiveParser.TOK_STRUCT:
       return getStructTypeStringFromAST(typeNode);
+    case HiveParser.TOK_UNIONTYPE:
+      return getUnionTypeStringFromAST(typeNode);
     default:
       return DDLSemanticAnalyzer.getTypeName(typeNode.getType());
     }
@@ -541,6 +551,24 @@ public abstract class BaseSemanticAnalyzer {
     return typeStr;
   }
 
+  private static String getUnionTypeStringFromAST(ASTNode typeNode)
+      throws SemanticException {
+    String typeStr = Constants.UNION_TYPE_NAME + "<";
+    typeNode = (ASTNode) typeNode.getChild(0);
+    int children = typeNode.getChildCount();
+    if (children <= 0) {
+      throw new SemanticException("empty union not allowed.");
+    }
+    for (int i = 0; i < children; i++) {
+      typeStr += getTypeStringFromAST((ASTNode) typeNode.getChild(i));
+      if (i < children - 1) {
+        typeStr += ",";
+      }
+    }
+    typeStr += ">";
+    return typeStr;
+  }
+
   /**
    * tableSpec.
    *
@@ -551,7 +579,9 @@ public abstract class BaseSemanticAnalyzer {
     public Map<String, String> partSpec; // has to use LinkedHashMap to enforce order
     public Partition partHandle;
     public int numDynParts; // number of dynamic partition columns
-    private List<Partition> partitions; // involved partitions in TableScanOperator/FileSinkOperator
+    public List<Partition> partitions; // involved partitions in TableScanOperator/FileSinkOperator
+    public static enum SpecType {TABLE_ONLY, STATIC_PARTITION, DYNAMIC_PARTITION};
+    public SpecType specType;
 
     public tableSpec(Hive db, HiveConf conf, ASTNode ast)
         throws SemanticException {
@@ -577,22 +607,29 @@ public abstract class BaseSemanticAnalyzer {
         throw new SemanticException(ErrorMsg.GENERIC_ERROR.getMsg(ast
             .getChild(childIndex), e.getMessage()), e);
       }
+
       // get partition metadata if partition specified
       if (ast.getChildCount() == 2) {
         childIndex = 1;
         ASTNode partspec = (ASTNode) ast.getChild(1);
+        partitions = new ArrayList<Partition>();
         // partSpec is a mapping from partition column name to its value.
         partSpec = new LinkedHashMap<String, String>(partspec.getChildCount());
         for (int i = 0; i < partspec.getChildCount(); ++i) {
           ASTNode partspec_val = (ASTNode) partspec.getChild(i);
           String val = null;
+          String colName = unescapeIdentifier(partspec_val.getChild(0).getText().toLowerCase());
           if (partspec_val.getChildCount() < 2) { // DP in the form of T partition (ds, hr)
             ++numDynParts;
           } else { // in the form of T partition (ds="2010-03-03")
             val = stripQuotes(partspec_val.getChild(1).getText());
           }
-          partSpec.put(unescapeIdentifier(partspec_val.getChild(0).getText().toLowerCase()), val);
+          partSpec.put(colName, val);
         }
+
+        // check if the columns specified in the partition() clause are actually partition columns
+        Utilities.validatePartSpec(tableHandle, partSpec);
+
         // check if the partition spec is valid
         if (numDynParts > 0) {
           List<FieldSchema> parts = tableHandle.getPartitionKeys();
@@ -613,15 +650,26 @@ public abstract class BaseSemanticAnalyzer {
           	}
         	}
           partHandle = null;
+          specType = SpecType.DYNAMIC_PARTITION;
         } else {
           try {
-            // this doesn't create partition. partition is created in MoveTask
-            partHandle = new Partition(tableHandle, partSpec, null);
-        	} catch (HiveException e) {
-         		throw new SemanticException(
-         		    ErrorMsg.INVALID_PARTITION.getMsg(ast.getChild(childIndex)));
-        	}
+            // this doesn't create partition.
+            partHandle = db.getPartition(tableHandle, partSpec, false);
+            if (partHandle == null) {
+              // if partSpec doesn't exists in DB, return a delegate one
+              // and the actual partition is created in MoveTask
+              partHandle = new Partition(tableHandle, partSpec, null);
+            } else {
+              partitions.add(partHandle);
+            }
+          } catch (HiveException e) {
+            throw new SemanticException(
+                ErrorMsg.INVALID_PARTITION.getMsg(ast.getChild(childIndex)));
+          }
+          specType = SpecType.STATIC_PARTITION;
         }
+      } else {
+        specType = SpecType.TABLE_ONLY;
       }
     }
 
@@ -671,5 +719,4 @@ public abstract class BaseSemanticAnalyzer {
     }
     return partSpec;
   }
-
 }
