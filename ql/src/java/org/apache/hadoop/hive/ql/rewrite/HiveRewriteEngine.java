@@ -30,78 +30,77 @@ import org.apache.hadoop.hive.ql.rewrite.rules.HiveRwRule;
 
 /**
  *
- * HiveRewriteEngine.
- * Query rewrite engine for Hive QL
+ * Query rewrite engine for Hive. Holds a list of rules registry. For each rule, evaluates the
+ * apply condition for the rule, and if it matches, invokes the rewrite method of the rule.
  *
  */
-public class HiveRewriteEngine {
-
+public final class HiveRewriteEngine {
+  // XTODO: Can this be some existing log stream/output in Hive instead? Will be easier to debug.
   private static final Log LOG = LogFactory.getLog("hive.ql.rewrite");
-  private final LinkedList<HiveRwRule> m_rwRules;
-  private Hive m_hiveInstance;
-  private static HiveRewriteEngine stc_Instance;
+  private final LinkedList<HiveRwRule> rwRules;
+  private Hive hiveInstance;
+  private static HiveRewriteEngine rewriteEngineInstance;
 
-  public static HiveRewriteEngine getInstance(Hive hiveDb)  {
-    if( stc_Instance == null ) {
-      stc_Instance = new HiveRewriteEngine(hiveDb);
-      stc_Instance.init();
+  public static HiveRewriteEngine getInstance(Hive hiveInstance) {
+    // XTODO: Does this need to be thread-safe?
+    if (rewriteEngineInstance == null) {
+      rewriteEngineInstance = new HiveRewriteEngine(hiveInstance);
+      rewriteEngineInstance.init();
     }
-    return stc_Instance;
+    return rewriteEngineInstance;
   }
 
 
-  public QB invokeRewrites(QB topQueryBlock)  {
+  public QB invokeRewrites(QB topQueryBlock) {
     LOG.debug("Invoking rewrites on QB(Id "+topQueryBlock.getId()+")");
-    for(int iIdx = 0; iIdx < m_rwRules.size(); iIdx++) {
+    // Invoke the rewrite rules in the same order as they were added to the rwRules list.
+    for (int idx = 0; idx < rwRules.size(); idx++) {
+      HiveRwRule rwRule = rwRules.get(idx);
       QB newRewrittenQb = topQueryBlock;
-      if( m_rwRules.get(iIdx).applyTopDown() == false )  {
-        newRewrittenQb = invokeRewriteInBottomUpWay(topQueryBlock, m_rwRules.get(iIdx));
+      if (!rwRule.applyTopDown()) {
+        newRewrittenQb = invokeRewriteInBottomUpWay(topQueryBlock, rwRule);
+      } else {
+        newRewrittenQb = invokeRewriteInTopDownWay(topQueryBlock, rwRule);
       }
-      else  {
-        newRewrittenQb = invokeRewriteInTopDownWay(topQueryBlock, m_rwRules.get(iIdx));
-      }
-      if( null != newRewrittenQb ) {
+      if (null != newRewrittenQb) {
         topQueryBlock = newRewrittenQb;
       }
     }
     return topQueryBlock;
   }
 
-  public QB invokeRewriteInTopDownWay(QB inputQb, HiveRwRule hiveRwRule)  {
-    //Apply the rewrite on top QB
+  public QB invokeRewriteInTopDownWay(QB inputQb, HiveRwRule hiveRwRule) {
+    // Apply the rewrite on top QB
     QB newRewrittenQb = applyRewrite(hiveRwRule, inputQb);
-    if( null != newRewrittenQb )  {
+    if (null != newRewrittenQb) {
       inputQb = newRewrittenQb;
     }
-    if( newRewrittenQb == null  )  {
+    if (newRewrittenQb == null) {
       inputQb = null;
       return inputQb;
     }
 
-    for( String sSubQueryAlias : inputQb.getSubqAliases() )  {
+    for (String sSubQueryAlias : inputQb.getSubqAliases()) {
       QB childSubQueryQb = inputQb.getSubqForAlias(sSubQueryAlias).getQB();
       QB newQb = invokeRewriteInTopDownWay(childSubQueryQb, hiveRwRule);
-      if( newQb == null )  {
+      if (newQb == null) {
         inputQb.removeSubQuery(sSubQueryAlias);
-      }
-      else if( newQb != childSubQueryQb ) {
+      } else if (newQb != childSubQueryQb) {
         QBExpr qbExpr = new QBExpr(newQb);
         inputQb.replaceSubQuery(sSubQueryAlias, sSubQueryAlias, qbExpr);
       }
-
     }
     return inputQb;
   }
 
 
-  public QB invokeRewriteInBottomUpWay(QB inputQb, HiveRwRule hiveRwRule)  {
-    for( String sSubQueryAlias : inputQb.getSubqAliases() )  {
+  public QB invokeRewriteInBottomUpWay(QB inputQb, HiveRwRule hiveRwRule) {
+    for (String sSubQueryAlias : inputQb.getSubqAliases()) {
       QB childSubQueryQb = inputQb.getSubqForAlias(sSubQueryAlias).getQB();
       QB newQb = invokeRewriteInBottomUpWay(childSubQueryQb, hiveRwRule);
-      if( newQb == null )  {
+      if (newQb == null) {
         inputQb.removeSubQuery(sSubQueryAlias);
-      }
-      else if( newQb != childSubQueryQb ) {
+      } else if (newQb != childSubQueryQb) {
         QBExpr qbExpr = new QBExpr(newQb);
         inputQb.replaceSubQuery(sSubQueryAlias, sSubQueryAlias, qbExpr);
       }
@@ -112,33 +111,31 @@ public class HiveRewriteEngine {
   public QB applyRewrite(HiveRwRule hiveRwRule, QB inputQb)  {
     LOG.debug("Trying " + hiveRwRule.getName() + " rewrite");
     QB newRewrittenQb = inputQb;
-    if( hiveRwRule.canApplyThisRule(inputQb) ) {
+    if (hiveRwRule.canApplyThisRule(inputQb)) {
       LOG.debug("Applying " + hiveRwRule.getName() + " rewrite");
       newRewrittenQb = hiveRwRule.rewriteQb(inputQb);
-      //If rewrites have modified qb,replace our local variable
+      //If rewrites have modified Qb, replace our local variable.
       LOG.debug("Done with rewrite " + hiveRwRule.getName());
     }
     return newRewrittenQb;
   }
 
-
   /**
-   * Initialises rewrite engine.
-   * Adds rewrite rules to m_rwRules
+   * Initializes rewrite engine.
+   * Adds rewrite rules to rwRules
    */
   private void init()  {
-    GbToCompactSumIdxRewrite gbToSumIdxRw = new GbToCompactSumIdxRewrite(m_hiveInstance, LOG);
-    m_rwRules.add(gbToSumIdxRw);
+    // List all the rewrite rules here.
+    GbToCompactSumIdxRewrite gbToSumIdxRw = new GbToCompactSumIdxRewrite(hiveInstance, LOG);
+    rwRules.add(gbToSumIdxRw);
   }
 
   private HiveRewriteEngine(Hive hiveInstance)  {
-    m_rwRules = new LinkedList<HiveRwRule>();
-    m_hiveInstance = hiveInstance;
+    rwRules = new LinkedList<HiveRwRule>();
+    this.hiveInstance = hiveInstance;
   }
 
-
-  public void setHiveDb(Hive hiveInstance) {
-    m_hiveInstance = hiveInstance;
-
+  public void setHiveInstance(Hive hiveInstance) {
+    this.hiveInstance = hiveInstance;
   }
 }

@@ -53,11 +53,10 @@ import org.apache.hadoop.hive.ql.parse.QBParseInfo;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
 
 /**
- * GbToCompactSumIdxRewrite.
- * This rule rewrites group by query to the query over
- * simple tablescan over COPMACT_SUMMARY index, if there is compact
- * summary index on the group by key(s) or the distinct column(s)
- * Eg.
+ * Implements GroupBy clause rewrite using compact index.
+ * This rule rewrites GroupBy query over base table to the query over simple table-scan over
+ * index table, if there is index on the group by key(s) or the distinct column(s).
+ * E.g.
  * <code>
  *   select key
  *   from table
@@ -66,111 +65,114 @@ import org.apache.hadoop.hive.ql.parse.SemanticException;
  *  to
  *  <code>
  *   select key
- *   from table_cmpt_sum_idx;
+ *   from idx_table;
  *  </code>
  * @see org.apache.hadoop.hive.ql.index.HiveIndex
- * @see org.apache.hadoop.hive.ql.index.HiveIndex.COMPACT_SUMMARY_TABLE
+ * @see org.apache.hadoop.hive.ql.index.HiveIndex.CompactIndexHandler
  *
  */
 public class GbToCompactSumIdxRewrite extends HiveRwRule {
-  //See if there is group by or distinct
-  //and check if the columns there is index over the columns involved.
+  // See if there is group by or distinct
+  // and check if the columns there is index over the columns involved.
 
-  private final Hive m_hiveInstance;
+  private final Hive hiveInstance;
   private static int subqueryCounter = 0;
 
 
   public GbToCompactSumIdxRewrite(Hive hiveInstance, Log log) {
     super(log);
-    m_hiveInstance = hiveInstance;
+    this.hiveInstance = hiveInstance;
   }
 
   class GbToCompactSumIdxRewriteContext extends  HiveRwRuleContext {
     public GbToCompactSumIdxRewriteContext()  {
-      m_indexTableMetaData = null;
-      m_sClauseName = null;
-      m_bIsDistinct = false;
-      m_sOrigBaseTableAlias = null;
-      m_bRemoveGroupBy = false;
-      m_bOptimizeCountWithCmplxGbKey = false;
-      m_sColNameToExplode = null;
-      m_countAstNode = null;
+      indexTableMetadata = null;
+      clauseName = null;
+      isDistinct = false;
+      origBaseTableAlias = null;
+      countFuncAstNode = null;
+      removeGroupBy = false;
+      optimizeCountWithCmplxGbKey = false;
+      optimizeCountWithSimpleGbKey = false;
     }
-    public Table m_indexTableMetaData;
-    public String m_sClauseName;
-    public boolean m_bIsDistinct;
-    public String m_sOrigBaseTableAlias;
-    public boolean m_bRemoveGroupBy;
-    public String m_sColNameToExplode;
-    public ASTNode m_countAstNode;
-    public List<String> m_vIdxKeys;
-    public boolean m_bOptimizeCountWithCmplxGbKey;
-    public boolean m_bOptimizeCountWithSimpleGbKey;
-    public String m_sInputToSize;
+    private Table indexTableMetadata;
+    private String clauseName;
+    private boolean isDistinct;
+    private String origBaseTableAlias;
+    private boolean removeGroupBy;
+    private ASTNode countFuncAstNode;
+    private List<String> idxKeyList;
+    private boolean optimizeCountWithCmplxGbKey;
+    private boolean optimizeCountWithSimpleGbKey;
+    private String inputToSizeFunc;
   }
 
   class CollectColRefNames implements NodeProcessor  {
     /**
-     *     Column names of column references found in root ast node
-     *     passed in constructor
+     * Column names of column references found in root AST node
+     * passed in constructor.
      */
-    private final List<String> m_vColNames;
+    private final List<String> colNameList;
     /**
      * If true, Do not return column references which are children of functions
      * Just return column references which are direct children of passed
-     * rootNode
+     * rootNode.
      */
-    private boolean m_bOnlyDirectChildren;
+    private boolean onlyDirectChildren;
+
     public CollectColRefNames(ASTNode rootNode)  {
-      m_vColNames = new ArrayList<String>();
+      colNameList = new ArrayList<String>();
       init(rootNode, false);
     }
-    public CollectColRefNames(ASTNode rootNode, boolean bOnlyDirectChildren)  {
-      m_vColNames = new ArrayList<String>();
-      init(rootNode, bOnlyDirectChildren);
+    public CollectColRefNames(ASTNode rootNode, boolean onlyDirectChildren)  {
+      colNameList = new ArrayList<String>();
+      init(rootNode, onlyDirectChildren);
     }
 
-    private void init(ASTNode rootNode, boolean bOnlyDirectChildren)  {
-      if( rootNode != null )  {
-        ArrayList<Node> alStartNode = new ArrayList<Node>();
-        m_bOnlyDirectChildren = bOnlyDirectChildren;
-        alStartNode.add(rootNode);
+    private void init(ASTNode rootNode, boolean onlyDirectChildren)  {
+      if (rootNode != null)  {
+        ArrayList<Node> startNodeList = new ArrayList<Node>();
+        this.onlyDirectChildren = onlyDirectChildren;
+        startNodeList.add(rootNode);
         Map<Rule, NodeProcessor> noSpecialRule = new HashMap<Rule, NodeProcessor>();
-        DefaultRuleDispatcher ruleDispatcher = new DefaultRuleDispatcher(this, noSpecialRule  , null);
+        DefaultRuleDispatcher ruleDispatcher =
+          new DefaultRuleDispatcher(this, noSpecialRule, null);
         DefaultGraphWalker graphWalker = new DefaultGraphWalker(ruleDispatcher);
         try {
-          graphWalker.startWalking(alStartNode, null);
+          graphWalker.startWalking(startNodeList, null);
         } catch (SemanticException e)  {
           getLogger().warn("Problem while traversing tree");
-          //TODO: Rethrow exception ?
+          // XTODO: Re-throw exception ?
         }
       }
     }
 
     public List<String> getColRefs()  {
-        return m_vColNames;
+        return colNameList;
     }
 
     @Override
     public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx procCtx,
         Object... nodeOutputs) throws SemanticException {
       ASTNode astNode = (ASTNode) nd;
-      if( astNode.getType() == HiveParser.TOK_TABLE_OR_COL )  {
-        if( m_bOnlyDirectChildren == true )  {
-          //If we want only direct children, It must have at 3 prev nodes in
-          //stack in case of select expr and 2 in case of others (rootnode and
-          //tok_table_or_col node)
-          //Eg. For select-list , stack would normaly look like
-          //ROOT_NODE, TOK_SELEXPR, TOK_TABLE_OR_COL i.e. 3 nodes
-          if( !(( stack.size() == 3 &&
-                ((ASTNode)stack.get(1)).getType() ==  HiveParser.TOK_SELEXPR ) ||
-                ( stack.size() == 2 )) ) {
+      if (astNode.getType() == HiveParser.TOK_TABLE_OR_COL)  {
+        if (onlyDirectChildren == true)  {
+          // If we want only direct children, It must have at 3 prev nodes in
+          // stack in case of select expr and 2 in case of others (rootnode and
+          // tok_table_or_col node)
+          // E.g. For select-list , stack would normally look like
+          // ROOT_NODE, TOK_SELEXPR, TOK_TABLE_OR_COL i.e. 3 nodes
+          if (!((stack.size() == 3 &&
+                ((ASTNode)stack.get(1)).getType() ==  HiveParser.TOK_SELEXPR) ||
+                 (stack.size() == 2)
+                )
+             ) {
             return null;
           }
         }
         //COLNAME or COLNAME AS COL_ALIAS
         ASTNode internalNode = (ASTNode) astNode.getChild(0);
-        m_vColNames.add(internalNode.getText().toLowerCase());
+        colNameList.add(internalNode.getText().toLowerCase());
       }
 
       return null;
@@ -181,15 +183,15 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
   private List<Index> getIndexes(Table baseTableMetaData, List<String> matchIndexTypes) {
     List<Index> indexesOnTable = baseTableMetaData.getAllIndexes();
     List<Index> matchingIndexes = new ArrayList<Index>();
-    for( int i = 0; i < indexesOnTable.size(); i++) {
+    for (int i = 0; i < indexesOnTable.size(); i++) {
       Index index = null;
       index = indexesOnTable.get(i);
       // The handler class implies the type of the index (e.g. compact
       // summary index would be:
       // "org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler").
       String indexType = index.getIndexHandlerClass();
-      for( int  j = 0; j < matchIndexTypes.size(); j++ ) {
-        if( indexType.equals(matchIndexTypes.get(j)) ) {
+      for (int  j = 0; j < matchIndexTypes.size(); j++) {
+        if (indexType.equals(matchIndexTypes.get(j))) {
           matchingIndexes.add(index);
           break;
         }
@@ -198,282 +200,281 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
     return matchingIndexes;
   }
 
-  private List<String> getChildColRefNames(ASTNode rootExpr, boolean bOnlyDirectChildren)  {
-    return new CollectColRefNames(rootExpr, bOnlyDirectChildren).getColRefs();
+  private List<String> getChildColRefNames(ASTNode rootExpr, boolean onlyDirectChildren)  {
+    return new CollectColRefNames(rootExpr, onlyDirectChildren).getColRefs();
   }
 
   private List<String> getChildColRefNames(ASTNode rootExpr)  {
     return new CollectColRefNames(rootExpr).getColRefs();
   }
 
-
   @Override
   public boolean canApplyThisRule(QB qb) {
-
-    if( getRwFlag(HiveConf.ConfVars.HIVE_QL_RW_GB_TO_IDX) == false ) {
-      getLogger().debug("Coinfiguration variable " +
-            HiveConf.ConfVars.HIVE_QL_RW_GB_TO_IDX.name() + " is set to false," +
-            "Not doing rewrite " + getName() );
+    if (getRwFlag(HiveConf.ConfVars.HIVE_QL_RW_GB_TO_IDX) == false) {
+      getLogger().debug("Conf variable " + HiveConf.ConfVars.HIVE_QL_RW_GB_TO_IDX.name()
+        + " is set to false, not doing rewrite " + getName());
       return false;
     }
 
     //Multiple table not supported yet
-    if( (qb.getTabAliases().size() != 1) ||
-        (qb.getSubqAliases().size() != 0) ) {
+    if ((qb.getTabAliases().size() != 1) ||
+        (qb.getSubqAliases().size() != 0)) {
       getLogger().debug("Query has more than one table or subqueries, " +
-      		"that is not supported with rewrite " + getName());
+        "that is not supported with rewrite " + getName());
       return false;
     }
 
-    if( qb.getQbJoinTree() != null )  {
+    if (qb.getQbJoinTree() != null)  {
       getLogger().debug("Query has joins, " +
-          "that is not supported with rewrite " + getName());
+        "that is not supported with rewrite " + getName());
       return false;
     }
     //--------------------------------------------
     //Get clause information.
     QBParseInfo qbParseInfo = qb.getParseInfo();
     Set<String> clauseNameSet = qbParseInfo.getClauseNames();
-    if( clauseNameSet.size() != 1 ) {
+    if (clauseNameSet.size() != 1) {
       return false;
     }
-    Iterator<String> itrClauseName = clauseNameSet.iterator();
-    String sClauseName = itrClauseName.next();
+    Iterator<String> clauseNameIter = clauseNameSet.iterator();
+    String clauseName = clauseNameIter.next();
 
     //Check if we have sort-by clause, not yet supported
-    if( qbParseInfo.getSortByForClause(sClauseName) != null )  {
+    if (qbParseInfo.getSortByForClause(clauseName) != null)  {
       getLogger().debug("Query has sortby clause, " +
-          "that is not supported with rewrite " + getName());
+        "that is not supported with rewrite " + getName());
       return false;
     }
     //Check if we have distributed-by clause, not yet supported
-    if( qbParseInfo.getDistributeByForClause(sClauseName) != null)  {
+    if (qbParseInfo.getDistributeByForClause(clauseName) != null)  {
       getLogger().debug("Query has distributeby clause, " +
-          "that is not supported with rewrite " + getName());
+        "that is not supported with rewrite " + getName());
       return false;
     }
 
     //-------------------------------------------
     //Getting agg func information.
-    HashMap<String, ASTNode> mapAggrNodes = qbParseInfo.getAggregationExprsForClause(sClauseName);
-    List< List<String> > vvColRefAggFuncInput = new ArrayList<List<String>>();
-    List<ASTNode> aggAstNodesList = new ArrayList<ASTNode>();
-    if( mapAggrNodes != null )  {
+    HashMap<String, ASTNode> mapAggrNodes = qbParseInfo.getAggregationExprsForClause(clauseName);
+    List<List<String>> colRefAggFuncInputList = new ArrayList<List<String>>();
+    List<ASTNode> aggASTNodesList = new ArrayList<ASTNode>();
+    if (mapAggrNodes != null)  {
       getLogger().debug("Found " + mapAggrNodes.size() + " aggregate functions");
-      if( mapAggrNodes.size() > 1 )  {
+      if (mapAggrNodes.size() > 1)  {
         getLogger().debug("More than 1 agg funcs: Not supported by rewrite " + getName());
         return false;
       }
       Collection<ASTNode> listAggrNodes = mapAggrNodes.values();
       Iterator<ASTNode> it = listAggrNodes.iterator();
-      while( it.hasNext() )  {
+      while (it.hasNext())  {
         ASTNode curNode = it.next();
-        int iChldCnt = curNode.getChildCount();
-        if( iChldCnt != 2 ) {
+        int childCount = curNode.getChildCount();
+        if (childCount != 2) {
           continue;
         }
         ASTNode funcNameNode = (ASTNode) curNode.getChild(0);
-        String sFuncName = funcNameNode.getText();
-        if( sFuncName.equalsIgnoreCase("count") == false ) {
+        String funcName = funcNameNode.getText();
+        if (funcName.toLowerCase().equals("count") == false) {
           getLogger().debug("Agg func other than count is not supported by rewrite " + getName());
           return false;
         }
-        List<String> vAggFuncInp = getChildColRefNames(curNode);
-        vvColRefAggFuncInput.add(vAggFuncInp);
-        aggAstNodesList.add(curNode);
+        List<String> aggFuncInput = getChildColRefNames(curNode);
+        colRefAggFuncInputList.add(aggFuncInput);
+        aggASTNodesList.add(curNode);
       }
     }
     //--------------------------------------------
     //Get Index information.
     Set<String> tableAlisesSet = qb.getTabAliases();
     Iterator<String> tableAliasesItr = tableAlisesSet.iterator();
-    String sTableAlias = tableAliasesItr.next();
-    String sTableName = qb.getTabNameForAlias(sTableAlias);
-    Table tableQlMetaData = qb.getMetaData().getTableForAlias(sTableAlias);
+    String tableAlias = tableAliasesItr.next();
+    String tableName = qb.getTabNameForAlias(tableAlias);
+    Table tableQlMetaData = qb.getMetaData().getTableForAlias(tableAlias);
 
-    if( !tableQlMetaData.hasIndex() ) {
-      getLogger().debug("Table " + sTableName + " does not have indexes. Cannot apply rewrite " + getName());
+    if (!tableQlMetaData.hasIndex()) {
+      getLogger().debug("Table " + tableName + " does not have indexes. Cannot apply rewrite "
+        + getName());
       return false;
     }
 
-    List<String> vIdxType = new ArrayList<String>();
+    List<String> idxType = new ArrayList<String>();
     // XTODO: Hardcoding
-    vIdxType.add("org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler");
-    List<Index> vIndexTable = getIndexes(tableQlMetaData, vIdxType);
-    if( vIndexTable.size() == 0 ) {
-      getLogger().debug("Table " + sTableName + " does not have compat summary " +
-          "index. Cannot apply rewrite " + getName());
+    idxType.add("org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler");
+    List<Index> indexTables = getIndexes(tableQlMetaData, idxType);
+    if (indexTables.size() == 0) {
+      getLogger().debug("Table " + tableName + " does not have compact index. " +
+        "Cannot apply rewrite " + getName());
       return false;
     }
-
-
-
 
     //--------------------------------------------
     //Getting where clause information
-
-    ASTNode whereClause = qbParseInfo.getWhrForClause(sClauseName);
+    ASTNode whereClause = qbParseInfo.getWhrForClause(clauseName);
     List<String> predColRefs = getChildColRefNames(whereClause);
-
 
     //--------------------------------------------
     //Getting select list column names
-    ASTNode rootSelExpr = qbParseInfo.getSelForClause(sClauseName);
-    boolean bIsDistinct = (rootSelExpr.getType() == HiveParser.TOK_SELECTDI);
-    List<String> selColRefNameList = getChildColRefNames(rootSelExpr, bIsDistinct /*bOnlyDirectChildren*/);
-    if( bIsDistinct == true &&
-        selColRefNameList.size() != rootSelExpr.getChildCount() )  {
+    ASTNode rootSelExpr = qbParseInfo.getSelForClause(clauseName);
+    boolean isDistinct = (rootSelExpr.getType() == HiveParser.TOK_SELECTDI);
+    List<String> selColRefNameList = getChildColRefNames(rootSelExpr,
+      isDistinct //onlyDirectChildren
+      );
+    if (isDistinct == true &&
+        selColRefNameList.size() != rootSelExpr.getChildCount())  {
       getLogger().debug("Select-list has distinct and it also has some non-col-ref expression. " +
-      		"Cannot apply the rewrite " + getName());
+        "Cannot apply the rewrite " + getName());
       return false;
     }
 
-    //Getting groupby key information
-    ASTNode groupByNode = qbParseInfo.getGroupByForClause(sClauseName);
-    List<String> gbKeyNameList = getChildColRefNames(groupByNode, true/*bOnlyDirectChildren*/);
+    //Getting GroupBy key information
+    ASTNode groupByNode = qbParseInfo.getGroupByForClause(clauseName);
+    List<String> gbKeyNameList = getChildColRefNames(groupByNode,
+                                                     true //onlyDirectChildren
+                                                    );
     List<String> gbKeyAllColRefList = getChildColRefNames(groupByNode);
 
-    /*
-    if( (groupByNode != null) &&
-        (gbKeyNameList.size() != groupByNode.getChildCount()) )  {
-      getLogger().debug("Group-by-key-list has some non-col-ref expression. " +
-          "Cannot apply the rewrite " + getName());
+    // XTODO: Remove if not needed
+    //
+    //if ((groupByNode != null) &&
+    //    (gbKeyNameList.size() != groupByNode.getChildCount()))  {
+    //  getLogger().debug("Group-by-key-list has some non-col-ref expression. " +
+    //      "Cannot apply the rewrite " + getName());
+    //  return false;
+    //}
+
+    if (colRefAggFuncInputList.size() > 0 && groupByNode == null)  {
+      getLogger().debug("Currently count function needs group by on key columns, "
+        + "Cannot apply this rewrite");
       return false;
     }
-*/
-    if( vvColRefAggFuncInput.size() > 0 && groupByNode == null)  {
-      getLogger().debug("Currently count function needs group by on key columns, Cannot apply this rewrite");
-      return false;
-    }
-
-
-
 
     Index indexTable = null;
-    for( int iIdxTbl = 0;iIdxTbl < vIndexTable.size(); iIdxTbl++)  {
-      boolean bRemoveGroupBy = true;
-      boolean bOptimizeCount = false;
+    for (int iIdxTbl = 0;iIdxTbl < indexTables.size(); iIdxTbl++)  {
+      boolean removeGroupBy = true;
+      boolean optimizeCount = false;
 
-      indexTable = vIndexTable.get(iIdxTbl);
+      indexTable = indexTables.get(iIdxTbl);
 
       //Getting index key columns
-      List<Order> vIdxCols = indexTable.getSd().getSortCols();
+      List<Order> idxColList = indexTable.getSd().getSortCols();
 
       Set<String> idxKeyColsNames = new TreeSet<String>();
-      for( int i = 0;i < vIdxCols.size(); i++) {
-        idxKeyColsNames.add(vIdxCols.get(i).getCol().toLowerCase());
+      for (int i = 0;i < idxColList.size(); i++) {
+        idxKeyColsNames.add(idxColList.get(i).getCol().toLowerCase());
       }
 
 
       //--------------------------------------------
       //Check if all columns in select list are part of index key columns
-      if( idxKeyColsNames.containsAll(selColRefNameList) == false ) {
+      if (idxKeyColsNames.containsAll(selColRefNameList) == false) {
         getLogger().debug("Select list has non index key column : " +
-        		" Cannot use this index  " + indexTable.getIndexName());
+          " Cannot use this index  " + indexTable.getIndexName());
         continue;
       }
 
-      //We need to check if all columns from index appear in select list only
-      //in case of DISTINCT queries, In case group by queries, it is okay as long
-      //as all columns from index appear in group-by-key list.
-      if( bIsDistinct ) {
-        //Check if all columns from index are part of select list too
-        if( selColRefNameList.containsAll(idxKeyColsNames) == false )  {
+      // We need to check if all columns from index appear in select list only
+      // in case of DISTINCT queries, In case group by queries, it is okay as long
+      // as all columns from index appear in group-by-key list.
+      if (isDistinct) {
+        // Check if all columns from index are part of select list too
+        if (selColRefNameList.containsAll(idxKeyColsNames) == false)  {
           getLogger().debug("Index has non select list columns " +
-              " Cannot use this index  " + indexTable.getIndexName());
+            " Cannot use this index  " + indexTable.getIndexName());
           continue;
         }
       }
 
       //--------------------------------------------
-      //Check if all columns in where predicate are part of index key columns
-      //TODO: Currently we allow all predicates , would it be more efficient (or at least not worse)
-      //to read from index_table and not from baseTable ?
-      if( idxKeyColsNames.containsAll(predColRefs) == false ) {
+      // Check if all columns in where predicate are part of index key columns
+      // XTODO: Currently we allow all predicates , would it be more efficient
+      // (or at least not worse) to read from index_table and not from baseTable?
+      if (idxKeyColsNames.containsAll(predColRefs) == false) {
         getLogger().debug("Predicate column ref list has non index key column : " +
-            " Cannot use this index  " + indexTable.getIndexName());
+          " Cannot use this index  " + indexTable.getIndexName());
         continue;
       }
 
-      if( bIsDistinct == false )  {
+      if (isDistinct == false)  {
         //--------------------------------------------
-        //For group by, we need to check if all keys are from index columns
-        //itself. Here gb key order can be different than index columns but that does
-        //not really matter for final result.
-        //Eg. select c1, c2 from src group by c2, c1;
-        //we can rewrite this one to s
-        //select c1, c2 from src_cmpt_sum_idx;
-        if( idxKeyColsNames.containsAll(gbKeyNameList) == false ) {
-          getLogger().debug("Group by key has some non-indexed columns, Cannot apply rewrite " + getName());
+        // For group by, we need to check if all keys are from index columns
+        // itself. Here GB key order can be different than index columns but that does
+        // not really matter for final result.
+        // E.g. select c1, c2 from src group by c2, c1;
+        // we can rewrite this one to:
+        // select c1, c2 from src_cmpt_idx;
+        if (idxKeyColsNames.containsAll(gbKeyNameList) == false) {
+          getLogger().debug("Group by key has some non-indexed columns, Cannot apply rewrite "
+            + getName());
           return false;
         }
 
-        if( idxKeyColsNames.containsAll(gbKeyAllColRefList) == false )  {
-          getLogger().debug("Group by key has some non-indexed columns, Cannot apply rewrite " + getName());
+        if (idxKeyColsNames.containsAll(gbKeyAllColRefList) == false)  {
+          getLogger().debug("Group by key has some non-indexed columns, Cannot apply rewrite "
+            + getName());
           return false;
         }
 
-        if( gbKeyNameList.containsAll(idxKeyColsNames) == false )  {
-          //Gb key and idx key are not same, don't remove groupby, but still do index scan
-          bRemoveGroupBy = false;
+        if (gbKeyNameList.containsAll(idxKeyColsNames) == false)  {
+          // GB key and idx key are not same, don't remove GroupBy, but still do index scan
+          removeGroupBy = false;
         }
 
-        //If we have agg function (currently only COUNT is supported), check if its input are
-        //from index. we currently support only that.
-        if( vvColRefAggFuncInput.size() > 0 )  {
-          for( int iAggFuncIdx = 0; iAggFuncIdx < vvColRefAggFuncInput.size(); iAggFuncIdx++)  {
-            if( idxKeyColsNames.containsAll(vvColRefAggFuncInput.get(iAggFuncIdx)) == false ) {
-              getLogger().debug("Agg Func input is not present in index key columns. " +
-              		"Currently only agg func on index columns are supported by rewrite" + getName());
+        // If we have agg function (currently only COUNT is supported), check if its input are
+        // from index. we currently support only that.
+        if (colRefAggFuncInputList.size() > 0)  {
+          for (int aggFuncIdx = 0; aggFuncIdx < colRefAggFuncInputList.size(); aggFuncIdx++)  {
+            if (idxKeyColsNames.containsAll(colRefAggFuncInputList.get(aggFuncIdx)) == false) {
+              getLogger().debug("Agg Func input is not present in index key columns. Currenlt " +
+                "only agg func on index columns are supported by rewrite" + getName());
               continue;
             }
 
-            //If we have count on some key, check if key is same as idex key,
-            // we can replace it with size(`__offset`) only in that case
-            if( vvColRefAggFuncInput.get(iAggFuncIdx).size() > 0 )  {
-              if( vvColRefAggFuncInput.get(iAggFuncIdx).containsAll(idxKeyColsNames) )  {
-                bOptimizeCount = true;
+            // If we have count on some key, check if key is same as index key,
+            if (colRefAggFuncInputList.get(aggFuncIdx).size() > 0)  {
+              if (colRefAggFuncInputList.get(aggFuncIdx).containsAll(idxKeyColsNames))  {
+                optimizeCount = true;
               }
             }
             else  {
-              bOptimizeCount = true;
+              optimizeCount = true;
             }
           }
-
         }
       }
 
       GbToCompactSumIdxRewriteContext rwContext = new GbToCompactSumIdxRewriteContext();
       try {
-        rwContext.m_indexTableMetaData =
-          m_hiveInstance.getTable(MetaStoreUtils.DEFAULT_DATABASE_NAME, indexTable.getIndexTableName());
+        rwContext.indexTableMetadata =
+          // XTODO: Use the DB of the table instead of DEFAULT_DATABASE_NAME?
+          hiveInstance.getTable(MetaStoreUtils.DEFAULT_DATABASE_NAME,
+            indexTable.getIndexTableName());
       } catch (HiveException e) {
+        // XTODO: Log error?
         return false;
       }
-      rwContext.m_sClauseName = sClauseName;
-      rwContext.m_vIdxKeys = new ArrayList<String>();
-      rwContext.m_vIdxKeys.addAll(idxKeyColsNames);
-      rwContext.m_bIsDistinct = bIsDistinct;
-      rwContext.m_sOrigBaseTableAlias = sTableAlias;
-      rwContext.m_bRemoveGroupBy = bRemoveGroupBy;
-      if( bOptimizeCount )  {
-        rwContext.m_countAstNode = aggAstNodesList.get(0);
-        rwContext.m_sInputToSize ="`_offsets`";
-        if( !bRemoveGroupBy )  {
-          rwContext.m_bOptimizeCountWithCmplxGbKey = true  ;
-          rwContext.m_bRemoveGroupBy = false;
+      rwContext.clauseName = clauseName;
+      rwContext.idxKeyList = new ArrayList<String>();
+      rwContext.idxKeyList.addAll(idxKeyColsNames);
+      rwContext.isDistinct = isDistinct;
+      rwContext.origBaseTableAlias = tableAlias;
+      rwContext.removeGroupBy = removeGroupBy;
+      if (optimizeCount)  {
+        rwContext.countFuncAstNode = aggASTNodesList.get(0);
+        rwContext.inputToSizeFunc ="`_offsets`";
+        if (!removeGroupBy)  {
+          rwContext.optimizeCountWithCmplxGbKey = true;
+          rwContext.removeGroupBy = false;
         }
         else {
-          rwContext.m_bOptimizeCountWithSimpleGbKey = true;
+          rwContext.optimizeCountWithSimpleGbKey = true;
         }
       }
       setContext(rwContext);
-      getLogger().debug("Now rewriting query block id " + qb.getId() +"with " + getName() + " rewrite");
+      getLogger().debug("Now rewriting query block id " + qb.getId() +"with " + getName()
+        + " rewrite");
       return true;
     }
     return false;
   }
-
 
   @Override
   public String getName() {
@@ -483,109 +484,117 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
   @Override
   public QB rewriteQb(QB oldQb) {
     GbToCompactSumIdxRewriteContext rwContext = (GbToCompactSumIdxRewriteContext)getContext();
-    Table indexTable = rwContext.m_indexTableMetaData;
-    String sIndexTableName = indexTable.getTableName();
+    Table indexTable = rwContext.indexTableMetadata;
+    String indexTableName = indexTable.getTableName();
     QBParseInfo qbParseInfo = oldQb.getParseInfo();
 
 
-    String sClauseName = rwContext.m_sClauseName;
+    String clauseName = rwContext.clauseName;
     QBMetaData qbMetaData = oldQb.getMetaData();
-    //In case of complex gb key, we put subquery inside this query which is on index table
-    //So this anyways will be removed.
-    if( rwContext.m_bOptimizeCountWithCmplxGbKey == false )  {
-      //Change query sourcetable to index table.
-      oldQb.replaceTableAlias(rwContext.m_sOrigBaseTableAlias,
-          sIndexTableName/*aliase*/,
-          sIndexTableName/*tableName*/,
-          sClauseName/*clauseName*/);
-      qbMetaData.setSrcForAlias(sIndexTableName, indexTable);
+    // In case of complex GB key, we put sub-query inside this query which is on index table
+    // So this anyways will be removed.
+    if (rwContext.optimizeCountWithCmplxGbKey == false)  {
+      // Change query source table to index table.
+      oldQb.replaceTableAlias(rwContext.origBaseTableAlias
+        ,indexTableName //alias
+        ,indexTableName //tableName
+        ,clauseName // clauseName
+        );
+      qbMetaData.setSrcForAlias(indexTableName, indexTable);
     }
 
-    if( rwContext.m_bIsDistinct ) {
-      //Remove distinct
-      qbParseInfo.clearDistinctFlag(sClauseName);
+    if (rwContext.isDistinct) {
+      // Remove distinct
+      qbParseInfo.clearDistinctFlag(clauseName);
     }
     else  {
-      if( rwContext.m_bRemoveGroupBy == true ) {
-        //Remove groupby
-        qbParseInfo.clearGroupBy(sClauseName);
+      if (rwContext.removeGroupBy == true) {
+        // Remove GroupBy
+        qbParseInfo.clearGroupBy(clauseName);
       }
     }
 
-    if( rwContext.m_bOptimizeCountWithSimpleGbKey == true ) {
-      //Replace count() with size on offset column
-      if( rwContext.m_countAstNode != null )  {
-        ASTNode astNode = rwContext.m_countAstNode;
+    if (rwContext.optimizeCountWithSimpleGbKey == true) {
+      // Replace count() with size on offset column
+      if (rwContext.countFuncAstNode != null)  {
+        ASTNode astNode = rwContext.countFuncAstNode;
         astNode.setChild(0, new ASTNode(new CommonToken(HiveParser.Identifier,"size")));
-        ASTNode colRefNode = new ASTNode(new CommonToken(HiveParser.TOK_TABLE_OR_COL, "TOK_TABLE_OR_COL"));
-        colRefNode.addChild(new ASTNode(new CommonToken(HiveParser.Identifier, rwContext.m_sInputToSize)));
-        if( astNode.getChildCount() == 2 )  {
+        ASTNode colRefNode = new ASTNode(new CommonToken(HiveParser.TOK_TABLE_OR_COL,
+          "TOK_TABLE_OR_COL"));
+        colRefNode.addChild(new ASTNode(new CommonToken(HiveParser.Identifier,
+          rwContext.inputToSizeFunc)));
+        if (astNode.getChildCount() == 2)  {
           astNode.setChild(1, colRefNode);
         }
-        else  {
+        else {
+          // XTODO: assert for assumption (astNode.getChildCount() == 1)?
           astNode.addChild(colRefNode);
         }
-        if( rwContext.m_bRemoveGroupBy == true ) {
+        if (rwContext.removeGroupBy == true) {
           // Make the agg func expr list empty
-          qbParseInfo.setAggregationExprsForClause(sClauseName, new LinkedHashMap<String, ASTNode>());
+          qbParseInfo.setAggregationExprsForClause(clauseName,
+            new LinkedHashMap<String, ASTNode>());
         }
       }
     }
 
-    if( rwContext.m_bOptimizeCountWithCmplxGbKey == true )  {
-      //Add new QueryBlock - SubQuery over idx table
-      //Remove meta data and table from this
-      QBExpr subqueryBlockExpr = new QBExpr("subquery_alias_"+subqueryCounter);
-      //This is subquery
+    if (rwContext.optimizeCountWithCmplxGbKey == true)  {
+      // Add new QueryBlock - SubQuery over idx table
+      // Remove meta data and table from this
+      QBExpr subqueryBlockExpr = new QBExpr("subquery_alias_"+ subqueryCounter);
+      // This is subquery
       subqueryBlockExpr.setOpcode(QBExpr.Opcode.NULLOP);
 
-      QB subqueryBlock = new QB("gdto_idx_"+subqueryCounter, null, true);
+      QB subqueryBlock = new QB("gdto_idx_" + subqueryCounter, null, true);
       subqueryBlockExpr.setQB(subqueryBlock);
-      subqueryBlock.setTabAlias(sIndexTableName, sIndexTableName);
-      subqueryBlock.getMetaData().setSrcForAlias(sIndexTableName, indexTable);
-      //Adding temp insert clause
+      subqueryBlock.setTabAlias(indexTableName, indexTableName);
+      subqueryBlock.getMetaData().setSrcForAlias(indexTableName, indexTable);
+      // Adding temp insert clause
       ASTNode dirNode = new ASTNode(new CommonToken(HiveParser.TOK_DIR, "TOK_DIR"));
       ASTNode tmpFileNode = new ASTNode(new CommonToken(HiveParser.TOK_TMP_FILE, "TOK_TMP_FILE"));
       dirNode.addChild(tmpFileNode);
-      subqueryBlock.getParseInfo().setDestForClause(sClauseName, dirNode);
+      subqueryBlock.getParseInfo().setDestForClause(clauseName, dirNode);
 
       ASTNode selNode = new ASTNode(new CommonToken(HiveParser.TOK_SELECT, "TOK_SELECT"));
 
-      for( int iIdxCnt = 0; iIdxCnt < rwContext.m_vIdxKeys.size(); iIdxCnt++ )  {
-        List<String> vKeyName = new ArrayList<String>();
-        vKeyName.add(rwContext.m_vIdxKeys.get(0));
-        ASTNode selExprNode = subqueryBlock.newSelectListExpr(false, null, vKeyName);
+      for (int idxCnt = 0; idxCnt < rwContext.idxKeyList.size(); idxCnt++)  {
+        List<String> keyNameList = new ArrayList<String>();
+        keyNameList.add(rwContext.idxKeyList.get(0));
+        ASTNode selExprNode = subqueryBlock.newSelectListExpr(false, null, keyNameList);
         selNode.addChild(selExprNode);
       }
-      List<String> vSumInput = new ArrayList<String>();
-      vSumInput.add(rwContext.m_sInputToSize);
-      ASTNode sumNode = subqueryBlock.newSelectListExpr(true, "size", vSumInput);
+      List<String> sumInputList = new ArrayList<String>();
+      sumInputList.add(rwContext.inputToSizeFunc);
+      ASTNode sumNode = subqueryBlock.newSelectListExpr(true, "size", sumInputList);
+      // XOTO: Need to ensure the new identifier `_ofset_count` is unique (not used in
+      // the query block already).
       sumNode.addChild(new ASTNode(new CommonToken(HiveParser.Identifier,"`_offset_count`")));
       selNode.addChild(sumNode);
-      if( rwContext.m_countAstNode != null )  {
-        ASTNode astNode = rwContext.m_countAstNode;
+      if (rwContext.countFuncAstNode != null)  {
+        ASTNode astNode = rwContext.countFuncAstNode;
         astNode.setChild(0, new ASTNode(new CommonToken(HiveParser.Identifier,"sum")));
-        ASTNode colRefNode = new ASTNode(new CommonToken(HiveParser.TOK_TABLE_OR_COL, "TOK_TABLE_OR_COL"));
-        colRefNode.addChild(new ASTNode(new CommonToken(HiveParser.Identifier,"`_offset_count`")));
+        ASTNode colRefNode = new ASTNode(new CommonToken(HiveParser.TOK_TABLE_OR_COL,
+          "TOK_TABLE_OR_COL"));
+        colRefNode.addChild(new ASTNode(new CommonToken(HiveParser.Identifier,
+          "`_offset_count`")));
         astNode.setChild(1, colRefNode);
       }
-      subqueryBlock.getParseInfo().setAggregationExprsForClause(sClauseName, new LinkedHashMap<String, ASTNode>());
-      subqueryBlock.getParseInfo().setDistinctFuncExprForClause(sClauseName, null);
-      subqueryBlock.getParseInfo().setSelExprForClause(sClauseName, selNode);
-      oldQb.removeTable(rwContext.m_sOrigBaseTableAlias);
-      oldQb.setSubqAlias("idx_table_"+subqueryCounter, subqueryBlockExpr);
+      subqueryBlock.getParseInfo().setAggregationExprsForClause(clauseName,
+        new LinkedHashMap<String, ASTNode>());
+      subqueryBlock.getParseInfo().setDistinctFuncExprForClause(clauseName, null);
+      subqueryBlock.getParseInfo().setSelExprForClause(clauseName, selNode);
+      oldQb.removeTable(rwContext.origBaseTableAlias);
+      oldQb.setSubqAlias("idx_table_" + subqueryCounter, subqueryBlockExpr);
       subqueryCounter++;
     }
 
-
-    //We aint changing qb here, what we change is internal information
+    // We aren't changing GB here, what we change is internal information.
     return oldQb;
   }
 
   @Override
   public boolean applyTopDown() {
-    //This rewrite needs to be applied bottom up
+    // This rewrite needs to be applied bottom up
     return false;
   }
-
 }
