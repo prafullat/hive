@@ -32,6 +32,9 @@ import org.apache.hadoop.hive.ql.rewrite.rules.HiveRwRule;
  *
  * Query rewrite engine for Hive. Holds a list of rules registry. For each rule, evaluates the
  * apply condition for the rule, and if it matches, invokes the rewrite method of the rule.
+ * The implementation is loosely based on publicly available paper on query rewrites:
+ * "Extensible/Rule Based Query Rewrite Optimization in Starburst (1992)"
+ * http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.40.7952
  *
  */
 public final class HiveRewriteEngine {
@@ -54,6 +57,7 @@ public final class HiveRewriteEngine {
   public QB invokeRewrites(QB topQueryBlock) {
     LOG.debug("Invoking rewrites on QB(Id "+topQueryBlock.getId()+")");
     // Invoke the rewrite rules in the same order as they were added to the rwRules list.
+    // XTODO: Give examples of both kind of rewrites, top-down & bottom-up
     for (int idx = 0; idx < rwRules.size(); idx++) {
       HiveRwRule rwRule = rwRules.get(idx);
       QB newRewrittenQb = topQueryBlock;
@@ -66,6 +70,7 @@ public final class HiveRewriteEngine {
         topQueryBlock = newRewrittenQb;
       }
     }
+    // XTODO: Print the query block before & after rewrites for each rewrite (with rewrite name)
     return topQueryBlock;
   }
 

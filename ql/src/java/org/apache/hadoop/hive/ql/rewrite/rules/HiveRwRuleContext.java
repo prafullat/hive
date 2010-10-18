@@ -21,6 +21,8 @@ package org.apache.hadoop.hive.ql.rewrite.rules;
 /**
 *
 * Base class for contextual data container/helper for a Hive query rewrite rule.
+* Typical usage involves the "apply condition" rewrite method fills up this context and
+* passes on to the rewrite process method.
 *
 */
 public class HiveRwRuleContext {

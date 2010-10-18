@@ -32,7 +32,6 @@ import java.util.TreeSet;
 import org.antlr.runtime.CommonToken;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.hive.conf.HiveConf;
-import org.apache.hadoop.hive.metastore.MetaStoreUtils;
 import org.apache.hadoop.hive.metastore.api.Index;
 import org.apache.hadoop.hive.metastore.api.Order;
 import org.apache.hadoop.hive.ql.lib.DefaultGraphWalker;
@@ -67,6 +66,11 @@ import org.apache.hadoop.hive.ql.parse.SemanticException;
  *   select key
  *   from idx_table;
  *  </code>
+ *
+ *  XTODO: Enhance the comment by mentioning
+ *  - things that are supported
+ *  - things that are not supported
+ *
  * @see org.apache.hadoop.hive.ql.index.HiveIndex
  * @see org.apache.hadoop.hive.ql.index.HiveIndex.CompactIndexHandler
  *
@@ -76,8 +80,10 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
   // and check if the columns there is index over the columns involved.
 
   private final Hive hiveInstance;
+  // XTODO: Is this thread-safe?
   private static int subqueryCounter = 0;
-
+  private static final String SUPPORTED_INDEX_TYPE =
+    "org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler";
 
   public GbToCompactSumIdxRewrite(Hive hiveInstance, Log log) {
     super(log);
@@ -90,10 +96,11 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
       clauseName = null;
       isDistinct = false;
       origBaseTableAlias = null;
-      countFuncAstNode = null;
       removeGroupBy = false;
+      countFuncAstNode = null;
       optimizeCountWithCmplxGbKey = false;
       optimizeCountWithSimpleGbKey = false;
+      inputToSizeFunc = null;
     }
     private Table indexTableMetadata;
     private String clauseName;
@@ -130,6 +137,8 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
     }
 
     private void init(ASTNode rootNode, boolean onlyDirectChildren)  {
+      onlyDirectChildren = false;
+      // In case of rootNode == null, return empty col ref list.
       if (rootNode != null)  {
         ArrayList<Node> startNodeList = new ArrayList<Node>();
         this.onlyDirectChildren = onlyDirectChildren;
@@ -154,6 +163,10 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
     @Override
     public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx procCtx,
         Object... nodeOutputs) throws SemanticException {
+
+      // The traversal is depth-first search. The stack param here holds the visited node trail
+      // in the traversal.
+
       ASTNode astNode = (ASTNode) nd;
       if (astNode.getType() == HiveParser.TOK_TABLE_OR_COL)  {
         if (onlyDirectChildren == true)  {
@@ -162,6 +175,7 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
           // tok_table_or_col node)
           // E.g. For select-list , stack would normally look like
           // ROOT_NODE, TOK_SELEXPR, TOK_TABLE_OR_COL i.e. 3 nodes
+          // XTODO: Refine this check.
           if (!((stack.size() == 3 &&
                 ((ASTNode)stack.get(1)).getType() ==  HiveParser.TOK_SELEXPR) ||
                  (stack.size() == 2)
@@ -239,13 +253,14 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
     Iterator<String> clauseNameIter = clauseNameSet.iterator();
     String clauseName = clauseNameIter.next();
 
-    //Check if we have sort-by clause, not yet supported
+    // Check if we have sort-by clause, not yet supported,
+    // XTODO: to be supported in future.
     if (qbParseInfo.getSortByForClause(clauseName) != null)  {
       getLogger().debug("Query has sortby clause, " +
         "that is not supported with rewrite " + getName());
       return false;
     }
-    //Check if we have distributed-by clause, not yet supported
+    // Check if we have distributed-by clause, not yet supported
     if (qbParseInfo.getDistributeByForClause(clauseName) != null)  {
       getLogger().debug("Query has distributeby clause, " +
         "that is not supported with rewrite " + getName());
@@ -268,6 +283,8 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
       while (it.hasNext())  {
         ASTNode curNode = it.next();
         int childCount = curNode.getChildCount();
+        // Check that the agg func node has 2 children (count & it's input) before the child
+        // array is accessed.
         if (childCount != 2) {
           continue;
         }
@@ -284,6 +301,7 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
     }
     //--------------------------------------------
     //Get Index information.
+    // XTODO: Move the index check to beginning of the method.
     Set<String> tableAlisesSet = qb.getTabAliases();
     Iterator<String> tableAliasesItr = tableAlisesSet.iterator();
     String tableAlias = tableAliasesItr.next();
@@ -297,8 +315,7 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
     }
 
     List<String> idxType = new ArrayList<String>();
-    // XTODO: Hardcoding
-    idxType.add("org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler");
+    idxType.add(SUPPORTED_INDEX_TYPE);
     List<Index> indexTables = getIndexes(tableQlMetaData, idxType);
     if (indexTables.size() == 0) {
       getLogger().debug("Table " + tableName + " does not have compact index. " +
@@ -332,14 +349,6 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
                                                     );
     List<String> gbKeyAllColRefList = getChildColRefNames(groupByNode);
 
-    // XTODO: Remove if not needed
-    //
-    //if ((groupByNode != null) &&
-    //    (gbKeyNameList.size() != groupByNode.getChildCount()))  {
-    //  getLogger().debug("Group-by-key-list has some non-col-ref expression. " +
-    //      "Cannot apply the rewrite " + getName());
-    //  return false;
-    //}
 
     if (colRefAggFuncInputList.size() > 0 && groupByNode == null)  {
       getLogger().debug("Currently count function needs group by on key columns, "
@@ -418,12 +427,13 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
           removeGroupBy = false;
         }
 
+        // XTODO: See if this can be relaxed.
         // If we have agg function (currently only COUNT is supported), check if its input are
         // from index. we currently support only that.
         if (colRefAggFuncInputList.size() > 0)  {
           for (int aggFuncIdx = 0; aggFuncIdx < colRefAggFuncInputList.size(); aggFuncIdx++)  {
             if (idxKeyColsNames.containsAll(colRefAggFuncInputList.get(aggFuncIdx)) == false) {
-              getLogger().debug("Agg Func input is not present in index key columns. Currenlt " +
+              getLogger().debug("Agg Func input is not present in index key columns. Currently " +
                 "only agg func on index columns are supported by rewrite" + getName());
               continue;
             }
@@ -444,8 +454,7 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
       GbToCompactSumIdxRewriteContext rwContext = new GbToCompactSumIdxRewriteContext();
       try {
         rwContext.indexTableMetadata =
-          // XTODO: Use the DB of the table instead of DEFAULT_DATABASE_NAME?
-          hiveInstance.getTable(MetaStoreUtils.DEFAULT_DATABASE_NAME,
+          hiveInstance.getTable(indexTable.getDbName(),
             indexTable.getIndexTableName());
       } catch (HiveException e) {
         // XTODO: Log error?
@@ -459,6 +468,7 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
       rwContext.removeGroupBy = removeGroupBy;
       if (optimizeCount)  {
         rwContext.countFuncAstNode = aggASTNodesList.get(0);
+        // XTODO: If the index table column name changes, this will need to be updated.
         rwContext.inputToSizeFunc ="`_offsets`";
         if (!removeGroupBy)  {
           rwContext.optimizeCountWithCmplxGbKey = true;
@@ -487,7 +497,6 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
     Table indexTable = rwContext.indexTableMetadata;
     String indexTableName = indexTable.getTableName();
     QBParseInfo qbParseInfo = oldQb.getParseInfo();
-
 
     String clauseName = rwContext.clauseName;
     QBMetaData qbMetaData = oldQb.getMetaData();
@@ -566,7 +575,7 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
       List<String> sumInputList = new ArrayList<String>();
       sumInputList.add(rwContext.inputToSizeFunc);
       ASTNode sumNode = subqueryBlock.newSelectListExpr(true, "size", sumInputList);
-      // XOTO: Need to ensure the new identifier `_ofset_count` is unique (not used in
+      // XOTO: Need to ensure the new identifier `_ofsset_count` is unique (not used in
       // the query block already).
       sumNode.addChild(new ASTNode(new CommonToken(HiveParser.Identifier,"`_offset_count`")));
       selNode.addChild(sumNode);
