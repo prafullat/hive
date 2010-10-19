@@ -29,8 +29,7 @@ import org.apache.hadoop.hive.ql.session.SessionState;
  *
  */
 public abstract class HiveRwRule {
-  // XTODO: Does this need to be static?
-  private static Log logger;
+  private final Log logger;
   private HiveRwRuleContext rwContext;
 
   public HiveRwRule(Log log) {
