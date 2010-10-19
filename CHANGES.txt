@@ -1,4 +1,4 @@
-- Hive Change Log -
+Hive Change Log
 
 Trunk -  Unreleased
 

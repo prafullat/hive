@@ -354,7 +354,7 @@ STAGE PLANS:
                 Group By Operator
                   aggregations:
                         expr: sum(_col1)
-                  bucketGroup: true
+                  bucketGroup: false
                   keys:
                         expr: year(_col0)
                         type: int
@@ -513,7 +513,7 @@ STAGE PLANS:
                 Group By Operator
                   aggregations:
                         expr: sum(_col1)
-                  bucketGroup: true
+                  bucketGroup: false
                   keys:
                         expr: year(_col0)
                         type: int
@@ -1230,7 +1230,7 @@ STAGE PLANS:
                     type: int
               outputColumnNames: key, value
               Group By Operator
-                bucketGroup: true
+                bucketGroup: false
                 keys:
                       expr: key
                       type: int
@@ -1353,7 +1353,7 @@ STAGE PLANS:
                     type: int
               outputColumnNames: value, key
               Group By Operator
-                bucketGroup: true
+                bucketGroup: false
                 keys:
                       expr: value
                       type: int
@@ -1433,7 +1433,7 @@ STAGE PLANS:
                     type: int
               outputColumnNames: value, key
               Group By Operator
-                bucketGroup: true
+                bucketGroup: false
                 keys:
                       expr: value
                       type: int
@@ -1523,7 +1523,7 @@ STAGE PLANS:
                         type: int
                   outputColumnNames: key, value
                   Group By Operator
-                    bucketGroup: true
+                    bucketGroup: false
                     keys:
                           expr: key
                           type: int
@@ -1613,7 +1613,7 @@ STAGE PLANS:
                         type: int
                   outputColumnNames: key, value
                   Group By Operator
-                    bucketGroup: true
+                    bucketGroup: false
                     keys:
                           expr: key
                           type: int
@@ -1703,7 +1703,7 @@ STAGE PLANS:
                         type: int
                   outputColumnNames: key, value
                   Group By Operator
-                    bucketGroup: true
+                    bucketGroup: false
                     keys:
                           expr: key
                           type: int
@@ -1842,7 +1842,7 @@ STAGE PLANS:
                         type: int
                   outputColumnNames: key, value
                   Group By Operator
-                    bucketGroup: true
+                    bucketGroup: false
                     keys:
                           expr: key
                           type: int
@@ -1928,7 +1928,7 @@ STAGE PLANS:
                       type: int
                 outputColumnNames: key, value
                 Group By Operator
-                  bucketGroup: true
+                  bucketGroup: false
                   keys:
                         expr: key
                         type: int
@@ -2027,7 +2027,7 @@ STAGE PLANS:
                         type: int
                   outputColumnNames: key
                   Group By Operator
-                    bucketGroup: true
+                    bucketGroup: false
                     keys:
                           expr: key
                           type: int
@@ -2107,7 +2107,7 @@ STAGE PLANS:
                         type: int
                   outputColumnNames: key, value
                   Group By Operator
-                    bucketGroup: true
+                    bucketGroup: false
                     keys:
                           expr: key
                           type: int
@@ -2189,7 +2189,7 @@ STAGE PLANS:
                     type: int
               outputColumnNames: key, value
               Group By Operator
-                bucketGroup: true
+                bucketGroup: false
                 keys:
                       expr: key
                       type: int

@@ -245,10 +245,6 @@ public class QBParseInfo {
     return destToSelExpr.get(clause);
   }
 
-  public ASTNode getInsertForClause(String sClause)  {
-    return insClauseToAstNode.get(sClause);
-  }
-
   /**
    * Get the Cluster By AST for the clause.
    *
@@ -444,7 +440,6 @@ public class QBParseInfo {
     lateralViews.add(lateralView);
   }
 
-
   public void replaceTable(String sOrigBaseTableAliase, String sNewTableName, String sClauseName) {
     ASTNode astNode = getSrcForAlias(sOrigBaseTableAliase);
     if( astNode == null ) {
@@ -491,6 +486,5 @@ public class QBParseInfo {
     Iterator<String> tName = tableSpecs.keySet().iterator();
     return tableSpecs.get(tName.next());
   }
-
 
 }
