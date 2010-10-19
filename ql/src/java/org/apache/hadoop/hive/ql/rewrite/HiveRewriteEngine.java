@@ -38,7 +38,10 @@ import org.apache.hadoop.hive.ql.rewrite.rules.HiveRwRule;
  *
  */
 public final class HiveRewriteEngine {
-  // XTODO: Can this be some existing log stream/output in Hive instead? Will be easier to debug.
+  // Changing hive.root.logger var to add DEBUG in to the list will
+  // show trace rewrite messages with this category. E.g. either modify
+  // the hive.root.logger in conf/hive-log4j.properties or pass it
+  // as -hiveconf param.
   private static final Log LOG = LogFactory.getLog("hive.ql.rewrite");
   private final LinkedList<HiveRwRule> rwRules;
   private Hive hiveInstance;
