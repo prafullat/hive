@@ -85,7 +85,14 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
     "org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler";
   private static final String COMPACT_IDX_BUCKET_COL = "_bucketname";
   private static final String COMPACT_IDX_OFFSETS_ARRAY_COL = "_offsets";
-  private static ThreadLocal<Integer> subqueryCounter = new ThreadLocal<Integer>();
+  private static ThreadLocal<Integer> subqueryCounter =
+    new ThreadLocal<Integer> () {
+      @Override
+      protected Integer initialValue() {
+        return new Integer(0);
+    }
+  };
+
 
   private void incrementSubqueryCounter(int incr) {
     subqueryCounter.set(subqueryCounter.get() + incr);
@@ -149,7 +156,6 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
     private void init(ASTNode rootNode, boolean onlyDirectChildren) throws SemanticException {
       this.onlyDirectChildren = onlyDirectChildren;
       this.rootNode = rootNode;
-
       // In case of rootNode == null, return empty col ref list.
       if (rootNode != null)  {
         ArrayList<Node> startNodeList = new ArrayList<Node>();
@@ -615,12 +621,12 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
     if (rwContext.optimizeCountWithCmplxGbKey == true)  {
       // Add new QueryBlock - SubQuery over idx table. Remove meta data and table from this.
       // Assumption: This generated QBExpr name is not already being used in the query.
-      QBExpr subqueryBlockExpr = new QBExpr("_rw_gen_subquery_alias_"+ subqueryCounter);
+      QBExpr subqueryBlockExpr = new QBExpr("_rw_gen_subquery_alias_" + subqueryCounter.get());
       // This is subquery
       subqueryBlockExpr.setOpcode(QBExpr.Opcode.NULLOP);
 
       // Assumption: This generated QB name is not already being used in the query.
-      QB subqueryBlock = new QB("_rw_gen_gb_to_idx_" + subqueryCounter, null, true);
+      QB subqueryBlock = new QB("_rw_gen_gb_to_idx_" + subqueryCounter.get(), null, true);
       subqueryBlockExpr.setQB(subqueryBlock);
       subqueryBlock.setTabAlias(indexTableName, indexTableName);
       subqueryBlock.getMetaData().setSrcForAlias(indexTableName, indexTable);
@@ -650,7 +656,7 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
         ASTNode colRefNode = new ASTNode(new CommonToken(HiveParser.TOK_TABLE_OR_COL,
           "TOK_TABLE_OR_COL"));
         colRefNode.addChild(new ASTNode(new CommonToken(HiveParser.Identifier,
-          "`_offset_count`")));
+          "_rw_gen_offset_count")));
         astNode.setChild(1, colRefNode);
       }
       subqueryBlock.getParseInfo().setAggregationExprsForClause(clauseName,
@@ -658,7 +664,7 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
       subqueryBlock.getParseInfo().setDistinctFuncExprForClause(clauseName, null);
       subqueryBlock.getParseInfo().setSelExprForClause(clauseName, selNode);
       oldQb.removeTable(rwContext.origBaseTableAlias);
-      oldQb.setSubqAlias("idx_table_" + subqueryCounter, subqueryBlockExpr);
+      oldQb.setSubqAlias("_rw_gen_idx_table_" + subqueryCounter.get(), subqueryBlockExpr);
       incrementSubqueryCounter(1);
     }
 
