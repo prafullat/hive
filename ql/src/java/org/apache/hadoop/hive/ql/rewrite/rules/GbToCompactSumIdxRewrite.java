@@ -134,23 +134,25 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
      * rootNode.
      */
     private boolean onlyDirectChildren;
+    private ASTNode rootNode;
 
     public CollectColRefNames(ASTNode rootNode) throws SemanticException {
       colNameList = new ArrayList<String>();
       init(rootNode, false);
     }
-    public CollectColRefNames(ASTNode rootNode, boolean onlyDirectChildren)
+    public CollectColRefNames(ASTNode _rootNode, boolean _onlyDirectChildren)
       throws SemanticException {
       colNameList = new ArrayList<String>();
-      init(rootNode, onlyDirectChildren);
+      init(rootNode, _onlyDirectChildren);
     }
 
     private void init(ASTNode rootNode, boolean onlyDirectChildren) throws SemanticException {
-      onlyDirectChildren = false;
+      this.onlyDirectChildren = onlyDirectChildren;
+      this.rootNode = rootNode;
+
       // In case of rootNode == null, return empty col ref list.
       if (rootNode != null)  {
         ArrayList<Node> startNodeList = new ArrayList<Node>();
-        this.onlyDirectChildren = onlyDirectChildren;
         startNodeList.add(rootNode);
         Map<Rule, NodeProcessor> noSpecialRule = new HashMap<Rule, NodeProcessor>();
         DefaultRuleDispatcher ruleDispatcher =
@@ -171,28 +173,41 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
       // The traversal is depth-first search. The stack param here holds the visited node trail
       // in the traversal.
 
-      ASTNode astNode = (ASTNode) nd;
-      if (astNode.getType() == HiveParser.TOK_TABLE_OR_COL)  {
-        if (onlyDirectChildren == true)  {
-          // If we want only direct children, It must have at 3 prev nodes in
-          // stack in case of select expr and 2 in case of others (rootnode and
-          // tok_table_or_col node)
-          // E.g. For select-list , stack would normally look like
-          // ROOT_NODE, TOK_SELEXPR, TOK_TABLE_OR_COL i.e. 3 nodes
-          // XTODO: Refine this check.
-          if (!((stack.size() == 3 &&
-                ((ASTNode)stack.get(1)).getType() ==  HiveParser.TOK_SELEXPR) ||
-                 (stack.size() == 2)
-                )
-             ) {
-            return null;
-          }
-        }
-        //COLNAME or COLNAME AS COL_ALIAS
-        ASTNode internalNode = (ASTNode) astNode.getChild(0);
-        colNameList.add(internalNode.getText().toLowerCase());
-      }
+      // We are interested in child of curNode being visited
+      // in the subtree under rootNode.
+       ASTNode curNode = (ASTNode) nd;
+       boolean captureCurNodeChild = true;
 
+       assert(stack.size() == 0
+              || (stack.size() > 0 && rootNode == stack.get(0))
+             );
+       if (curNode.getType() == HiveParser.TOK_TABLE_OR_COL)  {
+
+         // For onlyDirectChildren, currently we support only following cases
+         // (i.e. we only try to look for TABLE_OR_COL nodes just below or just very
+         // near below the rootNode):
+         // case 1:
+         //    rootNode curNode
+         //       0        1                 # <- stack elements (stack size is 2)
+         // case 2:
+         //    rootNode  selExprNode curNode
+         //       0        1           2     # <- stack elements (stack size is 3)
+         if (onlyDirectChildren == true)  {
+           if ( stack.size() == 2
+                || (stack.size() == 3 && ((ASTNode) stack.get(1)).getType() == HiveParser.TOK_SELEXPR)
+              ) {
+             captureCurNodeChild = true;
+           } else {
+             captureCurNodeChild = false;
+           }
+         }
+         if (captureCurNodeChild) {
+           //add curNode's child to list of cols
+           //COLNAME or COLNAME AS COL_ALIAS
+           ASTNode internalNode = (ASTNode) curNode.getChild(0);
+           colNameList.add(internalNode.getText().toLowerCase());
+         }
+       }
       return null;
     }
   }
