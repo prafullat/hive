@@ -40,12 +40,15 @@ import org.apache.hadoop.hive.ql.plan.GroupByDesc;
 import org.apache.hadoop.hive.ql.plan.api.OperatorType;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFEvaluator;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFEvaluator.AggregationBuffer;
+import org.apache.hadoop.hive.serde2.objectinspector.ListObjectsEqualComparer;
+import org.apache.hadoop.hive.serde2.lazy.LazyPrimitive;
+import org.apache.hadoop.hive.serde2.lazy.objectinspector.primitive.LazyStringObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorFactory;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorUtils;
+import org.apache.hadoop.hive.serde2.objectinspector.StructObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorUtils.ObjectInspectorCopyOption;
 import org.apache.hadoop.hive.serde2.objectinspector.PrimitiveObjectInspector.PrimitiveCategory;
-import org.apache.hadoop.hive.serde2.objectinspector.StructObjectInspector;
 import org.apache.hadoop.hive.serde2.typeinfo.PrimitiveTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfo;
 import org.apache.hadoop.io.Text;
@@ -115,6 +118,8 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
   // new Key ObjectInspectors are objectInspectors from the parent
   transient StructObjectInspector newKeyObjectInspector;
   transient StructObjectInspector currentKeyObjectInspector;
+  transient ListObjectsEqualComparer currentStructEqualComparer;
+  transient ListObjectsEqualComparer newKeyStructEqualComparer;
 
   /**
    * This is used to store the position and field names for variable length
@@ -243,7 +248,7 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
       aggregations = newAggregations();
       hashAggr = false;
     } else {
-      hashAggregations = new HashMap<KeyWrapper, AggregationBuffer[]>();
+      hashAggregations = new HashMap<KeyWrapper, AggregationBuffer[]>(256);
       aggregations = newAggregations();
       hashAggr = true;
       keyPositionsSize = new ArrayList<Integer>();
@@ -278,6 +283,8 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
     currentKeyObjectInspector = ObjectInspectorFactory
         .getStandardStructObjectInspector(keyNames, Arrays
         .asList(currentKeyObjectInspectors));
+    currentStructEqualComparer = new ListObjectsEqualComparer(currentKeyObjectInspectors, currentKeyObjectInspectors);
+    newKeyStructEqualComparer = new ListObjectsEqualComparer(currentKeyObjectInspectors, keyObjectInspectors);
 
     outputObjInspector = ObjectInspectorFactory
         .getStandardStructObjectInspector(fieldNames, objectInspectors);
@@ -632,14 +639,14 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
     public boolean equals(Object obj) {
       ArrayList<Object> copied_in_hashmap = ((KeyWrapper) obj).keys;
       if (!copy) {
-        return ObjectInspectorUtils.compare(copied_in_hashmap,
-            currentKeyObjectInspector, keys, newKeyObjectInspector) == 0;
+        return newKeyStructEqualComparer.areEqual(copied_in_hashmap, keys);
       } else {
-        return ObjectInspectorUtils.compare(copied_in_hashmap,
-            currentKeyObjectInspector, keys, currentKeyObjectInspector) == 0;
+        return currentStructEqualComparer.areEqual(copied_in_hashmap, keys);
       }
     }
   }
+
+
 
   KeyWrapper keyProber = new KeyWrapper();
 
@@ -703,8 +710,9 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
     // Prepare aggs for updating
     AggregationBuffer[] aggs = null;
     Object[][] lastInvoke = null;
-    boolean keysAreEqual = ObjectInspectorUtils.compare(newKeys,
-        newKeyObjectInspector, currentKeys, currentKeyObjectInspector) == 0;
+    boolean keysAreEqual = (currentKeys != null && newKeys != null)?
+      newKeyStructEqualComparer.areEqual(currentKeys, newKeys) : false;
+
 
     // Forward the current keys if needed for sort-based aggregation
     if (currentKeys != null && !keysAreEqual) {
@@ -753,7 +761,11 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
         Object key = newKeys.get(pos.intValue());
         // Ignore nulls
         if (key != null) {
-          if (key instanceof String) {
+          if (key instanceof LazyPrimitive) {
+              totalVariableSize +=
+                  ((LazyPrimitive<LazyStringObjectInspector, Text>) key).
+                      getWritableObject().getLength();
+          } else if (key instanceof String) {
             totalVariableSize += ((String) key).length();
           } else if (key instanceof Text) {
             totalVariableSize += ((Text) key).getLength();
@@ -763,7 +775,9 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
 
       AggregationBuffer[] aggs = null;
       if (aggrPositions.size() > 0) {
-        aggs = hashAggregations.get(newKeys);
+	KeyWrapper newKeyProber = new KeyWrapper(
+	    newKeys.hashCode(), newKeys);
+        aggs = hashAggregations.get(newKeyProber);
       }
 
       for (varLenFields v : aggrPositions) {
