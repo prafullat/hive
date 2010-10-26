@@ -147,10 +147,10 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
       colNameList = new ArrayList<String>();
       init(rootNode, false);
     }
-    public CollectColRefNames(ASTNode _rootNode, boolean _onlyDirectChildren)
+    public CollectColRefNames(ASTNode rootNode, boolean onlyDirectChildren)
       throws SemanticException {
       colNameList = new ArrayList<String>();
-      init(rootNode, _onlyDirectChildren);
+      init(rootNode, onlyDirectChildren);
     }
 
     private void init(ASTNode rootNode, boolean onlyDirectChildren) throws SemanticException {
@@ -410,6 +410,8 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
     }
 
     Index idx = null;
+    // This code block iterates over indexes on the table and picks up the
+    // first index that satisfies the rewrite criteria.
     for (int idxCtr = 0; idxCtr < indexTables.size(); idxCtr++)  {
       boolean removeGroupBy = true;
       boolean optimizeCount = false;
@@ -496,6 +498,25 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
 
         if (gbKeyNameList.containsAll(idxKeyColsNames) == false)  {
           // GB key and idx key are not same, don't remove GroupBy, but still do index scan
+          removeGroupBy = false;
+        }
+
+        // This check prevents to remove GroupBy for cases where the GROUP BY key cols are
+        // not simple expressions i.e. simple index key cols (in any order), but some
+        // expressions on the the key cols.
+        // e.g.
+        // 1. GROUP BY key, f(key)
+        //     XTODO: If f(key) output is functionally dependent on key, then we should support
+        //            it. However we don't have mechanism/info about f() yet to decide that.
+        // 2. GROUP BY idxKey, 1
+        //     XTODO: GB Key has literals along with idxKeyCols. Develop a rewrite to eliminate the
+        //            literals from GB key.
+        // 3. GROUP BY idxKey, idxKey
+        //     XTODO: GB Key has dup idxKeyCols. Develop a rewrite to eliminate the dup key cols
+        //            from GB key.
+        if (gbKeyNameList.size() != groupByNode.getChildCount()) {
+          getLogger().debug("Group by key can have only simple index columns, GroupBy will be"
+            + " preserved by rewrite " + getName());
           removeGroupBy = false;
         }
 
