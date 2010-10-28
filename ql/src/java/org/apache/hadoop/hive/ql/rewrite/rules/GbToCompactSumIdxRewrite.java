@@ -68,9 +68,32 @@ import org.apache.hadoop.hive.ql.parse.SemanticException;
  *   from idx_table;
  *  </code>
  *
- *  XTODO: Enhance the comment by mentioning
- *  - things that are supported
- *  - things that are not supported
+ *  The rewrite supports following queries
+ *  - Queries having only those col refs that are in the index key.
+ *  - Queries that have index key col refs
+ *    - in SELECT
+ *    - in WHERE
+ *    - in GROUP BY
+ *  - Queries with agg func COUNT(literal) or COUNT(index key col ref)
+ *    in SELECT
+ *  - Queries with SELECT DISTINCT index key col refs
+ *  - Queries having a subquery satisfying above condition (only the
+ *    subquery is rewritten)
+ *
+ *  FUTURE:
+ *  - Many of the checks for above criteria rely on equivalence of
+ *    expressions, but such framework/mechanism of expression equivalence
+ *    isn't present currently or developed yet. This needs to be supported
+ *    in order for better robust checks. This is critically important for
+ *    correctness of a query rewrite system.
+ *    - Also this code currently directly works on the parse tree data
+ *      structs (AST nodes) for checking, manipulating query data structure.
+ *      If such expr equiv mechanism is to be developed, it would be important
+ *      to think and reflect on whether to continue use the parse tree
+ *      data structs (and enhance those classes with such equivalence methods)
+ *      or to create independent hierarchies of data structs and classes
+ *      for the exprs and develop that equivalence mechanism on that new
+ *      class hierarchy, code.
  *
  * @see org.apache.hadoop.hive.ql.index.HiveIndex
  * @see org.apache.hadoop.hive.ql.index.HiveIndex.CompactIndexHandler
@@ -506,13 +529,13 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
         // expressions on the the key cols.
         // e.g.
         // 1. GROUP BY key, f(key)
-        //     XTODO: If f(key) output is functionally dependent on key, then we should support
+        //     FUTURE: If f(key) output is functionally dependent on key, then we should support
         //            it. However we don't have mechanism/info about f() yet to decide that.
         // 2. GROUP BY idxKey, 1
-        //     XTODO: GB Key has literals along with idxKeyCols. Develop a rewrite to eliminate the
+        //     FUTURE: GB Key has literals along with idxKeyCols. Develop a rewrite to eliminate the
         //            literals from GB key.
         // 3. GROUP BY idxKey, idxKey
-        //     XTODO: GB Key has dup idxKeyCols. Develop a rewrite to eliminate the dup key cols
+        //     FUTURE: GB Key has dup idxKeyCols. Develop a rewrite to eliminate the dup key cols
         //            from GB key.
         if (gbKeyNameList.size() != groupByNode.getChildCount()) {
           getLogger().debug("Group by key can have only simple index columns, GroupBy will be"
@@ -520,7 +543,7 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
           removeGroupBy = false;
         }
 
-        // XTODO: See if this can be relaxed.
+        // FUTURE: See if this can be relaxed.
         // If we have agg function (currently only COUNT is supported), check if its input are
         // from index. we currently support only that.
         if (colRefAggFuncInputList.size() > 0)  {
@@ -628,7 +651,6 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
           astNode.setChild(1, colRefNode);
         }
         else {
-          // XTODO: assert for assumption (astNode.getChildCount() == 1)?
           astNode.addChild(colRefNode);
         }
         if (rwContext.removeGroupBy == true) {
