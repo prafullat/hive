@@ -745,37 +745,13 @@ public class Table implements Serializable {
   }
 
   /**
-   * @return Returns true if there is any index available on this basetable
-   */
-  public boolean hasIndex() {
-     return (getNumIndexes() > 0);
-  }
-
-  /**
-   *
-   * @return Returns number of indexes on this table
-   */
-  public int getNumIndexes()  {
-    return getAllIndexes().size();
-  }
-
-  /**
    * @return List containing Index Table names if there is exists indexes
    * on this table
    * @throws HiveException
    */
-  public List<Index> getAllIndexes() {
-    List<Index> indexes = null;
-    try {
-      Hive hive = Hive.get();
-      indexes = hive.getIndexesOnTable(getTTable().getDbName(),
-                                       getTTable().getTableName(),
-                                       (short) 1024 // max XTODO: Hardcoding
-                                      );
-    } catch (HiveException e) {
-      // XTODO: Log error? Re-throw or don't catch?
-    }
-    return indexes;
+  public List<Index> getAllIndexes(short max) throws HiveException {
+    Hive hive = Hive.get();
+    return hive.getIndexesOnTable(getTTable().getDbName(), getTTable().getTableName(), max);
   }
 
   /**

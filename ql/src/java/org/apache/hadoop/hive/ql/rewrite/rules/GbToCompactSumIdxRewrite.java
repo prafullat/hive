@@ -243,8 +243,24 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
 
 
   private List<Index> getIndexes(Table baseTableMetaData, List<String> matchIndexTypes) {
-    List<Index> indexesOnTable = baseTableMetaData.getAllIndexes();
     List<Index> matchingIndexes = new ArrayList<Index>();
+    List<Index> indexesOnTable = null;
+
+    try {
+      short maxNumOfIndexes = 1024; // XTODO: Hardcoding. Need to know if
+                                    // there's a limit (and what is it) on
+                                    // # of indexes that can be created
+                                    // on a table. If not, why is this param
+                                    // required by metastore APIs?
+      indexesOnTable = baseTableMetaData.getAllIndexes(maxNumOfIndexes);
+    } catch (HiveException e) {
+      return matchingIndexes; // Return empty list (trouble doing rewrite
+                              // shouldn't stop regular query execution,
+                              // if there's serious problem with metadata
+                              // or anything else, it's assumed to be
+                              // checked & handled in core hive code itself.
+    }
+    
     for (int i = 0; i < indexesOnTable.size(); i++) {
       Index index = null;
       index = indexesOnTable.get(i);
@@ -300,12 +316,6 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
     String tableAlias = tableAliasesItr.next();
     String tableName = qb.getTabNameForAlias(tableAlias);
     Table tableQlMetaData = qb.getMetaData().getTableForAlias(tableAlias);
-
-    if (!tableQlMetaData.hasIndex()) {
-      getLogger().debug("Table " + tableName + " does not have indexes. Cannot apply rewrite "
-        + getName());
-      return false;
-    }
 
     List<String> idxType = new ArrayList<String>();
     idxType.add(SUPPORTED_INDEX_TYPE);
