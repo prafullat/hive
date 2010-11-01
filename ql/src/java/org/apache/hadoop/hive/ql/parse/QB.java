@@ -190,6 +190,9 @@ public class QB {
     return tblDesc != null;
   }
 
+  public ASTNode getTableNodeForAlias(String tableAlias) {
+    return qbp.getSrcForAlias(tableAlias);
+  }
   public void removeTable(String sAliasName)  {
     aliasToTabs.remove(sAliasName);
   }

@@ -139,6 +139,8 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
       optimizeCountWithCmplxGbKey = false;
       optimizeCountWithSimpleGbKey = false;
       inputToSizeFunc = null;
+      fromNode = null;
+      tabNode = null;
     }
     private Table indexTableMetadata;
     private String clauseName;
@@ -150,6 +152,8 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
     private boolean optimizeCountWithCmplxGbKey;
     private boolean optimizeCountWithSimpleGbKey;
     private String inputToSizeFunc;
+    private ASTNode fromNode;
+    private ASTNode tabNode;
   }
 
   class CollectColRefNames implements NodeProcessor  {
@@ -241,6 +245,60 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
     }
   }
 
+  class LocateFromTabNodeParent implements NodeProcessor  {
+    private final ASTNode tableRefNodeToLocate;
+    private ASTNode parentTokFrom;
+    private ASTNode parentTokTable;
+
+    public LocateFromTabNodeParent(ASTNode rootNode, ASTNode tableRefNode)
+      throws SemanticException {
+      assert(tableRefNode.getType() == HiveParser.Identifier);
+      tableRefNodeToLocate = tableRefNode;
+      parentTokFrom = null;
+      parentTokTable = null;
+      locate(rootNode);
+    }
+
+    public void locate(ASTNode rootNode) throws SemanticException {
+      ArrayList<Node> startNodeList = new ArrayList<Node>();
+      startNodeList.add(rootNode);
+      Map<Rule, NodeProcessor> noSpecialRule = new HashMap<Rule, NodeProcessor>();
+      DefaultRuleDispatcher ruleDispatcher =
+        new DefaultRuleDispatcher(this, noSpecialRule, null);
+      DefaultGraphWalker graphWalker = new DefaultGraphWalker(ruleDispatcher);
+      graphWalker.startWalking(startNodeList, null);
+    }
+
+    ASTNode getParentTokFromNode() {
+      return parentTokFrom;
+    }
+
+    ASTNode getParentTokTableNode() {
+      return parentTokTable;
+    }
+
+    @Override
+    public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx procCtx,
+        Object... nodeOutputs) throws SemanticException {
+
+       ASTNode curNode = (ASTNode) nd;
+       if (curNode.getType() == HiveParser.Identifier
+           && curNode == tableRefNodeToLocate) {
+           assert(stack.size() >= 4);
+           // Stack should look like:
+           // TOK_QUERY -> TOK_FROM -> TOK_TABREF -> TOK_TABLE_OR_COL
+           //                                            (curNode)
+           assert(((ASTNode)stack.get(stack.size() - 1)).getType() == HiveParser.Identifier
+                  && stack.get(stack.size() - 1) == curNode);
+           assert(((ASTNode)stack.get(stack.size() - 2)).getType() == HiveParser.TOK_TABREF);
+           assert(((ASTNode)stack.get(stack.size() - 3)).getType() == HiveParser.TOK_FROM);
+           assert(((ASTNode)stack.get(stack.size() - 4)).getType() == HiveParser.TOK_QUERY);
+           parentTokFrom = (ASTNode) (stack.get(stack.size() - 3));
+           parentTokTable = (ASTNode) (stack.get(stack.size() - 2));
+       }
+      return null;
+    }
+  }
 
   private List<Index> getIndexes(Table baseTableMetaData, List<String> matchIndexTypes) {
     List<Index> matchingIndexes = new ArrayList<Index>();
@@ -260,7 +318,7 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
                               // or anything else, it's assumed to be
                               // checked & handled in core hive code itself.
     }
-    
+
     for (int i = 0; i < indexesOnTable.size(); i++) {
       Index index = null;
       index = indexesOnTable.get(i);
@@ -288,7 +346,7 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
   }
 
   @Override
-  public boolean canApplyThisRule(QB qb) {
+  public boolean canApplyThisRule(QB qb, ASTNode rootNode) {
     if (getRwFlag(HiveConf.ConfVars.HIVE_QL_RW_GB_TO_IDX) == false) {
       getLogger().debug("Conf variable " + HiveConf.ConfVars.HIVE_QL_RW_GB_TO_IDX.name()
         + " is set to false, not doing rewrite " + getName());
@@ -309,6 +367,7 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
       return false;
     }
 
+
     //--------------------------------------------
     // Get Index information.
     Set<String> tableAlisesSet = qb.getTabAliases();
@@ -316,6 +375,24 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
     String tableAlias = tableAliasesItr.next();
     String tableName = qb.getTabNameForAlias(tableAlias);
     Table tableQlMetaData = qb.getMetaData().getTableForAlias(tableAlias);
+
+    //--------------------------------------------
+    // Get the TOK_QUERY for the current TOK_FROM
+    ASTNode tableNode = qb.getTableNodeForAlias(tableAlias);
+    ASTNode fromNode = null;
+    ASTNode tabNode = null;
+    try {
+      LocateFromTabNodeParent l = new LocateFromTabNodeParent(rootNode, tableNode);
+      fromNode = l.getParentTokFromNode();
+      tabNode = l.getParentTokTableNode();
+    } catch (SemanticException e) {
+      getLogger().debug("Got exception while trying to locate TOK_QUERY node for (TOK_FROM "
+          + tableAlias + ")");
+      return false;
+    }
+    assert(fromNode != null);
+    assert(tabNode != null);
+
 
     List<String> idxType = new ArrayList<String>();
     idxType.add(SUPPORTED_INDEX_TYPE);
@@ -603,6 +680,8 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
           rwContext.optimizeCountWithSimpleGbKey = true;
         }
       }
+      rwContext.fromNode = fromNode;
+      rwContext.tabNode = tabNode;
       setContext(rwContext);
       getLogger().debug("Now rewriting query block id " + qb.getId() +"with " + getName()
         + " rewrite");
@@ -683,17 +762,25 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
       subqueryBlockExpr.setQB(subqueryBlock);
       subqueryBlock.setTabAlias(indexTableName, indexTableName);
       subqueryBlock.getMetaData().setSrcForAlias(indexTableName, indexTable);
+
+      ASTNode tabRefNode = new ASTNode(new CommonToken(HiveParser.TOK_TABREF, "TOK_TABREF"));
+      tabRefNode.addChild(new ASTNode(new CommonToken(HiveParser.Identifier, indexTableName)));
+      ASTNode fromNode = new ASTNode(new CommonToken(HiveParser.TOK_FROM, "TOK_FROM"));
+      fromNode.addChild(tabRefNode);
+
       // Adding temp insert clause
       ASTNode dirNode = new ASTNode(new CommonToken(HiveParser.TOK_DIR, "TOK_DIR"));
       ASTNode tmpFileNode = new ASTNode(new CommonToken(HiveParser.TOK_TMP_FILE, "TOK_TMP_FILE"));
       dirNode.addChild(tmpFileNode);
       subqueryBlock.getParseInfo().setDestForClause(clauseName, dirNode);
+      ASTNode destNode = new ASTNode(new CommonToken(HiveParser.TOK_DESTINATION, "TOK_DESTINATION"));
+      destNode.addChild(dirNode);
 
       ASTNode selNode = new ASTNode(new CommonToken(HiveParser.TOK_SELECT, "TOK_SELECT"));
 
       for (int idxCnt = 0; idxCnt < rwContext.idxKeyList.size(); idxCnt++)  {
         List<String> keyNameList = new ArrayList<String>();
-        keyNameList.add(rwContext.idxKeyList.get(0));
+        keyNameList.add(rwContext.idxKeyList.get(idxCnt));
         ASTNode selExprNode = subqueryBlock.newSelectListExpr(false, null, keyNameList);
         selNode.addChild(selExprNode);
       }
@@ -712,6 +799,18 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
           "_rw_gen_offset_count")));
         astNode.setChild(1, colRefNode);
       }
+
+      ASTNode insNode = new ASTNode(new CommonToken(HiveParser.TOK_INSERT, "TOK_INSERT"));
+      insNode.addChild(destNode);
+      insNode.addChild(selNode);
+
+      ASTNode queryNode = new ASTNode(new CommonToken(HiveParser.TOK_QUERY, "TOK_QUERY"));
+      queryNode.addChild(fromNode);
+      queryNode.addChild(insNode);
+      ASTNode subqueryNode = new ASTNode(new CommonToken(HiveParser.TOK_SUBQUERY, "TOK_SUBQUERY"));
+      subqueryNode.addChild(queryNode);
+      replaceChildOfNode(rwContext.fromNode, rwContext.tabNode, subqueryNode);
+
       subqueryBlock.getParseInfo().setAggregationExprsForClause(clauseName,
         new LinkedHashMap<String, ASTNode>());
       subqueryBlock.getParseInfo().setDistinctFuncExprForClause(clauseName, null);
@@ -723,6 +822,15 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
 
     // We aren't changing GB here, what we change is internal information.
     return oldQb;
+  }
+
+  private void replaceChildOfNode(ASTNode parent, ASTNode childToReplace, ASTNode newChild) {
+    for (int i = 0; i < parent.getChildCount(); i++) {
+      if (parent.getChild(i) == childToReplace) {
+        parent.setChild(i, newChild);
+        return;
+      }
+    }
   }
 
   @Override

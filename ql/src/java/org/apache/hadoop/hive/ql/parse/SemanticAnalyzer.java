@@ -6403,7 +6403,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       if( ast.getToken().getType() == HiveParser.TOK_QUERY ) {
         //If we have query input invoke query rewrites on it.
         HiveRewriteEngine rwEngine = new HiveRewriteEngine(db);
-        QB newRewrittenQb = rwEngine.invokeRewrites(qb);
+        QB newRewrittenQb = rwEngine.invokeRewrites(qb, ast);
         qb = newRewrittenQb;
         LOG.info("Abstract syntax tree after rewrites : " + ast.toStringTree());
       }

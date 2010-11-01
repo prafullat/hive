@@ -20,6 +20,7 @@ package org.apache.hadoop.hive.ql.rewrite.rules;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.hive.conf.HiveConf;
+import org.apache.hadoop.hive.ql.parse.ASTNode;
 import org.apache.hadoop.hive.ql.parse.QB;
 import org.apache.hadoop.hive.ql.session.SessionState;
 
@@ -37,7 +38,7 @@ public abstract class HiveRwRule {
   }
 
   public abstract String getName();
-  public abstract boolean canApplyThisRule(QB qb);
+  public abstract boolean canApplyThisRule(QB qb, ASTNode rootNode);
   /**
    * Code that rewrites Qb to something new.
    * If this method returns NULL, that particular QB is removed from
