@@ -365,6 +365,7 @@ public class Table implements Serializable {
   public void setTableType(TableType tableType) {
      tTable.setTableType(tableType.toString());
    }
+<<<<<<< HEAD
 
   public TableType getTableType() {
      return Enum.valueOf(TableType.class, tTable.getTableType());
@@ -372,6 +373,15 @@ public class Table implements Serializable {
 
   public ArrayList<StructField> getFields() {
 
+=======
+
+  public TableType getTableType() {
+     return Enum.valueOf(TableType.class, tTable.getTableType());
+   }
+
+  public ArrayList<StructField> getFields() {
+
+>>>>>>> local_apache/trunk
     ArrayList<StructField> fields = new ArrayList<StructField>();
     try {
       Deserializer decoder = getDeserializer();
@@ -745,6 +755,7 @@ public class Table implements Serializable {
   }
 
   /**
+<<<<<<< HEAD
    * @return List containing Index Table names if there is exists indexes
    * on this table
    * @throws HiveException
@@ -755,6 +766,8 @@ public class Table implements Serializable {
   }
 
   /**
+=======
+>>>>>>> local_apache/trunk
    * @param protectMode
    */
   public void setProtectMode(ProtectMode protectMode){

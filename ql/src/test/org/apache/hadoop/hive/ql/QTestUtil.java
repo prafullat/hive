@@ -83,8 +83,9 @@ import org.apache.zookeeper.ZooKeeper;
 public class QTestUtil {
 
   private String testWarehouse;
-  private final String tmpdir = System.getProperty("test.tmp.dir");
+  private final String tmpdir= System.getProperty("test.tmp.dir") ;
   private final Path tmppath = new Path(tmpdir);
+
 
   private final String testFiles;
   private final String outDir;
@@ -327,17 +328,7 @@ public class QTestUtil {
       db.setCurrentDatabase(dbName);
       for (String tblName : db.getAllTables()) {
         if (!DEFAULT_DATABASE_NAME.equals(dbName) || !srcTables.contains(tblName)) {
-          Table table = db.getTable(dbName, tblName, false);
-          if (MetaStoreUtils.isIndexTable(table.getTTable())) {
-            // Skip the index type table here.
-            // XTODO: Assuming (but verify)
-            // - Drop table automatically drops indexes on that table too.
-            // - No other case results into dangling indexes i.e. where indexes are
-            //   left behind but orig (base) table no longer exists.
-          }
-          else {
-            db.dropTable(dbName, tblName);
-          }
+          db.dropTable(dbName, tblName);
         }
       }
       if (!DEFAULT_DATABASE_NAME.equals(dbName)) {
@@ -906,6 +897,7 @@ public class QTestUtil {
         "-I", "at java",
         "-I", "at junit",
         "-I", "Caused by:",
+        "-I", "QUERYID_LOCK:",
         "-I", "[.][.][.] [0-9]* more",
         (new File(logDir, tname + ".out")).getPath(),
         outFileName };

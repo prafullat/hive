@@ -27,6 +27,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,22 +36,26 @@ import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.parse.OpParseContext;
 import org.apache.hadoop.hive.ql.plan.AggregationDesc;
+import org.apache.hadoop.hive.ql.plan.ExprNodeColumnDesc;
 import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
 import org.apache.hadoop.hive.ql.plan.GroupByDesc;
 import org.apache.hadoop.hive.ql.plan.api.OperatorType;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFEvaluator;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFEvaluator.AggregationBuffer;
-import org.apache.hadoop.hive.serde2.objectinspector.ListObjectsEqualComparer;
 import org.apache.hadoop.hive.serde2.lazy.LazyPrimitive;
 import org.apache.hadoop.hive.serde2.lazy.objectinspector.primitive.LazyStringObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorFactory;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorUtils;
+import org.apache.hadoop.hive.serde2.objectinspector.StandardStructObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.StructField;
 import org.apache.hadoop.hive.serde2.objectinspector.StructObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.UnionObject;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorUtils.ObjectInspectorCopyOption;
 import org.apache.hadoop.hive.serde2.objectinspector.PrimitiveObjectInspector.PrimitiveCategory;
 import org.apache.hadoop.hive.serde2.typeinfo.PrimitiveTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfo;
+import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoUtils;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -67,7 +72,6 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
 
   protected transient ExprNodeEvaluator[] keyFields;
   protected transient ObjectInspector[] keyObjectInspectors;
-  protected transient Object[] keyObjects;
 
   protected transient ExprNodeEvaluator[][] aggregationParameterFields;
   protected transient ObjectInspector[][] aggregationParameterObjectInspectors;
@@ -77,16 +81,27 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
   // the same SQL clause,
   // so aggregationIsDistinct is a boolean array instead of a single number.
   protected transient boolean[] aggregationIsDistinct;
+  // Map from integer tag to distinct aggrs
+  transient protected Map<Integer, Set<Integer>> distinctKeyAggrs =
+    new HashMap<Integer, Set<Integer>>();
+  // Map from integer tag to non-distinct aggrs with key parameters.
+  transient protected Map<Integer, Set<Integer>> nonDistinctKeyAggrs =
+    new HashMap<Integer, Set<Integer>>();
+  // List of non-distinct aggrs.
+  transient protected List<Integer> nonDistinctAggrs = new ArrayList<Integer>();
+  // Union expr for distinct keys
+  transient ExprNodeEvaluator unionExprEval = null;
 
   transient GenericUDAFEvaluator[] aggregationEvaluators;
 
   protected transient ArrayList<ObjectInspector> objectInspectors;
   transient ArrayList<String> fieldNames;
 
+  transient KeyWrapperFactory keyWrapperFactory;
   // Used by sort-based GroupBy: Mode = COMPLETE, PARTIAL1, PARTIAL2,
   // MERGEPARTIAL
-  protected transient ArrayList<Object> currentKeys;
-  protected transient ArrayList<Object> newKeys;
+  protected transient KeyWrapper currentKeys;
+  protected transient KeyWrapper newKeys;
   protected transient AggregationBuffer[] aggregations;
   protected transient Object[][] aggregationsParametersLastInvoke;
 
@@ -94,7 +109,7 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
   protected transient HashMap<KeyWrapper, AggregationBuffer[]> hashAggregations;
 
   // Used by hash distinct aggregations when hashGrpKeyNotRedKey is true
-  protected transient HashSet<ArrayList<Object>> keysCurrentGroup;
+  protected transient HashSet<KeyWrapper> keysCurrentGroup;
 
   transient boolean bucketGroup;
 
@@ -118,8 +133,6 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
   // new Key ObjectInspectors are objectInspectors from the parent
   transient StructObjectInspector newKeyObjectInspector;
   transient StructObjectInspector currentKeyObjectInspector;
-  transient ListObjectsEqualComparer currentStructEqualComparer;
-  transient ListObjectsEqualComparer newKeyStructEqualComparer;
 
   /**
    * This is used to store the position and field names for variable length
@@ -169,35 +182,59 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
         HiveConf.ConfVars.HIVESENDHEARTBEAT);
     countAfterReport = 0;
 
-    assert (inputObjInspectors.length == 1);
     ObjectInspector rowInspector = inputObjInspectors[0];
 
     // init keyFields
     keyFields = new ExprNodeEvaluator[conf.getKeys().size()];
     keyObjectInspectors = new ObjectInspector[conf.getKeys().size()];
     currentKeyObjectInspectors = new ObjectInspector[conf.getKeys().size()];
-    keyObjects = new Object[conf.getKeys().size()];
     for (int i = 0; i < keyFields.length; i++) {
       keyFields[i] = ExprNodeEvaluatorFactory.get(conf.getKeys().get(i));
       keyObjectInspectors[i] = keyFields[i].initialize(rowInspector);
       currentKeyObjectInspectors[i] = ObjectInspectorUtils
           .getStandardObjectInspector(keyObjectInspectors[i],
           ObjectInspectorCopyOption.WRITABLE);
-      keyObjects[i] = null;
     }
-    newKeys = new ArrayList<Object>(keyFields.length);
 
+    // initialize unionExpr for reduce-side
+    // reduce KEY has union field as the last field if there are distinct
+    // aggregates in group-by.
+    List<? extends StructField> sfs =
+      ((StandardStructObjectInspector) rowInspector).getAllStructFieldRefs();
+    if (sfs.size() > 0) {
+      StructField keyField = sfs.get(0);
+      if (keyField.getFieldName().toUpperCase().equals(
+          Utilities.ReduceField.KEY.name())) {
+        ObjectInspector keyObjInspector = keyField.getFieldObjectInspector();
+        if (keyObjInspector instanceof StandardStructObjectInspector) {
+          List<? extends StructField> keysfs =
+            ((StandardStructObjectInspector) keyObjInspector).getAllStructFieldRefs();
+          if (keysfs.size() > 0) {
+            // the last field is the union field, if any
+            StructField sf = keysfs.get(keysfs.size() - 1);
+            if (sf.getFieldObjectInspector().getCategory().equals(
+                ObjectInspector.Category.UNION)) {
+              unionExprEval = ExprNodeEvaluatorFactory.get(
+                new ExprNodeColumnDesc(TypeInfoUtils.getTypeInfoFromObjectInspector(
+                sf.getFieldObjectInspector()),
+                keyField.getFieldName() + "." + sf.getFieldName(), null,
+                false));
+              unionExprEval.initialize(rowInspector);
+            }
+          }
+        }
+      }
+    }
     // init aggregationParameterFields
-    aggregationParameterFields = new ExprNodeEvaluator[conf.getAggregators()
-        .size()][];
-    aggregationParameterObjectInspectors = new ObjectInspector[conf
-        .getAggregators().size()][];
-    aggregationParameterStandardObjectInspectors = new ObjectInspector[conf
-        .getAggregators().size()][];
-    aggregationParameterObjects = new Object[conf.getAggregators().size()][];
-    for (int i = 0; i < aggregationParameterFields.length; i++) {
-      ArrayList<ExprNodeDesc> parameters = conf.getAggregators().get(i)
-          .getParameters();
+    ArrayList<AggregationDesc> aggrs = conf.getAggregators();
+    aggregationParameterFields = new ExprNodeEvaluator[aggrs.size()][];
+    aggregationParameterObjectInspectors = new ObjectInspector[aggrs.size()][];
+    aggregationParameterStandardObjectInspectors = new ObjectInspector[aggrs.size()][];
+    aggregationParameterObjects = new Object[aggrs.size()][];
+    aggregationIsDistinct = new boolean[aggrs.size()];
+    for (int i = 0; i < aggrs.size(); i++) {
+      AggregationDesc aggr = aggrs.get(i);
+      ArrayList<ExprNodeDesc> parameters = aggr.getParameters();
       aggregationParameterFields[i] = new ExprNodeEvaluator[parameters.size()];
       aggregationParameterObjectInspectors[i] = new ObjectInspector[parameters
           .size()];
@@ -209,17 +246,55 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
             .get(parameters.get(j));
         aggregationParameterObjectInspectors[i][j] = aggregationParameterFields[i][j]
             .initialize(rowInspector);
+        if (unionExprEval != null) {
+          String[] names = parameters.get(j).getExprString().split("\\.");
+          // parameters of the form : KEY.colx:t.coly
+          if (Utilities.ReduceField.KEY.name().equals(names[0])) {
+            String name = names[names.length - 2];
+            int tag = Integer.parseInt(name.split("\\:")[1]);
+            if (aggr.getDistinct()) {
+              // is distinct
+              Set<Integer> set = distinctKeyAggrs.get(tag);
+              if (null == set) {
+                set = new HashSet<Integer>();
+                distinctKeyAggrs.put(tag, set);
+              }
+              if (!set.contains(i)) {
+                set.add(i);
+              }
+            } else {
+              Set<Integer> set = nonDistinctKeyAggrs.get(tag);
+              if (null == set) {
+                set = new HashSet<Integer>();
+                nonDistinctKeyAggrs.put(tag, set);
+              }
+              if (!set.contains(i)) {
+                set.add(i);
+              }
+            }
+          } else {
+            // will be VALUE._COLx
+            if (!nonDistinctAggrs.contains(i)) {
+              nonDistinctAggrs.add(i);
+            }
+          }
+        } else {
+          if (aggr.getDistinct()) {
+            aggregationIsDistinct[i] = true;
+          }
+        }
         aggregationParameterStandardObjectInspectors[i][j] = ObjectInspectorUtils
             .getStandardObjectInspector(
             aggregationParameterObjectInspectors[i][j],
             ObjectInspectorCopyOption.WRITABLE);
         aggregationParameterObjects[i][j] = null;
       }
-    }
-    // init aggregationIsDistinct
-    aggregationIsDistinct = new boolean[conf.getAggregators().size()];
-    for (int i = 0; i < aggregationIsDistinct.length; i++) {
-      aggregationIsDistinct[i] = conf.getAggregators().get(i).getDistinct();
+      if (parameters.size() == 0) {
+        // for ex: count(*)
+        if (!nonDistinctAggrs.contains(i)) {
+          nonDistinctAggrs.add(i);
+        }
+      }
     }
 
     // init aggregationClasses
@@ -262,7 +337,7 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
           HiveConf.ConfVars.HIVEMAPAGGRHASHMINREDUCTION);
       groupKeyIsNotReduceKey = conf.getGroupKeyNotReductionKey();
       if (groupKeyIsNotReduceKey) {
-        keysCurrentGroup = new HashSet<ArrayList<Object>>();
+        keysCurrentGroup = new HashSet<KeyWrapper>();
       }
     }
 
@@ -283,11 +358,13 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
     currentKeyObjectInspector = ObjectInspectorFactory
         .getStandardStructObjectInspector(keyNames, Arrays
         .asList(currentKeyObjectInspectors));
-    currentStructEqualComparer = new ListObjectsEqualComparer(currentKeyObjectInspectors, currentKeyObjectInspectors);
-    newKeyStructEqualComparer = new ListObjectsEqualComparer(currentKeyObjectInspectors, keyObjectInspectors);
 
     outputObjInspector = ObjectInspectorFactory
         .getStandardStructObjectInspector(fieldNames, objectInspectors);
+
+    keyWrapperFactory = new KeyWrapperFactory(keyFields, keyObjectInspectors, currentKeyObjectInspectors);
+
+    newKeys = keyWrapperFactory.getKeyWrapper();
 
     firstRow = true;
     // estimate the number of hash table entries based on the size of each
@@ -482,37 +559,108 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
   protected void updateAggregations(AggregationBuffer[] aggs, Object row,
       ObjectInspector rowInspector, boolean hashAggr,
       boolean newEntryForHashAggr, Object[][] lastInvoke) throws HiveException {
+    if (unionExprEval == null) {
+      for (int ai = 0; ai < aggs.length; ai++) {
+        // Calculate the parameters
+        Object[] o = new Object[aggregationParameterFields[ai].length];
+        for (int pi = 0; pi < aggregationParameterFields[ai].length; pi++) {
+          o[pi] = aggregationParameterFields[ai][pi].evaluate(row);
+        }
 
-    for (int ai = 0; ai < aggs.length; ai++) {
-
-      // Calculate the parameters
-      Object[] o = new Object[aggregationParameterFields[ai].length];
-      for (int pi = 0; pi < aggregationParameterFields[ai].length; pi++) {
-        o[pi] = aggregationParameterFields[ai][pi].evaluate(row);
-      }
-
-      // Update the aggregations.
-      if (aggregationIsDistinct[ai]) {
-        if (hashAggr) {
-          if (newEntryForHashAggr) {
-            aggregationEvaluators[ai].aggregate(aggs[ai], o);
+        // Update the aggregations.
+        if (aggregationIsDistinct[ai]) {
+          if (hashAggr) {
+            if (newEntryForHashAggr) {
+              aggregationEvaluators[ai].aggregate(aggs[ai], o);
+            }
+          } else {
+            if (lastInvoke[ai] == null) {
+              lastInvoke[ai] = new Object[o.length];
+            }
+            if (ObjectInspectorUtils.compare(o,
+                aggregationParameterObjectInspectors[ai], lastInvoke[ai],
+                aggregationParameterStandardObjectInspectors[ai]) != 0) {
+              aggregationEvaluators[ai].aggregate(aggs[ai], o);
+              for (int pi = 0; pi < o.length; pi++) {
+                lastInvoke[ai][pi] = ObjectInspectorUtils.copyToStandardObject(
+                    o[pi], aggregationParameterObjectInspectors[ai][pi],
+                    ObjectInspectorCopyOption.WRITABLE);
+              }
+            }
           }
         } else {
-          if (lastInvoke[ai] == null) {
-            lastInvoke[ai] = new Object[o.length];
+          aggregationEvaluators[ai].aggregate(aggs[ai], o);
+        }
+      }
+      return;
+    }
+
+    if (distinctKeyAggrs.size() > 0) {
+      // evaluate union object
+      UnionObject uo = (UnionObject) (unionExprEval.evaluate(row));
+      int unionTag = uo.getTag();
+
+      // update non-distinct key aggregations : "KEY._colx:t._coly"
+      if (nonDistinctKeyAggrs.get(unionTag) != null) {
+        for (int pos : nonDistinctKeyAggrs.get(unionTag)) {
+          Object[] o = new Object[aggregationParameterFields[pos].length];
+          for (int pi = 0; pi < aggregationParameterFields[pos].length; pi++) {
+            o[pi] = aggregationParameterFields[pos][pi].evaluate(row);
           }
-          if (ObjectInspectorUtils.compare(o,
-              aggregationParameterObjectInspectors[ai], lastInvoke[ai],
-              aggregationParameterStandardObjectInspectors[ai]) != 0) {
-            aggregationEvaluators[ai].aggregate(aggs[ai], o);
-            for (int pi = 0; pi < o.length; pi++) {
-              lastInvoke[ai][pi] = ObjectInspectorUtils.copyToStandardObject(
-                  o[pi], aggregationParameterObjectInspectors[ai][pi],
-                  ObjectInspectorCopyOption.WRITABLE);
+          aggregationEvaluators[pos].aggregate(aggs[pos], o);
+        }
+      }
+      // there may be multi distinct clauses for one column
+      // update them all.
+      if (distinctKeyAggrs.get(unionTag) != null) {
+        for (int i : distinctKeyAggrs.get(unionTag)) {
+          Object[] o = new Object[aggregationParameterFields[i].length];
+          for (int pi = 0; pi < aggregationParameterFields[i].length; pi++) {
+            o[pi] = aggregationParameterFields[i][pi].evaluate(row);
+          }
+
+          if (hashAggr) {
+            if (newEntryForHashAggr) {
+              aggregationEvaluators[i].aggregate(aggs[i], o);
+            }
+          } else {
+            if (lastInvoke[i] == null) {
+              lastInvoke[i] = new Object[o.length];
+            }
+            if (ObjectInspectorUtils.compare(o,
+                aggregationParameterObjectInspectors[i],
+                lastInvoke[i],
+                aggregationParameterStandardObjectInspectors[i]) != 0) {
+              aggregationEvaluators[i].aggregate(aggs[i], o);
+              for (int pi = 0; pi < o.length; pi++) {
+                lastInvoke[i][pi] = ObjectInspectorUtils.copyToStandardObject(
+                    o[pi], aggregationParameterObjectInspectors[i][pi],
+                    ObjectInspectorCopyOption.WRITABLE);
+              }
             }
           }
         }
-      } else {
+      }
+
+      // update non-distinct value aggregations: 'VALUE._colx'
+      // these aggregations should be updated only once.
+      if (unionTag == 0) {
+        for (int pos : nonDistinctAggrs) {
+          Object[] o = new Object[aggregationParameterFields[pos].length];
+          for (int pi = 0; pi < aggregationParameterFields[pos].length; pi++) {
+            o[pi] = aggregationParameterFields[pos][pi].evaluate(row);
+          }
+          aggregationEvaluators[pos].aggregate(aggs[pos], o);
+        }
+      }
+    } else {
+      for (int ai = 0; ai < aggs.length; ai++) {
+        // there is no distinct aggregation,
+        // update all aggregations
+        Object[] o = new Object[aggregationParameterFields[ai].length];
+        for (int pi = 0; pi < aggregationParameterFields[ai].length; pi++) {
+          o[pi] = aggregationParameterFields[ai][pi].evaluate(row);
+        }
         aggregationEvaluators[ai].aggregate(aggs[ai], o);
       }
     }
@@ -560,17 +708,9 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
     try {
       countAfterReport++;
 
-      // Compute the keys
-      newKeys.clear();
-      for (int i = 0; i < keyFields.length; i++) {
-        if (keyObjectInspectors[i] == null) {
-          keyObjectInspectors[i] = keyFields[i].initialize(rowInspector);
-        }
-        keyObjects[i] = keyFields[i].evaluate(row);
-        newKeys.add(keyObjects[i]);
-      }
-
+      newKeys.getNewKey(row, rowInspector);
       if (hashAggr) {
+        newKeys.setHashKey();
         processHashAggr(row, rowInspector, newKeys);
       } else {
         processAggr(row, rowInspector, newKeys);
@@ -590,84 +730,16 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
     }
   }
 
-  private static ArrayList<Object> deepCopyElements(Object[] keys,
-      ObjectInspector[] keyObjectInspectors,
-      ObjectInspectorCopyOption copyOption) {
-    ArrayList<Object> result = new ArrayList<Object>(keys.length);
-    deepCopyElements(keys, keyObjectInspectors, result, copyOption);
-    return result;
-  }
-
-  private static void deepCopyElements(Object[] keys,
-      ObjectInspector[] keyObjectInspectors, ArrayList<Object> result,
-      ObjectInspectorCopyOption copyOption) {
-    result.clear();
-    for (int i = 0; i < keys.length; i++) {
-      result.add(ObjectInspectorUtils.copyToStandardObject(keys[i],
-          keyObjectInspectors[i], copyOption));
-    }
-  }
-
-  class KeyWrapper {
-    int hashcode;
-    ArrayList<Object> keys;
-    // decide whether this is already in hashmap (keys in hashmap are deepcopied
-    // version, and we need to use 'currentKeyObjectInspector').
-    boolean copy = false;
-
-    KeyWrapper() {
-    }
-
-    public KeyWrapper(int hashcode, ArrayList<Object> copiedKeys) {
-      this(hashcode, copiedKeys, false);
-    }
-
-    public KeyWrapper(int hashcode, ArrayList<Object> copiedKeys,
-        boolean inHashMap) {
-      super();
-      this.hashcode = hashcode;
-      keys = copiedKeys;
-      copy = inHashMap;
-    }
-
-    @Override
-    public int hashCode() {
-      return hashcode;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-      ArrayList<Object> copied_in_hashmap = ((KeyWrapper) obj).keys;
-      if (!copy) {
-        return newKeyStructEqualComparer.areEqual(copied_in_hashmap, keys);
-      } else {
-        return currentStructEqualComparer.areEqual(copied_in_hashmap, keys);
-      }
-    }
-  }
-
-
-
-  KeyWrapper keyProber = new KeyWrapper();
-
   private void processHashAggr(Object row, ObjectInspector rowInspector,
-      ArrayList<Object> newKeys) throws HiveException {
+      KeyWrapper newKeys) throws HiveException {
     // Prepare aggs for updating
     AggregationBuffer[] aggs = null;
     boolean newEntryForHashAggr = false;
 
-    keyProber.hashcode = newKeys.hashCode();
-    // use this to probe the hashmap
-    keyProber.keys = newKeys;
-
     // hash-based aggregations
-    aggs = hashAggregations.get(keyProber);
-    ArrayList<Object> newDefaultKeys = null;
+    aggs = hashAggregations.get(newKeys);
     if (aggs == null) {
-      newDefaultKeys = deepCopyElements(keyObjects, keyObjectInspectors,
-          ObjectInspectorCopyOption.WRITABLE);
-      KeyWrapper newKeyProber = new KeyWrapper(keyProber.hashcode,
-          newDefaultKeys, true);
+      KeyWrapper newKeyProber = newKeys.copyKey();
       aggs = newAggregations();
       hashAggregations.put(newKeyProber, aggs);
       newEntryForHashAggr = true;
@@ -680,11 +752,7 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
     // Peek into the set to find out if a new grouping key is seen for the given
     // reduction key
     if (groupKeyIsNotReduceKey) {
-      if (newDefaultKeys == null) {
-        newDefaultKeys = deepCopyElements(keyObjects, keyObjectInspectors,
-            ObjectInspectorCopyOption.WRITABLE);
-      }
-      newEntryForHashAggr = keysCurrentGroup.add(newDefaultKeys);
+      newEntryForHashAggr = keysCurrentGroup.add(newKeys.copyKey());
     }
 
     // Update the aggs
@@ -706,27 +774,30 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
 
   // Non-hash aggregation
   private void processAggr(Object row, ObjectInspector rowInspector,
-      ArrayList<Object> newKeys) throws HiveException {
+      KeyWrapper newKeys) throws HiveException {
     // Prepare aggs for updating
     AggregationBuffer[] aggs = null;
     Object[][] lastInvoke = null;
+    //boolean keysAreEqual = (currentKeys != null && newKeys != null)?
+    //  newKeyStructEqualComparer.areEqual(currentKeys, newKeys) : false;
+
     boolean keysAreEqual = (currentKeys != null && newKeys != null)?
-      newKeyStructEqualComparer.areEqual(currentKeys, newKeys) : false;
+        newKeys.equals(currentKeys) : false;
 
 
     // Forward the current keys if needed for sort-based aggregation
     if (currentKeys != null && !keysAreEqual) {
-      forward(currentKeys, aggregations);
+      forward(currentKeys.getKeyArray(), aggregations);
       countAfterReport = 0;
     }
 
     // Need to update the keys?
     if (currentKeys == null || !keysAreEqual) {
       if (currentKeys == null) {
-        currentKeys = new ArrayList<Object>(keyFields.length);
+        currentKeys = newKeys.copyKey();
+      } else {
+        currentKeys.copyKey(newKeys);
       }
-      deepCopyElements(keyObjects, keyObjectInspectors, currentKeys,
-          ObjectInspectorCopyOption.WRITABLE);
 
       // Reset the aggregations
       resetAggregations(aggregations);
@@ -751,14 +822,14 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
    * @param newKeys
    *          keys for the row under consideration
    **/
-  private boolean shouldBeFlushed(ArrayList<Object> newKeys) {
+  private boolean shouldBeFlushed(KeyWrapper newKeys) {
     int numEntries = hashAggregations.size();
 
     // The fixed size for the aggregation class is already known. Get the
     // variable portion of the size every NUMROWSESTIMATESIZE rows.
     if ((numEntriesHashTable == 0) || ((numEntries % NUMROWSESTIMATESIZE) == 0)) {
       for (Integer pos : keyPositionsSize) {
-        Object key = newKeys.get(pos.intValue());
+        Object key = newKeys.getKeyArray()[pos.intValue()];
         // Ignore nulls
         if (key != null) {
           if (key instanceof LazyPrimitive) {
@@ -775,8 +846,7 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
 
       AggregationBuffer[] aggs = null;
       if (aggrPositions.size() > 0) {
-	KeyWrapper newKeyProber = new KeyWrapper(
-	    newKeys.hashCode(), newKeys);
+        KeyWrapper newKeyProber = newKeys.copyKey();
         aggs = hashAggregations.get(newKeyProber);
       }
 
@@ -822,7 +892,7 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
           .entrySet().iterator();
       while (iter.hasNext()) {
         Map.Entry<KeyWrapper, AggregationBuffer[]> m = iter.next();
-        forward(m.getKey().keys, m.getValue());
+        forward(m.getKey().getKeyArray(), m.getValue());
       }
       hashAggregations.clear();
       hashAggregations = null;
@@ -837,7 +907,7 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
     int numDel = 0;
     while (iter.hasNext()) {
       Map.Entry<KeyWrapper, AggregationBuffer[]> m = iter.next();
-      forward(m.getKey().keys, m.getValue());
+      forward(m.getKey().getKeyArray(), m.getValue());
       iter.remove();
       numDel++;
       if (numDel * 10 >= oldSize) {
@@ -856,19 +926,20 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
    *          The keys in the record
    * @throws HiveException
    */
-  protected void forward(ArrayList<Object> keys, AggregationBuffer[] aggs)
+  protected void forward(Object[] keys, AggregationBuffer[] aggs)
       throws HiveException {
-    int totalFields = keys.size() + aggs.length;
+    int totalFields = keys.length+ aggs.length;
     if (forwardCache == null) {
       forwardCache = new Object[totalFields];
     }
-    for (int i = 0; i < keys.size(); i++) {
-      forwardCache[i] = keys.get(i);
+    for (int i = 0; i < keys.length; i++) {
+      forwardCache[i] = keys[i];
     }
     for (int i = 0; i < aggs.length; i++) {
-      forwardCache[keys.size() + i] = aggregationEvaluators[i]
+      forwardCache[keys.length + i] = aggregationEvaluators[i]
           .evaluate(aggs[i]);
     }
+
     forward(forwardCache, outputObjInspector);
   }
 
@@ -905,7 +976,7 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
           }
 
           // create dummy keys - size 0
-          forward(new ArrayList<Object>(0), aggregations);
+          forward(new Object[0], aggregations);
         } else {
           if (hashAggregations != null) {
             LOG.warn("Begin Hash Table flush at close: size = "
@@ -914,14 +985,15 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
             while (iter.hasNext()) {
               Map.Entry<KeyWrapper, AggregationBuffer[]> m = (Map.Entry) iter
                   .next();
-              forward(m.getKey().keys, m.getValue());
+
+              forward(m.getKey().getKeyArray(), m.getValue());
               iter.remove();
             }
             hashAggregations.clear();
           } else if (aggregations != null) {
             // sort-based aggregations
             if (currentKeys != null) {
-              forward(currentKeys, aggregations);
+              forward(currentKeys.getKeyArray(), aggregations);
             }
             currentKeys = null;
           } else {

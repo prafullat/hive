@@ -54,6 +54,10 @@ import org.apache.hadoop.hive.metastore.MetaStoreUtils;
 import org.apache.hadoop.hive.metastore.TableType;
 import org.apache.hadoop.hive.metastore.Warehouse;
 import org.apache.hadoop.hive.metastore.api.AlreadyExistsException;
+<<<<<<< HEAD
+=======
+import org.apache.hadoop.hive.metastore.api.Constants;
+>>>>>>> local_apache/trunk
 import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.Index;
@@ -336,6 +340,13 @@ public class Hive {
   public void alterTable(String tblName, Table newTbl)
       throws InvalidOperationException, HiveException {
     try {
+<<<<<<< HEAD
+=======
+      // Remove the DDL_TIME so it gets refreshed
+      if (newTbl.getParameters() != null) {
+        newTbl.getParameters().remove(Constants.DDL_TIME);
+      }
+>>>>>>> local_apache/trunk
       getMSC().alter_table(getCurrentDatabase(), tblName, newTbl.getTTable());
     } catch (MetaException e) {
       throw new HiveException("Unable to alter table.", e);
@@ -345,6 +356,31 @@ public class Hive {
   }
 
   /**
+<<<<<<< HEAD
+=======
+   * Updates the existing index metadata with the new metadata.
+   *
+   * @param idxName
+   *          name of the existing index
+   * @param newIdx
+   *          new name of the index. could be the old name
+   * @throws InvalidOperationException
+   *           if the changes in metadata is not acceptable
+   * @throws TException
+   */
+  public void alterIndex(String dbName, String baseTblName, String idxName, Index newIdx)
+      throws InvalidOperationException, HiveException {
+    try {
+      getMSC().alter_index(dbName, baseTblName, idxName, newIdx);
+    } catch (MetaException e) {
+      throw new HiveException("Unable to alter index.", e);
+    } catch (TException e) {
+      throw new HiveException("Unable to alter index.", e);
+    }
+  }
+
+  /**
+>>>>>>> local_apache/trunk
    * Updates the existing table metadata with the new metadata.
    *
    * @param tblName
@@ -358,6 +394,13 @@ public class Hive {
   public void alterPartition(String tblName, Partition newPart)
       throws InvalidOperationException, HiveException {
     try {
+<<<<<<< HEAD
+=======
+      // Remove the DDL time so that it gets refreshed
+      if (newPart.getParameters() != null) {
+        newPart.getParameters().remove(Constants.DDL_TIME);
+      }
+>>>>>>> local_apache/trunk
       getMSC().alter_partition(getCurrentDatabase(), tblName,
           newPart.getTPartition());
 
@@ -398,6 +441,9 @@ public class Hive {
             tbl.getDeserializer()));
       }
       tbl.checkValidity();
+      if (tbl.getParameters() != null) {
+        tbl.getParameters().remove(Constants.DDL_TIME);
+      }
       getMSC().createTable(tbl.getTTable());
     } catch (AlreadyExistsException e) {
       if (!ifNotExists) {
@@ -446,9 +492,15 @@ public class Hive {
       List<String> indexedCols, String indexTblName, boolean deferredRebuild,
       String inputFormat, String outputFormat, String serde,
       String storageHandler, String location,
+<<<<<<< HEAD
       Map<String, String> idxProps, Map<String, String> serdeProps,
       String collItemDelim, String fieldDelim, String fieldEscape,
       String lineDelim, String mapKeyDelim)
+=======
+      Map<String, String> idxProps, Map<String, String> tblProps, Map<String, String> serdeProps,
+      String collItemDelim, String fieldDelim, String fieldEscape,
+      String lineDelim, String mapKeyDelim, String indexComment)
+>>>>>>> local_apache/trunk
       throws HiveException {
 
     try {
@@ -558,6 +610,14 @@ public class Hive {
         List<FieldSchema> partKeys = baseTbl.getPartitionKeys();
         tt.setPartitionKeys(partKeys);
         tt.setTableType(TableType.INDEX_TABLE.toString());
+<<<<<<< HEAD
+=======
+        if (tblProps != null) {
+          for (Entry<String, String> prop : tblProps.entrySet()) {
+            tt.putToParameters(prop.getKey(), prop.getValue());
+          }
+        }
+>>>>>>> local_apache/trunk
       }
 
       if(!deferredRebuild) {
@@ -566,8 +626,19 @@ public class Hive {
 
       Index indexDesc = new Index(indexName, indexHandlerClass, dbName, tableName, time, time, indexTblName,
           storageDescriptor, params, deferredRebuild);
+<<<<<<< HEAD
       indexHandler.analyzeIndexDefinition(baseTbl, indexDesc, tt);
 
+=======
+      indexDesc.getParameters().put("comment", indexComment);
+      indexHandler.analyzeIndexDefinition(baseTbl, indexDesc, tt);
+
+      if (idxProps != null)
+      {
+        indexDesc.getParameters().putAll(idxProps);
+      }
+
+>>>>>>> local_apache/trunk
       this.getMSC().createIndex(indexDesc, tt);
 
     } catch (Exception e) {
@@ -575,6 +646,13 @@ public class Hive {
     }
   }
 
+<<<<<<< HEAD
+=======
+  public Index getIndex(String baseTableName, String indexName) throws HiveException {
+    return this.getIndex(getCurrentDatabase(), baseTableName, indexName);
+  }
+
+>>>>>>> local_apache/trunk
   public Index getIndex(String dbName, String baseTableName,
       String indexName) throws HiveException {
     try {
@@ -592,6 +670,7 @@ public class Hive {
     } catch (Exception e) {
       throw new HiveException("Unknow error. Please check logs.", e);
     }
+<<<<<<< HEAD
   }
 
   public List<Index> getIndexesOnTable(String db_name, String tbl_name,
@@ -603,6 +682,8 @@ public class Hive {
     } catch (Exception e) {
       throw new HiveException("Unknow error. Please check logs.", e);
     }
+=======
+>>>>>>> local_apache/trunk
   }
 
   /**
@@ -773,6 +854,7 @@ public class Hive {
    */
   public List<String> getAllTables() throws HiveException {
     return getAllTables(getCurrentDatabase());
+<<<<<<< HEAD
   }
 
   /**
@@ -786,6 +868,21 @@ public class Hive {
   }
 
   /**
+=======
+  }
+
+  /**
+   * Get all table names for the specified database.
+   * @param dbName
+   * @return List of table names
+   * @throws HiveException
+   */
+  public List<String> getAllTables(String dbName) throws HiveException {
+    return getTablesByPattern(dbName, ".*");
+  }
+
+  /**
+>>>>>>> local_apache/trunk
    * Returns all existing tables from default database which match the given
    * pattern. The matching occurs as per Java regular expressions
    *
@@ -856,6 +953,7 @@ public class Hive {
    *          java re pattern
    * @return list of database names
    * @throws HiveException
+<<<<<<< HEAD
    */
   public List<String> getDatabasesByPattern(String databasePattern) throws HiveException {
     try {
@@ -873,6 +971,25 @@ public class Hive {
    *         does not exist.
    * @throws HiveException
    */
+=======
+   */
+  public List<String> getDatabasesByPattern(String databasePattern) throws HiveException {
+    try {
+      return getMSC().getDatabases(databasePattern);
+    } catch (Exception e) {
+      throw new HiveException(e);
+    }
+  }
+
+  /**
+   * Query metadata to see if a database with the given name already exists.
+   *
+   * @param dbName
+   * @return true if a database with the given name already exists, false if
+   *         does not exist.
+   * @throws HiveException
+   */
+>>>>>>> local_apache/trunk
   public boolean databaseExists(String dbName) throws HiveException {
     try {
       if (null != getMSC().getDatabase(dbName)) {
@@ -1088,6 +1205,8 @@ public class Hive {
 
     try {
       Partition tmpPart = new Partition(tbl, partSpec, location);
+      // No need to clear DDL_TIME in parameters since we know it's
+      // not populated on construction.
       partition = getMSC().add_partition(tmpPart.getTPartition());
     } catch (Exception e) {
       LOG.error(StringUtils.stringifyException(e));
@@ -1278,6 +1397,7 @@ public class Hive {
     List<String> partialPvals = getPvals(tbl.getPartCols(), partialPartSpec);
 
     List<org.apache.hadoop.hive.metastore.api.Partition> partitions = null;
+<<<<<<< HEAD
     try {
       partitions = getMSC().listPartitions(tbl.getDbName(), tbl.getTableName(),
           partialPvals, (short) -1);
@@ -1354,6 +1474,84 @@ public class Hive {
   static private void checkPaths(FileSystem fs, FileStatus[] srcs, Path destf,
       boolean replace) throws HiveException {
     try {
+=======
+    try {
+      partitions = getMSC().listPartitions(tbl.getDbName(), tbl.getTableName(),
+          partialPvals, (short) -1);
+    } catch (Exception e) {
+      throw new HiveException(e);
+    }
+
+    List<Partition> qlPartitions = new ArrayList<Partition>();
+    for (org.apache.hadoop.hive.metastore.api.Partition p : partitions) {
+      qlPartitions.add( new Partition(tbl, p));
+    }
+
+    return qlPartitions;
+  }
+
+  /**
+   * get all the partitions of the table that matches the given partial
+   * specification. partition columns whose value is can be anything should be
+   * an empty string.
+   *
+   * @param tbl
+   *          object for which partition is needed. Must be partitioned.
+   * @return list of partition objects
+   * @throws HiveException
+   */
+  public List<Partition> getPartitionsByNames(Table tbl,
+      Map<String, String> partialPartSpec)
+      throws HiveException {
+
+    if (!tbl.isPartitioned()) {
+      throw new HiveException("Partition spec should only be supplied for a " +
+      		"partitioned table");
+    }
+
+    List<String> names = getPartitionNames(tbl.getDbName(), tbl.getTableName(),
+        partialPartSpec, (short)-1);
+
+    List<Partition> partitions = new ArrayList<Partition>();
+
+    for (String pval: names) {
+      try {
+        org.apache.hadoop.hive.metastore.api.Partition tpart =
+          getMSC().getPartition(tbl.getDbName(), tbl.getTableName(), pval);
+        if (tpart != null) {
+          Partition p = new Partition(tbl, tpart);
+          partitions.add(p);
+        }
+      } catch (Exception e) {
+        throw new HiveException(e);
+      }
+    }
+
+    return partitions;
+  }
+  /**
+   * Get the name of the current database
+   * @return
+   */
+  public String getCurrentDatabase() {
+    if (null == currentDatabase) {
+      currentDatabase = DEFAULT_DATABASE_NAME;
+    }
+    return currentDatabase;
+  }
+
+  /**
+   * Set the name of the current database
+   * @param currentDatabase
+   */
+  public void setCurrentDatabase(String currentDatabase) {
+    this.currentDatabase = currentDatabase;
+  }
+
+  static private void checkPaths(FileSystem fs, FileStatus[] srcs, Path destf,
+      boolean replace) throws HiveException {
+    try {
+>>>>>>> local_apache/trunk
       for (FileStatus src : srcs) {
         FileStatus[] items = fs.listStatus(src.getPath());
         for (FileStatus item : items) {
@@ -1378,6 +1576,7 @@ public class Hive {
             // "destf" directory. The scheme is dead simple: simply tack
             // on "_copy_N" where N starts at 1 and works its way up until
             // we find a free space.
+<<<<<<< HEAD
 
             // Note: there are race conditions here, but I don't believe
             // they're worse than what was already present.
@@ -1395,6 +1594,25 @@ public class Hive {
                 continue;
               }
 
+=======
+
+            // Note: there are race conditions here, but I don't believe
+            // they're worse than what was already present.
+            int counter = 1;
+            Path itemDest = new Path(destf, itemStaging.getName());
+
+            while (fs.exists(itemDest)) {
+              Path proposedStaging = itemStaging.suffix("_copy_" + counter++);
+              Path proposedDest = new Path(destf, proposedStaging.getName());
+
+              if (fs.exists(proposedDest)) {
+                // There's already a file in our destination directory with our
+                // _copy_N suffix. We've been here before...
+                LOG.trace(proposedDest + " already exists");
+                continue;
+              }
+
+>>>>>>> local_apache/trunk
               if (!fs.rename(itemStaging, proposedStaging)) {
                 LOG.debug("Unsuccessfully in attempt to rename " + itemStaging + " to " + proposedStaging + "...");
                 continue;
@@ -1601,7 +1819,21 @@ public class Hive {
     } catch (MetaException e) {
       throw new HiveException("Error in getting fields from serde."
           + e.getMessage(), e);
+<<<<<<< HEAD
+=======
     }
+  }
+
+  public List<Index> getIndexes(String dbName, String tblName, short max) throws HiveException {
+    List<Index> indexes = null;
+    try {
+      indexes = getMSC().listIndexes(dbName, tblName, max);
+    } catch (Exception e) {
+      LOG.error(StringUtils.stringifyException(e));
+      throw new HiveException(e);
+>>>>>>> local_apache/trunk
+    }
+    return indexes;
   }
 
 };

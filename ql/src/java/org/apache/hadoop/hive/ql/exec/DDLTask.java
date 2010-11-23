@@ -37,10 +37,11 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.Map.Entry;
+import java.lang.Long;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -58,10 +59,12 @@ import org.apache.hadoop.hive.metastore.Warehouse;
 import org.apache.hadoop.hive.metastore.api.AlreadyExistsException;
 import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
+import org.apache.hadoop.hive.metastore.api.Index;
 import org.apache.hadoop.hive.metastore.api.InvalidOperationException;
 import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.NoSuchObjectException;
 import org.apache.hadoop.hive.metastore.api.Order;
+import org.apache.hadoop.hive.metastore.api.Index;
 import org.apache.hadoop.hive.ql.Context;
 import org.apache.hadoop.hive.ql.DriverContext;
 import org.apache.hadoop.hive.ql.QueryPlan;
@@ -82,8 +85,9 @@ import org.apache.hadoop.hive.ql.metadata.Partition;
 import org.apache.hadoop.hive.ql.metadata.Table;
 import org.apache.hadoop.hive.ql.plan.AddPartitionDesc;
 import org.apache.hadoop.hive.ql.plan.AlterTableDesc;
-import org.apache.hadoop.hive.ql.plan.AlterTableDesc.AlterTableTypes;
 import org.apache.hadoop.hive.ql.plan.AlterTableSimpleDesc;
+import org.apache.hadoop.hive.ql.plan.AlterIndexDesc;
+import org.apache.hadoop.hive.ql.plan.AlterIndexDesc.AlterIndexTypes;
 import org.apache.hadoop.hive.ql.plan.CreateDatabaseDesc;
 import org.apache.hadoop.hive.ql.plan.CreateIndexDesc;
 import org.apache.hadoop.hive.ql.plan.CreateTableDesc;
@@ -99,12 +103,14 @@ import org.apache.hadoop.hive.ql.plan.LockTableDesc;
 import org.apache.hadoop.hive.ql.plan.MsckDesc;
 import org.apache.hadoop.hive.ql.plan.ShowDatabasesDesc;
 import org.apache.hadoop.hive.ql.plan.ShowFunctionsDesc;
+import org.apache.hadoop.hive.ql.plan.ShowIndexesDesc;
 import org.apache.hadoop.hive.ql.plan.ShowLocksDesc;
 import org.apache.hadoop.hive.ql.plan.ShowPartitionsDesc;
 import org.apache.hadoop.hive.ql.plan.ShowTableStatusDesc;
 import org.apache.hadoop.hive.ql.plan.ShowTablesDesc;
 import org.apache.hadoop.hive.ql.plan.SwitchDatabaseDesc;
 import org.apache.hadoop.hive.ql.plan.UnlockTableDesc;
+import org.apache.hadoop.hive.ql.plan.AlterTableDesc.AlterTableTypes;
 import org.apache.hadoop.hive.ql.plan.api.StageType;
 import org.apache.hadoop.hive.serde.Constants;
 import org.apache.hadoop.hive.serde2.Deserializer;
@@ -183,6 +189,11 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
       CreateIndexDesc crtIndex = work.getCreateIndexDesc();
       if (crtIndex != null) {
         return createIndex(db, crtIndex);
+      }
+
+      AlterIndexDesc alterIndex = work.getAlterIndexDesc();
+      if (alterIndex != null) {
+        return alterIndex(db, alterIndex);
       }
 
       DropIndexDesc dropIdx = work.getDropIdxDesc();
@@ -281,6 +292,11 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
         return showPartitions(db, showParts);
       }
 
+      ShowIndexesDesc showIndexes = work.getShowIndexesDesc();
+      if (showIndexes != null) {
+        return showIndexes(db, showIndexes);
+      }
+
     } catch (InvalidTableException e) {
       console.printError("Table " + e.getTableName() + " does not exist");
       LOG.debug(stringifyException(e));
@@ -316,10 +332,41 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
         crtIndex.getTableName(), crtIndex.getIndexName(), crtIndex.getIndexTypeHandlerClass(),
         crtIndex.getIndexedCols(), crtIndex.getIndexTableName(), crtIndex.getDeferredRebuild(),
         crtIndex.getInputFormat(), crtIndex.getOutputFormat(), crtIndex.getSerde(),
-        crtIndex.getStorageHandler(), crtIndex.getLocation(), crtIndex.getIdxProps(), crtIndex.getSerdeProps(),
-        crtIndex.getCollItemDelim(), crtIndex.getFieldDelim(), crtIndex.getFieldEscape(),
-        crtIndex.getLineDelim(), crtIndex.getMapKeyDelim()
+        crtIndex.getStorageHandler(), crtIndex.getLocation(), crtIndex.getIdxProps(), crtIndex.getTblProps(),
+        crtIndex.getSerdeProps(), crtIndex.getCollItemDelim(), crtIndex.getFieldDelim(), crtIndex.getFieldEscape(),
+        crtIndex.getLineDelim(), crtIndex.getMapKeyDelim(), crtIndex.getIndexComment()
         );
+    return 0;
+  }
+
+  private int alterIndex(Hive db, AlterIndexDesc alterIndex) throws HiveException {
+    String dbName = alterIndex.getDbName();
+    String baseTableName = alterIndex.getBaseTableName();
+    String indexName = alterIndex.getIndexName();
+    Index idx = db.getIndex(dbName, baseTableName, indexName);
+
+    if (alterIndex.getOp() == AlterIndexDesc.AlterIndexTypes.ADDPROPS) {
+      idx.getParameters().putAll(alterIndex.getProps());
+    } else {
+      console.printError("Unsupported Alter commnad");
+      return 1;
+    }
+
+    // set last modified by properties
+    if (!updateModifiedParameters(idx.getParameters(), conf)) {
+      return 1;
+    }
+
+    try {
+      db.alterIndex(dbName, baseTableName, indexName, idx);
+    } catch (InvalidOperationException e) {
+      console.printError("Invalid alter operation: " + e.getMessage());
+      LOG.info("alter index: " + stringifyException(e));
+      return 1;
+    } catch (HiveException e) {
+      console.printError("Invalid alter operation: " + e.getMessage());
+      return 1;
+    }
     return 0;
   }
 
@@ -1084,6 +1131,60 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
   }
 
   /**
+   * Write a list of indexes to a file.
+   *
+   * @param db
+   *          The database in question.
+   * @param showIndexes
+   *          These are the indexes we're interested in.
+   * @return Returns 0 when execution succeeds and above 0 if it fails.
+   * @throws HiveException
+   *           Throws this exception if an unexpected error occurs.
+   */
+  private int showIndexes(Hive db, ShowIndexesDesc showIndexes) throws HiveException {
+    // get the indexes for the table and populate the output
+    String tableName = showIndexes.getTableName();
+    Table tbl = null;
+    List<Index> indexes = null;
+
+    tbl = db.getTable(tableName);
+
+    indexes = db.getIndexes(db.getCurrentDatabase(), tbl.getTableName(), (short) -1);
+
+    // write the results in the file
+    try {
+      Path resFile = new Path(showIndexes.getResFile());
+      FileSystem fs = resFile.getFileSystem(conf);
+      DataOutput outStream = fs.create(resFile);
+
+      if (showIndexes.isFormatted()) {
+        // column headers
+        outStream.writeBytes(MetaDataFormatUtils.getIndexColumnsHeader());
+        outStream.write(terminator);
+        outStream.write(terminator);
+      }
+
+      for (Index index : indexes)
+      {
+        outStream.writeBytes(MetaDataFormatUtils.getAllColumnsInformation(index));
+      }
+
+      ((FSDataOutputStream) outStream).close();
+
+    } catch (FileNotFoundException e) {
+      LOG.info("show indexes: " + stringifyException(e));
+      throw new HiveException(e.toString());
+    } catch (IOException e) {
+      LOG.info("show indexes: " + stringifyException(e));
+      throw new HiveException(e.toString());
+    } catch (Exception e) {
+      throw new HiveException(e.toString());
+    }
+
+    return 0;
+  }
+
+  /**
    * Write a list of the available databases to a file.
    *
    * @param showDatabases
@@ -1233,6 +1334,7 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
   private int showLocks(ShowLocksDesc showLocks) throws HiveException {
     Context ctx = driverContext.getCtx();
     HiveLockManager lockMgr = ctx.getHiveLockMgr();
+    boolean isExt = showLocks.isExt();
     if (lockMgr == null) {
       throw new HiveException("show Locks LockManager not specified");
     }
@@ -1242,7 +1344,15 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
       Path resFile = new Path(showLocks.getResFile());
       FileSystem fs = resFile.getFileSystem(conf);
       DataOutput outStream = fs.create(resFile);
-      List<HiveLock> locks = lockMgr.getLocks();
+      List<HiveLock> locks = null;
+
+      if (showLocks.getTableName() == null) {
+        locks = lockMgr.getLocks();
+      }
+      else {
+        locks = lockMgr.getLocks(getHiveObject(showLocks.getTableName(),
+                                               showLocks.getPartSpec()));
+      }
 
       Collections.sort(locks, new Comparator<HiveLock>() {
 
@@ -1271,6 +1381,19 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
         outStream.writeBytes(lock.getHiveLockObject().getName());
         outStream.write(separator);
         outStream.writeBytes(lock.getHiveLockMode().toString());
+        if (isExt) {
+          outStream.write(terminator);
+          String lockData = lock.getHiveLockObject().getData();
+          if (lockData != null) {
+            String[] lockDataArr = lockData.split(":");
+            if (lockDataArr.length == 1) {
+              outStream.writeBytes("QUERYID_LOCK:" + lockData);
+            }
+            else {
+              outStream.writeBytes("QUERYID_LOCK:" + lockDataArr[0] + " TIME : " + Long.parseLong(lockDataArr[1]));
+            }
+          }
+        }
         outStream.write(terminator);
       }
       ((FSDataOutputStream) outStream).close();
@@ -1310,8 +1433,10 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
     }
 
     Map<String, String> partSpec = lockTbl.getPartSpec();
+    String lockData = lockTbl.getQueryId() + ":" + String.valueOf(System.currentTimeMillis());
+
     if (partSpec == null) {
-      HiveLock lck = lockMgr.lock(new HiveLockObject(tbl), mode, true);
+      HiveLock lck = lockMgr.lock(new HiveLockObject(tbl, lockData), mode, true);
       if (lck == null) {
         return 1;
       }
@@ -1322,11 +1447,33 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
     if (par == null) {
       throw new HiveException("Partition " + partSpec + " for table " + tabName + " does not exist");
     }
-    HiveLock lck = lockMgr.lock(new HiveLockObject(par), mode, true);
+    HiveLock lck = lockMgr.lock(new HiveLockObject(par, lockData), mode, true);
     if (lck == null) {
       return 1;
     }
     return 0;
+  }
+
+  private HiveLockObject getHiveObject(String tabName,
+                                       Map<String, String> partSpec) throws HiveException {
+    Table  tbl = db.getTable(MetaStoreUtils.DEFAULT_DATABASE_NAME, tabName);
+    if (tbl == null) {
+      throw new HiveException("Table " + tabName + " does not exist ");
+    }
+
+    HiveLockObject obj = null;
+
+    if  (partSpec == null) {
+      obj = new HiveLockObject(tbl, null);
+    }
+    else {
+      Partition par = db.getPartition(tbl, partSpec, false);
+      if (par == null) {
+        throw new HiveException("Partition " + partSpec + " for table " + tabName + " does not exist");
+      }
+      obj = new HiveLockObject(par, null);
+    }
+    return obj;
   }
 
   /**
@@ -1346,24 +1493,7 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
     }
 
     String tabName = unlockTbl.getTableName();
-    Table  tbl = db.getTable(MetaStoreUtils.DEFAULT_DATABASE_NAME, tabName);
-    if (tbl == null) {
-      throw new HiveException("Table " + tabName + " does not exist ");
-    }
-
-    Map<String, String> partSpec = unlockTbl.getPartSpec();
-    HiveLockObject obj = null;
-
-    if  (partSpec == null) {
-      obj = new HiveLockObject(tbl);
-    }
-    else {
-      Partition par = db.getPartition(tbl, partSpec, false);
-      if (par == null) {
-        throw new HiveException("Partition " + partSpec + " for table " + tabName + " does not exist");
-      }
-      obj = new HiveLockObject(par);
-    }
+    HiveLockObject obj = getHiveObject(tabName, unlockTbl.getPartSpec());
 
     List<HiveLock> locks = lockMgr.getLocks(obj);
     if ((locks == null) || (locks.isEmpty())) {
@@ -2070,20 +2200,10 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
       return 1;
     }
 
-    // set last modified by properties
-    String user = null;
-    try {
-      user = conf.getUser();
-    } catch (IOException e) {
-      console.printError("Unable to get current user: " + e.getMessage(),
-          stringifyException(e));
-      return 1;
-    }
-
     if(part == null) {
-      tbl.setProperty("last_modified_by", user);
-      tbl.setProperty("last_modified_time", Long.toString(System
-          .currentTimeMillis() / 1000));
+      if (!updateModifiedParameters(tbl.getTTable().getParameters(), conf)) {
+        return 1;
+      }
       try {
         tbl.checkValidity();
       } catch (HiveException e) {
@@ -2092,9 +2212,9 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
         return 1;
       }
     } else {
-      part.getParameters().put("last_modified_by", user);
-      part.getParameters().put("last_modified_time", Long.toString(System
-          .currentTimeMillis() / 1000));
+      if (!updateModifiedParameters(part.getParameters(), conf)) {
+        return 1;
+      }
     }
 
     try {
@@ -2234,6 +2354,29 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
     }
 
     return 0;
+  }
+
+  /**
+   * Update last_modified_by and last_modified_time parameters in parameter map.
+   *
+   * @param params
+   *          Parameters.
+   * @param user
+   *          user that is doing the updating.
+   */
+  private boolean updateModifiedParameters(Map<String, String> params, HiveConf conf) {
+    String user = null;
+    try {
+      user = conf.getUser();
+    } catch (IOException e) {
+      console.printError("Unable to get current user: " + e.getMessage(),
+          stringifyException(e));
+      return false;
+    }
+
+    params.put("last_modified_by", user);
+    params.put("last_modified_time", Long.toString(System.currentTimeMillis() / 1000));
+    return true;
   }
 
   /**

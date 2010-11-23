@@ -231,7 +231,10 @@ public class HiveConf extends Configuration {
     // mapper/reducer memory in local mode
     HIVEHADOOPMAXMEM("hive.mapred.local.mem", 0),
 
-    // test mode in hive mode
+    //small table file size
+    HIVESMALLTABLESFILESIZE("hive.smalltable.filesize",25000000L), //25M
+
+      // test mode in hive mode
     HIVETESTMODE("hive.test.mode", false),
     HIVETESTMODEPREFIX("hive.test.mode.prefix", "test_"),
     HIVETESTMODESAMPLEFREQ("hive.test.mode.samplefreq", 32),
@@ -243,6 +246,8 @@ public class HiveConf extends Configuration {
     HIVEMERGEMAPFILESAVGSIZE("hive.merge.smallfiles.avgsize", (long) (16 * 1000 * 1000)),
 
     HIVESKEWJOIN("hive.optimize.skewjoin", false),
+
+    HIVECONVERTJOIN("hive.auto.convert.join", false),
     HIVESKEWJOINKEY("hive.skewjoin.key", 1000000),
     HIVESKEWJOINMAPJOINNUMMAPTASK("hive.skewjoin.mapjoin.map.tasks", 10000),
     HIVESKEWJOINMAPJOINMINSPLIT("hive.skewjoin.mapjoin.min.split", 33554432), //32M
@@ -251,6 +256,13 @@ public class HiveConf extends Configuration {
 
     HIVESENDHEARTBEAT("hive.heartbeat.interval", 1000),
     HIVEMAXMAPJOINSIZE("hive.mapjoin.maxsize", 100000),
+
+    HIVEHASHTABLETHRESHOLD("hive.hashtable.initialCapacity", 100000),
+    HIVEHASHTABLELOADFACTOR("hive.hashtable.loadfactor", (float) 0.75),
+    HIVEHASHTABLEMAXMEMORYUSAGE("hive.hashtable.max.memory.usage", (float) 0.90),
+    HIVEHASHTABLESCALE("hive.hashtable.scale", (long)100000),
+
+    HIVEDEBUGLOCALTASK("hive.debug.localtask",false),
 
     HIVEJOBPROGRESS("hive.task.progress", false),
 
@@ -300,6 +312,7 @@ public class HiveConf extends Configuration {
     // For har files
     HIVEARCHIVEENABLED("hive.archive.enabled", false),
     HIVEHARPARENTDIRSETTABLE("hive.archive.har.parentdir.settable", false),
+
     //QL rewrites related flags.
     //Enable/Disable rewrites
     HIVE_QL_REWRITE("hive.ql.rewrites", true),
@@ -487,6 +500,16 @@ public class HiveConf extends Configuration {
   public HiveConf(Configuration other, Class<?> cls) {
     super(other);
     initialize(cls);
+  }
+
+  /**
+   * Copy constructor
+   */
+  public HiveConf(HiveConf other) {
+    super(other);
+    hiveJar = other.hiveJar;
+    auxJars = other.auxJars;
+    origProp = (Properties)other.origProp.clone();
   }
 
   private Properties getUnderlyingProps() {

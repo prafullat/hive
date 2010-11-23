@@ -26,6 +26,7 @@ import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.conf.HiveConf;
+import org.apache.hadoop.hive.ql.exec.persistence.AbstractMapJoinKey;
 import org.apache.hadoop.hive.ql.exec.persistence.RowContainer;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.plan.MapJoinDesc;
@@ -68,6 +69,7 @@ public abstract class AbstractMapJoinOperator <T extends MapJoinDesc> extends Co
 
   transient boolean firstRow;
 
+
   public AbstractMapJoinOperator() {
   }
 
@@ -84,17 +86,19 @@ public abstract class AbstractMapJoinOperator <T extends MapJoinDesc> extends Co
 
     joinKeys = new HashMap<Byte, List<ExprNodeEvaluator>>();
 
-    populateJoinKeyValue(joinKeys, conf.getKeys());
-    joinKeysObjectInspectors = getObjectInspectorsFromEvaluators(joinKeys,
-        inputObjInspectors);
-    joinKeysStandardObjectInspectors = getStandardObjectInspectors(joinKeysObjectInspectors);
+    JoinUtil.populateJoinKeyValue(joinKeys, conf.getKeys(),order,NOTSKIPBIGTABLE);
+    joinKeysObjectInspectors = JoinUtil.getObjectInspectorsFromEvaluators(joinKeys,
+        inputObjInspectors,NOTSKIPBIGTABLE);
+    joinKeysStandardObjectInspectors = JoinUtil.getStandardObjectInspectors(
+        joinKeysObjectInspectors,NOTSKIPBIGTABLE);
 
     // all other tables are small, and are cached in the hash table
     posBigTable = conf.getPosBigTable();
 
     emptyList = new RowContainer<ArrayList<Object>>(1, hconf);
-    RowContainer bigPosRC = getRowContainer(hconf, (byte) posBigTable,
-        order[posBigTable], joinCacheSize);
+    RowContainer bigPosRC = JoinUtil.getRowContainer(hconf,
+        rowContainerStandardObjectInspectors.get((byte) posBigTable),
+        order[posBigTable], joinCacheSize,spillTableDesc, conf,noOuterJoin);
     storage.put((byte) posBigTable, bigPosRC);
 
     mapJoinRowsKey = HiveConf.getIntVar(hconf,
@@ -120,6 +124,7 @@ public abstract class AbstractMapJoinOperator <T extends MapJoinDesc> extends Co
     initializeChildren(hconf);
   }
 
+
   @Override
   protected void fatalErrorMessage(StringBuilder errMsg, long counterCode) {
     errMsg.append("Operator " + getOperatorId() + " (id=" + id + "): "
@@ -141,6 +146,23 @@ public abstract class AbstractMapJoinOperator <T extends MapJoinDesc> extends Co
       }
     }
     return false;
+  }
+
+  // returns true if there are elements in key list and any of them is null
+  protected boolean hasAnyNulls(Object[] key) {
+    if (key != null && key.length> 0) {
+      for (Object k : key) {
+        if (k == null) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  // returns true if there are elements in key list and any of them is null
+  protected boolean hasAnyNulls(AbstractMapJoinKey key) {
+    return key.hasAnyNulls();
   }
 
 }

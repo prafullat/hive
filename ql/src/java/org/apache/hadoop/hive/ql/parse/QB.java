@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hive.ql.parse;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
@@ -42,6 +43,7 @@ public class QB {
   private int numSelDi = 0;
   private HashMap<String, String> aliasToTabs;
   private HashMap<String, QBExpr> aliasToSubq;
+  private List<String> aliases;
   private QBParseInfo qbp;
   private QBMetaData qbm;
   private QBJoinTree qbjoin;
@@ -67,6 +69,7 @@ public class QB {
   public QB(String outer_id, String alias, boolean isSubQ) {
     aliasToTabs = new HashMap<String, String>();
     aliasToSubq = new HashMap<String, QBExpr>();
+    aliases = new ArrayList<String>();
     if (alias != null) {
       alias = alias.toLowerCase();
     }
@@ -112,6 +115,12 @@ public class QB {
     aliasToSubq.put(alias.toLowerCase(), qbexpr);
   }
 
+  public void addAlias(String alias) {
+    if (!aliases.contains(alias.toLowerCase())) {
+      aliases.add(alias.toLowerCase());
+    }
+  }
+
   public String getId() {
     return id;
   }
@@ -138,6 +147,10 @@ public class QB {
 
   public Set<String> getTabAliases() {
     return aliasToTabs.keySet();
+  }
+
+  public List<String> getAliases() {
+    return aliases;
   }
 
   public QBExpr getSubqForAlias(String alias) {

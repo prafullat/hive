@@ -101,7 +101,18 @@ Trunk -  Unreleased
     HIVE-1709. Add Postgres metastore schema migration scripts (0.5 -> 0.6)
     (Yuanjun Li via namit)
 
+    HIVE-474 Support for distinct selection on two or more columns
+    (Amareshwari Sriramadasu via namit)
+
+    HIVE-1779 Add udf str_to_map
+    (Siying Dong via namit)
+
+    HIVE-1642 Convert join queries to map-join based on size of table/row
+    (Liyin Tang via namit)
+
   IMPROVEMENTS
+
+    HIVE-1712. Migrating metadata from derby to mysql thrown NullPointerException (Jake Farrell via pauly)
 
     HIVE-1394. Do not update transient_lastDdlTime if the partition is modified by a housekeeping
     operation (Ning Zhang via namit)
@@ -200,6 +211,61 @@ Trunk -  Unreleased
     database (Paul Yang via namit)
 
     HIVE-1738. Optimize key comparison in groupby
+    (Siying Dong via namit)
+
+    HIVE-1749. ExecMapper and ExecReducer reduce function calls to l4j.isInfoEnabled()
+    (Siying Dong via namit)
+
+    HIVE-1641. add map joined table to distributed cache
+    (Liyin Tang via He Yongqiang)
+
+    HIVE-1498. support IDXPROPERTIES on CREATE INDEX
+    (Marquis Wang via jvs)
+
+    HIVE-1761. Support show locks for a particular table
+    (namit via He Yongqiang)
+
+    HIVE-1751. Optimize ColumnarStructObjectInspector.getStructFieldData()
+    (Siying Dong via namit)
+
+    HIVE-1750 Remove partition filtering conditions when possible
+    (Siying Dong via namit)
+
+    HIVE-1768 Update transident_lastDdlTime only if not specified
+    (Paul Yang via namit)
+
+    HIVE-1765 Add queryid while locking
+    (namit via He Yongqiang)
+
+    HIVE-1743 Compare from the end for GroupBy
+    (Siying Dong via namit)
+
+    HIVE-1758 Reduce memory for groupby map-side hashmap
+    (Siying Dong via namit)
+
+    HIVE-1754 Remove JDBM component from Map Join
+    (Liyin via He Yongqiang)
+
+    HIVE-1782 add more debug information for hive locking
+    (namit via He Yongqiang)
+
+    HIVE-1786 Better documentation for udf str_to_map
+    (Siying Dong via namit)
+
+    HIVE-1497 support COMMENT clause on CREATE INDEX, and add new
+    command for SHOW INDEXES
+    (Russell Melick via jvs)
+
+    HIVE-1783 optimize join code path in the scenario where there is 1 value for a key
+    (Siying Dong via namit)
+
+    HIVE-1796 dumps time at which lock was taken along with the queryid in show locks <T> extended
+    (namit via He Yongqiang)
+
+    HIVE-1746 Support for using ALTER to set IDXPROPERTIES
+    (Marquis Wang via jvs)
+
+    HIVE-1787 optimize the code path when there are no outer joins
     (Siying Dong via namit)
 
   OPTIMIZATIONS
@@ -403,6 +469,64 @@ Trunk -  Unreleased
     HIVE-1742. Fix Eclipse templates (and use Ivy metadata to generate
     Eclipse library dependencies)
     (Carl Steinbach via jvs)
+
+    HIVE-1748 Statistics broken for tables with size in excess of Integer.MAX_VALUE
+    (Paul Butler via namit)
+
+    HIVE-1755 Update broken test outputs due to 1641
+    (He Yongqiang via namit)
+
+    HIVE-1757 Test cleanup for 1641
+    (Liyin Tang via namit)
+
+    HIVE-1756 Negative Test cleanup for 1641
+    (Liyin Tang via namit)
+
+    HIVE-1657 Join results are displayed wrongly for some complex joins
+    using select * (Amareshwari Sriramadasu via namit)
+
+    HIVE-1760 Mismatched open/commit transaction calls in case of connection retry
+    (Paul Yang via namit)
+
+    HIVE-1753 CombineHiveInputFormat bug
+    (Thiruvel Thirumoolan via He Yongqiang)
+
+    HIVE-1767 Bug in merging files for dynamic partitions
+    (He Yongqiang via namit)
+
+    HIVE-1769 Bug in test pcr.q
+    (Siying Dong via namit)
+
+    HIVE-1774 Bug in test merge_dynamic_partition.q
+    (He Yongqiang via namit)
+
+    HIVE-1777 Outdated comments for GenericUDTF.close()
+    (Paul Yang via jvs)
+
+    HIVE-1771 Fix bug in UDF round
+    (John Sichi via namit)
+
+    HIVE-1501 when generating reentrant INSERT for index rebuild,
+    quote identifiers using backticks
+    (Skye Berghel via jvs)
+
+    HIVE-1780 Typo in hive-default.xml
+    (Youngwoo Kim via namit)
+
+    HIVE-1776 parallel execution and auto-local mode combine to place
+    plan file in wrong file system (Joydeep Sen Sarma via namit)
+
+    HIVE-1583 Hive cannot overwrite HADOOP_CLASSPATH
+    (Thiruvel Thirumoolan via namit)
+
+    HIVE-1781 outputs not populated for dynamic partitions at compile time
+    (namit via He Yongqiang)
+
+    HIVE-1794 Bug in AND and OR if they return boolean/string
+    (Siying Dong via namit)
+
+    HIVE-1795 outputs not correctly populated for alter table
+    (namit via He Yongqiang)
 
   TESTS
 

@@ -28,6 +28,8 @@ import org.apache.hadoop.hive.ql.plan.FileSinkDesc;
 import org.apache.hadoop.hive.ql.plan.FilterDesc;
 import org.apache.hadoop.hive.ql.plan.ForwardDesc;
 import org.apache.hadoop.hive.ql.plan.GroupByDesc;
+import org.apache.hadoop.hive.ql.plan.HashTableDummyDesc;
+import org.apache.hadoop.hive.ql.plan.HashTableSinkDesc;
 import org.apache.hadoop.hive.ql.plan.JoinDesc;
 import org.apache.hadoop.hive.ql.plan.LateralViewForwardDesc;
 import org.apache.hadoop.hive.ql.plan.LateralViewJoinDesc;
@@ -85,6 +87,10 @@ public final class OperatorFactory {
         LateralViewJoinOperator.class));
     opvec.add(new OpTuple<LateralViewForwardDesc>(LateralViewForwardDesc.class,
         LateralViewForwardOperator.class));
+    opvec.add(new OpTuple<HashTableDummyDesc>(HashTableDummyDesc.class,
+        HashTableDummyOperator.class));
+    opvec.add(new OpTuple<HashTableSinkDesc>(HashTableSinkDesc.class,
+        HashTableSinkOperator.class));
   }
 
   public static <T extends Serializable> Operator<T> get(Class<T> opClass) {
@@ -188,7 +194,49 @@ public final class OperatorFactory {
    * Returns an operator given the conf and a list of parent operators.
    */
   public static <T extends Serializable> Operator<T> getAndMakeChild(T conf,
+      List<Operator<? extends Serializable>> oplist) {
+    Operator<T> ret = get((Class<T>) conf.getClass());
+    ret.setConf(conf);
+    if (oplist.size() == 0) {
+      return (ret);
+    }
+
+    // Add the new operator as child of each of the passed in operators
+    for (Operator op : oplist) {
+      List<Operator> children = op.getChildOperators();
+      if (children == null) {
+        children = new ArrayList<Operator>();
+      }
+      children.add(ret);
+      op.setChildOperators(children);
+    }
+
+    // add parents for the newly created operator
+    List<Operator<? extends Serializable>> parent = new ArrayList<Operator<? extends Serializable>>();
+    for (Operator op : oplist) {
+      parent.add(op);
+    }
+
+    ret.setParentOperators(parent);
+
+    return (ret);
+  }
+
+  /**
+   * Returns an operator given the conf and a list of parent operators.
+   */
+  public static <T extends Serializable> Operator<T> getAndMakeChild(T conf,
       RowSchema rwsch, Operator... oplist) {
+    Operator<T> ret = getAndMakeChild(conf, oplist);
+    ret.setSchema(rwsch);
+    return (ret);
+  }
+
+  /**
+   * Returns an operator given the conf and a list of parent operators.
+   */
+  public static <T extends Serializable> Operator<T> getAndMakeChild(T conf,
+      RowSchema rwsch, List<Operator<? extends Serializable>> oplist) {
     Operator<T> ret = getAndMakeChild(conf, oplist);
     ret.setSchema(rwsch);
     return (ret);

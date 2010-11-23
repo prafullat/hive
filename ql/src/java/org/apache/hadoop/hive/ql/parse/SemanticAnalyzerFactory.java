@@ -30,7 +30,7 @@ import org.apache.hadoop.hive.ql.session.SessionState;
 public final class SemanticAnalyzerFactory {
 
   static HashMap<Integer, String> commandType = new HashMap<Integer, String>();
-  static HashMap<Integer, String[]> tablePartitionCommandType = new HashMap<Integer, String[]>(); 
+  static HashMap<Integer, String[]> tablePartitionCommandType = new HashMap<Integer, String[]>();
 
   static {
     commandType.put(HiveParser.TOK_EXPLAIN, "EXPLAIN");
@@ -55,11 +55,14 @@ public final class SemanticAnalyzerFactory {
     commandType.put(HiveParser.TOK_ALTERTABLE_PROPERTIES, "ALTERTABLE_PROPERTIES");
     commandType.put(HiveParser.TOK_ALTERTABLE_SERIALIZER, "ALTERTABLE_SERIALIZER");
     commandType.put(HiveParser.TOK_ALTERTABLE_SERDEPROPERTIES, "ALTERTABLE_SERDEPROPERTIES");
+    commandType.put(HiveParser.TOK_ALTERINDEX_REBUILD, "ALTERINDEX_REBUILD");
+    commandType.put(HiveParser.TOK_ALTERINDEX_PROPERTIES, "ALTERINDEX_PROPS");
     commandType.put(HiveParser.TOK_SHOWDATABASES, "SHOWDATABASES");
     commandType.put(HiveParser.TOK_SHOWTABLES, "SHOWTABLES");
     commandType.put(HiveParser.TOK_SHOW_TABLESTATUS, "SHOW_TABLESTATUS");
     commandType.put(HiveParser.TOK_SHOWFUNCTIONS, "SHOWFUNCTIONS");
     commandType.put(HiveParser.TOK_SHOWPARTITIONS, "SHOWPARTITIONS");
+    commandType.put(HiveParser.TOK_SHOWINDEXES, "SHOWINDEXES");
     commandType.put(HiveParser.TOK_SHOWLOCKS, "SHOWLOCKS");
     commandType.put(HiveParser.TOK_CREATEFUNCTION, "CREATEFUNCTION");
     commandType.put(HiveParser.TOK_DROPFUNCTION, "DROPFUNCTION");
@@ -67,22 +70,21 @@ public final class SemanticAnalyzerFactory {
     commandType.put(HiveParser.TOK_DROPVIEW, "DROPVIEW");
     commandType.put(HiveParser.TOK_CREATEINDEX, "CREATEINDEX");
     commandType.put(HiveParser.TOK_DROPINDEX, "DROPINDEX");
-    commandType.put(HiveParser.TOK_ALTERINDEX_REBUILD, "ALTERINDEX_REBUILD");
     commandType.put(HiveParser.TOK_ALTERVIEW_PROPERTIES, "ALTERVIEW_PROPERTIES");
     commandType.put(HiveParser.TOK_QUERY, "QUERY");
     commandType.put(HiveParser.TOK_LOCKTABLE, "LOCKTABLE");
     commandType.put(HiveParser.TOK_UNLOCKTABLE, "UNLOCKTABLE");
   }
-  
+
   static {
-    tablePartitionCommandType.put(HiveParser.TOK_ALTERTABLE_ALTERPARTS_PROTECTMODE, 
+    tablePartitionCommandType.put(HiveParser.TOK_ALTERTABLE_ALTERPARTS_PROTECTMODE,
         new String[] { "ALTERTABLE_PROTECTMODE", "ALTERPARTITION_PROTECTMODE" });
     tablePartitionCommandType.put(HiveParser.TOK_ALTERTABLE_FILEFORMAT,
         new String[] { "ALTERTABLE_FILEFORMAT", "ALTERPARTITION_FILEFORMAT" });
     tablePartitionCommandType.put(HiveParser.TOK_ALTERTABLE_LOCATION,
         new String[] { "ALTERTABLE_LOCATION", "ALTERPARTITION_LOCATION" });
   }
-  
+
 
   public static BaseSemanticAnalyzer get(HiveConf conf, ASTNode tree)
       throws SemanticException {
@@ -114,12 +116,14 @@ public final class SemanticAnalyzerFactory {
       case HiveParser.TOK_ALTERTABLE_SERIALIZER:
       case HiveParser.TOK_ALTERTABLE_SERDEPROPERTIES:
       case HiveParser.TOK_ALTERINDEX_REBUILD:
+      case HiveParser.TOK_ALTERINDEX_PROPERTIES:
       case HiveParser.TOK_ALTERVIEW_PROPERTIES:
       case HiveParser.TOK_SHOWDATABASES:
       case HiveParser.TOK_SHOWTABLES:
       case HiveParser.TOK_SHOW_TABLESTATUS:
       case HiveParser.TOK_SHOWFUNCTIONS:
       case HiveParser.TOK_SHOWPARTITIONS:
+      case HiveParser.TOK_SHOWINDEXES:
       case HiveParser.TOK_SHOWLOCKS:
       case HiveParser.TOK_CREATEINDEX:
       case HiveParser.TOK_DROPINDEX:

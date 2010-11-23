@@ -115,6 +115,7 @@ TOK_ALTERTABLE_LOCATION;
 TOK_ALTERTABLE_PROPERTIES;
 TOK_ALTERTABLE_CHANGECOL_AFTER_POSITION;
 TOK_ALTERINDEX_REBUILD;
+TOK_ALTERINDEX_PROPERTIES;
 TOK_MSCK;
 TOK_SHOWDATABASES;
 TOK_SHOWTABLES;
@@ -167,6 +168,8 @@ TOK_EXPLAIN;
 TOK_TABLESERIALIZER;
 TOK_TABLEPROPERTIES;
 TOK_TABLEPROPLIST;
+TOK_INDEXPROPERTIES;
+TOK_INDEXPROPLIST;
 TOK_TABTYPE;
 TOK_LIMIT;
 TOK_TABLEPROPERTY;
@@ -186,6 +189,8 @@ TOK_LEFTSEMIJOIN;
 TOK_LATERAL_VIEW;
 TOK_TABALIAS;
 TOK_ANALYZE;
+TOK_SHOWINDEXES;
+TOK_INDEXCOMMENT;
 }
 
 
@@ -251,7 +256,6 @@ ddlStatement
     | createFunctionStatement
     | createIndexStatement
     | dropIndexStatement
-    | alterIndexRebuild
     | dropFunctionStatement
     | analyzeStatement
     | lockStatement
@@ -337,21 +341,34 @@ createTableStatement
 createIndexStatement
 @init { msgs.push("create index statement");}
 @after {msgs.pop();}
-    : KW_CREATE KW_INDEX indexName=Identifier 
-      KW_ON KW_TABLE tab=Identifier LPAREN indexedCols=columnNameList RPAREN 
+    : KW_CREATE KW_INDEX indexName=Identifier
+      KW_ON KW_TABLE tab=Identifier LPAREN indexedCols=columnNameList RPAREN
       KW_AS typeName=StringLiteral
       autoRebuild?
+      indexPropertiesPrefixed?
       indexTblName?
       tableRowFormat?
       tableFileFormat?
       tableLocation?
+      tablePropertiesPrefixed?
+      indexComment?
     ->^(TOK_CREATEINDEX $indexName $typeName $tab $indexedCols 
         autoRebuild?
+        indexPropertiesPrefixed?
         indexTblName?
         tableRowFormat?
         tableFileFormat?
-        tableLocation?)
+        tableLocation?
+        tablePropertiesPrefixed?
+        indexComment?)
     ;
+
+indexComment
+@init { msgs.push("comment on an index");}
+@after {msgs.pop();}
+        :
+                KW_COMMENT comment=StringLiteral  -> ^(TOK_INDEXCOMMENT $comment)
+        ;
 
 autoRebuild
 @init { msgs.push("auto rebuild index");}
@@ -375,10 +392,17 @@ indexPropertiesPrefixed
     ;
 
 indexProperties
-@init { msgs.push("table properties"); }
+@init { msgs.push("index properties"); }
 @after { msgs.pop(); }
     :
-      LPAREN propertiesList RPAREN -> ^(TOK_TABLEPROPERTIES propertiesList)
+      LPAREN indexPropertiesList RPAREN -> ^(TOK_INDEXPROPERTIES indexPropertiesList)
+    ;
+
+indexPropertiesList
+@init { msgs.push("index properties list"); }
+@after { msgs.pop(); }
+    :
+      keyValueProperty (COMMA keyValueProperty)* -> ^(TOK_INDEXPROPLIST keyValueProperty+)
     ;
 
 dropIndexStatement
@@ -402,6 +426,8 @@ alterStatement
             KW_TABLE! alterTableStatementSuffix
         |
             KW_VIEW! alterViewStatementSuffix
+        |
+            KW_INDEX! alterIndexStatementSuffix
         )
     ;
 
@@ -426,6 +452,22 @@ alterViewStatementSuffix
 @init { msgs.push("alter view statement"); }
 @after { msgs.pop(); }
     : alterViewSuffixProperties
+    ;
+
+alterIndexStatementSuffix
+@init { msgs.push("alter index statement"); }
+@after { msgs.pop(); }
+    : indexName=Identifier
+      (KW_ON tableName=Identifier)
+      partitionSpec?
+    (
+      KW_REBUILD
+      ->^(TOK_ALTERINDEX_REBUILD $tableName $indexName partitionSpec?)
+    |
+      KW_SET KW_IDXPROPERTIES
+      indexProperties
+      ->^(TOK_ALTERINDEX_PROPERTIES $tableName $indexName indexProperties)
+    )
     ;
 
 alterStatementSuffixRename
@@ -462,7 +504,7 @@ alterStatementSuffixAddPartitions
     : Identifier KW_ADD ifNotExists? partitionSpec partitionLocation? (partitionSpec partitionLocation?)*
     -> ^(TOK_ALTERTABLE_ADDPARTS Identifier ifNotExists? (partitionSpec partitionLocation?)+)
     ;
-    
+
 alterStatementSuffixTouch
 @init { msgs.push("touch statement"); }
 @after { msgs.pop(); }
@@ -524,7 +566,7 @@ alterStatementSuffixSerdeProperties
 tablePartitionPrefix
 @init {msgs.push("table partition prefix");}
 @after {msgs.pop();}
-  :name=Identifier partitionSpec? 
+  :name=Identifier partitionSpec?
   ->^(TOK_TABLE_PARTITION $name partitionSpec?)
   ;
 
@@ -585,17 +627,10 @@ alterStatementSuffixClusterbySortby
 @after{msgs.pop();}
 	:name=Identifier tableBuckets
 	->^(TOK_ALTERTABLE_CLUSTER_SORT $name tableBuckets)
-	| 
+	|
 	name=Identifier KW_NOT KW_CLUSTERED
 	->^(TOK_ALTERTABLE_CLUSTER_SORT $name)
 	;
-
-alterIndexRebuild
-@init { msgs.push("update index statement");}
-@after {msgs.pop();}
-    : KW_ALTER KW_INDEX indexName=Identifier KW_ON base_table_name=Identifier partitionSpec? KW_REBUILD
-    ->^(TOK_ALTERINDEX_REBUILD $base_table_name $indexName partitionSpec?)
-    ;
 
 fileFormat
 @init { msgs.push("file format specification"); }
@@ -605,7 +640,7 @@ fileFormat
     | KW_RCFILE  -> ^(TOK_TBLRCFILE)
     | KW_INPUTFORMAT inFmt=StringLiteral KW_OUTPUTFORMAT outFmt=StringLiteral (KW_INPUTDRIVER inDriver=StringLiteral KW_OUTPUTDRIVER outDriver=StringLiteral)?
       -> ^(TOK_TABLEFILEFORMAT $inFmt $outFmt $inDriver? $outDriver?)
-    | genericSpec=Identifier -> ^(TOK_FILEFORMAT_GENERIC $genericSpec) 
+    | genericSpec=Identifier -> ^(TOK_FILEFORMAT_GENERIC $genericSpec)
     ;
 
 tabTypeExpr
@@ -627,7 +662,7 @@ descStatement
     : (KW_DESCRIBE|KW_DESC) (descOptions=KW_FORMATTED|descOptions=KW_EXTENDED)? (parttype=partTypeExpr) -> ^(TOK_DESCTABLE $parttype $descOptions?)
     | (KW_DESCRIBE|KW_DESC) KW_FUNCTION KW_EXTENDED? (name=descFuncNames) -> ^(TOK_DESCFUNCTION $name KW_EXTENDED?)
     ;
-    
+
 analyzeStatement
 @init { msgs.push("analyze statement"); }
 @after { msgs.pop(); }
@@ -644,6 +679,9 @@ showStatement
     | KW_SHOW KW_TABLE KW_EXTENDED ((KW_FROM|KW_IN) db_name=Identifier)? KW_LIKE showStmtIdentifier partitionSpec?
     -> ^(TOK_SHOW_TABLESTATUS showStmtIdentifier $db_name? partitionSpec?)
     | KW_SHOW KW_LOCKS -> ^(TOK_SHOWLOCKS)
+    | KW_SHOW KW_LOCKS (parttype=partTypeExpr) (isExtended=KW_EXTENDED)? -> ^(TOK_SHOWLOCKS $parttype $isExtended?)
+    | KW_SHOW (showOptions=KW_FORMATTED)? (KW_INDEX|KW_INDEXES) KW_ON showStmtIdentifier ((KW_FROM|KW_IN) db_name=Identifier)?
+    -> ^(TOK_SHOWINDEXES showStmtIdentifier $showOptions? $db_name?)  
     ;
 
 lockStatement
@@ -797,11 +835,11 @@ tableProperties
 @init { msgs.push("table properties"); }
 @after { msgs.pop(); }
     :
-      LPAREN propertiesList RPAREN -> ^(TOK_TABLEPROPERTIES propertiesList)
+      LPAREN tablePropertiesList RPAREN -> ^(TOK_TABLEPROPERTIES tablePropertiesList)
     ;
 
-propertiesList
-@init { msgs.push("properties list"); }
+tablePropertiesList
+@init { msgs.push("table properties list"); }
 @after { msgs.pop(); }
     :
       keyValueProperty (COMMA keyValueProperty)* -> ^(TOK_TABLEPROPLIST keyValueProperty+)
@@ -853,12 +891,12 @@ tableFileFormat
       KW_STORED KW_AS KW_SEQUENCEFILE  -> TOK_TBLSEQUENCEFILE
       | KW_STORED KW_AS KW_TEXTFILE  -> TOK_TBLTEXTFILE
       | KW_STORED KW_AS KW_RCFILE  -> TOK_TBLRCFILE
-      | KW_STORED KW_AS KW_INPUTFORMAT inFmt=StringLiteral KW_OUTPUTFORMAT outFmt=StringLiteral (KW_INPUTDRIVER inDriver=StringLiteral KW_OUTPUTDRIVER outDriver=StringLiteral)?      
+      | KW_STORED KW_AS KW_INPUTFORMAT inFmt=StringLiteral KW_OUTPUTFORMAT outFmt=StringLiteral (KW_INPUTDRIVER inDriver=StringLiteral KW_OUTPUTDRIVER outDriver=StringLiteral)?
       -> ^(TOK_TABLEFILEFORMAT $inFmt $outFmt $inDriver? $outDriver?)
       | KW_STORED KW_BY storageHandler=StringLiteral
          (KW_WITH KW_SERDEPROPERTIES serdeprops=tableProperties)?
       -> ^(TOK_STORAGEHANDLER $storageHandler $serdeprops?)
-      | KW_STORED KW_AS genericSpec=Identifier      
+      | KW_STORED KW_AS genericSpec=Identifier
       -> ^(TOK_FILEFORMAT_GENERIC $genericSpec)
     ;
 
@@ -961,7 +999,7 @@ type
     : primitiveType
     | listType
     | structType
-    | mapType 
+    | mapType
     | unionType;
 
 primitiveType
@@ -1745,6 +1783,7 @@ KW_PARTITIONS : 'PARTITIONS';
 KW_TABLE: 'TABLE';
 KW_TABLES: 'TABLES';
 KW_INDEX: 'INDEX';
+KW_INDEXES: 'INDEXES';
 KW_REBUILD: 'REBUILD';
 KW_FUNCTIONS: 'FUNCTIONS';
 KW_SHOW: 'SHOW';
@@ -1836,7 +1875,7 @@ KW_TEMPORARY: 'TEMPORARY';
 KW_FUNCTION: 'FUNCTION';
 KW_EXPLAIN: 'EXPLAIN';
 KW_EXTENDED: 'EXTENDED';
-KW_FORMATTED: 'FORMATTED';	 
+KW_FORMATTED: 'FORMATTED';
 KW_SERDE: 'SERDE';
 KW_WITH: 'WITH';
 KW_DEFERRED: 'DEFERRED';
@@ -1844,7 +1883,7 @@ KW_SERDEPROPERTIES: 'SERDEPROPERTIES';
 KW_LIMIT: 'LIMIT';
 KW_SET: 'SET';
 KW_TBLPROPERTIES: 'TBLPROPERTIES';
-KW_IDXPROPERTIES: 'INDEXPROPERTIES';
+KW_IDXPROPERTIES: 'IDXPROPERTIES';
 KW_VALUE_TYPE: '$VALUE$';
 KW_ELEM_TYPE: '$ELEM$';
 KW_CASE: 'CASE';

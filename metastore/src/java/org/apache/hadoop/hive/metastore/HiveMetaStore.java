@@ -613,7 +613,7 @@ public class HiveMetaStore extends ThriftHiveMetastore {
       boolean success = false;
       try {
         ms.openTransaction();
-        if (is_type_exists(type.getName())) {
+        if (is_type_exists(ms, type.getName())) {
           throw new AlreadyExistsException("Type " + type.getName() + " already exists");
         }
         ms.createType(type);
@@ -679,14 +679,9 @@ public class HiveMetaStore extends ThriftHiveMetastore {
       return ret;
     }
 
-    public boolean is_type_exists(String typeName) throws MetaException {
-      incrementCounter("is_type_exists");
-      logStartFunction("is_type_exists: " + typeName);
-      try {
-        return (get_type(typeName) != null);
-      } catch (NoSuchObjectException e) {
-        return false;
-      }
+    private boolean is_type_exists(RawStore ms, String typeName)
+        throws MetaException {
+      return (ms.getType(typeName) != null);
     }
 
     private void drop_type_core(final RawStore ms, String typeName)
@@ -695,7 +690,7 @@ public class HiveMetaStore extends ThriftHiveMetastore {
       try {
         ms.openTransaction();
         // drop any partitions
-        if (!is_type_exists(typeName)) {
+        if (!is_type_exists(ms, typeName)) {
           throw new NoSuchObjectException(typeName + " doesn't exist");
         }
         if (!ms.dropType(typeName)) {
@@ -756,7 +751,7 @@ public class HiveMetaStore extends ThriftHiveMetastore {
         ms.openTransaction();
 
         // get_table checks whether database exists, it should be moved here
-        if (is_table_exists(tbl.getDbName(), tbl.getTableName())) {
+        if (is_table_exists(ms, tbl.getDbName(), tbl.getTableName())) {
           throw new AlreadyExistsException("Table " + tbl.getTableName()
               + " already exists");
         }
@@ -789,8 +784,10 @@ public class HiveMetaStore extends ThriftHiveMetastore {
         // set create time
         long time = System.currentTimeMillis() / 1000;
         tbl.setCreateTime((int) time);
-        tbl.putToParameters(Constants.DDL_TIME, Long.toString(time));
-
+        if (tbl.getParameters() == null ||
+            tbl.getParameters().get(Constants.DDL_TIME) == null) {
+          tbl.putToParameters(Constants.DDL_TIME, Long.toString(time));
+        }
         ms.createTable(tbl);
         success = ms.commitTransaction();
 
@@ -829,15 +826,9 @@ public class HiveMetaStore extends ThriftHiveMetastore {
       }
     }
 
-    public boolean is_table_exists(String dbname, String name)
+    private boolean is_table_exists(RawStore ms, String dbname, String name)
         throws MetaException {
-      incrementCounter("is_table_exists");
-      logStartTableFunction("is_table_exists", dbname, name);
-      try {
-        return (get_table(dbname, name) != null);
-      } catch (NoSuchObjectException e) {
-        return false;
-      }
+      return (ms.getTable(dbname, name) != null);
     }
 
     private void drop_table_core(final RawStore ms, final String dbname,
@@ -1171,8 +1162,10 @@ public class HiveMetaStore extends ThriftHiveMetastore {
         // set create time
         long time = System.currentTimeMillis() / 1000;
         part.setCreateTime((int) time);
-        part.putToParameters(Constants.DDL_TIME, Long.toString(time));
-
+        if (part.getParameters() == null ||
+            part.getParameters().get(Constants.DDL_TIME) == null) {
+          part.putToParameters(Constants.DDL_TIME, Long.toString(time));
+        }
         success = ms.addPartition(part) && ms.commitTransaction();
 
       } finally {
@@ -1371,8 +1364,13 @@ public class HiveMetaStore extends ThriftHiveMetastore {
         final String tbl_name, final Partition new_part)
         throws InvalidOperationException, MetaException, TException {
       try {
-        new_part.putToParameters(Constants.DDL_TIME, Long.toString(System
-            .currentTimeMillis() / 1000));
+        // Set DDL time to now if not specified
+        if (new_part.getParameters() == null ||
+            new_part.getParameters().get(Constants.DDL_TIME) == null ||
+            Integer.parseInt(new_part.getParameters().get(Constants.DDL_TIME)) == 0) {
+          new_part.putToParameters(Constants.DDL_TIME, Long.toString(System
+              .currentTimeMillis() / 1000));
+        }
         ms.alterPartition(db_name, tbl_name, new_part);
       } catch (InvalidObjectException e) {
         throw new InvalidOperationException("alter is not possible");
@@ -1414,6 +1412,33 @@ public class HiveMetaStore extends ThriftHiveMetastore {
       throw new MetaException("Not yet implemented");
     }
 
+    public void alter_index(final String dbname, final String base_table_name, final String index_name, final Index newIndex)
+        throws InvalidOperationException, MetaException {
+      incrementCounter("alter_index");
+      logStartFunction("alter_index: db=" + dbname + " base_tbl=" + base_table_name
+          + " idx=" + index_name + " newidx=" + newIndex.getIndexName());
+      newIndex.putToParameters(Constants.DDL_TIME, Long.toString(System
+          .currentTimeMillis() / 1000));
+
+      try {
+        executeWithRetry(new Command<Boolean>() {
+          @Override
+          Boolean run(RawStore ms) throws Exception {
+            ms.alterIndex(dbname, base_table_name, index_name, newIndex);
+            return Boolean.TRUE;
+          }
+        });
+      } catch (MetaException e) {
+        throw e;
+      } catch (InvalidOperationException e) {
+        throw e;
+      } catch (Exception e) {
+        assert(e instanceof RuntimeException);
+        throw (RuntimeException)e;
+      }
+      return;
+    }
+
     public String getVersion() throws TException {
       incrementCounter("getVersion");
       logStartFunction("getVersion");
@@ -1425,8 +1450,13 @@ public class HiveMetaStore extends ThriftHiveMetastore {
       incrementCounter("alter_table");
       logStartFunction("alter_table: db=" + dbname + " tbl=" + name
           + " newtbl=" + newTable.getTableName());
-      newTable.putToParameters(Constants.DDL_TIME, Long.toString(System
-          .currentTimeMillis() / 1000));
+
+      // Update the time if it hasn't been specified.
+      if (newTable.getParameters() == null ||
+          newTable.getParameters().get(Constants.DDL_TIME) == null) {
+        newTable.putToParameters(Constants.DDL_TIME, Long.toString(System
+            .currentTimeMillis() / 1000));
+      }
 
       try {
         executeWithRetry(new Command<Boolean>() {

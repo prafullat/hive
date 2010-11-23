@@ -31,6 +31,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.ql.lib.Node;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
+import org.apache.hadoop.hive.ql.parse.SemanticException;
 import org.apache.hadoop.hive.ql.plan.Explain;
 import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
@@ -281,6 +282,10 @@ public abstract class Operator<T extends Serializable> implements Serializable,
       return true;
     }
     for (Operator<? extends Serializable> parent : parentOperators) {
+      if (parent == null) {
+        //return true;
+        continue;
+      }
       if (parent.state != State.INIT) {
         return false;
       }
@@ -427,6 +432,14 @@ public abstract class Operator<T extends Serializable> implements Serializable,
     initialize(hconf, null);
   }
 
+  public ObjectInspector[] getInputObjInspectors() {
+    return inputObjInspectors;
+  }
+
+  public void setInputObjInspectors(ObjectInspector[] inputObjInspectors) {
+    this.inputObjInspectors = inputObjInspectors;
+  }
+
   /**
    * Process the row.
    *
@@ -501,6 +514,9 @@ public abstract class Operator<T extends Serializable> implements Serializable,
   protected boolean allInitializedParentsAreClosed() {
     if (parentOperators != null) {
       for (Operator<? extends Serializable> parent : parentOperators) {
+        if(parent==null){
+          continue;
+        }
         if (!(parent.state == State.CLOSE || parent.state == State.UNINIT)) {
           return false;
         }
@@ -629,6 +645,36 @@ public abstract class Operator<T extends Serializable> implements Serializable,
   }
 
   /**
+   * Remove a child and add all of the child's children to the location of the child
+   *
+   * @param child   If this operator is not the only parent of the child. There can be unpredictable result.
+   * @throws SemanticException
+   */
+  public void removeChildAndAdoptItsChildren(Operator<? extends Serializable> child) throws SemanticException {
+    int childIndex = childOperators.indexOf(child);
+    if (childIndex == -1) {
+      throw new SemanticException(
+          "Exception when trying to remove partition predicates: fail to find child from parent");
+    }
+
+    childOperators.remove(childIndex);
+    if (child.getChildOperators() != null &&
+        child.getChildOperators().size() > 0) {
+      childOperators.addAll(childIndex, child.getChildOperators());
+    }
+
+    for (Operator<? extends Serializable> gc : child.getChildOperators()) {
+      List<Operator<? extends Serializable>> parents = gc.getParentOperators();
+      int index = parents.indexOf(child);
+      if (index == -1) {
+        throw new SemanticException(
+            "Exception when trying to remove partition predicates: fail to find parent from child");
+      }
+      parents.set(index, this);
+    }
+  }
+
+  /**
    * Replace one parent with another at the same position. Chilren of the new
    * parent are not updated
    *
@@ -708,6 +754,16 @@ public abstract class Operator<T extends Serializable> implements Serializable,
     for (Enum<?> e : statsMap.keySet()) {
       statsMap.get(e).set(0L);
     }
+  }
+
+  public void reset(){
+    this.state=State.INIT;
+    if (childOperators != null) {
+      for (Operator<? extends Serializable> o : childOperators) {
+        o.reset();
+      }
+    }
+
   }
 
   /**
@@ -819,6 +875,20 @@ public abstract class Operator<T extends Serializable> implements Serializable,
     ObjectInspector[] result = new ObjectInspector[evals.length];
     for (int i = 0; i < evals.length; i++) {
       result[i] = evals[i].initialize(rowInspector);
+    }
+    return result;
+  }
+
+  /**
+   * Initialize an array of ExprNodeEvaluator from start, for specified length
+   * and return the result ObjectInspectors.
+   */
+  protected static ObjectInspector[] initEvaluators(ExprNodeEvaluator[] evals,
+      int start, int length,
+      ObjectInspector rowInspector) throws HiveException {
+    ObjectInspector[] result = new ObjectInspector[length];
+    for (int i = 0; i < length; i++) {
+      result[i] = evals[start + i].initialize(rowInspector);
     }
     return result;
   }

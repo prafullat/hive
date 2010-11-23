@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.hive.ql.exec;
 
-import java.io.IOException;
 import java.io.File;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
 import java.util.HashMap;
@@ -102,8 +102,8 @@ public class MapRedTask extends ExecDriver implements Serializable {
 
         String reason = MapRedTask.isEligibleForLocalMode(conf, inputSummary, numReducers);
         if (reason == null) {
-          // set the JT to local for the duration of this job
-          ctx.setOriginalTracker(conf.getVar(HiveConf.ConfVars.HADOOPJT));
+          // clone configuration before modifying it on per-task basis
+          cloneConf();
           conf.setVar(HiveConf.ConfVars.HADOOPJT, "local");
           console.printInfo("Selecting local mode for task: " + getId());
         } else {
@@ -120,6 +120,9 @@ public class MapRedTask extends ExecDriver implements Serializable {
         // so directly invoke ExecDriver
         return super.execute(driverContext);
       }
+
+      // we need to edit the configuration to setup cmdline. clone it first
+      cloneConf();
 
       // enable assertion
       String hadoopExec = conf.getVar(HiveConf.ConfVars.HADOOPBIN);
@@ -173,15 +176,17 @@ public class MapRedTask extends ExecDriver implements Serializable {
 
         workDir = (new Path(ctx.getLocalTmpFileURI())).toUri().getPath();
 
-        if (! (new File(workDir)).mkdir())
+        if (! (new File(workDir)).mkdir()) {
           throw new IOException ("Cannot create tmp working dir: " + workDir);
+        }
 
         for (String f: StringUtils.split(files, ',')) {
           Path p = new Path(f);
           String target = p.toUri().getPath();
           String link = workDir + Path.SEPARATOR + p.getName();
-          if (FileUtil.symLink(target, link) != 0)
+          if (FileUtil.symLink(target, link) != 0) {
             throw new IOException ("Cannot link to added file: " + target + " from: " + link);
+          }
         }
       }
 
@@ -261,10 +266,6 @@ public class MapRedTask extends ExecDriver implements Serializable {
       return (1);
     } finally {
       try {
-        // in case we decided to run everything in local mode, restore the
-        // the jobtracker setting to its initial value
-        ctx.restoreOriginalTracker();
-
         // creating the context can create a bunch of files. So make
         // sure to clear it out
         if(ctxCreated) {
@@ -408,4 +409,7 @@ public class MapRedTask extends ExecDriver implements Serializable {
 
     return null;
   }
+
+
+
 }

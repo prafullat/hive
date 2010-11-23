@@ -78,9 +78,11 @@ public class JoinOperator extends CommonJoinOperator<JoinDesc> implements
         nextSz = joinEmitInterval;
       }
 
-      ArrayList<Object> nr = computeValues(row, joinValues.get(alias),
+
+      ArrayList<Object> nr = JoinUtil.computeValues(row, joinValues.get(alias),
           joinValuesObjectInspectors.get(alias), joinFilters.get(alias),
           joinFilterObjectInspectors.get(alias), noOuterJoin);
+
 
       if (handleSkewJoin) {
         skewJoinKeyContext.handleSkew(tag);

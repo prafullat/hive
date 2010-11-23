@@ -130,10 +130,10 @@ public class ZooKeeperHiveLockManager implements HiveLockManager {
 
     try {
       if (keepAlive) {
-        res = zooKeeper.create(name, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT_SEQUENTIAL);
+        res = zooKeeper.create(name, key.getData().getBytes(), Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT_SEQUENTIAL);
       }
       else {
-        res = zooKeeper.create(name, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
+        res = zooKeeper.create(name, key.getData().getBytes(), Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
       }
 
       int seqNo = getSequenceNumber(res, name);
@@ -161,7 +161,8 @@ public class ZooKeeperHiveLockManager implements HiveLockManager {
 
         if ((childSeq >= 0) && (childSeq < seqNo)) {
           zooKeeper.delete(res, -1);
-          console.printError("conflicting lock present ");
+          console.printError("conflicting lock present for " + key.getName() +
+                             " mode " + mode);
           return null;
         }
       }
@@ -241,14 +242,22 @@ public class ZooKeeperHiveLockManager implements HiveLockManager {
     }
 
     for (String child : children) {
+      String data = "NULL";
       child = "/" + parent + "/" + child;
 
-      HiveLockMode   mode  = getLockMode(conf, child);
+      try {
+        data = new String(zkpClient.getData(child, new DummyWatcher(), null));
+      } catch (Exception e) {
+        LOG.error("Error in getting data for " + child + " " + e);
+        // ignore error
+      }
+
+      HiveLockMode mode = getLockMode(conf, child);
       if (mode == null) {
         continue;
       }
 
-      HiveLockObject obj   = getLockObject(conf, child, mode);
+      HiveLockObject obj   = getLockObject(conf, child, mode, data);
       if ((key == null) ||
           (obj.getName().equals(key.getName()))) {
         HiveLock lck = (HiveLock)(new ZooKeeperHiveLock(child, obj, mode));
@@ -290,7 +299,8 @@ public class ZooKeeperHiveLockManager implements HiveLockManager {
    * For eg: if Table T is partitioned by ds, hr and ds=1/hr=1 is a valid partition,
    * the lock may also correspond to T@ds=1, which is not a valid object
    **/
-  private static HiveLockObject getLockObject(HiveConf conf, String path, HiveLockMode mode) throws LockException {
+  private static HiveLockObject getLockObject(HiveConf conf, String path,
+                                              HiveLockMode mode, String data) throws LockException {
     try {
       Hive db = Hive.get(conf);
       int indx = path.lastIndexOf(mode.toString());
@@ -302,7 +312,7 @@ public class ZooKeeperHiveLockManager implements HiveLockManager {
       assert (tab != null);
 
       if (names.length == 2) {
-        return new HiveLockObject(tab);
+        return new HiveLockObject(tab, data);
       }
 
       String[] parts = names[2].split(conf.getVar(HiveConf.ConfVars.DEFAULT_ZOOKEEPER_PARTITION_NAME));
@@ -321,11 +331,12 @@ public class ZooKeeperHiveLockManager implements HiveLockManager {
       }
 
       if (partn == null) {
-        return new HiveLockObject(new DummyPartition(
-          objName.split("/")[1].replaceAll(conf.getVar(HiveConf.ConfVars.DEFAULT_ZOOKEEPER_PARTITION_NAME), "/")));
+        return new HiveLockObject(new DummyPartition(tab,
+          objName.split("/")[1].replaceAll(conf.getVar(HiveConf.ConfVars.DEFAULT_ZOOKEEPER_PARTITION_NAME), "/")),
+                                  data);
       }
 
-      return new HiveLockObject(partn);
+      return new HiveLockObject(partn, data);
     } catch (Exception e) {
       LOG.error("Failed to create ZooKeeper object: " + e);
       throw new LockException(e);

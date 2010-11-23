@@ -69,6 +69,14 @@ public class QBParseInfo {
 
   private final HashMap<String, ASTNode> destToSortby;
 
+
+  /**
+   * SortBy controls the reduce keys, which affects the order of rows that the
+   * reducer receives.
+   */
+
+  private final HashMap<String, ASTNode> destToSortby;
+
   /**
    * Maping from table/subquery aliases to all the associated lateral view nodes.
    */
@@ -81,12 +89,13 @@ public class QBParseInfo {
 
   // used by GroupBy
   private final LinkedHashMap<String, LinkedHashMap<String, ASTNode>> destToAggregationExprs;
-  private final HashMap<String, ASTNode> destToDistinctFuncExpr;
 
   /**
    * Insert clause to ASTNode mapping
    */
   private final HashMap<String, ASTNode> insClauseToAstNode;
+  private final HashMap<String, List<ASTNode>> destToDistinctFuncExprs;
+
 
   @SuppressWarnings("unused")
   private static final Log LOG = LogFactory.getLog(QBParseInfo.class.getName());
@@ -105,8 +114,10 @@ public class QBParseInfo {
     destToLimit = new HashMap<String, Integer>();
     insClauseToAstNode = new HashMap<String, ASTNode>();
 
+
     destToAggregationExprs = new LinkedHashMap<String, LinkedHashMap<String, ASTNode>>();
-    destToDistinctFuncExpr = new HashMap<String, ASTNode>();
+    destToDistinctFuncExprs = new HashMap<String, List<ASTNode>>();
+
 
     this.alias = alias;
     this.isSubQ = isSubQ;
@@ -125,13 +136,13 @@ public class QBParseInfo {
   public HashMap<String, ASTNode> getAggregationExprsForClause(String clause) {
     return destToAggregationExprs.get(clause);
   }
-
-  public void setDistinctFuncExprForClause(String clause, ASTNode ast) {
-    destToDistinctFuncExpr.put(clause, ast);
+  public void setDistinctFuncExprsForClause(String clause, List<ASTNode> ast) {
+    destToDistinctFuncExprs.put(clause, ast);
   }
 
-  public ASTNode getDistinctFuncExprForClause(String clause) {
-    return destToDistinctFuncExpr.get(clause);
+  public List<ASTNode> getDistinctFuncExprsForClause(String clause) {
+    return destToDistinctFuncExprs.get(clause);
+
   }
 
   public void setSelExprForClause(String clause, ASTNode ast) {
@@ -373,12 +384,12 @@ public class QBParseInfo {
       }
     }
 
-    if (!destToDistinctFuncExpr.isEmpty()) {
-      Iterator<Map.Entry<String, ASTNode>> distn = destToDistinctFuncExpr
+    if (!destToDistinctFuncExprs.isEmpty()) {
+      Iterator<Map.Entry<String, List<ASTNode>>> distn = destToDistinctFuncExprs
           .entrySet().iterator();
       while (distn.hasNext()) {
-        ASTNode ct = distn.next().getValue();
-        if (ct != null) {
+        List<ASTNode> ct = distn.next().getValue();
+        if (!ct.isEmpty()) {
           return false;
         }
       }

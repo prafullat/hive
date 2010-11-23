@@ -19,6 +19,7 @@
 package org.apache.hadoop.hive.ql.plan;
 
 import java.io.Serializable;
+import java.util.HashMap;
 
 import org.apache.hadoop.fs.Path;
 
@@ -30,6 +31,9 @@ import org.apache.hadoop.fs.Path;
 public class ShowLocksDesc extends DDLDesc implements Serializable {
   private static final long serialVersionUID = 1L;
   String resFile;
+  String tableName;
+  HashMap<String, String> partSpec;
+  boolean isExt;
 
   /**
    * table name for the result of show locks.
@@ -54,8 +58,44 @@ public class ShowLocksDesc extends DDLDesc implements Serializable {
   /**
    * @param resFile
    */
-  public ShowLocksDesc(Path resFile) {
-    this.resFile = resFile.toString();
+  public ShowLocksDesc(Path resFile, String tableName,
+                       HashMap<String, String> partSpec, boolean isExt) {
+    this.resFile   = resFile.toString();
+    this.partSpec  = partSpec;
+    this.tableName = tableName;
+    this.isExt     = isExt;
+  }
+
+  /**
+   * @return the tableName
+   */
+  @Explain(displayName = "table")
+  public String getTableName() {
+    return tableName;
+  }
+
+  /**
+   * @param tableName
+   *          the tableName to set
+   */
+  public void setTableName(String tableName) {
+    this.tableName = tableName;
+  }
+
+  /**
+   * @return the partSpec
+   */
+  @Explain(displayName = "partition")
+  public HashMap<String, String> getPartSpec() {
+    return partSpec;
+  }
+
+  /**
+   * @param partSpec
+   *          the partSpec to set
+   */
+  public void setPartSpecs(HashMap<String, String> partSpec) {
+    this.partSpec = partSpec;
   }
 
   /**
@@ -72,5 +112,20 @@ public class ShowLocksDesc extends DDLDesc implements Serializable {
    */
   public void setResFile(String resFile) {
     this.resFile = resFile;
+  }
+
+  /**
+   * @return the isExt
+   */
+  public boolean isExt() {
+    return isExt;
+  }
+
+  /**
+   * @param isExt
+   *          the isExt to set
+   */
+  public void setExt(boolean isExt) {
+    this.isExt = isExt;
   }
 }
