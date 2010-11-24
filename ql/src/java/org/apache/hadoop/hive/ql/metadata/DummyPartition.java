@@ -38,12 +38,8 @@ public class DummyPartition extends Partition {
   public DummyPartition() {
   }
 
-<<<<<<< HEAD
-  public DummyPartition(String name) {
-=======
   public DummyPartition(Table tbl, String name) throws HiveException {
     setTable(tbl);
->>>>>>> local_apache/trunk
     this.name = name;
   }
 

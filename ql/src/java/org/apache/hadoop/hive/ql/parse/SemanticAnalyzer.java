@@ -1400,8 +1400,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
           replacementText.append(HiveUtils.unparseIdentifier(tmp[1]));
         }
       }
-
-      return tblDesc;
     }
     if (matched == 0) {
       throw new SemanticException(ErrorMsg.INVALID_COLUMN.getMsg(sel));
@@ -3566,7 +3564,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         }
       }
 
->>>>>>> local_apache/trunk
       break;
     }
     case QBMetaData.DEST_PARTITION: {

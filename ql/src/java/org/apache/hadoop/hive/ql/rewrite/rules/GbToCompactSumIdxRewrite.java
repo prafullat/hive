@@ -303,7 +303,7 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
   private List<Index> getIndexes(Table baseTableMetaData, List<String> matchIndexTypes) {
     List<Index> matchingIndexes = new ArrayList<Index>();
     List<Index> indexesOnTable = null;
-
+    /*
     try {
       short maxNumOfIndexes = 1024; // XTODO: Hardcoding. Need to know if
                                     // there's a limit (and what is it) on
@@ -311,6 +311,7 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
                                     // on a table. If not, why is this param
                                     // required by metastore APIs?
       indexesOnTable = baseTableMetaData.getAllIndexes(maxNumOfIndexes);
+    
     } catch (HiveException e) {
       return matchingIndexes; // Return empty list (trouble doing rewrite
                               // shouldn't stop regular query execution,
@@ -318,7 +319,7 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
                               // or anything else, it's assumed to be
                               // checked & handled in core hive code itself.
     }
-
+    */
     for (int i = 0; i < indexesOnTable.size(); i++) {
       Index index = null;
       index = indexesOnTable.get(i);
@@ -813,7 +814,7 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
 
       subqueryBlock.getParseInfo().setAggregationExprsForClause(clauseName,
         new LinkedHashMap<String, ASTNode>());
-      subqueryBlock.getParseInfo().setDistinctFuncExprForClause(clauseName, null);
+      /*subqueryBlock.getParseInfo().setDistinctFuncExprForClause(clauseName, null);*/
       subqueryBlock.getParseInfo().setSelExprForClause(clauseName, selNode);
       oldQb.removeTable(rwContext.origBaseTableAlias);
       oldQb.setSubqAlias("_rw_gen_idx_table_" + subqueryCounter.get(), subqueryBlockExpr);

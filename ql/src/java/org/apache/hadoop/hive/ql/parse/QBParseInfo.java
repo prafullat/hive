@@ -62,12 +62,6 @@ public class QBParseInfo {
    * reducer the rows will go to.
    */
   private final HashMap<String, ASTNode> destToDistributeby;
-  /**
-   * SortBy controls the reduce keys, which affects the order of rows that the
-   * reducer receives.
-   */
-
-  private final HashMap<String, ASTNode> destToSortby;
 
 
   /**

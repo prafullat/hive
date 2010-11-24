@@ -18,21 +18,15 @@
 
 package org.apache.hadoop.hive.ql.metadata;
 
-<<<<<<< HEAD
-=======
 import java.util.List;
 
->>>>>>> local_apache/trunk
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.common.JavaUtils;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.index.HiveIndexHandler;
 import org.apache.hadoop.hive.ql.parse.AbstractSemanticAnalyzerHook;
 import org.apache.hadoop.util.ReflectionUtils;
-<<<<<<< HEAD
-=======
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
->>>>>>> local_apache/trunk
 
 /**
  * General collection of helper functions.
@@ -192,9 +186,6 @@ public final class HiveUtils {
     }
 
   }
-<<<<<<< HEAD
-=======
-
 
     /**
      * Convert FieldSchemas to columnNames with backticks around them.
@@ -210,5 +201,4 @@ public final class HiveUtils {
       }
       return sb.toString();
     }
->>>>>>> local_apache/trunk
 }

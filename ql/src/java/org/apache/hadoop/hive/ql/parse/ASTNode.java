@@ -37,10 +37,6 @@ public class ASTNode extends CommonTree implements Node,Serializable {
   public ASTNode() {
   }
 
-  private ASTNodeOrigin origin;
-
-  public ASTNode() {
-  }
 
   /**
    * Constructor.
