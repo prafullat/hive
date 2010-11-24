@@ -428,13 +428,13 @@
 <property>
   <name>hive.exec.pre.hooks</name>
   <value></value>
-  <description>Comma-separated list of pre-execution hooks to be invoked for each statement.  A pre-execution hook is specified as the name of a Java class which implements the org.apache.hadoop.hive.ql.hooks.PreExecute interface.</description>
+  <description>Comma-separated list of pre-execution hooks to be invoked for each statement.  A pre-execution hook is specified as the name of a Java class which implements the org.apache.hadoop.hive.ql.hooks.ExecuteWithHookContext interface.</description>
 </property>
 
 <property>
   <name>hive.exec.post.hooks</name>
   <value></value>
-  <description>Comma-separated list of post-execution hooks to be invoked for each statement.  A post-execution hook is specified as the name of a Java class which implements the org.apache.hadoop.hive.ql.hooks.PostExecute interface.</description>
+  <description>Comma-separated list of post-execution hooks to be invoked for each statement.  A post-execution hook is specified as the name of a Java class which implements the org.apache.hadoop.hive.ql.hooks.ExecuteWithHookContext interface.</description>
 </property>
 
 <property>
@@ -510,6 +510,7 @@
   <description>Whether Hive enable the optimization about converting common join into mapjoin based on the input file size</description>
 </property>
 
+
 <property>
   <name>hive.script.auto.progress</name>
   <value>false</value>
@@ -537,7 +538,6 @@
 <property>
   <name>hive.input.format</name>
   <value>org.apache.hadoop.hive.ql.io.HiveInputFormat</value>
-
   <description>The default input format, if it is not specified, the system assigns it. It is set to HiveInputFormat for hadoop versions 17, 18 and 19, whereas it is set to CombineHiveInputFormat for hadoop 20. The user can always overwrite it - if there is a bug in CombineHiveInputFormat, it can always be manually set to HiveInputFormat. </description>
 </property>
 

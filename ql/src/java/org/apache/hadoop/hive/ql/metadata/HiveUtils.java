@@ -187,6 +187,7 @@ public final class HiveUtils {
 
   }
 
+
     /**
      * Convert FieldSchemas to columnNames with backticks around them.
      */
