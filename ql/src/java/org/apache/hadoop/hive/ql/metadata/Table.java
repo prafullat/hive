@@ -38,6 +38,7 @@ import org.apache.hadoop.hive.metastore.MetaStoreUtils;
 import org.apache.hadoop.hive.metastore.ProtectMode;
 import org.apache.hadoop.hive.metastore.TableType;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
+import org.apache.hadoop.hive.metastore.api.Index;
 import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.Order;
 import org.apache.hadoop.hive.metastore.api.SerDeInfo;
@@ -797,4 +798,15 @@ public class Table implements Serializable {
   public String getCompleteName() {
     return getDbName() + "@" + getTableName();
   }
+
+  /**
+   * @return List containing Index Table names if there is exists indexes
+   * on this table
+   * @throws HiveException
+   **/
+  public List<Index> getAllIndexes(short max) throws HiveException {
+    Hive hive = Hive.get();
+    return hive.getIndexesOnTable(getTTable().getDbName(), getTTable().getTableName(), max);
+  }
+
 };

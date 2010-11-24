@@ -814,7 +814,7 @@ public class GbToCompactSumIdxRewrite extends HiveRwRule {
 
       subqueryBlock.getParseInfo().setAggregationExprsForClause(clauseName,
         new LinkedHashMap<String, ASTNode>());
-      /*subqueryBlock.getParseInfo().setDistinctFuncExprForClause(clauseName, null);*/
+      subqueryBlock.getParseInfo().setDistinctFuncExprsForClause(clauseName, null);
       subqueryBlock.getParseInfo().setSelExprForClause(clauseName, selNode);
       oldQb.removeTable(rwContext.origBaseTableAlias);
       oldQb.setSubqAlias("_rw_gen_idx_table_" + subqueryCounter.get(), subqueryBlockExpr);
