@@ -152,7 +152,6 @@ public class QBParseInfo {
   }
 
   public void clearGroupBy(String sClauseName)  {
-
     destToGroupby.clear();
 
     ASTNode astInsertNode = getInsertNodeForClause(sClauseName);

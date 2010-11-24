@@ -328,7 +328,17 @@ public class QTestUtil {
       db.setCurrentDatabase(dbName);
       for (String tblName : db.getAllTables()) {
         if (!DEFAULT_DATABASE_NAME.equals(dbName) || !srcTables.contains(tblName)) {
-          db.dropTable(dbName, tblName);
+	  Table table = db.getTable(dbName, tblName, false);
+	  if (MetaStoreUtils.isIndexTable(table.getTTable())) {
+	    // Skip the index type table here.
+	    // XTODO: Assuming (but verify)
+	    // - Drop table automatically drops indexes on that table too.
+	    // - No other case results into dangling indexes i.e. where indexes are
+	    //   left behind but orig (base) table no longer exists.
+	  }
+	  else {
+	    db.dropTable(dbName, tblName);
+	  }
         }
       }
       if (!DEFAULT_DATABASE_NAME.equals(dbName)) {
