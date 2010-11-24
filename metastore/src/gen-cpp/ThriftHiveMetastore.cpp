@@ -7767,8 +7767,6 @@ uint32_t ThriftHiveMetastore_add_index_presult::read(apache::thrift::protocol::T
   return xfer;
 }
 
-<<<<<<< HEAD
-=======
 uint32_t ThriftHiveMetastore_alter_index_args::read(apache::thrift::protocol::TProtocol* iprot) {
 
   uint32_t xfer = 0;
@@ -7989,7 +7987,6 @@ uint32_t ThriftHiveMetastore_alter_index_presult::read(apache::thrift::protocol:
   return xfer;
 }
 
->>>>>>> local_apache/trunk
 uint32_t ThriftHiveMetastore_drop_index_by_name_args::read(apache::thrift::protocol::TProtocol* iprot) {
 
   uint32_t xfer = 0;
@@ -11205,8 +11202,6 @@ void ThriftHiveMetastoreClient::recv_add_index(Index& _return)
   throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "add_index failed: unknown result");
 }
 
-<<<<<<< HEAD
-=======
 void ThriftHiveMetastoreClient::alter_index(const std::string& dbname, const std::string& base_tbl_name, const std::string& idx_name, const Index& new_idx)
 {
   send_alter_index(dbname, base_tbl_name, idx_name, new_idx);
@@ -11271,7 +11266,6 @@ void ThriftHiveMetastoreClient::recv_alter_index()
   return;
 }
 
->>>>>>> local_apache/trunk
 bool ThriftHiveMetastoreClient::drop_index_by_name(const std::string& db_name, const std::string& tbl_name, const std::string& index_name, const bool deleteData)
 {
   send_drop_index_by_name(db_name, tbl_name, index_name, deleteData);
@@ -12728,7 +12722,6 @@ void ThriftHiveMetastoreProcessor::process_add_index(int32_t seqid, apache::thri
   oprot->getTransport()->writeEnd();
 }
 
-
 void ThriftHiveMetastoreProcessor::process_alter_index(int32_t seqid, apache::thrift::protocol::TProtocol* iprot, apache::thrift::protocol::TProtocol* oprot)
 {
   ThriftHiveMetastore_alter_index_args args;
@@ -12761,7 +12754,6 @@ void ThriftHiveMetastoreProcessor::process_alter_index(int32_t seqid, apache::th
   oprot->getTransport()->flush();
   oprot->getTransport()->writeEnd();
 }
-
 
 void ThriftHiveMetastoreProcessor::process_drop_index_by_name(int32_t seqid, apache::thrift::protocol::TProtocol* iprot, apache::thrift::protocol::TProtocol* oprot)
 {

@@ -94,6 +94,7 @@ public class ThriftHiveMetastore {
     public Index add_index(Index new_index, Table index_table) throws InvalidObjectException, AlreadyExistsException, MetaException, TException;
 
     public void alter_index(String dbname, String base_tbl_name, String idx_name, Index new_idx) throws InvalidOperationException, MetaException, TException;
+
     public boolean drop_index_by_name(String db_name, String tbl_name, String index_name, boolean deleteData) throws NoSuchObjectException, MetaException, TException;
 
     public Index get_index_by_name(String db_name, String tbl_name, String index_name) throws MetaException, NoSuchObjectException, TException;
@@ -2784,6 +2785,7 @@ public class ThriftHiveMetastore {
       }
 
     }
+
     private class drop_index_by_name implements ProcessFunction {
       public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
       {
@@ -19846,6 +19848,7 @@ public class ThriftHiveMetastore {
           setO1((MetaException)value);
         }
         break;
+
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
@@ -20207,6 +20210,7 @@ public class ThriftHiveMetastore {
 
       case TBL_NAME:
         return getTbl_name();
+
       case FILTER:
         return getFilter();
 
@@ -20410,6 +20414,7 @@ public class ThriftHiveMetastore {
     }
 
   }
+
   public static class get_partitions_by_filter_result implements TBase, java.io.Serializable, Cloneable   {
     private static final TStruct STRUCT_DESC = new TStruct("get_partitions_by_filter_result");
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.LIST, (short)0);
@@ -23341,7 +23346,6 @@ public class ThriftHiveMetastore {
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
-
 
     @Override
     public boolean equals(Object that) {
