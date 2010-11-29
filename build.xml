@@ -50,6 +50,7 @@
   <property name="checkstyle.conf.dir" location="${hive.root}/checkstyle"/>
   <property name="checkstyle.build.dir" location="${build.dir.hive}/checkstyle"/>
   <property name="md5sum.format" value="{0}  {1}"/>
+<!--  <property name="is-offline" value="true"/> -->
 
   <!-- hbase-handler is enabled by default only for Hadoop 0.20.x -->
   <condition property="hbase.enabled" value="true" else="false">
