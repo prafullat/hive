@@ -6529,8 +6529,10 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     getMetaData(qb);
     LOG.info("Completed getting MetaData in Semantic Analysis");
 
+
     if( HiveConf.getBoolVar(conf, HiveConf.ConfVars.HIVE_QL_REWRITE) ) {
       if( ast.getToken().getType() == HiveParser.TOK_QUERY ) {
+        LOG.info("Abstract syntax tree before rewrites : " + ast.toStringTree());
         //If we have query input invoke query rewrites on it.
         HiveRewriteEngine rwEngine = new HiveRewriteEngine(db);
         QB newRewrittenQb = rwEngine.invokeRewrites(qb, ast);

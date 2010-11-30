@@ -583,6 +583,21 @@ public abstract class BaseSemanticAnalyzer {
     public static enum SpecType {TABLE_ONLY, STATIC_PARTITION, DYNAMIC_PARTITION};
     public SpecType specType;
 
+    public tableSpec(Hive db, HiveConf conf, String tableName) {
+       this.tableName  = tableName;
+       try {
+        this.tableHandle = db.getTable(tableName);
+      } catch (HiveException e) {
+        //XTODO: Throw semantic exception here
+        e.printStackTrace();
+      }
+
+
+    }
+    private Table getTable(String tableName2) {
+      // TODO Auto-generated method stub
+      return null;
+    }
     public tableSpec(Hive db, HiveConf conf, ASTNode ast)
         throws SemanticException {
 
