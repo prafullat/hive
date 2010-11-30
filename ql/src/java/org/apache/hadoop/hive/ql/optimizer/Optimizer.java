@@ -44,6 +44,10 @@ public class Optimizer {
    */
   public void initialize(HiveConf hiveConf) {
     transformations = new ArrayList<Transform>();
+
+    //See if group by can make use of indexes
+    transformations.add(new GbToIdxOptimizer());
+
     // Add the transformation that computes the lineage information.
     transformations.add(new Generator());
     if (HiveConf.getBoolVar(hiveConf, HiveConf.ConfVars.HIVEOPTCP)) {
