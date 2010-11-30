@@ -20,6 +20,7 @@ package org.apache.hadoop.hive.ql.optimizer;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Stack;
@@ -115,7 +116,7 @@ public class GbToIdxOptimizer implements Transform {
 
 
     gbToIdxContext = new GbToIdxContext();
-    gbToIdxContext.indexTableName = "something";
+    gbToIdxContext.indexTableName = "tbl";
     gbToIdxContext.hiveDb = hiveDb;
     gbToIdxContext.parseContext = parseContext;
 
@@ -145,7 +146,7 @@ public class GbToIdxOptimizer implements Transform {
 
 
     // TODO Auto-generated method stub
-    return null;
+    return this.parseContext;
   }
 
   protected boolean shouldApplyOptimization(ParseContext parseContext)  {
@@ -176,32 +177,38 @@ public class GbToIdxOptimizer implements Transform {
 
   public static class GbToIdxTableScanProc implements NodeProcessor {
 
-    public void setUpTableDesc(TableScanDesc tsDesc,Table table, String alias)  {
-
-      tsDesc.setGatherStats(false);
-
-      String tblName = table.getTableName();
-      tableSpec tblSpec = createTableScanDesc(table, alias);
-      String k = tblName + Path.SEPARATOR;
-      tsDesc.setStatsAggPrefix(k);
-    }
-
-    private tableSpec createTableScanDesc(Table table, String alias) {
-      // TODO Auto-generated method stub
-      return null;
-    }
 
     @Override
     public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx procCtx,
         Object... nodeOutputs) throws SemanticException {
 
-      GbToIdxContext context = (GbToIdxContext)procCtx;
+      GbToIdxContext gbToIdxContext = (GbToIdxContext)procCtx;
 
 
       TableScanOperator scanOperator = (TableScanOperator)nd;
+
       //Get the lineage information corresponding to this
       //and modify it ?
-      TableScanDesc indexTableDesc = new TableScanDesc();
+      TableScanDesc indexTableScanDesc = new TableScanDesc();
+      indexTableScanDesc.setGatherStats(false);
+
+      String tableName = gbToIdxContext.indexTableName;
+
+      tableSpec ts = new tableSpec(gbToIdxContext.hiveDb,
+            gbToIdxContext.parseContext.getConf(),
+            tableName
+          );
+      String k = tableName + Path.SEPARATOR;
+      indexTableScanDesc.setStatsAggPrefix(k);
+      scanOperator.setConf(indexTableScanDesc);
+      HashMap<TableScanOperator, Table>  topToTable =
+        gbToIdxContext.parseContext.getTopToTable();
+      topToTable.remove(scanOperator);
+      topToTable.put(scanOperator, ts.tableHandle);
+      gbToIdxContext.parseContext.setTopToTable(topToTable);
+
+
+
       //Modify outputs
 
 
@@ -212,18 +219,6 @@ public class GbToIdxOptimizer implements Transform {
   }
 
 
-  public tableSpec getTableSpec(String aliase) {
-    //gbToIdxContext.hiveDb;
-    //gbToIdxContext.parseContext.getConf()
-    //tableSpec ts = new tableSpec();
-
-    //tableName
-    //tableHandle
-    //No part spec
-    //no part handle?
-    //Spec type set to TABLE_ONLY
-    return null;
-  }
 }
 
 
