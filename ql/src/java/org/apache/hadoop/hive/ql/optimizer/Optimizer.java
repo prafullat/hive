@@ -39,14 +39,14 @@ public class Optimizer {
 
   /**
    * Create the list of transformations.
-   *
+   *l
    * @param hiveConf
    */
   public void initialize(HiveConf hiveConf) {
     transformations = new ArrayList<Transform>();
 
     //See if group by can make use of indexes
-    transformations.add(new GbToIdxOptimizer());
+    //transformations.add(new GbToIdxOptimizer());
 
     // Add the transformation that computes the lineage information.
     transformations.add(new Generator());

@@ -315,7 +315,7 @@ public class HiveConf extends Configuration {
 
     //QL rewrites related flags.
     //Enable/Disable rewrites
-    HIVE_QL_REWRITE("hive.ql.rewrites", true),
+    HIVE_QL_REWRITE("hive.ql.rewrites", false),
     //Enable/Disable gbToIdx rewrite rule
     HIVE_QL_RW_GB_TO_IDX("hive.ql.rw.gb_to_idx", false),
 
