@@ -18,17 +18,14 @@ CREATE TABLE lineitem (L_ORDERKEY      INT,
 ROW FORMAT DELIMITED
 FIELDS TERMINATED BY '|';
 
-explain select l_shipdate,
-       count(1)
-from 
-lineitem
-group by l_shipdate;
-
-
 CREATE INDEX lineitem_lshipdate_idx ON TABLE lineitem(l_shipdate) AS 'org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler' WITH DEFERRED REBUILD;
 ALTER INDEX lineitem_lshipdate_idx ON lineitem REBUILD;
 
-set hive.ql.rw.gb_to_idx=true;
+
+select l_shipdate
+from lineitem
+group by l_shipdate;
+
 
 explain select l_shipdate,
        count(1)
