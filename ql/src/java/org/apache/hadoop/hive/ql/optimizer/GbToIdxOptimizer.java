@@ -37,6 +37,7 @@ import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.Index;
 import org.apache.hadoop.hive.metastore.api.Order;
 import org.apache.hadoop.hive.ql.exec.Operator;
+import org.apache.hadoop.hive.ql.exec.SelectOperator;
 import org.apache.hadoop.hive.ql.exec.TableScanOperator;
 import org.apache.hadoop.hive.ql.lib.DefaultGraphWalker;
 import org.apache.hadoop.hive.ql.lib.DefaultRuleDispatcher;
@@ -50,6 +51,7 @@ import org.apache.hadoop.hive.ql.lib.RuleRegExp;
 import org.apache.hadoop.hive.ql.metadata.Hive;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.metadata.Table;
+import org.apache.hadoop.hive.ql.optimizer.GbToIdxOptimizer.GbToIdxDefaultProc.GbToIdxSelOpProc;
 import org.apache.hadoop.hive.ql.parse.ASTNode;
 import org.apache.hadoop.hive.ql.parse.HiveParser;
 import org.apache.hadoop.hive.ql.parse.OpParseContext;
@@ -58,6 +60,8 @@ import org.apache.hadoop.hive.ql.parse.QB;
 import org.apache.hadoop.hive.ql.parse.QBParseInfo;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
 import org.apache.hadoop.hive.ql.parse.BaseSemanticAnalyzer.tableSpec;
+import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
+import org.apache.hadoop.hive.ql.plan.SelectDesc;
 import org.apache.hadoop.hive.ql.plan.TableScanDesc;
 
 /**
@@ -152,6 +156,7 @@ public class GbToIdxOptimizer implements Transform {
     // generates the plan from the operator tree
     Map<Rule, NodeProcessor> opRules = new LinkedHashMap<Rule, NodeProcessor>();
     opRules.put(new RuleRegExp("R1", "TS%"), new GbToIdxTableScanProc());
+    opRules.put(new RuleRegExp("R2", "SEL%"), new GbToIdxSelOpProc());
 
     // The dispatcher fires the processor corresponding to the closest matching
     // rule and passes the context along
@@ -179,7 +184,7 @@ public class GbToIdxOptimizer implements Transform {
 
   protected boolean shouldApplyOptimization(ParseContext parseContext)  {
     QB inputQb = parseContext.getQB();
-    boolean retValue = false;
+    boolean retValue = true;
     for (String subqueryAlias : inputQb.getSubqAliases()) {
       QB childSubQueryQb = inputQb.getSubqForAlias(subqueryAlias).getQB();
       retValue |= checkSingleQB(childSubQueryQb, gbToIdxContext) ;
@@ -462,8 +467,8 @@ public class GbToIdxOptimizer implements Transform {
 
     //Getting GroupBy key information
     ASTNode groupByNode = qbParseInfo.getGroupByForClause(clauseName);
-    List<String> gbKeyNameList = null;
-    List<String> gbKeyAllColRefList = null;
+    List<String> gbKeyNameList = new ArrayList<String>();
+    List<String> gbKeyAllColRefList = new ArrayList<String>();
     try {
       gbKeyNameList = getChildColRefNames(groupByNode,
         true //onlyDirectChildren
@@ -615,6 +620,10 @@ public class GbToIdxOptimizer implements Transform {
           }
         }
       }
+
+      //Now that we are good to do this optimization, set parameters in context
+      //which would be used by transforation proceduer as inputs.
+
       //subquery is needed only in case of optimizecount and complex gb keys?
       if( !(optimizeCount == true && removeGroupBy == false) ) {
         context.addTable(tableName, idx.getIndexTableName());
@@ -622,7 +631,7 @@ public class GbToIdxOptimizer implements Transform {
 
       //Add stuff here ?
       return true;
-    }
+    }//End of for loop
     return false;
   }
 
@@ -659,6 +668,33 @@ public class GbToIdxOptimizer implements Transform {
       return null;
     }
 
+  public static class GbToIdxSelOpProc implements NodeProcessor {
+
+    @Override
+    public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx procCtx,
+        Object... nodeOutputs) throws SemanticException {
+
+
+      SelectOperator selOperator = (SelectOperator)nd;
+      SelectDesc selDesc = selOperator.getConf();
+
+      ArrayList<ExprNodeDesc> colList = selDesc.getColList();
+      colList.set(1, colList.get(0));
+
+
+      ArrayList<String> colNameList = selDesc.getOutputColumnNames();
+
+      Map<String, ExprNodeDesc> colExprMap = selOperator.getColumnExprMap();
+      colExprMap.put(colNameList.get(1), colList.get(0));
+      selOperator.setColumnExprMap(colExprMap);
+
+
+      return null;
+
+
+    }
+
+    }
   }
 
   public static class GbToIdxTableScanProc implements NodeProcessor {
@@ -669,8 +705,6 @@ public class GbToIdxOptimizer implements Transform {
         Object... nodeOutputs) throws SemanticException {
 
       GbToIdxContext gbToIdxContext = (GbToIdxContext)procCtx;
-
-
 
       TableScanOperator scanOperator = (TableScanOperator)nd;
       HashMap<TableScanOperator, Table>  topToTable =
