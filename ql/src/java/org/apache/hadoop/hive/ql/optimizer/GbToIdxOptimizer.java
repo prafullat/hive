@@ -111,7 +111,7 @@ import org.apache.hadoop.hive.ql.plan.TableScanDesc;
 public class GbToIdxOptimizer implements Transform {
   private ParseContext parseContext;
   private Hive hiveDb;
-  private GbToIdxContext gbToIdxContext;
+  private static GbToIdxContext gbToIdxContext;
   private LinkedHashMap<Operator<? extends Serializable>, OpParseContext> opToParseCtxMap;
   // Changing hive.root.logger var to add DEBUG in to the list will
   // show trace rewrite messages with this category. E.g. either modify

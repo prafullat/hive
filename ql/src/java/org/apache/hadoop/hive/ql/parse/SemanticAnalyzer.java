@@ -6566,22 +6566,18 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         loadTableWork, loadFileWork, ctx, idToTableNameMap, destTableId, uCtx,
         listMapJoinOpsNoReducer, groupOpToInputTables, prunedPartitions,
         opToSamplePruner);
-
     Optimizer optm = new Optimizer();
     optm.setPctx(pCtx);
-    optm.initialize(conf);
-    pCtx = optm.optimize();
-    init(pCtx);
-    qb = pCtx.getQB();
 
-   {
+
+    {
       HashMap<String, Operator<? extends Serializable>> top = pCtx.getTopOps();
       Iterator<String> tabItr = top.keySet().iterator();
       String tab = tabItr.next();
-      LOG.info("Printing ORIGINAL DAG for table:" + tab );
+      LOG.info("Printing DAG for table:" + tab );
       Operator<? extends Serializable> pList = top.get(tab);
-      if(pList != null && pList.getChildOperators() != null){
-        while(pList.getChildOperators().size() > 0){
+
+        while(pList != null && pList.getChildOperators() != null && pList.getChildOperators().size() > 0){
           List<Operator<? extends Serializable>> cList = pList.getChildOperators();
           for (Operator<? extends Serializable> operator : cList) {
             if(null != operator){
@@ -6592,84 +6588,17 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
           }
         }
 
-      }
     }
 
 
 
-    {
-
-      ParseContext myPCtx = pCtx;
-
-      HashMap<String, Operator<? extends Serializable>> newTop = new HashMap<String, Operator<? extends Serializable>>();
-      //Operator<? extends Serializable> newPList = ;
-      List<Operator<? extends Serializable>> newCList = new ArrayList<Operator<? extends Serializable>>();
-
-      HashMap<String, Operator<? extends Serializable>> top = myPCtx.getTopOps();
-      Iterator<String> tabItr = top.keySet().iterator();
-      String tab = tabItr.next();
-      Operator<? extends Serializable> pList = top.get(tab);
-
-      while(pList != null && pList.getChildOperators() != null && pList.getChildOperators().size() > 0){
-        List<Operator<? extends Serializable>> cList = pList.getChildOperators();
-
-        for (Operator<? extends Serializable> operator : cList) {
-          if(null != operator){
-              if(operator instanceof GroupByOperator && null != operator.getChildren()){
-                  for(int i=0; i< operator.getChildOperators().size(); i++){
-                    LOG.info("Removing Identifier = " + Integer.parseInt(operator.getIdentifier()) + " Operator Name - " + operator.getName());
-                    operator = operator.getChildOperators().get(i);
-                    pList = operator;
-                    newCList.add(operator);
-                    continue;
-                  }
-              }else{
-                pList = operator;
-                newCList.add(operator);
-                continue;
-              }
-
-            }
-        }
-
-      }
-      pList.setChildOperators(newCList);
-      newTop.put(tab, pList);
-      myPCtx.setTopOps(newTop);
-      pCtx = myPCtx;
-    }
-
-
-
-    {
-      HashMap<String, Operator<? extends Serializable>> top = pCtx.getTopOps();
-      Iterator<String> tabItr = top.keySet().iterator();
-      String tab = tabItr.next();
-      LOG.info("Printing MODIFIED DAG for table:" + tab );
-      Operator<? extends Serializable> pList = top.get(tab);
-      if(pList != null && pList.getChildOperators() != null){
-        while(pList.getChildOperators().size() > 0){
-          List<Operator<? extends Serializable>> cList = pList.getChildOperators();
-          for (Operator<? extends Serializable> operator : cList) {
-            if(null != operator){
-              LOG.info("Operator Identifier =" + Integer.parseInt(operator.getIdentifier())+ " parent - " + pList.getName() + "....child - " + operator.getName());
-              if(operator.getChildren() != null){
-                pList = operator;
-                continue;
-                }
-              }
-          }
-        }
-
-      }
-    }
-
-
-
+    optm.initialize(conf);
+    pCtx = optm.optimize();
+    init(pCtx);
+    qb = pCtx.getQB();
     // At this point we have the complete operator tree
     // from which we want to find the reduce operator
     genMapRedTasks(qb);
-
     LOG.info("Completed plan generation");
 
     return;
