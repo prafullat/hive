@@ -6547,6 +6547,9 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     // such as JDBC would prefer instead of the c0, c1 we'll end
     // up with later.
     Operator sinkOp = genPlan(qb);
+    LOG.info("Processing for = " + sinkOp.getName() + "("
+        + ((Operator) sinkOp).getIdentifier() + ")");
+
     resultSchema =
         convertRowSchemaToViewSchema(opParseCtx.get(sinkOp).getRowResolver());
 
@@ -6569,7 +6572,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     Optimizer optm = new Optimizer();
     optm.setPctx(pCtx);
 
-
+/*
     {
       HashMap<String, Operator<? extends Serializable>> top = pCtx.getTopOps();
       Iterator<String> tabItr = top.keySet().iterator();
@@ -6581,7 +6584,12 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
           List<Operator<? extends Serializable>> cList = pList.getChildOperators();
           for (Operator<? extends Serializable> operator : cList) {
             if(null != operator){
-              LOG.info("Operator Identifier =" + Integer.parseInt(operator.getIdentifier())+ " parent - " + pList.getName() + "....child - " + operator.getName());
+              //LOG.info("Operator Identifier =" + Integer.parseInt(operator.getIdentifier())+ " parent - " + pList.getName() + "....child - " + operator.getName());
+              LOG.info("Processing for Parent = " + pList.getName() + "("
+                  + ((Operator) pList).getIdentifier() + ")"
+                  + " And Child = " + operator.getName() + "("
+                  + ((Operator) operator).getIdentifier() + ")" );
+
               pList = operator;
               continue;
               }
@@ -6591,7 +6599,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     }
 
 
-
+*/
     optm.initialize(conf);
     pCtx = optm.optimize();
     init(pCtx);

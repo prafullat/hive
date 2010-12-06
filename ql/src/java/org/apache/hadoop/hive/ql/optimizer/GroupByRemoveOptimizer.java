@@ -25,10 +25,12 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Stack;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hive.ql.exec.FileSinkOperator;
 import org.apache.hadoop.hive.ql.exec.GroupByOperator;
 import org.apache.hadoop.hive.ql.exec.Operator;
 import org.apache.hadoop.hive.ql.lib.DefaultGraphWalker;
@@ -57,6 +59,8 @@ public class GroupByRemoveOptimizer implements Transform {
         // process group-by pattern
     opRules.put(new RuleRegExp("R1", "GBY%RS%"),
         getRemoveGroupByProc(pctx));
+    opRules.put(new RuleRegExp("R2", "FS%"),
+        getRemoveFsProc(pctx));
 
     // The dispatcher fires the processor corresponding to the closest matching
     // rule and passes the context along
@@ -72,6 +76,23 @@ public class GroupByRemoveOptimizer implements Transform {
     return pctx;
   }
 
+  private NodeProcessor getRemoveFsProc(ParseContext pctx) {
+    return new FSProc();
+  }
+
+  public class FSProc implements NodeProcessor {
+
+    @Override
+    public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx procCtx,
+        Object... nodeOutputs) throws SemanticException {
+
+      Properties pt =    ((FileSinkOperator)nd).getConf().getTableInfo().getProperties();
+      pt.setProperty("columns", "key");
+      ((FileSinkOperator)nd).getConf().getTableInfo().setProperties(pt);
+      return null;
+    }
+
+  }
   private void toStringTree(ParseContext pCtx){
     HashMap<String, Operator<? extends Serializable>> top = pCtx.getTopOps();
     Iterator<String> tabItr = top.keySet().iterator();

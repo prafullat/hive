@@ -40,6 +40,7 @@ import org.apache.hadoop.hive.ql.lib.NodeProcessor;
 import org.apache.hadoop.hive.ql.lib.NodeProcessorCtx;
 import org.apache.hadoop.hive.ql.lib.Rule;
 import org.apache.hadoop.hive.ql.lib.RuleRegExp;
+import org.apache.hadoop.hive.ql.metadata.Table;
 import org.apache.hadoop.hive.ql.parse.ParseContext;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
 
@@ -83,7 +84,11 @@ public class SubqueryAppendOptimizer implements Transform {
         List<Operator<? extends Serializable>> cList = pList.getChildOperators();
         for (Operator<? extends Serializable> operator : cList) {
           if(null != operator){
-            LOG.info("Operator Identifier =" + Integer.parseInt(operator.getIdentifier())+ " parent - " + pList.getName() + "....child - " + operator.getName());
+            //LOG.info("Operator Identifier =" + Integer.parseInt(operator.getIdentifier())+ " parent - " + pList.getName() + "....child - " + operator.getName());
+            LOG.info("Processing for Parent = " + pList.getName() + "("
+                + ((Operator) pList).getIdentifier() + ")"
+                + " And Child = " + operator.getName() + "("
+                + ((Operator) operator).getIdentifier() + ")" );
             pList = operator;
             continue;
             }
@@ -113,23 +118,36 @@ public class SubqueryAppendOptimizer implements Transform {
    *
    */
   public class AppendSubqueryProcessor implements NodeProcessor {
-    protected ParseContext pGraphContext;
+    protected ParseContext pContext;
 
-    public AppendSubqueryProcessor(ParseContext pGraphContext) {
-      this.pGraphContext = pGraphContext;
+    public AppendSubqueryProcessor(ParseContext pContext) {
+      this.pContext = pContext;
     }
 
     @Override
     public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx procCtx,
         Object... nodeOutputs) throws SemanticException {
       LOG.info("Processing node - " + nd.getName());
-      // GBY,RS,GBY... (top to bottom)
-      TableScanOperator tsOp = null;
-      appendSubquery(tsOp);
+
+      TableScanOperator tsOrigOp = (TableScanOperator)nd;
+      TableScanOperator tsSubqOp = generateDAGForSubquery();
+      appendSubquery(tsOrigOp, tsSubqOp);
       return null;
     }
 
-    private void appendSubquery(TableScanOperator tsOp){
+    private TableScanOperator generateDAGForSubquery(){
+      return null;
+
+    }
+
+
+    private void appendSubquery(Operator tsOrigOp, Operator tsSubqOp){
+      HashMap<TableScanOperator, Table>  topToTable = pContext.getTopToTable();
+      if(topToTable.get(0).equals(tsOrigOp)){
+
+      }else{
+        LOG.info("Not a valid operator");
+      }
 
 
     }
