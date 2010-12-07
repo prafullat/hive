@@ -47,8 +47,8 @@ public class Optimizer {
 
     //See if group by can make use of indexes
     //transformations.add(new GbToIdxOptimizer());
-    //transformations.add(new SubqueryAppendOptimizer());
-    transformations.add(new GroupByRemoveOptimizer());
+    transformations.add(new SubqueryAppendOptimizer());
+    //transformations.add(new GroupByRemoveOptimizer());
 
     // Add the transformation that computes the lineage information.
     transformations.add(new Generator());
