@@ -33,6 +33,7 @@ import java.util.TreeSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.Index;
 import org.apache.hadoop.hive.metastore.api.Order;
@@ -56,8 +57,11 @@ import org.apache.hadoop.hive.ql.parse.ASTNode;
 import org.apache.hadoop.hive.ql.parse.HiveParser;
 import org.apache.hadoop.hive.ql.parse.OpParseContext;
 import org.apache.hadoop.hive.ql.parse.ParseContext;
+import org.apache.hadoop.hive.ql.parse.ParseDriver;
+import org.apache.hadoop.hive.ql.parse.ParseException;
 import org.apache.hadoop.hive.ql.parse.QB;
 import org.apache.hadoop.hive.ql.parse.QBParseInfo;
+import org.apache.hadoop.hive.ql.parse.SemanticAnalyzer;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
 import org.apache.hadoop.hive.ql.parse.BaseSemanticAnalyzer.tableSpec;
 import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
@@ -669,24 +673,52 @@ public class GbToIdxOptimizer implements Transform {
     }
 
   public static class GbToIdxSelOpProc implements NodeProcessor {
+    private static final String COMPACT_IDX_BUCKET_COL = "_bucketname";
+    private static final String COMPACT_IDX_OFFSETS_ARRAY_COL = "_offsets";
 
     @Override
     public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx procCtx,
         Object... nodeOutputs) throws SemanticException {
 
+      GbToIdxContext gbToIdxContext = (GbToIdxContext)procCtx;
+      ParseContext parseContext = gbToIdxContext.parseContext;
+      HiveConf conf = parseContext.getConf();
+      SemanticAnalyzer semAna = new SemanticAnalyzer(conf);
+      SelectOperator selOpr = (SelectOperator) nd;
+
+      ParseDriver pd = new ParseDriver();
+
+      //String funcStr = "select size(`"+COMPACT_IDX_OFFSETS_ARRAY_COL +"`) from dummyTable";
+      String funcStr = "select key+key from dummyTable";
+      ASTNode tree = null;
+      try {
+        tree = pd.parse(funcStr, null);
+      } catch (ParseException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
+      ASTNode funcNode = (ASTNode) tree.getChild(0).getChild(1).getChild(1).getChild(0).getChild(0);
+
+      LinkedHashMap<Operator<? extends Serializable>, OpParseContext> opCtxMap =
+        parseContext.getOpParseCtx();
+
+
+      OpParseContext selCtx = opCtxMap.get(selOpr.getParentOperators().get(0));
+
+      ExprNodeDesc exprNode = semAna.genExprNodeDesc(funcNode, selCtx.getRowResolver());
 
       SelectOperator selOperator = (SelectOperator)nd;
       SelectDesc selDesc = selOperator.getConf();
 
       ArrayList<ExprNodeDesc> colList = selDesc.getColList();
-      colList.set(1, colList.get(0));
-
+      colList.set(0, exprNode);
 
       ArrayList<String> colNameList = selDesc.getOutputColumnNames();
 
       Map<String, ExprNodeDesc> colExprMap = selOperator.getColumnExprMap();
-      colExprMap.put(colNameList.get(1), colList.get(0));
+      colExprMap.put(colNameList.get(0), exprNode);
       selOperator.setColumnExprMap(colExprMap);
+
 
 
       return null;
