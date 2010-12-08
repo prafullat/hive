@@ -110,6 +110,15 @@ Trunk -  Unreleased
     HIVE-1642 Convert join queries to map-join based on size of table/row
     (Liyin Tang via namit)
 
+    HIVE-1819 maintain lastAccessTime in the metastore
+    (namit via He Yongqiang)
+
+    HIVE-1827 Add a new local mode flag in Task
+    (Liyin Tang via He Yongqiang)
+
+    HIVE-1836 Extend CREATE DATABASE command with DBPROPERTIES
+    (Ning Zhang via namit)
+
   IMPROVEMENTS
 
     HIVE-1712. Migrating metadata from derby to mysql thrown NullPointerException (Jake Farrell via pauly)
@@ -282,6 +291,9 @@ Trunk -  Unreleased
 
     HIVE-138 Provide option to export a HEADER
     (Paul Butler via He Yongqiang)
+
+    HIVE-1834 more debugging for locking
+    (namit via He Yongqiang)
 
   OPTIMIZATIONS
 
@@ -560,6 +572,18 @@ Trunk -  Unreleased
 
     HIVE-1811 Show the time the local task takes
     (Liyin Tang via He Yongqiang)
+
+    HIVE-1824 Create a new ZooKeeper instance when retrying lock
+    (He Yongqiang via namit)
+
+    HIVE-1828 No need to get Table/Partition for show locks.
+    (He Yongqiang via namit)
+
+    HIVE-1823 upgrade the database thrift interface to allow parameters key-value
+    pairs (Ning Zhang via namit)
+
+    HIVE-1508 Add cleanup method for HiveHistory
+    (Edward Capriolo via namit)
 
   TESTS
 
