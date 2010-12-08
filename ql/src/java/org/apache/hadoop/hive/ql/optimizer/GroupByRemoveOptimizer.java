@@ -33,6 +33,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.ql.exec.FileSinkOperator;
 import org.apache.hadoop.hive.ql.exec.GroupByOperator;
 import org.apache.hadoop.hive.ql.exec.Operator;
+import org.apache.hadoop.hive.ql.exec.SelectOperator;
 import org.apache.hadoop.hive.ql.lib.DefaultGraphWalker;
 import org.apache.hadoop.hive.ql.lib.DefaultRuleDispatcher;
 import org.apache.hadoop.hive.ql.lib.Dispatcher;
@@ -44,6 +45,8 @@ import org.apache.hadoop.hive.ql.lib.Rule;
 import org.apache.hadoop.hive.ql.lib.RuleRegExp;
 import org.apache.hadoop.hive.ql.parse.ParseContext;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
+import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
+import org.apache.hadoop.hive.ql.plan.SelectDesc;
 
 
 public class GroupByRemoveOptimizer implements Transform {
@@ -72,7 +75,44 @@ public class GroupByRemoveOptimizer implements Transform {
     ArrayList<Node> topNodes = new ArrayList<Node>();
     topNodes.addAll(pctx.getTopOps().values());
     ogw.startWalking(topNodes, null);
+
+
+    SelectOperator origSelOperator = (SelectOperator) topNodes.get(0).getChildren().get(0);
+    FileSinkOperator origFileSinkOperator  = (FileSinkOperator) topNodes.get(0).getChildren().get(0).getChildren().get(0);
+
+    SelectDesc selDesc = new SelectDesc();
+
+    ArrayList<ExprNodeDesc> colList = new ArrayList<ExprNodeDesc>();
+    colList.add(origSelOperator.getConf().getColList().get(0));
+    selDesc.setColList(colList);
+
+    ArrayList<String> outputColumnNames = new ArrayList<String>();
+    outputColumnNames.add("_col0");
+    selDesc.setOutputColumnNames(outputColumnNames);
+
+    SelectOperator selOperator = new SelectOperator();
+    selOperator.setConf(selDesc);
+    selOperator.setSchema(origFileSinkOperator.getSchema());
+
+
+    List<Operator<? extends Serializable>> parOpr1 = new ArrayList<Operator<? extends Serializable>>();
+    parOpr1.add(selOperator);
+    origFileSinkOperator.setParentOperators(parOpr1);
+    List<Operator<? extends Serializable>> chldOpr1 = new ArrayList<Operator<? extends Serializable>>();
+    chldOpr1.add(origFileSinkOperator);
+    selOperator.setChildOperators(chldOpr1);
+
+    List<Operator<? extends Serializable>> chldOpr2 = new ArrayList<Operator<? extends Serializable>>();
+    chldOpr2.add(selOperator);
+    origSelOperator.setChildOperators(chldOpr2);
+    List<Operator<? extends Serializable>> parOpr2 = new ArrayList<Operator<? extends Serializable>>();
+    parOpr2.add(origSelOperator);
+    selOperator.setParentOperators(parOpr2);
+
     toStringTree(pctx);
+
+    //OrigSel --> NewSel --> OrigFs
+    // --> Child
     return pctx;
   }
 
@@ -110,7 +150,6 @@ public class GroupByRemoveOptimizer implements Transform {
             }
         }
       }
-
 
   }
 
