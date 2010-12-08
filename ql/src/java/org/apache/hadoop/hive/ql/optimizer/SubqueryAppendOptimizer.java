@@ -45,11 +45,13 @@ import org.apache.hadoop.hive.ql.lib.Rule;
 import org.apache.hadoop.hive.ql.lib.RuleRegExp;
 import org.apache.hadoop.hive.ql.parse.ASTNode;
 import org.apache.hadoop.hive.ql.parse.BaseSemanticAnalyzer;
+import org.apache.hadoop.hive.ql.parse.OpParseContext;
 import org.apache.hadoop.hive.ql.parse.ParseContext;
 import org.apache.hadoop.hive.ql.parse.ParseDriver;
 import org.apache.hadoop.hive.ql.parse.ParseException;
 import org.apache.hadoop.hive.ql.parse.ParseUtils;
 import org.apache.hadoop.hive.ql.parse.QB;
+import org.apache.hadoop.hive.ql.parse.RowResolver;
 import org.apache.hadoop.hive.ql.parse.SemanticAnalyzer;
 import org.apache.hadoop.hive.ql.parse.SemanticAnalyzerFactory;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
@@ -80,6 +82,7 @@ public class SubqueryAppendOptimizer implements Transform {
     ArrayList<Node> topNodes = new ArrayList<Node>();
     topNodes.addAll(pctx.getTopOps().values());
     ogw.startWalking(topNodes, null);
+
     toStringTree(pctx);
     return pctx;
   }
@@ -138,9 +141,7 @@ public class SubqueryAppendOptimizer implements Transform {
         Object... nodeOutputs) throws SemanticException {
       LOG.info("Processing node - " + nd.getName());
 
-      //TableScanOperator tsOrigOp = (TableScanOperator)nd;
       ParseContext subPCtx = generateDAGForSubquery();
-      //appendSubquery(tsOrigOp, tsSubqOp);
       appendSubquery(pctx, subPCtx);
 
       return pctx;
@@ -213,6 +214,113 @@ public class SubqueryAppendOptimizer implements Transform {
 
 
     private void appendSubquery(ParseContext origPCtx, ParseContext subqPCtx){
+      List<Operator<? extends Serializable>> finalDAG = new ArrayList<Operator<? extends Serializable>>();
+      int id = 1;
+      LinkedHashMap<Operator<? extends Serializable>, OpParseContext> origOpOldOpc = origPCtx.getOpParseCtx();
+      LinkedHashMap<Operator<? extends Serializable>, OpParseContext> subqOpOldOpc = subqPCtx.getOpParseCtx();
+
+      LinkedHashMap<Operator<? extends Serializable>, OpParseContext> newOpc =
+                                    new LinkedHashMap<Operator<? extends Serializable>, OpParseContext>();
+
+      HashMap<String, Operator<? extends Serializable>> origTopMap = origPCtx.getTopOps();
+      Iterator<String> origTabItr = origTopMap.keySet().iterator();
+      String origTab = origTabItr.next();
+      Operator<? extends Serializable> origOp = origTopMap.get(origTab);
+      List<Operator<? extends Serializable>> origChildrenList = origOp.getChildOperators();
+
+      //int oId = 0;
+      //oId = Integer.parseInt(origOp.getIdentifier());
+     // LOG.info("Orig Top Operator " + origOp.getName() + "(" + oId + ")" );
+
+      HashMap<String, Operator<? extends Serializable>> subqTopMap = subqPCtx.getTopOps();
+      Iterator<String> subqTabItr = subqTopMap.keySet().iterator();
+      String subqTab = subqTabItr.next();
+      List<Operator<? extends Serializable>> subqList;
+      Operator<? extends Serializable> subqOp = subqTopMap.get(subqTab);
+      //LOG.info("Sub-query hierarchy");
+
+      if(subqOp != null && subqOp.getChildOperators() != null){
+        origOp.setChildOperators(subqOp.getChildOperators());
+      }
+
+      List<Operator<? extends Serializable>> subqFSParentList = null;
+      while(subqOp != null && subqOp.getChildOperators() != null && subqOp.getChildOperators().size() > 0){
+        subqList = subqOp.getChildOperators();
+        if(subqList != null && subqList.size() > 0){
+          for (Operator<? extends Serializable> operator : subqList) {
+            if(null != operator){
+              if(operator instanceof FileSinkOperator) {
+                subqFSParentList = operator.getParentOperators();
+                subqOp = null;
+                break;
+              }else{
+                operator.setId(Integer.toString(id));
+                id++;
+                //oId = Integer.parseInt(operator.getIdentifier());
+                //LOG.info("Operator " + operator.getName() + "(" + oId + ")" );
+
+                finalDAG.add(operator);
+                RowResolver rr = subqOpOldOpc.get(operator).getRowResolver();
+                OpParseContext ctx = new OpParseContext(rr);
+                newOpc.put(operator, ctx);
+                subqOp = operator;
+                continue;
+              }
+            }
+          }
+        }
+      }
+
+
+      if(null != origChildrenList) {
+        finalDAG.get(finalDAG.size() - 1).setChildOperators(origChildrenList);
+      }
+
+
+     // LOG.info("Original query hierarchy");
+      List<Operator<? extends Serializable>> origList = origChildrenList;
+        while(origList != null && origList.size() > 0){
+          for (Operator<? extends Serializable> operator : origList) {
+            if(null != operator){
+              if(Integer.parseInt(operator.getIdentifier()) == 1){
+                operator.setParentOperators(subqFSParentList);
+              }
+
+              operator.setId(Integer.toString(id));
+              id++;
+              //oId = Integer.parseInt(operator.getIdentifier());
+              //LOG.info("Operator " + operator.getName() + "(" + oId + ")" );
+
+              finalDAG.add(operator);
+              RowResolver rr = origOpOldOpc.get(operator).getRowResolver();
+              OpParseContext ctx = new OpParseContext(rr);
+              newOpc.put(operator, ctx);
+
+              if(operator.getChildOperators() != null && operator.getChildOperators().size() > 0){
+                origList = operator.getChildOperators();
+                continue;
+              }else{
+                origList = null;
+                break;
+              }
+            }
+          }
+        }
+        List<Operator<? extends Serializable>> finalTSChildList = new ArrayList<Operator<? extends Serializable>>();
+        finalTSChildList.add(finalDAG.get(0));
+        origOp.setChildOperators(null);
+        origOp.setChildOperators(finalTSChildList);
+        origTopMap.remove(origTab);
+        origTopMap.put(origTab, origOp);
+        pctx.setTopOps(null);
+        pctx.setTopOps(origTopMap);
+        pctx.setOpParseCtx(newOpc);
+
+    }
+
+
+
+/*    private void appendSubquery(ParseContext origPCtx, ParseContext subqPCtx){
       List<Operator<? extends Serializable>> finalDAG = new ArrayList<Operator<? extends Serializable>>();
       int id = 1;
 
@@ -293,14 +401,17 @@ public class SubqueryAppendOptimizer implements Transform {
             }
           }
         }
+        List<Operator<? extends Serializable>> finalTSChildList = new ArrayList<Operator<? extends Serializable>>();
+        finalTSChildList.add(finalDAG.get(0));
         origOp.setChildOperators(null);
-        origOp.setChildOperators(finalDAG);
+        origOp.setChildOperators(finalTSChildList);
         origTop.remove(origTab);
         origTop.put(origTab, origOp);
+        pctx.setTopOps(null);
         pctx.setTopOps(origTop);
 
     }
-
+*/
   }
 
   public class SubqueryOptProcCtx implements NodeProcessorCtx {
