@@ -47,11 +47,14 @@ public class Optimizer {
 
     //See if group by can make use of indexes
     //transformations.add(new GbToIdxOptimizer());
-   transformations.add(new SubqueryAppendOptimizer());
+
    //transformations.add(new GroupByRemoveOptimizer());
 
     // Add the transformation that computes the lineage information.
     transformations.add(new Generator());
+
+    transformations.add(new SubqueryAppendOptimizer());
+
     if (HiveConf.getBoolVar(hiveConf, HiveConf.ConfVars.HIVEOPTCP)) {
       transformations.add(new ColumnPruner());
     }
