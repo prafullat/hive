@@ -118,7 +118,6 @@ public class HashTableSinkOperator extends TerminalOperator<HashTableSinkDesc> i
   private long hashTableScale;
   private boolean isAbort = false;
 
-
   public static class HashTableSinkObjectCtx {
     ObjectInspector standardOI;
     SerDe serde;
@@ -244,14 +243,13 @@ public class HashTableSinkOperator extends TerminalOperator<HashTableSinkDesc> i
     for (int pos = 0; pos < numAliases; pos++) {
       metadataValueTag[pos] = -1;
     }
-
     mapJoinTables = new HashMap<Byte, HashMapWrapper<AbstractMapJoinKey, MapJoinObjectValue>>();
 
     int hashTableThreshold = HiveConf.getIntVar(hconf, HiveConf.ConfVars.HIVEHASHTABLETHRESHOLD);
     float hashTableLoadFactor = HiveConf.getFloatVar(hconf,
         HiveConf.ConfVars.HIVEHASHTABLELOADFACTOR);
-    float hashTableMaxMemoryUsage = HiveConf.getFloatVar(hconf,
-        HiveConf.ConfVars.HIVEHASHTABLEMAXMEMORYUSAGE);
+    float hashTableMaxMemoryUsage = this.getConf().getHashtableMemoryUsage();
+
     hashTableScale = HiveConf.getLongVar(hconf, HiveConf.ConfVars.HIVEHASHTABLESCALE);
     if (hashTableScale <= 0) {
       hashTableScale = 1;
@@ -400,7 +398,7 @@ public class HashTableSinkOperator extends TerminalOperator<HashTableSinkDesc> i
             .entrySet()) {
           // get the key and value
           Byte tag = hashTables.getKey();
-          HashMapWrapper hashTable = hashTables.getValue();
+          HashMapWrapper<AbstractMapJoinKey, MapJoinObjectValue> hashTable = hashTables.getValue();
 
           // get current input file name
           String bigBucketFileName = this.getExecContext().getCurrentBigBucketFile();
@@ -408,7 +406,7 @@ public class HashTableSinkOperator extends TerminalOperator<HashTableSinkDesc> i
             bigBucketFileName = "-";
           }
           // get the tmp URI path; it will be a hdfs path if not local mode
-          String tmpURIPath = PathUtil.generatePath(tmpURI, tag, bigBucketFileName);
+          String tmpURIPath = Utilities.generatePath(tmpURI, tag, bigBucketFileName);
           hashTable.isAbort(rowNumber, console);
           console.printInfo(Utilities.now() + "\tDump the hashtable into file: " + tmpURIPath);
           // get the hashtable file and path
@@ -442,10 +440,7 @@ public class HashTableSinkOperator extends TerminalOperator<HashTableSinkDesc> i
   }
 
   @Override
-  public int getType() {
+  public OperatorType getType() {
     return OperatorType.HASHTABLESINK;
   }
-
-
-
 }

@@ -583,6 +583,22 @@ public abstract class BaseSemanticAnalyzer {
     public static enum SpecType {TABLE_ONLY, STATIC_PARTITION, DYNAMIC_PARTITION};
     public SpecType specType;
 
+    public tableSpec(Hive db, HiveConf conf, String tableName) throws SemanticException {
+       this.tableName  = tableName;
+
+       try {
+        this.tableHandle = db.getTable(tableName);
+      } catch (HiveException e) {
+        //XTODO: Throw semantic exception here
+        throw new SemanticException(ErrorMsg.GENERIC_ERROR.getMsg(tableName), e);
+      }
+     this.specType = SpecType.TABLE_ONLY;
+
+    }
+    private Table getTable(String tableName2) {
+      // TODO Auto-generated method stub
+      return null;
+    }
     public tableSpec(Hive db, HiveConf conf, ASTNode ast)
         throws SemanticException {
 
@@ -601,11 +617,9 @@ public abstract class BaseSemanticAnalyzer {
 
         tableHandle = db.getTable(tableName);
       } catch (InvalidTableException ite) {
-        throw new SemanticException(ErrorMsg.INVALID_TABLE.getMsg(ast
-            .getChild(0)), ite);
+        throw new SemanticException(ErrorMsg.INVALID_TABLE.getMsg(ast.getChild(0)), ite);
       } catch (HiveException e) {
-        throw new SemanticException(ErrorMsg.GENERIC_ERROR.getMsg(ast
-            .getChild(childIndex), e.getMessage()), e);
+        throw new SemanticException(ErrorMsg.GENERIC_ERROR.getMsg(ast.getChild(childIndex), e.getMessage()), e);
       }
 
       // get partition metadata if partition specified
