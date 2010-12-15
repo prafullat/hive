@@ -23,7 +23,7 @@ import org.apache.hadoop.hive.ql.parse.SemanticException;
 
 /**
  *
- * Implements GroupBy clause rewrite using compact index.
+ * Implements optimizations for GroupBy clause rewrite using compact index.
  * This optimization rewrites GroupBy query over base table to the query over simple table-scan over
  * index table, if there is index on the group by key(s) or the distinct column(s).
  * E.g.

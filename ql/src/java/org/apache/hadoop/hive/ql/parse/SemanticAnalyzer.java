@@ -6144,6 +6144,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
                 partsList = PartitionPruner.prune(topToTable.get(ts),
                     opToPartPruner.get(ts), conf, (String) topOps.keySet()
                     .toArray()[0], prunedPartitions);
+
                 opToPartList.put(ts, partsList);
               }
             } catch (HiveException e) {
