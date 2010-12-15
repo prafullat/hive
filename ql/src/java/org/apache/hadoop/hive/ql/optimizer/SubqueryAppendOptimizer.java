@@ -32,8 +32,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.Context;
+import org.apache.hadoop.hive.ql.exec.ColumnInfo;
 import org.apache.hadoop.hive.ql.exec.FileSinkOperator;
 import org.apache.hadoop.hive.ql.exec.Operator;
+import org.apache.hadoop.hive.ql.exec.RowSchema;
+import org.apache.hadoop.hive.ql.exec.SelectOperator;
 import org.apache.hadoop.hive.ql.lib.DefaultGraphWalker;
 import org.apache.hadoop.hive.ql.lib.DefaultRuleDispatcher;
 import org.apache.hadoop.hive.ql.lib.Dispatcher;
@@ -45,14 +48,18 @@ import org.apache.hadoop.hive.ql.lib.Rule;
 import org.apache.hadoop.hive.ql.lib.RuleRegExp;
 import org.apache.hadoop.hive.ql.parse.ASTNode;
 import org.apache.hadoop.hive.ql.parse.BaseSemanticAnalyzer;
+import org.apache.hadoop.hive.ql.parse.OpParseContext;
 import org.apache.hadoop.hive.ql.parse.ParseContext;
 import org.apache.hadoop.hive.ql.parse.ParseDriver;
 import org.apache.hadoop.hive.ql.parse.ParseException;
 import org.apache.hadoop.hive.ql.parse.ParseUtils;
 import org.apache.hadoop.hive.ql.parse.QB;
+import org.apache.hadoop.hive.ql.parse.RowResolver;
 import org.apache.hadoop.hive.ql.parse.SemanticAnalyzer;
 import org.apache.hadoop.hive.ql.parse.SemanticAnalyzerFactory;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
+import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
+import org.apache.hadoop.hive.ql.plan.SelectDesc;
 
 
 public class SubqueryAppendOptimizer implements Transform {
@@ -80,6 +87,7 @@ public class SubqueryAppendOptimizer implements Transform {
     ArrayList<Node> topNodes = new ArrayList<Node>();
     topNodes.addAll(pctx.getTopOps().values());
     ogw.startWalking(topNodes, null);
+
     toStringTree(pctx);
     return pctx;
   }
@@ -138,9 +146,7 @@ public class SubqueryAppendOptimizer implements Transform {
         Object... nodeOutputs) throws SemanticException {
       LOG.info("Processing node - " + nd.getName());
 
-      //TableScanOperator tsOrigOp = (TableScanOperator)nd;
       ParseContext subPCtx = generateDAGForSubquery();
-      //appendSubquery(tsOrigOp, tsSubqOp);
       appendSubquery(pctx, subPCtx);
 
       return pctx;
@@ -153,7 +159,7 @@ public class SubqueryAppendOptimizer implements Transform {
       ParseContext subPCtx = null;
       try {
         ctx = new Context(conf);
-      String command = "Select key, count(key) from tbl group by key";
+      String command = "Select key from tbl";
       ParseDriver pd = new ParseDriver();
       ASTNode tree = pd.parse(command, ctx);
       tree = ParseUtils.findRootNonNullToken(tree);
@@ -215,27 +221,43 @@ public class SubqueryAppendOptimizer implements Transform {
     private void appendSubquery(ParseContext origPCtx, ParseContext subqPCtx){
       List<Operator<? extends Serializable>> finalDAG = new ArrayList<Operator<? extends Serializable>>();
       int id = 1;
+      LinkedHashMap<Operator<? extends Serializable>, OpParseContext> origOpOldOpc = origPCtx.getOpParseCtx();
+      LinkedHashMap<Operator<? extends Serializable>, OpParseContext> subqOpOldOpc = subqPCtx.getOpParseCtx();
 
-      HashMap<String, Operator<? extends Serializable>> origTop = origPCtx.getTopOps();
-      Iterator<String> origTabItr = origTop.keySet().iterator();
+      LinkedHashMap<Operator<? extends Serializable>, OpParseContext> newOpc =
+                                    new LinkedHashMap<Operator<? extends Serializable>, OpParseContext>();
+
+      HashMap<String, Operator<? extends Serializable>> origTopMap = origPCtx.getTopOps();
+      Iterator<String> origTabItr = origTopMap.keySet().iterator();
       String origTab = origTabItr.next();
-      Operator<? extends Serializable> origOp = origTop.get(origTab);
+      Operator<? extends Serializable> origOp = origTopMap.get(origTab);
       List<Operator<? extends Serializable>> origChildrenList = origOp.getChildOperators();
+      RowResolver origOpRR = origOpOldOpc.get(origOp).getRowResolver();
+      OpParseContext origOpCtx = new OpParseContext(origOpRR);
+      newOpc.put(origOp, origOpCtx);
+
 
       //int oId = 0;
       //oId = Integer.parseInt(origOp.getIdentifier());
      // LOG.info("Orig Top Operator " + origOp.getName() + "(" + oId + ")" );
 
-      HashMap<String, Operator<? extends Serializable>> subqTop = subqPCtx.getTopOps();
-      Iterator<String> subqTabItr = subqTop.keySet().iterator();
+      HashMap<String, Operator<? extends Serializable>> subqTopMap = subqPCtx.getTopOps();
+      Iterator<String> subqTabItr = subqTopMap.keySet().iterator();
       String subqTab = subqTabItr.next();
       List<Operator<? extends Serializable>> subqList;
-      Operator<? extends Serializable> subqOp = subqTop.get(subqTab);
+      Operator<? extends Serializable> subqOp = subqTopMap.get(subqTab);
       //LOG.info("Sub-query hierarchy");
 
       if(subqOp != null && subqOp.getChildOperators() != null){
         origOp.setChildOperators(subqOp.getChildOperators());
       }
+
+      ArrayList<String> newOutputCols = new ArrayList<String>();
+      Map<String, ExprNodeDesc> newColExprMap = new HashMap<String, ExprNodeDesc>();
+      ArrayList<ColumnInfo> newRS = new ArrayList<ColumnInfo>();
+      RowResolver newRR = new RowResolver();
+
+
 
       List<Operator<? extends Serializable>> subqFSParentList = null;
       while(subqOp != null && subqOp.getChildOperators() != null && subqOp.getChildOperators().size() > 0){
@@ -247,6 +269,62 @@ public class SubqueryAppendOptimizer implements Transform {
                 subqFSParentList = operator.getParentOperators();
                 subqOp = null;
                 break;
+              }else if(operator instanceof SelectOperator) {
+                int oId = Integer.parseInt(operator.getIdentifier());
+                LOG.info("Operator " + operator.getName() + "(" + oId + ")" );
+
+
+                RowSchema oldRS = operator.getSchema();
+                List<ColumnInfo> oldSign =  oldRS.getSignature();
+
+                for (ColumnInfo columnInfo : oldSign) {
+                  LOG.info("column name: " + columnInfo.getInternalName());
+                  LOG.info("column alias: " + columnInfo.getAlias());
+                  LOG.info("table alias: " + columnInfo.getTabAlias());
+                }
+
+                RowResolver oldRR = subqOpOldOpc.get(operator).getRowResolver();
+                SelectDesc oldConf = (SelectDesc) operator.getConf();
+                Map<String, ExprNodeDesc> oldColumnExprMap = operator.getColumnExprMap();
+
+
+                for(int i=0; i < oldConf.getOutputColumnNames().size(); i++){
+                  String internalName = oldConf.getOutputColumnNames().get(i);
+                  LOG.info("output column: " + internalName);
+                  newOutputCols.add(internalName);
+                  ExprNodeDesc newDesc = oldColumnExprMap.get(internalName);
+                  newColExprMap.put(internalName, newDesc);
+
+                }
+
+                for (int i = 0; i < newOutputCols.size(); i++) {
+                  String internalName = newOutputCols.get(i);
+                  String[] nm = oldRR.reverseLookup(internalName);
+                  ColumnInfo col;
+                  try {
+                    col = oldRR.get(nm[0], nm[1]);
+                    newRR.put(nm[0], nm[1], col);
+                    newRS.add(col);
+                  } catch (SemanticException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                  }
+                }
+
+                operator.setColumnExprMap(newColExprMap);
+                oldConf.setOutputColumnNames(newOutputCols);
+                operator.getSchema().setSignature(newRS);
+                subqOpOldOpc.get(operator).setRowResolver(newRR);
+
+
+                operator.setId(Integer.toString(id));
+                id++;
+                finalDAG.add(operator);
+                RowResolver rr = subqOpOldOpc.get(operator).getRowResolver();
+                OpParseContext ctx = new OpParseContext(rr);
+                newOpc.put(operator, ctx);
+                subqOp = operator;
+                continue;
               }else{
                 operator.setId(Integer.toString(id));
                 id++;
@@ -254,6 +332,9 @@ public class SubqueryAppendOptimizer implements Transform {
                 //LOG.info("Operator " + operator.getName() + "(" + oId + ")" );
 
                 finalDAG.add(operator);
+                RowResolver rr = subqOpOldOpc.get(operator).getRowResolver();
+                OpParseContext ctx = new OpParseContext(rr);
+                newOpc.put(operator, ctx);
                 subqOp = operator;
                 continue;
               }
@@ -277,12 +358,53 @@ public class SubqueryAppendOptimizer implements Transform {
                 operator.setParentOperators(subqFSParentList);
               }
 
-              operator.setId(Integer.toString(id));
-              id++;
-              //oId = Integer.parseInt(operator.getIdentifier());
-              //LOG.info("Operator " + operator.getName() + "(" + oId + ")" );
+              if(operator instanceof SelectOperator) {
+                int oId = Integer.parseInt(operator.getIdentifier());
+                LOG.info("Operator " + operator.getName() + "(" + oId + ")" );
 
-              finalDAG.add(operator);
+                SelectDesc oldConf = (SelectDesc) operator.getConf();
+
+                operator.setColumnExprMap(newColExprMap);
+                oldConf.setOutputColumnNames(newOutputCols);
+                operator.getSchema().setSignature(newRS);
+                origOpOldOpc.get(operator).setRowResolver(newRR);
+
+                RowSchema oldRS = operator.getSchema();
+                List<ColumnInfo> oldSign =  oldRS.getSignature();
+
+                for (ColumnInfo columnInfo : oldSign) {
+                  LOG.info("column name: " + columnInfo.getInternalName());
+                  LOG.info("column alias: " + columnInfo.getAlias());
+                  LOG.info("table alias: " + columnInfo.getTabAlias());
+                }
+
+                for(int i=0; i < oldConf.getOutputColumnNames().size(); i++){
+                  String internalName = oldConf.getOutputColumnNames().get(i);
+                  LOG.info("output column: " + internalName);
+                }
+
+                operator.setId(Integer.toString(id));
+                id++;
+                //oId = Integer.parseInt(operator.getIdentifier());
+                //LOG.info("Operator " + operator.getName() + "(" + oId + ")" );
+
+                finalDAG.add(operator);
+                RowResolver rr = origOpOldOpc.get(operator).getRowResolver();
+                OpParseContext ctx = new OpParseContext(rr);
+                newOpc.put(operator, ctx);
+
+              }else{
+
+                operator.setId(Integer.toString(id));
+                id++;
+                //oId = Integer.parseInt(operator.getIdentifier());
+                //LOG.info("Operator " + operator.getName() + "(" + oId + ")" );
+
+                finalDAG.add(operator);
+                RowResolver rr = origOpOldOpc.get(operator).getRowResolver();
+                OpParseContext ctx = new OpParseContext(rr);
+                newOpc.put(operator, ctx);
+              }
               if(operator.getChildOperators() != null && operator.getChildOperators().size() > 0){
                 origList = operator.getChildOperators();
                 continue;
@@ -293,146 +415,18 @@ public class SubqueryAppendOptimizer implements Transform {
             }
           }
         }
+        List<Operator<? extends Serializable>> finalTSChildList = new ArrayList<Operator<? extends Serializable>>();
+        finalTSChildList.add(finalDAG.get(0));
         origOp.setChildOperators(null);
-        origOp.setChildOperators(finalDAG);
-        origTop.remove(origTab);
-        origTop.put(origTab, origOp);
-        pctx.setTopOps(origTop);
+        origOp.setChildOperators(finalTSChildList);
+        origTopMap.remove(origTab);
+        origTopMap.put(origTab, origOp);
+        pctx.setTopOps(null);
+        pctx.setTopOps(origTopMap);
+        pctx.setOpParseCtx(newOpc);
 
     }
 
-/*    private void appendSubquery(ParseContext origPCtx, ParseContext subqPCtx){
-      List<Operator<? extends Serializable>> finalDAG = new ArrayList<Operator<? extends Serializable>>();
-      int finCnt = 0;
-
-
-      HashMap<String, Operator<? extends Serializable>> origTop = origPCtx.getTopOps();
-      Iterator<String> origTabItr = origTop.keySet().iterator();
-      String origTab = origTabItr.next();
-      List<Operator<? extends Serializable>> origList = null;
-      List<Operator<? extends Serializable>> tempParentList = new ArrayList<Operator<? extends Serializable>>();
-      Operator<? extends Serializable> origOp = origTop.get(origTab);
-      int oId = 0;
-
-      oId = Integer.parseInt(origOp.getIdentifier());
-      LOG.info("Operator " + origOp.getName() + "(" + oId + ")" );
-
-
-      HashMap<String, Operator<? extends Serializable>> subqTop = subqPCtx.getTopOps();
-      Iterator<String> subqTabItr = subqTop.keySet().iterator();
-      String subqTab = subqTabItr.next();
-      List<Operator<? extends Serializable>> subqList;
-      Operator<? extends Serializable> subqOp = subqTop.get(subqTab);
-      LOG.info("Sub-query hierarchy");
-
-
-
-      Operator<? extends Serializable> temp = origOp;
-      if(null != subqOp && null != subqOp.getChildOperators()) {
-        temp.setChildOperators(subqOp.getChildOperators());
-      }
-      if(null != origOp && null != origOp.getParentOperators()) {
-        temp.setParentOperators(origOp.getParentOperators());
-      }
-      temp.setId(String.valueOf(finCnt));
-      finCnt++;
-      finalDAG.add(temp);
-
-
-      oId = Integer.parseInt(subqOp.getIdentifier());
-      while(subqOp != null && subqOp.getChildOperators() != null && subqOp.getChildOperators().size() > 0){
-        subqList = subqOp.getChildOperators();
-        if(subqList != null && subqList.size() > 0){
-          for (Operator<? extends Serializable> operator : subqList) {
-            if(null != operator){
-              oId = Integer.parseInt(operator.getIdentifier());
-              LOG.info("Operator " + operator.getName() + "(" + oId + ")" );
-              if(!(operator instanceof FileSinkOperator)) {
-                temp = operator;
-                if(Integer.parseInt(operator.getIdentifier()) == 1){
-                  if(null != operator.getChildOperators().get(0)) {
-                    temp.setParentOperators(operator.getChildOperators().get(0).getParentOperators());
-                  }
-                }else{
-                  if(null != operator.getParentOperators()) {
-                    temp.setParentOperators(operator.getParentOperators());
-                  }
-                }
-                if(null != operator && null != operator.getChildOperators()) {
-                  temp.setChildOperators(operator.getChildOperators());
-                }
-                temp.setId(String.valueOf(finCnt));
-                finCnt++;
-                finalDAG.add(temp);
-              }else{
-                tempParentList = operator.getParentOperators();
-              }
-              subqOp = operator;
-              continue;
-            }
-          }
-        }
-      }
-
-        if(null != origOp && null != origOp.getChildOperators()) {
-          finalDAG.get(finalDAG.size() - 1).setChildOperators(origOp.getChildOperators());
-        }
-
-      LOG.info("Original query hierarchy");
-      while(origOp != null && origOp.getChildOperators() != null && origOp.getChildOperators().size() > 0){
-        origList = origOp.getChildOperators();
-        if(origList != null && origList.size() > 0){
-          for (Operator<? extends Serializable> operator : origList) {
-            if(null != operator){
-              oId = Integer.parseInt(operator.getIdentifier());
-              LOG.info("Operator " + operator.getName() + "(" + oId + ")" );
-              temp = operator;
-              if(Integer.parseInt(operator.getIdentifier()) == 1){
-                //temp.setParentOperators(tempParentList);
-              }else{
-                if(null != operator.getParentOperators()) {
-                  temp.setParentOperators(operator.getParentOperators());
-                }
-              }
-
-              if(null != operator && null != operator.getChildOperators()) {
-                temp.setChildOperators(operator.getChildOperators());
-              }
-              temp.setId(String.valueOf(finCnt));
-              finCnt++;
-              finalDAG.add(temp);
-              origOp = operator;
-              continue;
-            }
-          }
-        }
-      }
-
-
-      LOG.info("Final DAG");
-      for (Operator<? extends Serializable> operator : finalDAG) {
-        if(null != operator){
-          oId = Integer.parseInt(operator.getIdentifier());
-          LOG.info("Operator " + operator.getName() + "(" + oId + ")" );
-        }
-      }
-
-      Operator<? extends Serializable> pList = finalDAG.get(0);
-      while(pList != null && pList.getChildOperators() != null && pList.getChildOperators().size() > 0){
-        List<Operator<? extends Serializable>> cList = pList.getChildOperators();
-        for (Operator<? extends Serializable> operator : cList) {
-          if(null != operator){
-            LOG.info("Operator Identifier =" + Integer.parseInt(operator.getIdentifier())+ " parent - " + pList.getName() + "....child - " + operator.getName());
-            pList = operator;
-            continue;
-            }
-        }
-      }
-
-
-
-    }
-*/
   }
 
   public class SubqueryOptProcCtx implements NodeProcessorCtx {
