@@ -36,7 +36,6 @@ import org.apache.hadoop.hive.ql.exec.ColumnInfo;
 import org.apache.hadoop.hive.ql.exec.FileSinkOperator;
 import org.apache.hadoop.hive.ql.exec.FilterOperator;
 import org.apache.hadoop.hive.ql.exec.Operator;
-import org.apache.hadoop.hive.ql.exec.RowSchema;
 import org.apache.hadoop.hive.ql.exec.SelectOperator;
 import org.apache.hadoop.hive.ql.lib.DefaultGraphWalker;
 import org.apache.hadoop.hive.ql.lib.DefaultRuleDispatcher;
@@ -163,7 +162,7 @@ public class SubqueryAppendOptimizer implements Transform {
       ParseContext subPCtx = null;
       try {
         ctx = new Context(conf);
-      String command = "Select key from tbl";
+      String command = "Select key from tbl group by key";
       ParseDriver pd = new ParseDriver();
       ASTNode tree = pd.parse(command, ctx);
       tree = ParseUtils.findRootNonNullToken(tree);
@@ -281,68 +280,59 @@ public class SubqueryAppendOptimizer implements Transform {
                 subqOp = null;
                 break;
               }else if(operator instanceof SelectOperator) {
-                operator.setParentOperators(origParent);
-
-                int oId = Integer.parseInt(operator.getIdentifier());
-                LOG.info("Operator " + operator.getName() + "(" + oId + ")" );
-
-
-                RowSchema oldRS = operator.getSchema();
-                List<ColumnInfo> oldSign =  oldRS.getSignature();
-
-                for (ColumnInfo columnInfo : oldSign) {
-                  LOG.info("column name: " + columnInfo.getInternalName());
-                  LOG.info("column alias: " + columnInfo.getAlias());
-                  LOG.info("table alias: " + columnInfo.getTabAlias());
-                }
-
                 RowResolver oldRR = subqOpOldOpc.get(operator).getRowResolver();
-                HashMap<String, LinkedHashMap<String, ColumnInfo>> rslvMap = oldRR.getRslvMap();
-                HashMap<String, LinkedHashMap<String, ColumnInfo>> newRslvMap = new LinkedHashMap<String, LinkedHashMap<String,ColumnInfo>>();
-                newRslvMap.put("v1",(LinkedHashMap<String, ColumnInfo>) rslvMap.get(null).clone());
-                oldRR.setRslvMap(null);
-                oldRR.setRslvMap(newRslvMap);
 
-                SelectDesc oldConf = (SelectDesc) operator.getConf();
-                Map<String, ExprNodeDesc> oldColumnExprMap = operator.getColumnExprMap();
-                ArrayList<ExprNodeDesc> oldColList = oldConf.getColList();
-
-
-                String internalName = null;
-                for(int i=0; i < oldConf.getOutputColumnNames().size(); i++){
-                  internalName = oldConf.getOutputColumnNames().get(i);
-                  LOG.info("output column: " + internalName);
-                  newOutputCols.add(new String(internalName));
-                  ExprNodeColumnDesc oldDesc = (ExprNodeColumnDesc) oldColumnExprMap.get(internalName);
-                  ExprNodeColumnDesc newDesc = (ExprNodeColumnDesc) oldDesc.clone();
-                  newDesc.setColumn(internalName);
-                  newColExprMap.put(internalName, newDesc);
-
-                }
-
-                for (ExprNodeDesc exprNodeDesc : oldColList) {
-                  ExprNodeColumnDesc newDesc = (ExprNodeColumnDesc) exprNodeDesc.clone();
-                  newDesc.setColumn(internalName);
-                  newColList.add(newDesc);
-                }
-
-                for (int i = 0; i < newOutputCols.size(); i++) {
-                  internalName = newOutputCols.get(i);
-                  String[] nm = oldRR.reverseLookup(internalName);
-                  ColumnInfo col;
-                  try {
-                    col = oldRR.get(nm[0], nm[1]);
-                    if(nm[0] == null){
-                      nm[0] = "v1";
-                    }
-                    newRR.put(nm[0], nm[1], col);
-                    newRS.add(col);
-                  } catch (SemanticException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
+                if(Integer.parseInt(operator.getIdentifier()) == 5){
+                  operator.setParentOperators(origParent);
+/*                  HashMap<String, LinkedHashMap<String, ColumnInfo>> rslvMap = oldRR.getRslvMap();
+                  HashMap<String, LinkedHashMap<String, ColumnInfo>> newRslvMap = new LinkedHashMap<String, LinkedHashMap<String,ColumnInfo>>();
+                  for (String key: rslvMap.keySet()) {
+                    newRslvMap.put("v1",(LinkedHashMap<String, ColumnInfo>) rslvMap.get(key).clone());
                   }
-                }
-                //newRR = oldRR;
+                  oldRR.setRslvMap(newRslvMap);
+*/                }else{
+                      SelectDesc oldConf = (SelectDesc) operator.getConf();
+                      Map<String, ExprNodeDesc> oldColumnExprMap = operator.getColumnExprMap();
+                      ArrayList<ExprNodeDesc> oldColList = oldConf.getColList();
+
+
+                      String internalName = null;
+                      for(int i=0; i < oldConf.getOutputColumnNames().size(); i++){
+                        internalName = oldConf.getOutputColumnNames().get(i);
+                        newOutputCols.add(new String(internalName));
+                        if(oldColumnExprMap != null){
+                          ExprNodeColumnDesc oldDesc = (ExprNodeColumnDesc) oldColumnExprMap.get(internalName);
+                          ExprNodeColumnDesc newDesc = (ExprNodeColumnDesc) oldDesc.clone();
+                          newDesc.setColumn(internalName);
+                          newColExprMap.put(internalName, newDesc);
+                        }
+
+                        ExprNodeDesc exprNodeDesc = oldColList.get(i);
+                        ExprNodeColumnDesc newDesc = (ExprNodeColumnDesc) exprNodeDesc.clone();
+                        newDesc.setColumn(internalName);
+                        newColList.add(newDesc);
+
+                      }
+
+                      for (int i = 0; i < newOutputCols.size(); i++) {
+                        internalName = newOutputCols.get(i);
+                        String[] nm = oldRR.reverseLookup(internalName);
+                        ColumnInfo col;
+                        try {
+                          col = oldRR.get(nm[0], nm[1]);
+                          if(nm[0] == null){
+                            nm[0] = "v1";
+                          }
+                          newRR.put(nm[0], nm[1], col);
+                          newRS.add(col);
+                        } catch (SemanticException e) {
+                          // TODO Auto-generated catch block
+                          e.printStackTrace();
+                        }
+                      }
+                      //newRR = oldRR;
+
+                  }
 
                 operator.setId(Integer.toString(id));
                 id++;
@@ -385,7 +375,7 @@ public class SubqueryAppendOptimizer implements Transform {
                 operator.setParentOperators(subqFSParentList);
               }
 
-              if(operator instanceof SelectOperator && Integer.parseInt(operator.getIdentifier()) == 1) {
+              if(operator instanceof SelectOperator) {
                 int oId = Integer.parseInt(operator.getIdentifier());
                 LOG.info("Operator " + operator.getName() + "(" + oId + ")" );
 
@@ -404,13 +394,12 @@ public class SubqueryAppendOptimizer implements Transform {
                 OpParseContext ctx = new OpParseContext(rr);
                 newOpc.put(operator, ctx);
 
-              }else if(operator instanceof FilterOperator&& Integer.parseInt(operator.getIdentifier()) == 1) {
+              }else if(operator instanceof FilterOperator) {
 
                 FilterDesc conf = (FilterDesc)operator.getConf();
                 ExprNodeGenericFuncDesc oldengfd = (ExprNodeGenericFuncDesc) conf.getPredicate().clone();
 
                 List<ExprNodeDesc> endExprList = oldengfd.getChildExprs();
-                List<ExprNodeDesc> endChildList = oldengfd.getChildren();
                 List<ExprNodeDesc> newChildren = new ArrayList<ExprNodeDesc>();
 
                 for (ExprNodeDesc exprNodeDesc : endExprList) {
@@ -426,6 +415,10 @@ public class SubqueryAppendOptimizer implements Transform {
 
                 oldengfd.setChildExprs(newChildren);
                 conf.setPredicate(oldengfd);
+
+                operator.setColumnExprMap(newColExprMap);
+                operator.getSchema().setSignature(newRS);
+                origOpOldOpc.get(operator).setRowResolver(newRR);
 
 
                 operator.setId(Integer.toString(id));
