@@ -34,6 +34,7 @@ import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.Context;
 import org.apache.hadoop.hive.ql.exec.ColumnInfo;
 import org.apache.hadoop.hive.ql.exec.FileSinkOperator;
+import org.apache.hadoop.hive.ql.exec.FilterOperator;
 import org.apache.hadoop.hive.ql.exec.Operator;
 import org.apache.hadoop.hive.ql.exec.RowSchema;
 import org.apache.hadoop.hive.ql.exec.SelectOperator;
@@ -58,7 +59,9 @@ import org.apache.hadoop.hive.ql.parse.RowResolver;
 import org.apache.hadoop.hive.ql.parse.SemanticAnalyzer;
 import org.apache.hadoop.hive.ql.parse.SemanticAnalyzerFactory;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
+import org.apache.hadoop.hive.ql.plan.ExprNodeColumnDesc;
 import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
+import org.apache.hadoop.hive.ql.plan.FilterDesc;
 import org.apache.hadoop.hive.ql.plan.SelectDesc;
 
 
@@ -220,10 +223,11 @@ public class SubqueryAppendOptimizer implements Transform {
 
     private void appendSubquery(ParseContext origPCtx, ParseContext subqPCtx){
       List<Operator<? extends Serializable>> finalDAG = new ArrayList<Operator<? extends Serializable>>();
+      List<Operator<? extends Serializable>> origParent = new ArrayList<Operator<? extends Serializable>>();
+
       int id = 1;
       LinkedHashMap<Operator<? extends Serializable>, OpParseContext> origOpOldOpc = origPCtx.getOpParseCtx();
       LinkedHashMap<Operator<? extends Serializable>, OpParseContext> subqOpOldOpc = subqPCtx.getOpParseCtx();
-
       LinkedHashMap<Operator<? extends Serializable>, OpParseContext> newOpc =
                                     new LinkedHashMap<Operator<? extends Serializable>, OpParseContext>();
 
@@ -232,10 +236,11 @@ public class SubqueryAppendOptimizer implements Transform {
       String origTab = origTabItr.next();
       Operator<? extends Serializable> origOp = origTopMap.get(origTab);
       List<Operator<? extends Serializable>> origChildrenList = origOp.getChildOperators();
+
       RowResolver origOpRR = origOpOldOpc.get(origOp).getRowResolver();
+      String[] colAlias  = origOpRR.reverseLookup(origTab);
       OpParseContext origOpCtx = new OpParseContext(origOpRR);
       newOpc.put(origOp, origOpCtx);
-
 
       //int oId = 0;
       //oId = Integer.parseInt(origOp.getIdentifier());
@@ -252,8 +257,12 @@ public class SubqueryAppendOptimizer implements Transform {
         origOp.setChildOperators(subqOp.getChildOperators());
       }
 
+      origOp.setParentOperators(null);
+      origParent.add(origOp);
+
       ArrayList<String> newOutputCols = new ArrayList<String>();
       Map<String, ExprNodeDesc> newColExprMap = new HashMap<String, ExprNodeDesc>();
+      ArrayList<ExprNodeDesc> newColList = new ArrayList<ExprNodeDesc>();
       ArrayList<ColumnInfo> newRS = new ArrayList<ColumnInfo>();
       RowResolver newRR = new RowResolver();
 
@@ -265,11 +274,14 @@ public class SubqueryAppendOptimizer implements Transform {
         if(subqList != null && subqList.size() > 0){
           for (Operator<? extends Serializable> operator : subqList) {
             if(null != operator){
+
               if(operator instanceof FileSinkOperator) {
                 subqFSParentList = operator.getParentOperators();
                 subqOp = null;
                 break;
               }else if(operator instanceof SelectOperator) {
+                operator.setParentOperators(origParent);
+
                 int oId = Integer.parseInt(operator.getIdentifier());
                 LOG.info("Operator " + operator.getName() + "(" + oId + ")" );
 
@@ -284,25 +296,43 @@ public class SubqueryAppendOptimizer implements Transform {
                 }
 
                 RowResolver oldRR = subqOpOldOpc.get(operator).getRowResolver();
+                HashMap<String, LinkedHashMap<String, ColumnInfo>> rslvMap = oldRR.getRslvMap();
+                HashMap<String, LinkedHashMap<String, ColumnInfo>> newRslvMap = new LinkedHashMap<String, LinkedHashMap<String,ColumnInfo>>();
+                newRslvMap.put("v1",rslvMap.get(null));
+                oldRR.setRslvMap(newRslvMap);
+
                 SelectDesc oldConf = (SelectDesc) operator.getConf();
                 Map<String, ExprNodeDesc> oldColumnExprMap = operator.getColumnExprMap();
+                ArrayList<ExprNodeDesc> oldColList = oldConf.getColList();
 
 
+                String internalName = null;
                 for(int i=0; i < oldConf.getOutputColumnNames().size(); i++){
-                  String internalName = oldConf.getOutputColumnNames().get(i);
+                  internalName = oldConf.getOutputColumnNames().get(i);
                   LOG.info("output column: " + internalName);
-                  newOutputCols.add(internalName);
-                  ExprNodeDesc newDesc = oldColumnExprMap.get(internalName);
+                  newOutputCols.add(new String(internalName));
+                  ExprNodeColumnDesc oldDesc = (ExprNodeColumnDesc) oldColumnExprMap.get(internalName);
+                  ExprNodeColumnDesc newDesc = (ExprNodeColumnDesc) oldDesc.clone();
+                  newDesc.setColumn(internalName);
                   newColExprMap.put(internalName, newDesc);
 
                 }
 
+                for (ExprNodeDesc exprNodeDesc : oldColList) {
+                  ExprNodeColumnDesc newDesc = (ExprNodeColumnDesc) exprNodeDesc.clone();
+                  newDesc.setColumn(internalName);
+                  newColList.add(newDesc);
+                }
+
                 for (int i = 0; i < newOutputCols.size(); i++) {
-                  String internalName = newOutputCols.get(i);
+                  internalName = newOutputCols.get(i);
                   String[] nm = oldRR.reverseLookup(internalName);
                   ColumnInfo col;
                   try {
                     col = oldRR.get(nm[0], nm[1]);
+                    if(nm[0] == null){
+                      nm[0] = "v1";
+                    }
                     newRR.put(nm[0], nm[1], col);
                     newRS.add(col);
                   } catch (SemanticException e) {
@@ -310,12 +340,7 @@ public class SubqueryAppendOptimizer implements Transform {
                     e.printStackTrace();
                   }
                 }
-
-                operator.setColumnExprMap(newColExprMap);
-                oldConf.setOutputColumnNames(newOutputCols);
-                operator.getSchema().setSignature(newRS);
-                subqOpOldOpc.get(operator).setRowResolver(newRR);
-
+                //newRR = oldRR;
 
                 operator.setId(Integer.toString(id));
                 id++;
@@ -358,13 +383,14 @@ public class SubqueryAppendOptimizer implements Transform {
                 operator.setParentOperators(subqFSParentList);
               }
 
-              if(operator instanceof SelectOperator) {
+              if(operator instanceof SelectOperator && Integer.parseInt(operator.getIdentifier()) == 1) {
                 int oId = Integer.parseInt(operator.getIdentifier());
                 LOG.info("Operator " + operator.getName() + "(" + oId + ")" );
 
                 SelectDesc oldConf = (SelectDesc) operator.getConf();
 
                 operator.setColumnExprMap(newColExprMap);
+                oldConf.setColList(newColList);
                 oldConf.setOutputColumnNames(newOutputCols);
                 operator.getSchema().setSignature(newRS);
                 origOpOldOpc.get(operator).setRowResolver(newRR);
@@ -383,6 +409,47 @@ public class SubqueryAppendOptimizer implements Transform {
                   LOG.info("output column: " + internalName);
                 }
 
+                operator.setId(Integer.toString(id));
+                id++;
+                //oId = Integer.parseInt(operator.getIdentifier());
+                //LOG.info("Operator " + operator.getName() + "(" + oId + ")" );
+
+                finalDAG.add(operator);
+                RowResolver rr = origOpOldOpc.get(operator).getRowResolver();
+                OpParseContext ctx = new OpParseContext(rr);
+                newOpc.put(operator, ctx);
+
+              }else if(operator instanceof FilterOperator) {
+                int oId = Integer.parseInt(operator.getIdentifier());
+                LOG.info("Operator " + operator.getName() + "(" + oId + ")" );
+
+                FilterDesc oldConf = (FilterDesc) operator.getConf();
+                LOG.info(" predicate cols : "+  oldConf.getPredicate().getCols().get(0));
+               // LOG.info(" predicate expr string : "+  oldConf.getPredicate().getExprString());
+                //operator.setColumnExprMap(newColExprMap);
+                operator.setColumnExprMap(null);
+                oldConf.setPredicate(newColList.get(0).clone());
+
+                LOG.info(" predicate cols : "+  oldConf.getPredicate().getCols().get(0));
+                //oldConf.setColList(newColList);
+                //oldConf.setOutputColumnNames(newOutputCols);
+                operator.getSchema().setSignature(newRS);
+                origOpOldOpc.get(operator).setRowResolver(newRR);
+
+                RowSchema oldRS = operator.getSchema();
+                List<ColumnInfo> oldSign =  oldRS.getSignature();
+
+                for (ColumnInfo columnInfo : oldSign) {
+                  LOG.info("column name: " + columnInfo.getInternalName());
+                  LOG.info("column alias: " + columnInfo.getAlias());
+                  LOG.info("table alias: " + columnInfo.getTabAlias());
+                }
+
+/*                for(int i=0; i < oldConf.getOutputColumnNames().size(); i++){
+                  String internalName = oldConf.getOutputColumnNames().get(i);
+                  LOG.info("output column: " + internalName);
+                }
+*/
                 operator.setId(Integer.toString(id));
                 id++;
                 //oId = Integer.parseInt(operator.getIdentifier());
@@ -415,6 +482,8 @@ public class SubqueryAppendOptimizer implements Transform {
             }
           }
         }
+
+
         List<Operator<? extends Serializable>> finalTSChildList = new ArrayList<Operator<? extends Serializable>>();
         finalTSChildList.add(finalDAG.get(0));
         origOp.setChildOperators(null);
