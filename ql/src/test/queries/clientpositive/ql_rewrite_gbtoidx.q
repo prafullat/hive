@@ -1,5 +1,5 @@
 DROP TABLE tbl;
 CREATE TABLE tbl(key int, value int);
-LOAD DATA LOCAL INPATH "/home/prafulla/projects/hive/./build/test/data/warehouse/src/kv1.txt" INTO TABLE tbl;
+CREATE INDEX lineitem_lshipdate_idx ON TABLE tbl(key) AS 'org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler' WITH DEFERRED REBUILD;
 explain select key from tbl;
 select key from tbl;

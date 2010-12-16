@@ -37,6 +37,7 @@ import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.Index;
 import org.apache.hadoop.hive.metastore.api.Order;
+import org.apache.hadoop.hive.ql.exec.ColumnInfo;
 import org.apache.hadoop.hive.ql.exec.Operator;
 import org.apache.hadoop.hive.ql.exec.SelectOperator;
 import org.apache.hadoop.hive.ql.exec.TableScanOperator;
@@ -47,6 +48,7 @@ import org.apache.hadoop.hive.ql.lib.GraphWalker;
 import org.apache.hadoop.hive.ql.lib.Node;
 import org.apache.hadoop.hive.ql.lib.NodeProcessor;
 import org.apache.hadoop.hive.ql.lib.NodeProcessorCtx;
+import org.apache.hadoop.hive.ql.lib.PreOrderWalker;
 import org.apache.hadoop.hive.ql.lib.Rule;
 import org.apache.hadoop.hive.ql.lib.RuleRegExp;
 import org.apache.hadoop.hive.ql.metadata.Hive;
@@ -61,12 +63,17 @@ import org.apache.hadoop.hive.ql.parse.ParseDriver;
 import org.apache.hadoop.hive.ql.parse.ParseException;
 import org.apache.hadoop.hive.ql.parse.QB;
 import org.apache.hadoop.hive.ql.parse.QBParseInfo;
+import org.apache.hadoop.hive.ql.parse.RowResolver;
 import org.apache.hadoop.hive.ql.parse.SemanticAnalyzer;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
 import org.apache.hadoop.hive.ql.parse.BaseSemanticAnalyzer.tableSpec;
 import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
 import org.apache.hadoop.hive.ql.plan.SelectDesc;
 import org.apache.hadoop.hive.ql.plan.TableScanDesc;
+import org.apache.hadoop.hive.serde2.SerDeException;
+import org.apache.hadoop.hive.serde2.objectinspector.StructField;
+import org.apache.hadoop.hive.serde2.objectinspector.StructObjectInspector;
+import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoUtils;
 
 /**
  *
@@ -165,7 +172,7 @@ public class GbToIdxOptimizer implements Transform {
     // The dispatcher fires the processor corresponding to the closest matching
     // rule and passes the context along
     Dispatcher disp = new DefaultRuleDispatcher(new GbToIdxDefaultProc(), opRules, gbToIdxContext);
-    GraphWalker ogw = new DefaultGraphWalker(disp);
+    GraphWalker ogw = new PreOrderWalker(disp);
 
     // Create a list of topop nodes
     ArrayList<Node> topNodes = new ArrayList<Node>();
@@ -221,7 +228,7 @@ public class GbToIdxOptimizer implements Transform {
       init(rootNode, false);
     }
     public CollectColRefNames(ASTNode rootNode, boolean onlyDirectChildren)
-      throws SemanticException {
+    throws SemanticException {
       colNameList = new ArrayList<String>();
       init(rootNode, onlyDirectChildren);
     }
@@ -242,7 +249,7 @@ public class GbToIdxOptimizer implements Transform {
     }
 
     public List<String> getColRefs()  {
-        return colNameList;
+      return colNameList;
     }
 
     @Override
@@ -254,39 +261,39 @@ public class GbToIdxOptimizer implements Transform {
 
       // We are interested in child of curNode being visited
       // in the subtree under rootNode.
-       ASTNode curNode = (ASTNode) nd;
-       boolean captureCurNodeChild = true;
+      ASTNode curNode = (ASTNode) nd;
+      boolean captureCurNodeChild = true;
 
-       assert(stack.size() == 0
-              || (stack.size() > 0 && rootNode == stack.get(0))
-             );
-       if (curNode.getType() == HiveParser.TOK_TABLE_OR_COL)  {
+      assert(stack.size() == 0
+          || (stack.size() > 0 && rootNode == stack.get(0))
+      );
+      if (curNode.getType() == HiveParser.TOK_TABLE_OR_COL)  {
 
-         // For onlyDirectChildren, currently we support only following cases
-         // (i.e. we only try to look for TABLE_OR_COL nodes just below or just very
-         // near below the rootNode):
-         // case 1:
-         //    rootNode curNode
-         //       0        1                 # <- stack elements (stack size is 2)
-         // case 2:
-         //    rootNode  selExprNode curNode
-         //       0        1           2     # <- stack elements (stack size is 3)
-         if (onlyDirectChildren == true)  {
-           if ( stack.size() == 2
-                || (stack.size() == 3 && ((ASTNode) stack.get(1)).getType() == HiveParser.TOK_SELEXPR)
-              ) {
-             captureCurNodeChild = true;
-           } else {
-             captureCurNodeChild = false;
-           }
-         }
-         if (captureCurNodeChild) {
-           //add curNode's child to list of cols
-           //COLNAME or COLNAME AS COL_ALIAS
-           ASTNode internalNode = (ASTNode) curNode.getChild(0);
-           colNameList.add(internalNode.getText().toLowerCase());
-         }
-       }
+        // For onlyDirectChildren, currently we support only following cases
+        // (i.e. we only try to look for TABLE_OR_COL nodes just below or just very
+        // near below the rootNode):
+        // case 1:
+        //    rootNode curNode
+        //       0        1                 # <- stack elements (stack size is 2)
+        // case 2:
+        //    rootNode  selExprNode curNode
+        //       0        1           2     # <- stack elements (stack size is 3)
+        if (onlyDirectChildren == true)  {
+          if ( stack.size() == 2
+              || (stack.size() == 3 && ((ASTNode) stack.get(1)).getType() == HiveParser.TOK_SELEXPR)
+          ) {
+            captureCurNodeChild = true;
+          } else {
+            captureCurNodeChild = false;
+          }
+        }
+        if (captureCurNodeChild) {
+          //add curNode's child to list of cols
+          //COLNAME or COLNAME AS COL_ALIAS
+          ASTNode internalNode = (ASTNode) curNode.getChild(0);
+          colNameList.add(internalNode.getText().toLowerCase());
+        }
+      }
       return null;
     }
   }
@@ -298,18 +305,18 @@ public class GbToIdxOptimizer implements Transform {
 
     try {
       short maxNumOfIndexes = 1024; // XTODO: Hardcoding. Need to know if
-                                    // there's a limit (and what is it) on
-                                    // # of indexes that can be created
-                                    // on a table. If not, why is this param
-                                    // required by metastore APIs?
+      // there's a limit (and what is it) on
+      // # of indexes that can be created
+      // on a table. If not, why is this param
+      // required by metastore APIs?
       indexesOnTable = baseTableMetaData.getAllIndexes(maxNumOfIndexes);
 
     } catch (HiveException e) {
       return matchingIndexes; // Return empty list (trouble doing rewrite
-                              // shouldn't stop regular query execution,
-                              // if there's serious problem with metadata
-                              // or anything else, it's assumed to be
-                              // checked & handled in core hive code itself.
+      // shouldn't stop regular query execution,
+      // if there's serious problem with metadata
+      // or anything else, it's assumed to be
+      // checked & handled in core hive code itself.
     }
 
     for (int i = 0; i < indexesOnTable.size(); i++) {
@@ -330,7 +337,7 @@ public class GbToIdxOptimizer implements Transform {
   }
 
   private List<String> getChildColRefNames(ASTNode rootExpr, boolean onlyDirectChildren)
-    throws SemanticException {
+  throws SemanticException {
     return new CollectColRefNames(rootExpr, onlyDirectChildren).getColRefs();
   }
 
@@ -346,13 +353,13 @@ public class GbToIdxOptimizer implements Transform {
     if ((qb.getTabAliases().size() != 1) ||
         (qb.getSubqAliases().size() != 0)) {
       getLogger().debug("Query has more than one table or subqueries, " +
-        "that is not supported with " + getName() + " optimization" );
+          "that is not supported with " + getName() + " optimization" );
       return false;
     }
 
     if (qb.getQbJoinTree() != null)  {
       getLogger().debug("Query has joins, " +
-        "that is not supported with " + getName() + " optimization" );
+          "that is not supported with " + getName() + " optimization" );
       return false;
     }
 
@@ -370,7 +377,7 @@ public class GbToIdxOptimizer implements Transform {
     List<Index> indexTables = getIndexes(tableQlMetaData, idxType);
     if (indexTables.size() == 0) {
       getLogger().debug("Table " + tableName + " does not have compact index. " +
-        "Cannot apply " + getName() + " optimization" );
+          "Cannot apply " + getName() + " optimization" );
       return false;
     }
 
@@ -388,13 +395,13 @@ public class GbToIdxOptimizer implements Transform {
     // TODO: to be supported in future.
     if (qbParseInfo.getSortByForClause(clauseName) != null)  {
       getLogger().debug("Query has sortby clause, " +
-        "that is not supported with " + getName() + " optimization" );
+          "that is not supported with " + getName() + " optimization" );
       return false;
     }
     // Check if we have distributed-by clause, not yet supported
     if (qbParseInfo.getDistributeByForClause(clauseName) != null)  {
       getLogger().debug("Query has distributeby clause, " +
-        "that is not supported with " + getName() + " optimization" );
+          "that is not supported with " + getName() + " optimization" );
       return false;
     }
 
@@ -444,7 +451,7 @@ public class GbToIdxOptimizer implements Transform {
       predColRefs = getChildColRefNames(whereClause);
     } catch (SemanticException se) {
       getLogger().debug("Got exception while locating child col refs for where clause, "
-        + "skipping " + getName() + " optimization" );
+          + "skipping " + getName() + " optimization" );
       return false;
     }
 
@@ -455,17 +462,17 @@ public class GbToIdxOptimizer implements Transform {
     List<String> selColRefNameList = null;
     try {
       selColRefNameList = getChildColRefNames(rootSelExpr,
-        isDistinct //onlyDirectChildren
-        );
+          isDistinct //onlyDirectChildren
+      );
     } catch (SemanticException se) {
       getLogger().debug("Got exception while locating child col refs for select list, "
-        + "skipping " + getName() + " optimization" );
+          + "skipping " + getName() + " optimization" );
       return false;
     }
     if (isDistinct == true &&
         selColRefNameList.size() != rootSelExpr.getChildCount())  {
       getLogger().debug("Select-list has distinct and it also has some non-col-ref expression. " +
-        "Cannot apply the rewrite " + getName() + " optimization" );
+          "Cannot apply the rewrite " + getName() + " optimization" );
       return false;
     }
 
@@ -475,18 +482,18 @@ public class GbToIdxOptimizer implements Transform {
     List<String> gbKeyAllColRefList = new ArrayList<String>();
     try {
       gbKeyNameList = getChildColRefNames(groupByNode,
-        true //onlyDirectChildren
-        );
+          true //onlyDirectChildren
+      );
       gbKeyAllColRefList = getChildColRefNames(groupByNode);
     } catch (SemanticException se) {
       getLogger().debug("Got exception while locating child col refs for GroupBy key, "
           + "skipping " + getName() + " optimization" );
-        return false;
+      return false;
     }
 
     if (colRefAggFuncInputList.size() > 0 && groupByNode == null)  {
       getLogger().debug("Currently count function needs group by on key columns, "
-        + "Cannot apply this " + getName() + " optimization" );
+          + "Cannot apply this " + getName() + " optimization" );
       return false;
     }
 
@@ -515,7 +522,7 @@ public class GbToIdxOptimizer implements Transform {
       ArrayList<String> idxTblColNames = new ArrayList<String>();
       try {
         Table idxTbl = hiveInstance.getTable(idx.getDbName(),
-          idx.getIndexTableName());
+            idx.getIndexTableName());
         for (FieldSchema idxTblCol : idxTbl.getCols()) {
           idxTblColNames.add(idxTblCol.getName());
         }
@@ -531,7 +538,7 @@ public class GbToIdxOptimizer implements Transform {
       //Check if all columns in select list are part of index key columns
       if (idxKeyColsNames.containsAll(selColRefNameList) == false) {
         getLogger().debug("Select list has non index key column : " +
-          " Cannot use this index  " + idx.getIndexName());
+            " Cannot use this index  " + idx.getIndexName());
         continue;
       }
 
@@ -542,7 +549,7 @@ public class GbToIdxOptimizer implements Transform {
         // Check if all columns from index are part of select list too
         if (selColRefNameList.containsAll(idxKeyColsNames) == false)  {
           getLogger().debug("Index has non select list columns " +
-            " Cannot use this index  " + idx.getIndexName());
+              " Cannot use this index  " + idx.getIndexName());
           continue;
         }
       }
@@ -553,7 +560,7 @@ public class GbToIdxOptimizer implements Transform {
       // (or at least not worse) to read from index_table and not from baseTable?
       if (idxKeyColsNames.containsAll(predColRefs) == false) {
         getLogger().debug("Predicate column ref list has non index key column : " +
-          " Cannot use this index  " + idx.getIndexName());
+            " Cannot use this index  " + idx.getIndexName());
         continue;
       }
 
@@ -573,7 +580,7 @@ public class GbToIdxOptimizer implements Transform {
 
         if (idxKeyColsNames.containsAll(gbKeyAllColRefList) == false)  {
           getLogger().debug("Group by key has some non-indexed columns, Cannot apply rewrite "
-            + getName());
+              + getName());
           return false;
         }
 
@@ -595,9 +602,10 @@ public class GbToIdxOptimizer implements Transform {
         // 3. GROUP BY idxKey, idxKey
         //     FUTURE: GB Key has dup idxKeyCols. Develop a rewrite to eliminate the dup key cols
         //            from GB key.
-        if (gbKeyNameList.size() != groupByNode.getChildCount()) {
+        if (groupByNode != null &&
+            gbKeyNameList.size() != groupByNode.getChildCount()) {
           getLogger().debug("Group by key has only some non-indexed columns, GroupBy will be"
-            + " preserved by rewrite " + getName() + " optimization" );
+              + " preserved by rewrite " + getName() + " optimization" );
           removeGroupBy = false;
         }
 
@@ -608,7 +616,7 @@ public class GbToIdxOptimizer implements Transform {
           for (int aggFuncIdx = 0; aggFuncIdx < colRefAggFuncInputList.size(); aggFuncIdx++)  {
             if (idxKeyColsNames.containsAll(colRefAggFuncInputList.get(aggFuncIdx)) == false) {
               getLogger().debug("Agg Func input is not present in index key columns. Currently " +
-                "only agg func on index columns are supported by rewrite " + getName() + " optimization" );
+                  "only agg func on index columns are supported by rewrite " + getName() + " optimization" );
               continue;
             }
 
@@ -650,7 +658,7 @@ public class GbToIdxOptimizer implements Transform {
     private final HashMap<String, String> baseToIdxTableMap;
 
     public GbToIdxContext() {
-     baseToIdxTableMap = new HashMap<String, String>();
+      baseToIdxTableMap = new HashMap<String, String>();
     }
 
     public void addTable(String baseTableName, String indexTableName) {
@@ -664,7 +672,7 @@ public class GbToIdxOptimizer implements Transform {
 
   public static class GbToIdxDefaultProc implements NodeProcessor {
 
-     //No-Op
+    //No-Op
     @Override
     public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx procCtx,
         Object... nodeOutputs) throws SemanticException {
@@ -672,65 +680,58 @@ public class GbToIdxOptimizer implements Transform {
       return null;
     }
 
-  public static class GbToIdxSelOpProc implements NodeProcessor {
-    private static final String COMPACT_IDX_BUCKET_COL = "_bucketname";
-    private static final String COMPACT_IDX_OFFSETS_ARRAY_COL = "_offsets";
+    public static class GbToIdxSelOpProc implements NodeProcessor {
+      private static final String COMPACT_IDX_BUCKET_COL = "_bucketname";
+      private static final String COMPACT_IDX_OFFSETS_ARRAY_COL = "_offsets";
 
-    @Override
-    public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx procCtx,
-        Object... nodeOutputs) throws SemanticException {
+      @Override
+      public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx procCtx,
+          Object... nodeOutputs) throws SemanticException {
 
-      GbToIdxContext gbToIdxContext = (GbToIdxContext)procCtx;
-      ParseContext parseContext = gbToIdxContext.parseContext;
-      HiveConf conf = parseContext.getConf();
-      SemanticAnalyzer semAna = new SemanticAnalyzer(conf);
-      SelectOperator selOpr = (SelectOperator) nd;
+        GbToIdxContext gbToIdxContext = (GbToIdxContext)procCtx;
+        ParseContext parseContext = gbToIdxContext.parseContext;
+        HiveConf conf = parseContext.getConf();
+        SemanticAnalyzer semAna = new SemanticAnalyzer(conf);
+        SelectOperator selOpr = (SelectOperator) nd;
 
-      ParseDriver pd = new ParseDriver();
+        ParseDriver pd = new ParseDriver();
 
-      //String funcStr = "select size(`"+COMPACT_IDX_OFFSETS_ARRAY_COL +"`) from dummyTable";
-      String funcStr = "select key+key from dummyTable";
-      ASTNode tree = null;
-      try {
-        tree = pd.parse(funcStr, null);
-      } catch (ParseException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
+
+        String funcStr = "select size(`_offsets`) from dummyTable";
+        ASTNode tree = null;
+        try {
+          tree = pd.parse(funcStr, null);
+        } catch (ParseException e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
+        }
+        ASTNode funcNode = (ASTNode) tree.getChild(0).getChild(1).getChild(1).getChild(0).getChild(0);
+
+        LinkedHashMap<Operator<? extends Serializable>, OpParseContext> opCtxMap =
+          parseContext.getOpParseCtx();
+
+
+        OpParseContext selCtx = opCtxMap.get(selOpr.getParentOperators().get(0));
+
+        ExprNodeDesc exprNode = semAna.genExprNodeDesc(funcNode, selCtx.getRowResolver());
+
+        SelectOperator selOperator = (SelectOperator)nd;
+        SelectDesc selDesc = selOperator.getConf();
+
+        ArrayList<ExprNodeDesc> colList = selDesc.getColList();
+        colList.set(0, exprNode);
+
+        ArrayList<String> colNameList = selDesc.getOutputColumnNames();
+
+        Map<String, ExprNodeDesc> colExprMap = selOperator.getColumnExprMap();
+        colExprMap.put(colNameList.get(0), exprNode);
+        selOperator.setColumnExprMap(colExprMap);
+        return null;
       }
-      ASTNode funcNode = (ASTNode) tree.getChild(0).getChild(1).getChild(1).getChild(0).getChild(0);
-
-      LinkedHashMap<Operator<? extends Serializable>, OpParseContext> opCtxMap =
-        parseContext.getOpParseCtx();
-
-
-      OpParseContext selCtx = opCtxMap.get(selOpr.getParentOperators().get(0));
-
-      ExprNodeDesc exprNode = semAna.genExprNodeDesc(funcNode, selCtx.getRowResolver());
-
-      SelectOperator selOperator = (SelectOperator)nd;
-      SelectDesc selDesc = selOperator.getConf();
-
-      ArrayList<ExprNodeDesc> colList = selDesc.getColList();
-      colList.set(0, exprNode);
-
-      ArrayList<String> colNameList = selDesc.getOutputColumnNames();
-
-      Map<String, ExprNodeDesc> colExprMap = selOperator.getColumnExprMap();
-      colExprMap.put(colNameList.get(0), exprNode);
-      selOperator.setColumnExprMap(colExprMap);
-
-
-
-      return null;
-
-
-    }
-
     }
   }
 
   public static class GbToIdxTableScanProc implements NodeProcessor {
-
 
     @Override
     public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx procCtx,
@@ -742,8 +743,8 @@ public class GbToIdxOptimizer implements Transform {
       HashMap<TableScanOperator, Table>  topToTable =
         gbToIdxContext.parseContext.getTopToTable();
 
-       String baseTableName = topToTable.get(scanOperator).getTableName();
-       if( gbToIdxContext.findBaseTable(baseTableName) == null ) {
+      String baseTableName = topToTable.get(scanOperator).getTableName();
+      if( gbToIdxContext.findBaseTable(baseTableName) == null ) {
         return null;
       }
 
@@ -755,19 +756,37 @@ public class GbToIdxOptimizer implements Transform {
       String tableName = gbToIdxContext.findBaseTable(baseTableName);
 
       tableSpec ts = new tableSpec(gbToIdxContext.hiveDb,
-            gbToIdxContext.parseContext.getConf(),
-            tableName
-          );
+          gbToIdxContext.parseContext.getConf(),
+          tableName
+      );
       String k = tableName + Path.SEPARATOR;
       indexTableScanDesc.setStatsAggPrefix(k);
       scanOperator.setConf(indexTableScanDesc);
 
-
       topToTable.remove(scanOperator);
+      //Scan operator now points to other table
       topToTable.put(scanOperator, ts.tableHandle);
       gbToIdxContext.parseContext.setTopToTable(topToTable);
 
+      OpParseContext operatorContext =
+        gbToIdxContext.parseContext.getOpParseCtx().get(scanOperator);
+      RowResolver rr = new RowResolver();
 
+      try {
+        StructObjectInspector rowObjectInspector = (StructObjectInspector) ts.tableHandle.getDeserializer().getObjectInspector();
+        List<? extends StructField> fields = rowObjectInspector
+        .getAllStructFieldRefs();
+        for (int i = 0; i < fields.size(); i++) {
+          rr.put(tableName, fields.get(i).getFieldName(), new ColumnInfo(fields
+              .get(i).getFieldName(), TypeInfoUtils
+              .getTypeInfoFromObjectInspector(fields.get(i)
+                  .getFieldObjectInspector()), tableName, false));
+        }
+      } catch (SerDeException e) {
+        throw new RuntimeException(e);
+      }
+      //Set row resolver for new table
+      operatorContext.setRowResolver(rr);
       return null;
     }
   }
