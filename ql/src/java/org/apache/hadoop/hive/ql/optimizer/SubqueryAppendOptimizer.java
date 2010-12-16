@@ -61,6 +61,7 @@ import org.apache.hadoop.hive.ql.parse.SemanticAnalyzerFactory;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
 import org.apache.hadoop.hive.ql.plan.ExprNodeColumnDesc;
 import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
+import org.apache.hadoop.hive.ql.plan.ExprNodeGenericFuncDesc;
 import org.apache.hadoop.hive.ql.plan.FilterDesc;
 import org.apache.hadoop.hive.ql.plan.SelectDesc;
 
@@ -298,7 +299,8 @@ public class SubqueryAppendOptimizer implements Transform {
                 RowResolver oldRR = subqOpOldOpc.get(operator).getRowResolver();
                 HashMap<String, LinkedHashMap<String, ColumnInfo>> rslvMap = oldRR.getRslvMap();
                 HashMap<String, LinkedHashMap<String, ColumnInfo>> newRslvMap = new LinkedHashMap<String, LinkedHashMap<String,ColumnInfo>>();
-                newRslvMap.put("v1",rslvMap.get(null));
+                newRslvMap.put("v1",(LinkedHashMap<String, ColumnInfo>) rslvMap.get(null).clone());
+                oldRR.setRslvMap(null);
                 oldRR.setRslvMap(newRslvMap);
 
                 SelectDesc oldConf = (SelectDesc) operator.getConf();
@@ -395,66 +397,39 @@ public class SubqueryAppendOptimizer implements Transform {
                 operator.getSchema().setSignature(newRS);
                 origOpOldOpc.get(operator).setRowResolver(newRR);
 
-                RowSchema oldRS = operator.getSchema();
-                List<ColumnInfo> oldSign =  oldRS.getSignature();
-
-                for (ColumnInfo columnInfo : oldSign) {
-                  LOG.info("column name: " + columnInfo.getInternalName());
-                  LOG.info("column alias: " + columnInfo.getAlias());
-                  LOG.info("table alias: " + columnInfo.getTabAlias());
-                }
-
-                for(int i=0; i < oldConf.getOutputColumnNames().size(); i++){
-                  String internalName = oldConf.getOutputColumnNames().get(i);
-                  LOG.info("output column: " + internalName);
-                }
-
                 operator.setId(Integer.toString(id));
                 id++;
-                //oId = Integer.parseInt(operator.getIdentifier());
-                //LOG.info("Operator " + operator.getName() + "(" + oId + ")" );
-
                 finalDAG.add(operator);
                 RowResolver rr = origOpOldOpc.get(operator).getRowResolver();
                 OpParseContext ctx = new OpParseContext(rr);
                 newOpc.put(operator, ctx);
 
-              }else if(operator instanceof FilterOperator) {
-                int oId = Integer.parseInt(operator.getIdentifier());
-                LOG.info("Operator " + operator.getName() + "(" + oId + ")" );
+              }else if(operator instanceof FilterOperator&& Integer.parseInt(operator.getIdentifier()) == 1) {
 
-                FilterDesc oldConf = (FilterDesc) operator.getConf();
-                LOG.info(" predicate cols : "+  oldConf.getPredicate().getCols().get(0));
-               // LOG.info(" predicate expr string : "+  oldConf.getPredicate().getExprString());
-                //operator.setColumnExprMap(newColExprMap);
-                operator.setColumnExprMap(null);
-                oldConf.setPredicate(newColList.get(0).clone());
+                FilterDesc conf = (FilterDesc)operator.getConf();
+                ExprNodeGenericFuncDesc oldengfd = (ExprNodeGenericFuncDesc) conf.getPredicate().clone();
 
-                LOG.info(" predicate cols : "+  oldConf.getPredicate().getCols().get(0));
-                //oldConf.setColList(newColList);
-                //oldConf.setOutputColumnNames(newOutputCols);
-                operator.getSchema().setSignature(newRS);
-                origOpOldOpc.get(operator).setRowResolver(newRR);
+                List<ExprNodeDesc> endExprList = oldengfd.getChildExprs();
+                List<ExprNodeDesc> endChildList = oldengfd.getChildren();
+                List<ExprNodeDesc> newChildren = new ArrayList<ExprNodeDesc>();
 
-                RowSchema oldRS = operator.getSchema();
-                List<ColumnInfo> oldSign =  oldRS.getSignature();
+                for (ExprNodeDesc exprNodeDesc : endExprList) {
+                  if(exprNodeDesc instanceof ExprNodeColumnDesc){
+                    ExprNodeColumnDesc encd = (ExprNodeColumnDesc) exprNodeDesc.clone();
+                    encd.setColumn(newOutputCols.get(0));
+                    newChildren.add(encd);
+                  }else{
+                    newChildren.add(exprNodeDesc);
+                  }
 
-                for (ColumnInfo columnInfo : oldSign) {
-                  LOG.info("column name: " + columnInfo.getInternalName());
-                  LOG.info("column alias: " + columnInfo.getAlias());
-                  LOG.info("table alias: " + columnInfo.getTabAlias());
                 }
 
-/*                for(int i=0; i < oldConf.getOutputColumnNames().size(); i++){
-                  String internalName = oldConf.getOutputColumnNames().get(i);
-                  LOG.info("output column: " + internalName);
-                }
-*/
+                oldengfd.setChildExprs(newChildren);
+                conf.setPredicate(oldengfd);
+
+
                 operator.setId(Integer.toString(id));
                 id++;
-                //oId = Integer.parseInt(operator.getIdentifier());
-                //LOG.info("Operator " + operator.getName() + "(" + oId + ")" );
-
                 finalDAG.add(operator);
                 RowResolver rr = origOpOldOpc.get(operator).getRowResolver();
                 OpParseContext ctx = new OpParseContext(rr);
@@ -464,9 +439,6 @@ public class SubqueryAppendOptimizer implements Transform {
 
                 operator.setId(Integer.toString(id));
                 id++;
-                //oId = Integer.parseInt(operator.getIdentifier());
-                //LOG.info("Operator " + operator.getName() + "(" + oId + ")" );
-
                 finalDAG.add(operator);
                 RowResolver rr = origOpOldOpc.get(operator).getRowResolver();
                 OpParseContext ctx = new OpParseContext(rr);
