@@ -1,8 +1,8 @@
 DROP TABLE tbl;
 CREATE TABLE tbl(key int, value string);
 
-LOAD DATA LOCAL INPATH '/tmp/kv1.txt' OVERWRITE INTO TABLE tbl;
+LOAD DATA LOCAL INPATH '/home/pkalmegh/hivelabs/src/hive/build/test/data/warehouse/src/kv1.txt' OVERWRITE INTO TABLE tbl;
 
 
-explain select key from tbl where key <50 
+explain select key from tbl where key <50; 
 select key from tbl where key <50;
