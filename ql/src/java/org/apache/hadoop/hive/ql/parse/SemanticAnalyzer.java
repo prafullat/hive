@@ -6580,35 +6580,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         opToSamplePruner);
     Optimizer optm = new Optimizer();
     optm.setPctx(pCtx);
-
-/*
-    {
-      HashMap<String, Operator<? extends Serializable>> top = pCtx.getTopOps();
-      Iterator<String> tabItr = top.keySet().iterator();
-      String tab = tabItr.next();
-      LOG.info("Printing DAG for table:" + tab );
-      Operator<? extends Serializable> pList = top.get(tab);
-
-        while(pList != null && pList.getChildOperators() != null && pList.getChildOperators().size() > 0){
-          List<Operator<? extends Serializable>> cList = pList.getChildOperators();
-          for (Operator<? extends Serializable> operator : cList) {
-            if(null != operator){
-              //LOG.info("Operator Identifier =" + Integer.parseInt(operator.getIdentifier())+ " parent - " + pList.getName() + "....child - " + operator.getName());
-              LOG.info("Processing for Parent = " + pList.getName() + "("
-                  + ((Operator) pList).getIdentifier() + ")"
-                  + " And Child = " + operator.getName() + "("
-                  + ((Operator) operator).getIdentifier() + ")" );
-
-              pList = operator;
-              continue;
-              }
-          }
-        }
-
-    }
-
-
-*/
     optm.initialize(conf);
     pCtx = optm.optimize();
     init(pCtx);
