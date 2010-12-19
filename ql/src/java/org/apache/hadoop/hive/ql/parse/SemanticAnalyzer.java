@@ -145,7 +145,6 @@ import org.apache.hadoop.hive.ql.plan.TableScanDesc;
 import org.apache.hadoop.hive.ql.plan.UDTFDesc;
 import org.apache.hadoop.hive.ql.plan.UnionDesc;
 import org.apache.hadoop.hive.ql.plan.FilterDesc.sampleDesc;
-import org.apache.hadoop.hive.ql.rewrite.HiveRewriteEngine;
 import org.apache.hadoop.hive.ql.session.SessionState;
 import org.apache.hadoop.hive.ql.session.SessionState.ResourceType;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFEvaluator;
@@ -6538,7 +6537,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
 
     getMetaData(qb);
     LOG.info("Completed getting MetaData in Semantic Analysis");
-
+/*
     if( HiveConf.getBoolVar(conf, HiveConf.ConfVars.HIVE_QL_REWRITE) ) {
       if( ast.getToken().getType() == HiveParser.TOK_QUERY ) {
         //If we have query input invoke query rewrites on it.
@@ -6548,7 +6547,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         LOG.info("Abstract syntax tree after rewrites : " + ast.toStringTree());
       }
     }
-
+*/
     // Save the result schema derived from the sink operator produced
     // by genPlan.  This has the correct column names, which clients
     // such as JDBC would prefer instead of the c0, c1 we'll end

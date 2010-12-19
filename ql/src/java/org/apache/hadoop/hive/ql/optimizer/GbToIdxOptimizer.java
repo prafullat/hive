@@ -155,7 +155,15 @@ public class GbToIdxOptimizer implements Transform {
     gbToIdxContext.hiveDb = hiveDb;
     gbToIdxContext.parseContext = parseContext;
 
-
+    //Op DAG pretty printing
+    Dispatcher printDispatcher =
+      new DefaultRuleDispatcher(new OpDAGPrettyPrinter(),
+        new LinkedHashMap<Rule, NodeProcessor>(),
+        gbToIdxContext);
+    DefaultGraphWalker printGraphWalker = new DefaultGraphWalker(printDispatcher);
+    ArrayList<Node> topNodes = new ArrayList<Node>();
+    topNodes.addAll(pctx.getTopOps().values());
+    printGraphWalker.startWalking(topNodes, null);
 
 
     if( shouldApplyOptimization(parseContext) == false ) {
@@ -175,8 +183,6 @@ public class GbToIdxOptimizer implements Transform {
     GraphWalker ogw = new PreOrderWalker(disp);
 
     // Create a list of topop nodes
-    ArrayList<Node> topNodes = new ArrayList<Node>();
-    topNodes.addAll(pctx.getTopOps().values());
     ogw.startWalking(topNodes, null);
 
 
@@ -192,6 +198,24 @@ public class GbToIdxOptimizer implements Transform {
   public String getName() {
     return "GbToIdxOptimizer";
   }
+
+  class OpDAGPrettyPrinter implements NodeProcessor {
+
+    @Override
+    public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx procCtx,
+        Object... nodeOutputs) throws SemanticException {
+      int prevNodeCnt = stack.size();
+      StringBuffer strBuffer = new StringBuffer();
+      for(int i = 0; i < prevNodeCnt; i++)  {
+        strBuffer.append("*");
+      }
+      strBuffer.append(nd.toString());
+      getLogger().info(strBuffer.toString());
+      return null;
+    }
+
+  }
+
 
   protected boolean shouldApplyOptimization(ParseContext parseContext)  {
     QB inputQb = parseContext.getQB();
@@ -652,6 +676,12 @@ public class GbToIdxOptimizer implements Transform {
     private ParseContext parseContext;
     private Hive hiveDb;
     private boolean replaceTableWithIdxTable;
+
+
+    /**
+     * True if the base table has compact summary index associated with it
+     */
+    private boolean hasValidTableScan;
 
     //Map for base table to index table mapping
     //TableScan operator for base table will be modified to read from index table
