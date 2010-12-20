@@ -72,31 +72,30 @@ public class SubqueryAppendOptimizer implements Transform {
   ParseContext pctx = null;
   ParseContext subqueryPctx = null;
 
+  //Initialise all data structures required to copy RowResolver and RowSchema from subquery DAG to original DAG operators
+  ArrayList<String> newOutputCols = new ArrayList<String>();
+  Map<String, ExprNodeDesc> newColExprMap = new HashMap<String, ExprNodeDesc>();
+  ArrayList<ExprNodeDesc> newColList = new ArrayList<ExprNodeDesc>();
+  ArrayList<ColumnInfo> newRS = new ArrayList<ColumnInfo>();
+  RowResolver newRR = new RowResolver();
+
+  // Get the parentOperatos List for FileSinkOperator. We need this later to set the parentOperators for original DAG operator
+  List<Operator<? extends Serializable>> subqFSParentList = null;
+  //We need the reference to this SelectOperator so that the original DAG can be appended here
+  Operator<? extends Serializable> subqLastSelectOp = null;
+
+  //OperatorToParseContexts for original DAG and subquery DAG
+  LinkedHashMap<Operator<? extends Serializable>, OpParseContext> origOpOldOpc = null;
+  LinkedHashMap<Operator<? extends Serializable>, OpParseContext> subqOpOldOpc = null;
+
+
 
   @Override
   public ParseContext transform(ParseContext pctx) throws SemanticException {
-
-    Map<Rule, NodeProcessor> opRules = new LinkedHashMap<Rule, NodeProcessor>();
     this.pctx = pctx;
-
-    //Creates the operator DAG for subquery
-    SubqueryParseContextGenerator subqPCgen = new SubqueryParseContextGenerator();
-    subqueryPctx = subqPCgen.generateDAGForSubquery();
-
-    //appends subquery DAG to original DAG
-    opRules.put(new RuleRegExp("R1", "TS%"), new AppendSubqueryProc());
-
-    // The dispatcher fires the processor corresponding to the closest matching
-    // rule and passes the context along
-    Dispatcher disp = new DefaultRuleDispatcher(getDefaultProc(), opRules,
-        new SubqueryOptProcCtx());
-    GraphWalker ogw = new DefaultGraphWalker(disp);
-
-    // Create a list of topop nodes
-    ArrayList<Node> topNodes = new ArrayList<Node>();
-    topNodes.addAll(pctx.getTopOps().values());
-    ogw.startWalking(topNodes, null);
-
+    generateSubquery();
+    processSubquery();
+    processOriginalDAG();
     toStringTree(pctx);
     return pctx;
   }
@@ -113,11 +112,8 @@ public class SubqueryAppendOptimizer implements Transform {
         List<Operator<? extends Serializable>> cList = pList.getChildOperators();
         for (Operator<? extends Serializable> operator : cList) {
           if(null != operator){
-            //LOG.info("Operator Identifier =" + Integer.parseInt(operator.getIdentifier())+ " parent - " + pList.getName() + "....child - " + operator.getName());
-            LOG.info("Processing for Parent = " + pList.getName() + "("
-                + ((Operator<? extends Serializable>) pList).getIdentifier() + ")"
-                + " And Child = " + operator.getName() + "("
-                + ((Operator<? extends Serializable>) operator).getIdentifier() + ")" );
+            LOG.info("Processing for = " + pList.getName() + "("
+                + ((Operator<? extends Serializable>) pList).getIdentifier() + ")" );
             pList = operator;
             continue;
             }
@@ -137,12 +133,62 @@ public class SubqueryAppendOptimizer implements Transform {
     };
   }
 
+  private void generateSubquery() throws SemanticException{
+    origOpOldOpc = pctx.getOpParseCtx();
+    //Creates the operator DAG for subquery
+    Dispatcher disp = new DefaultRuleDispatcher(new SubqueryParseContextGenerator(), new LinkedHashMap<Rule, NodeProcessor>(),
+        new SubqueryOptProcCtx());
+    DefaultGraphWalker ogw = new DefaultGraphWalker(disp);
+    ArrayList<Node> topNodes = new ArrayList<Node>();
+    topNodes.addAll(pctx.getTopOps().values());
+    ogw.startWalking(topNodes, null);
+    subqOpOldOpc = subqueryPctx.getOpParseCtx();
+  }
+
+  private void processSubquery() throws SemanticException{
+    Map<Rule, NodeProcessor> opRules = new LinkedHashMap<Rule, NodeProcessor>();
+    //appends subquery DAG to original DAG
+    opRules.put(new RuleRegExp("R1", "FS%"), new SubqueryDAGProc());
+
+    // The dispatcher fires the processor corresponding to the closest matching
+    // rule and passes the context along
+    Dispatcher disp = new DefaultRuleDispatcher(getDefaultProc(), opRules,
+        new SubqueryOptProcCtx());
+    GraphWalker ogw = new DefaultGraphWalker(disp);
+
+    // Create a list of topop nodes
+    ArrayList<Node> topNodes = new ArrayList<Node>();
+    topNodes.addAll(subqueryPctx.getTopOps().values());
+    ogw.startWalking(topNodes, null);
+
+  }
+
+  private void processOriginalDAG() throws SemanticException{
+    Map<Rule, NodeProcessor> opRules = new LinkedHashMap<Rule, NodeProcessor>();
+
+    //appends subquery DAG to original DAG
+    opRules.put(new RuleRegExp("R1", "TS%"), new OriginalDAGProc());
+
+    // The dispatcher fires the processor corresponding to the closest matching
+    // rule and passes the context along
+    Dispatcher disp = new DefaultRuleDispatcher(getDefaultProc(), opRules,
+        new SubqueryOptProcCtx());
+    GraphWalker ogw = new DefaultGraphWalker(disp);
+
+    // Create a list of topop nodes
+    ArrayList<Node> topNodes = new ArrayList<Node>();
+    topNodes.addAll(pctx.getTopOps().values());
+    ogw.startWalking(topNodes, null);
+
+  }
+
+
 
 /*
  *Class to instantialte SemanticAnalyzer and create the operator DAG for subquery
  *Method generateDAGForSubquery() returns the new ParseContext object for the subquery DAG
  */
-  public class SubqueryParseContextGenerator {
+  public class SubqueryParseContextGenerator implements NodeProcessor {
 
     public SubqueryParseContextGenerator() {
     }
@@ -210,130 +256,35 @@ public class SubqueryAppendOptimizer implements Transform {
 
     }
 
+    @Override
+    public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx procCtx,
+        Object... nodeOutputs) throws SemanticException {
+      subqueryPctx = generateDAGForSubquery();
+      return null;
+    }
+
   }
 
 
-  /*
-   * Class to append operator DAG of subquery to original operator DAG
-   */
-  public class AppendSubqueryProc implements NodeProcessor {
-
-    public AppendSubqueryProc() {
-    }
+  public class OriginalDAGProc implements NodeProcessor {
 
     @Override
     public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx procCtx,
         Object... nodeOutputs) throws SemanticException {
       LOG.info("Processing node - " + nd.getName());
-      appendSubquery(pctx, subqueryPctx);
-      return pctx;
+      appendSubquery();
+      return null;
     }
 
     @SuppressWarnings("unchecked")
-    private void appendSubquery(ParseContext origPCtx, ParseContext subqPCtx){
-
-      //OperatorToParseContexts for original DAG and subquery DAG
-      LinkedHashMap<Operator<? extends Serializable>, OpParseContext> origOpOldOpc = origPCtx.getOpParseCtx();
-      LinkedHashMap<Operator<? extends Serializable>, OpParseContext> subqOpOldOpc = subqPCtx.getOpParseCtx();
+    private void appendSubquery(){
 
       //origOp is the TableScanOperator for the original DAG
-      HashMap<String, Operator<? extends Serializable>> origTopMap = origPCtx.getTopOps();
+      HashMap<String, Operator<? extends Serializable>> origTopMap = pctx.getTopOps();
       Iterator<String> origTabItr = origTopMap.keySet().iterator();
       String origTab = origTabItr.next();
       Operator<? extends Serializable> origOp = origTopMap.get(origTab);
       List<Operator<? extends Serializable>> origChildrenList = origOp.getChildOperators();
-
-      //subqOp is the TableScanOperator for the sub-query DAG
-      HashMap<String, Operator<? extends Serializable>> subqTopMap = subqPCtx.getTopOps();
-      Iterator<String> subqTabItr = subqTopMap.keySet().iterator();
-      String subqTab = subqTabItr.next();
-      Operator<? extends Serializable> subqOp = subqTopMap.get(subqTab);
-      List<Operator<? extends Serializable>> subqChildrenList = subqOp.getChildOperators();
-      List<Operator<? extends Serializable>> subqFSParentList = null;
-      Operator<? extends Serializable> subqLastOp = null;
-
-      //Initialise all data structures required to copy RowResolver and RowSchema from subquery DAG to original DAG operators
-      ArrayList<String> newOutputCols = new ArrayList<String>();
-      Map<String, ExprNodeDesc> newColExprMap = new HashMap<String, ExprNodeDesc>();
-      ArrayList<ExprNodeDesc> newColList = new ArrayList<ExprNodeDesc>();
-      ArrayList<ColumnInfo> newRS = new ArrayList<ColumnInfo>();
-      RowResolver newRR = new RowResolver();
-
-      /*
-       * Loop through all the sub-query operators
-       * We need to copy the row schema, row resolvers, columnExprMap, outputColumns and colList information in respective data structures
-       * The above information is required to pass appropriate input to operators in the original DAG
-       */
-      List<Operator<? extends Serializable>> subqList = subqChildrenList;
-      while(subqList != null && subqList.size() > 0){
-        for (Operator<? extends Serializable> operator : subqList) {
-          if(null != operator){
-            List<Operator<? extends Serializable>> opChildren = operator.getChildOperators();
-            //We need to copy information only for the last SelectOperator before the FileSinkOperator
-            if(null != opChildren && opChildren.size()>0 && (opChildren.get(0) instanceof FileSinkOperator)){
-              // Get the parentOperatos List for FileSinkOperator. We need this later to set the parentOperators for original DAG operator
-              subqFSParentList = opChildren.get(0).getParentOperators();
-              subqOpOldOpc.remove(opChildren.get(0));
-              //We need the reference to this SelectOperator so that the original DAG can be appended here
-              subqLastOp = operator;
-              //Retrieve information only if this is a SelectOperator (This will be true for all operator DAGs
-              if(operator instanceof SelectOperator){
-                  RowResolver oldRR = subqOpOldOpc.get(operator).getRowResolver();
-                  SelectDesc oldConf = (SelectDesc) operator.getConf();
-                  Map<String, ExprNodeDesc> oldColumnExprMap = operator.getColumnExprMap();
-                  ArrayList<ExprNodeDesc> oldColList = oldConf.getColList();
-
-                  String internalName = null;
-                  for(int i=0; i < oldConf.getOutputColumnNames().size(); i++){
-                    internalName = oldConf.getOutputColumnNames().get(i);
-                    //Fetch all output columns (required by SelectOperators in original DAG)
-                    newOutputCols.add(new String(internalName));
-                    if(oldColumnExprMap != null){
-                      ExprNodeColumnDesc oldDesc = (ExprNodeColumnDesc) oldColumnExprMap.get(internalName);
-                      ExprNodeColumnDesc newDesc = (ExprNodeColumnDesc) oldDesc.clone();
-                      newDesc.setColumn(internalName);
-                      //Fetch columnExprMap (required by SelectOperator and FilterOperator in original DAG)
-                      newColExprMap.put(internalName, newDesc);
-                    }
-
-                    ExprNodeDesc exprNodeDesc = oldColList.get(i);
-                    ExprNodeColumnDesc newDesc = (ExprNodeColumnDesc) exprNodeDesc.clone();
-                    newDesc.setColumn(internalName);
-                    //Fetch colList (required by SelectOperators in original DAG)
-                    newColList.add(newDesc);
-
-                  }
-
-                  //We need to set the alias for the new index table subquery
-                  for (int i = 0; i < newOutputCols.size(); i++) {
-                    internalName = newOutputCols.get(i);
-                    String[] nm = oldRR.reverseLookup(internalName);
-                    ColumnInfo col;
-                    try {
-                      col = oldRR.get(nm[0], nm[1]);
-                      if(nm[0] == null){
-                        nm[0] = "v1";
-                      }
-                      // Fetch RowResolver and RowSchema (required by SelectOperator and FilterOperator in original DAG)
-                      newRR.put(nm[0], nm[1], col);
-                      newRS.add(col);
-                    } catch (SemanticException e) {
-                      // TODO Auto-generated catch block
-                      e.printStackTrace();
-                    }
-                  }
-              }
-              //Set to null as breaking condition from the loop
-              subqList = null;
-              break;
-            }else{
-              // Continue looping until we find the SelectOperator prior to FileSinkOperator
-              subqList = operator.getChildOperators();
-              continue;
-            }
-          }
-         }
-      }
 
       /*
        * origChildrenList has the child operators for the TableScanOperator of the original DAG
@@ -347,8 +298,8 @@ public class SubqueryAppendOptimizer implements Transform {
       if(origChildrenList != null && origChildrenList.size() > 0){
         origChildrenList.get(0).setParentOperators(subqFSParentList);
       }
-      if(subqLastOp != null){
-        subqLastOp.setChildOperators(origChildrenList);
+      if(subqLastSelectOp != null){
+        subqLastSelectOp.setChildOperators(origChildrenList);
       }
 
       //Loop through the rest of the original operator DAG and set appropriate column informations, RowResolvers and RowSchema
@@ -414,13 +365,98 @@ public class SubqueryAppendOptimizer implements Transform {
          */
         HashMap<TableScanOperator, Table> newTopToTable = (HashMap<TableScanOperator, Table>) pctx.getTopToTable().clone();
         newTopToTable.remove(origOp);
-        Table tbl = subqPCtx.getTopToTable().get(subqOp);
+
+        HashMap<String, Operator<? extends Serializable>> subqTopMap = subqueryPctx.getTopOps();
+        Iterator<String> subqTabItr = subqTopMap.keySet().iterator();
+        String subqTab = subqTabItr.next();
+        Operator<? extends Serializable> subqOp = subqTopMap.get(subqTab);
+
+        Table tbl = subqueryPctx.getTopToTable().get(subqOp);
         newTopToTable.put((TableScanOperator) subqOp, tbl);
         pctx.setTopToTable(newTopToTable);
         pctx.setTopOps(subqTopMap);
         pctx.setOpParseCtx(subqOpOldOpc);
 
     }
+
+
+  }
+
+
+  /*
+   * Class to append operator DAG of subquery to original operator DAG
+   */
+  public class SubqueryDAGProc implements NodeProcessor {
+
+
+    public SubqueryDAGProc() {
+    }
+
+    @Override
+    public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx procCtx,
+        Object... nodeOutputs) throws SemanticException {
+      LOG.info("Processing node - " + nd.getName());
+      FileSinkOperator fs = (FileSinkOperator) nd;
+      getSelectOperatorSchema(fs);
+      return null;
+    }
+
+    private void getSelectOperatorSchema(FileSinkOperator fs){
+      subqFSParentList = fs.getParentOperators();
+      subqLastSelectOp =  subqFSParentList.get(0);
+      //Retrieve information only if this is a SelectOperator (This will be true for all operator DAGs
+      if(subqLastSelectOp instanceof SelectOperator){
+          RowResolver oldRR = subqOpOldOpc.get(subqLastSelectOp).getRowResolver();
+          SelectDesc oldConf = (SelectDesc) subqLastSelectOp.getConf();
+          Map<String, ExprNodeDesc> oldColumnExprMap = subqLastSelectOp.getColumnExprMap();
+          ArrayList<ExprNodeDesc> oldColList = oldConf.getColList();
+
+          String internalName = null;
+          for(int i=0; i < oldConf.getOutputColumnNames().size(); i++){
+            internalName = oldConf.getOutputColumnNames().get(i);
+            //Fetch all output columns (required by SelectOperators in original DAG)
+            newOutputCols.add(new String(internalName));
+            if(oldColumnExprMap != null){
+              ExprNodeColumnDesc oldDesc = (ExprNodeColumnDesc) oldColumnExprMap.get(internalName);
+              ExprNodeColumnDesc newDesc = (ExprNodeColumnDesc) oldDesc.clone();
+              newDesc.setColumn(internalName);
+              //Fetch columnExprMap (required by SelectOperator and FilterOperator in original DAG)
+              newColExprMap.put(internalName, newDesc);
+            }
+
+            ExprNodeDesc exprNodeDesc = oldColList.get(i);
+            ExprNodeColumnDesc newDesc = (ExprNodeColumnDesc) exprNodeDesc.clone();
+            newDesc.setColumn(internalName);
+            //Fetch colList (required by SelectOperators in original DAG)
+            newColList.add(newDesc);
+
+          }
+
+          //We need to set the alias for the new index table subquery
+          for (int i = 0; i < newOutputCols.size(); i++) {
+            internalName = newOutputCols.get(i);
+            String[] nm = oldRR.reverseLookup(internalName);
+            ColumnInfo col;
+            try {
+              col = oldRR.get(nm[0], nm[1]);
+              if(nm[0] == null){
+                nm[0] = "v1";
+              }
+              // Fetch RowResolver and RowSchema (required by SelectOperator and FilterOperator in original DAG)
+              newRR.put(nm[0], nm[1], col);
+              newRS.add(col);
+            } catch (SemanticException e) {
+              // TODO Auto-generated catch block
+              e.printStackTrace();
+            }
+          }
+      }
+
+      subqOpOldOpc.remove(fs);
+      subqueryPctx.setOpParseCtx(subqOpOldOpc);
+
+    }
+
   }
 
   public class SubqueryOptProcCtx implements NodeProcessorCtx {
