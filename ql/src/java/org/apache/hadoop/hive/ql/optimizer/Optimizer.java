@@ -52,7 +52,7 @@ public class Optimizer {
 
     // Add the transformation that computes the lineage information.
     transformations.add(new Generator());
-
+    transformations.add(new RewriteGBUsingIndex());
     transformations.add(new SubqueryAppendOptimizer());
 
     if (HiveConf.getBoolVar(hiveConf, HiveConf.ConfVars.HIVEOPTCP)) {

@@ -68,7 +68,7 @@ import org.apache.hadoop.hive.ql.plan.SelectDesc;
 
 
 public class SubqueryAppendOptimizer implements Transform {
-  protected final Log LOG = LogFactory.getLog(this.getClass().getName());;
+  protected final Log LOG = LogFactory.getLog(this.getClass().getName());
   ParseContext pctx = null;
   ParseContext subqueryPctx = null;
 
