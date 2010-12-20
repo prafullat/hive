@@ -1,4 +1,5 @@
 DROP TABLE tbl;
+
 DROP TABLE tbl_idx;
 
 CREATE TABLE tbl(key int, value string);
