@@ -1,11 +1,12 @@
 DROP TABLE tbl;
 
-DROP TABLE tbl_idx;
+DROP TABLE idx_tbl;
 
 CREATE TABLE tbl(key int, value string);
-CREATE TABLE tbl_idx(key int, value string);
+CREATE TABLE idx_tbl(key int, value string);
 
 LOAD DATA LOCAL INPATH '/home/pkalmegh/hivelabs/src/hive/input1.txt' OVERWRITE INTO TABLE tbl;
-LOAD DATA LOCAL INPATH '/home/pkalmegh/hivelabs/src/hive/input2.txt' OVERWRITE INTO TABLE tbl_idx;
+LOAD DATA LOCAL INPATH '/home/pkalmegh/hivelabs/src/hive/input2.txt' OVERWRITE INTO TABLE idx_tbl;
 
-select key from tbl where key <50 order by key;
+
+explain select key, count(key) from tbl group by key;

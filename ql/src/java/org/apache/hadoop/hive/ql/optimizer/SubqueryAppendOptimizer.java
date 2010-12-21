@@ -104,22 +104,28 @@ public class SubqueryAppendOptimizer implements Transform {
   private void toStringTree(ParseContext pCtx){
     HashMap<String, Operator<? extends Serializable>> top = pCtx.getTopOps();
     Iterator<String> tabItr = top.keySet().iterator();
-    String tab = tabItr.next();
-    LOG.info("Printing DAG for table:" + tab );
-    Operator<? extends Serializable> pList = top.get(tab);
+    while(tabItr.hasNext()){
+      String tab = tabItr.next();
+      LOG.info("Printing DAG for table:" + tab );
+      Operator<? extends Serializable> pList = top.get(tab);
+        while(pList != null){
+          LOG.info("Operator = " + pList.getName() + "("
+              + ((Operator<? extends Serializable>) pList).getIdentifier() + ")" );
 
-      while(pList != null && pList.getChildOperators() != null && pList.getChildOperators().size() > 0){
-        List<Operator<? extends Serializable>> cList = pList.getChildOperators();
-        for (Operator<? extends Serializable> operator : cList) {
-          if(null != operator){
-            LOG.info("Processing for = " + pList.getName() + "("
-                + ((Operator<? extends Serializable>) pList).getIdentifier() + ")" );
-            pList = operator;
-            continue;
+          if(pList.getChildOperators() == null || pList.getChildOperators().size() == 0){
+            pList = null;
+            break;
+          }else{
+            List<Operator<? extends Serializable>> cList = pList.getChildOperators();
+            for (Operator<? extends Serializable> operator : cList) {
+              if(null != operator){
+                pList = operator;
+                continue;
+              }
             }
+          }
         }
-      }
-
+    }
   }
 
 

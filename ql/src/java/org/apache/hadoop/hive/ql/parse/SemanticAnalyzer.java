@@ -268,6 +268,34 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         opToSamplePruner);
   }
 
+  /* Method to print the operators in the DAG and their child operators */
+  private void toStringTree(ParseContext pCtx){
+    HashMap<String, Operator<? extends Serializable>> top = pCtx.getTopOps();
+    Iterator<String> tabItr = top.keySet().iterator();
+    while(tabItr.hasNext()){
+      String tab = tabItr.next();
+      LOG.info("Printing DAG for table:" + tab );
+      Operator<? extends Serializable> pList = top.get(tab);
+        while(pList != null){
+          LOG.info("Operator = " + pList.getName() + "("
+              + ((Operator<? extends Serializable>) pList).getIdentifier() + ")" );
+
+          if(pList.getChildOperators() == null || pList.getChildOperators().size() == 0){
+            pList = null;
+            break;
+          }else{
+            List<Operator<? extends Serializable>> cList = pList.getChildOperators();
+            for (Operator<? extends Serializable> operator : cList) {
+              if(null != operator){
+                pList = operator;
+                continue;
+              }
+            }
+          }
+        }
+    }
+  }
+
   @SuppressWarnings("nls")
   public void doPhase1QBExpr(ASTNode ast, QBExpr qbexpr, String id, String alias)
       throws SemanticException {
@@ -6580,6 +6608,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         opToSamplePruner);
     Optimizer optm = new Optimizer();
     optm.setPctx(pCtx);
+    toStringTree(pCtx);
     optm.initialize(conf);
     pCtx = optm.optimize();
     init(pCtx);
