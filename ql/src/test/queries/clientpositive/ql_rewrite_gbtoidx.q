@@ -9,4 +9,4 @@ LOAD DATA LOCAL INPATH '/home/pkalmegh/hivelabs/src/hive/input1.txt' OVERWRITE I
 LOAD DATA LOCAL INPATH '/home/pkalmegh/hivelabs/src/hive/input2.txt' OVERWRITE INTO TABLE idx_tbl;
 
 
-explain select key, count(key) from tbl group by key;
+EXPLAIN SELECT DISTINCT key, value FROM tbl WHERE value = 2;

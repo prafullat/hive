@@ -20,17 +20,26 @@ package org.apache.hadoop.hive.ql.optimizer;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.Index;
+import org.apache.hadoop.hive.metastore.api.Order;
 import org.apache.hadoop.hive.ql.exec.ExtractOperator;
+import org.apache.hadoop.hive.ql.exec.FilterOperator;
+import org.apache.hadoop.hive.ql.exec.GroupByOperator;
 import org.apache.hadoop.hive.ql.exec.JoinOperator;
 import org.apache.hadoop.hive.ql.exec.Operator;
+import org.apache.hadoop.hive.ql.exec.ReduceSinkOperator;
+import org.apache.hadoop.hive.ql.exec.SelectOperator;
 import org.apache.hadoop.hive.ql.exec.TableScanOperator;
 import org.apache.hadoop.hive.ql.lib.NodeProcessorCtx;
 import org.apache.hadoop.hive.ql.metadata.Hive;
@@ -39,6 +48,14 @@ import org.apache.hadoop.hive.ql.metadata.Table;
 import org.apache.hadoop.hive.ql.parse.OpParseContext;
 import org.apache.hadoop.hive.ql.parse.ParseContext;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
+import org.apache.hadoop.hive.ql.plan.AggregationDesc;
+import org.apache.hadoop.hive.ql.plan.ExprNodeConstantDesc;
+import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
+import org.apache.hadoop.hive.ql.plan.ExprNodeGenericFuncDesc;
+import org.apache.hadoop.hive.ql.plan.FilterDesc;
+import org.apache.hadoop.hive.ql.plan.GroupByDesc;
+import org.apache.hadoop.hive.ql.plan.ReduceSinkDesc;
+import org.apache.hadoop.hive.ql.plan.SelectDesc;
 
 
 public class RewriteGBUsingIndex implements Transform {
@@ -53,13 +70,32 @@ public class RewriteGBUsingIndex implements Transform {
   boolean QUERY_HAS_JOIN = false;
   boolean TABLE_HAS_NO_INDEX = false;
   boolean QUERY_HAS_SORT_BY = false;
+  boolean QUERY_HAS_ORDER_BY = false;
   boolean QUERY_HAS_DISTRIBUTE_BY = false;
-  int AGG_FUNC_COUNT = 0;
+  boolean QUERY_HAS_GROUP_BY = false;
+  boolean QUERY_HAS_DISTINCT = false; // TO-DO (could not find any place in operator DAG where TOK_SELECTDI flag was translated
+  int AGG_FUNC_CNT = 0;
+  int GBY_KEY_CNT = 0;
   boolean AGG_FUNC_IS_NOT_COUNT = false;
-  boolean FUNC_COUNT_COLS_FETCH_EXCEPTION = false;
+  boolean AGG_FUNC_COLS_FETCH_EXCEPTION = false;
+  boolean WHR_CLAUSE_COLS_FETCH_EXCEPTION = false;
+  boolean SEL_CLAUSE_COLS_FETCH_EXCEPTION = false;
+  boolean GBY_KEYS_FETCH_EXCEPTION = false;
+  boolean GBY_KEY_HAS_NON_INDEX_COLS = false;
+  boolean SEL_HAS_NON_COL_REF = false;
+  boolean GBY_NOT_ON_COUNT_KEYS = false;
+  boolean IDX_TBL_SEARCH_EXCEPTION = false;
   private static final String SUPPORTED_INDEX_TYPE =
     "org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler";
+  private static final String COMPACT_IDX_BUCKET_COL = "_bucketname";
+  private static final String COMPACT_IDX_OFFSETS_ARRAY_COL = "_offsets";
   private String topTable = null;
+  private List<String> selColRefNameList = new ArrayList<String>();
+  private List<String> predColRefs = new ArrayList<String>();
+  private final List<String> gbKeyNameList = new ArrayList<String>();
+  private final RewriteGBUsingIndexProcCtx context = new RewriteGBUsingIndexProcCtx();
+  private final List<List<AggregationDesc>> colRefAggFuncInputList = new ArrayList<List<AggregationDesc>>();
+
 
 
   @Override
@@ -83,6 +119,7 @@ public class RewriteGBUsingIndex implements Transform {
   public String getName() {
     return "RewriteGBUsingIndex";
   }
+
 
 
   private List<Index> getIndexes(Table baseTableMetaData, List<String> matchIndexTypes) {
@@ -152,8 +189,9 @@ public class RewriteGBUsingIndex implements Transform {
           List<Index> indexTables = getIndexes(tsTable, idxType);
           if (indexTables.size() == 0) {
             TABLE_HAS_NO_INDEX = true;
+            return;
           }else{
-            DAGTraversal(topOp.getChildOperators());
+            DAGTraversal(topOp.getChildOperators(), indexTables);
           }
         }
 
@@ -161,7 +199,153 @@ public class RewriteGBUsingIndex implements Transform {
       }
   }
 
-  private void DAGTraversal(List<Operator<? extends Serializable>> topOpChildrenList){
+  private boolean checkIndexInformation(List<Index> indexTables){
+    Index idx = null;
+    Hive hiveInstance = hiveDb;
+
+    // This code block iterates over indexes on the table and picks up the
+    // first index that satisfies the rewrite criteria.
+    for (int idxCtr = 0; idxCtr < indexTables.size(); idxCtr++)  {
+      boolean removeGroupBy = true;
+      boolean optimizeCount = false;
+
+      idx = indexTables.get(idxCtr);
+
+      //Getting index key columns
+      List<Order> idxColList = idx.getSd().getSortCols();
+
+      Set<String> idxKeyColsNames = new TreeSet<String>();
+      for (int i = 0;i < idxColList.size(); i++) {
+        idxKeyColsNames.add(idxColList.get(i).getCol().toLowerCase());
+      }
+
+      // Check that the index schema is as expected. This code block should
+      // catch problems of this rewrite breaking when the CompactIndexHandler
+      // index is changed.
+      // This dependency could be better handled by doing init-time check for
+      // compatibility instead of this overhead for every rewrite invocation.
+      ArrayList<String> idxTblColNames = new ArrayList<String>();
+      try {
+        Table idxTbl = hiveInstance.getTable(idx.getDbName(),
+            idx.getIndexTableName());
+        for (FieldSchema idxTblCol : idxTbl.getCols()) {
+          idxTblColNames.add(idxTblCol.getName());
+        }
+      } catch (HiveException e) {
+        IDX_TBL_SEARCH_EXCEPTION = true;
+        return false;
+      }
+      assert(idxTblColNames.contains(COMPACT_IDX_BUCKET_COL));
+      assert(idxTblColNames.contains(COMPACT_IDX_OFFSETS_ARRAY_COL));
+      assert(idxTblColNames.size() == idxKeyColsNames.size() + 2);
+
+      //--------------------------------------------
+      //Check if all columns in select list are part of index key columns
+      if (idxKeyColsNames.containsAll(selColRefNameList) == false) {
+        LOG.info("Select list has non index key column : " +
+            " Cannot use this index  " + idx.getIndexName());
+        continue;
+      }
+
+      // We need to check if all columns from index appear in select list only
+      // in case of DISTINCT queries, In case group by queries, it is okay as long
+      // as all columns from index appear in group-by-key list.
+      if (QUERY_HAS_DISTINCT) {
+        // Check if all columns from index are part of select list too
+        if (selColRefNameList.containsAll(idxKeyColsNames) == false)  {
+          LOG.info("Index has non select list columns " +
+              " Cannot use this index  " + idx.getIndexName());
+          continue;
+        }
+      }
+
+      //--------------------------------------------
+      // Check if all columns in where predicate are part of index key columns
+      // TODO: Currently we allow all predicates , would it be more efficient
+      // (or at least not worse) to read from index_table and not from baseTable?
+      if (idxKeyColsNames.containsAll(predColRefs) == false) {
+        LOG.info("Predicate column ref list has non index key column : " +
+            " Cannot use this index  " + idx.getIndexName());
+        continue;
+      }
+
+      if (!QUERY_HAS_DISTINCT)  {
+        //--------------------------------------------
+        // For group by, we need to check if all keys are from index columns
+        // itself. Here GB key order can be different than index columns but that does
+        // not really matter for final result.
+        // E.g. select c1, c2 from src group by c2, c1;
+        // we can rewrite this one to:
+        // select c1, c2 from src_cmpt_idx;
+        if (idxKeyColsNames.containsAll(gbKeyNameList) == false) {
+          GBY_KEY_HAS_NON_INDEX_COLS = true;
+          return false;
+        }
+
+        if (gbKeyNameList.containsAll(idxKeyColsNames) == false)  {
+          // GB key and idx key are not same, don't remove GroupBy, but still do index scan
+          removeGroupBy = false;
+        }
+
+        // This check prevents to remove GroupBy for cases where the GROUP BY key cols are
+        // not simple expressions i.e. simple index key cols (in any order), but some
+        // expressions on the the key cols.
+        // e.g.
+        // 1. GROUP BY key, f(key)
+        //     FUTURE: If f(key) output is functionally dependent on key, then we should support
+        //            it. However we don't have mechanism/info about f() yet to decide that.
+        // 2. GROUP BY idxKey, 1
+        //     FUTURE: GB Key has literals along with idxKeyCols. Develop a rewrite to eliminate the
+        //            literals from GB key.
+        // 3. GROUP BY idxKey, idxKey
+        //     FUTURE: GB Key has dup idxKeyCols. Develop a rewrite to eliminate the dup key cols
+        //            from GB key.
+        if (QUERY_HAS_GROUP_BY &&
+            gbKeyNameList.size() != GBY_KEY_CNT) {
+          LOG.info("Group by key has only some non-indexed columns, GroupBy will be"
+              + " preserved by rewrite " + getName() + " optimization" );
+          removeGroupBy = false;
+        }
+
+        // FUTURE: See if this can be relaxed.
+        // If we have agg function (currently only COUNT is supported), check if its input are
+        // from index. we currently support only that.
+        if (colRefAggFuncInputList.size() > 0)  {
+          for (int aggFuncIdx = 0; aggFuncIdx < colRefAggFuncInputList.size(); aggFuncIdx++)  {
+            if (idxKeyColsNames.containsAll(colRefAggFuncInputList.get(aggFuncIdx)) == false) {
+              LOG.info("Agg Func input is not present in index key columns. Currently " +
+                  "only agg func on index columns are supported by rewrite " + getName() + " optimization" );
+              continue;
+            }
+
+            // If we have count on some key, check if key is same as index key,
+            if (colRefAggFuncInputList.get(aggFuncIdx).size() > 0)  {
+              if (colRefAggFuncInputList.get(aggFuncIdx).containsAll(idxKeyColsNames))  {
+                optimizeCount = true;
+              }
+            }
+            else  {
+              optimizeCount = true;
+            }
+          }
+        }
+      }
+
+      //Now that we are good to do this optimization, set parameters in context
+      //which would be used by transforation proceduer as inputs.
+
+      //subquery is needed only in case of optimizecount and complex gb keys?
+      if( !(optimizeCount == true && removeGroupBy == false) ) {
+        context.addTable(topTable, idx.getIndexTableName());
+      }
+
+    }
+    return true;
+
+  }
+
+
+  private void DAGTraversal(List<Operator<? extends Serializable>> topOpChildrenList, List<Index> indexTables){
     List<Operator<? extends Serializable>> childrenList = topOpChildrenList;
     while(childrenList != null && childrenList.size() > 0){
       for (Operator<? extends Serializable> operator : childrenList) {
@@ -170,14 +354,141 @@ public class RewriteGBUsingIndex implements Transform {
             QUERY_HAS_JOIN = true;
             return;
           }else if(operator instanceof ExtractOperator){
-            QUERY_HAS_SORT_BY = true;
-            QUERY_HAS_DISTRIBUTE_BY = true;
+            processExtractOperator(operator);
+          }else if(operator instanceof GroupByOperator){
+            processGroupByOperator(operator);
+          }else if(operator instanceof FilterOperator){
+            processFilterOperator(operator);
+          }else if(operator instanceof SelectOperator){
+            processSelectOperator(operator, indexTables);
+         }
+        }
+      }
+    }
+    checkIndexInformation(indexTables);
+  }
+
+
+  private void processGroupByOperator(Operator<? extends Serializable> operator){
+    if(parseContext.getGroupOpToInputTables().containsKey(operator)){
+      QUERY_HAS_GROUP_BY = true;
+      GroupByDesc conf = (GroupByDesc) operator.getConf();
+      ArrayList<AggregationDesc> aggrList = conf.getAggregators();
+      if(aggrList != null){
+        if(aggrList.size() > 0){
+          AGG_FUNC_CNT++;
+          if(AGG_FUNC_CNT > 1) {
             return;
           }
+          for (AggregationDesc aggregationDesc : aggrList) {
+            String aggFunc = aggregationDesc.getGenericUDAFName();
+            if(!aggFunc.equals("count")){
+              AGG_FUNC_IS_NOT_COUNT = true;
+              return;
+            }else{
+              ArrayList<ExprNodeDesc> para = aggregationDesc.getParameters();
+              if(para == null || para.size() == 0){
+                AGG_FUNC_COLS_FETCH_EXCEPTION =  true;
+                return;
+              }else{
+                ExprNodeDesc end = para.get(0);
+                if(end instanceof ExprNodeConstantDesc){
+                  GBY_NOT_ON_COUNT_KEYS = true;
+                  return;
+                }
+              }
+            }
+            colRefAggFuncInputList.add(aggrList);
+          }
+        }else{
+          QUERY_HAS_DISTINCT = true;
+          return;
+        }
+
+      }
+      ArrayList<ExprNodeDesc> keyList = conf.getKeys();
+      if(keyList == null || keyList.size() == 0){
+        GBY_KEYS_FETCH_EXCEPTION = true;
+        return;
+      }
+      GBY_KEY_CNT = keyList.size();
+      for (ExprNodeDesc exprNodeDesc : keyList) {
+        gbKeyNameList.addAll(exprNodeDesc.getCols());
+      }
+
+    }
+
+  }
+
+  private void processExtractOperator(Operator<? extends Serializable> operator){
+    if(operator.getParentOperators() != null && operator.getParentOperators().size() >0){
+      Operator<? extends Serializable> interim = operator.getParentOperators().get(0);
+      if(interim instanceof ReduceSinkOperator){
+        ReduceSinkDesc conf = (ReduceSinkDesc) interim.getConf();
+        ArrayList<ExprNodeDesc> partCols = conf.getPartitionCols();
+        if(partCols == null || partCols.size() == 0){
+          QUERY_HAS_DISTRIBUTE_BY = true;
+          return;
+        }
+        int nr = conf.getNumReducers();
+        if(nr == -1){
+          QUERY_HAS_SORT_BY = true;
+          return;
+        }else if(nr == 1){
+          QUERY_HAS_ORDER_BY = true;
+          return;
         }
       }
     }
   }
+
+  private void processFilterOperator(Operator<? extends Serializable> operator){
+    FilterDesc conf = (FilterDesc)operator.getConf();
+    ExprNodeGenericFuncDesc oldengfd = (ExprNodeGenericFuncDesc) conf.getPredicate();
+    if(oldengfd == null){
+      WHR_CLAUSE_COLS_FETCH_EXCEPTION = true;
+      return;
+    }
+    List<String> colList = oldengfd.getCols();
+    if(colList == null || colList.size() == 0){
+      WHR_CLAUSE_COLS_FETCH_EXCEPTION = true;
+      return;
+    }
+    predColRefs = colList;
+  }
+
+  private void processSelectOperator(Operator<? extends Serializable> operator, List<Index> indexTables){
+    int colSelCnt = 0;
+    int colIdxCnt = 0;
+    Collection<String> indexSourceCols = null;
+    for (int i = 0; i < indexTables.size(); i++) {
+      Index index = null;
+      index = indexTables.get(i);
+      indexSourceCols = index.getParameters().values();
+    }
+    SelectDesc conf = (SelectDesc)operator.getConf();
+    ArrayList<ExprNodeDesc> selColList = conf.getColList();
+    if(selColList == null || selColList.size() == 0){
+      SEL_CLAUSE_COLS_FETCH_EXCEPTION = true;
+      return;
+    }
+    for (ExprNodeDesc exprNodeDesc : selColList) {
+      List<String> colList = exprNodeDesc.getCols();
+      for (String colName : colList) {
+        colSelCnt++;
+        if(indexSourceCols.contains(colName)){
+          colIdxCnt++;
+        }
+      }
+      selColRefNameList = colList;
+    }
+    if(colIdxCnt != colSelCnt){
+      SEL_HAS_NON_COL_REF = true;
+      return;
+    }
+  }
+
+
 
   private boolean checkIfOptimizationCanApply(){
     boolean canApply = false;
@@ -185,40 +496,127 @@ public class RewriteGBUsingIndex implements Transform {
       LOG.info("Query has more than one table " +
           "that is not supported with " + getName() + " optimization" );
       return canApply;
-    }
+    }//1
     if (NO_OF_SUBQUERIES != 0) {
       LOG.info("Query has more than one subqueries " +
           "that is not supported with " + getName() + " optimization" );
       return canApply;
-    }
+    }//2
     if(QUERY_HAS_JOIN){
       LOG.info("Query has joins, " +
           "that is not supported with " + getName() + " optimization" );
       return canApply;
 
-    }
+    }//3
     if (TABLE_HAS_NO_INDEX) {
       LOG.info("Table " + topTable + " does not have compact index. " +
           "Cannot apply " + getName() + " optimization" );
       return canApply;
-    }
-    if(QUERY_HAS_SORT_BY){
-      LOG.info("Query has sortby clause, " +
-          "that is not supported with " + getName() + " optimization" );
-      return canApply;
-    }
+    }//4
     if(QUERY_HAS_DISTRIBUTE_BY){
       LOG.info("Query has distributeby clause, " +
           "that is not supported with " + getName() + " optimization" );
       return canApply;
+    }//5
+    if(QUERY_HAS_SORT_BY){
+      LOG.info("Query has sortby clause, " +
+          "that is not supported with " + getName() + " optimization" );
+      return canApply;
+    }//6
+    if(QUERY_HAS_ORDER_BY){
+      LOG.info("Query has orderby clause, " +
+          "that is not supported with " + getName() + " optimization" );
+      return canApply;
+    }//7
+    if(AGG_FUNC_CNT != 1){
+      LOG.info("More than 1 agg funcs: " +
+      		"Not supported by " + getName() + " optimization" );
+      return canApply;
+    }//8
+    if(AGG_FUNC_IS_NOT_COUNT){
+      LOG.info("Agg func other than count is " +
+      		"not supported by " + getName() + " optimization" );
+      return canApply;
+    }//9
+    if(AGG_FUNC_COLS_FETCH_EXCEPTION){
+      LOG.info("Got exception while locating child col refs " +
+      		"of agg func, skipping " + getName() + " optimization" );
+      return canApply;
+    }//10
+    if(WHR_CLAUSE_COLS_FETCH_EXCEPTION){
+      LOG.info("Got exception while locating child col refs for where clause, "
+          + "skipping " + getName() + " optimization" );
+      return canApply;
+    }//11
+    if(QUERY_HAS_DISTINCT){
+      LOG.info("Select-list has distinct. " +
+          "Cannot apply the rewrite " + getName() + " optimization" );
+      return canApply;
+    }//12
+    if(SEL_HAS_NON_COL_REF){
+      LOG.info("Select-list has some non-col-ref expression. " +
+          "Cannot apply the rewrite " + getName() + " optimization" );
+      return canApply;
+    }//13
+    if(SEL_CLAUSE_COLS_FETCH_EXCEPTION){
+      LOG.info("Got exception while locating child col refs for select list, "
+          + "skipping " + getName() + " optimization" );
+      return canApply;
+    }//14
+    if(GBY_KEYS_FETCH_EXCEPTION){
+      LOG.info("Got exception while locating child col refs for GroupBy key, "
+          + "skipping " + getName() + " optimization" );
+      return canApply;
+    }//15
+    if(GBY_NOT_ON_COUNT_KEYS){
+      LOG.info("Currently count function needs group by on key columns, "
+          + "Cannot apply this " + getName() + " optimization" );
+      return canApply;
+    }//16
+    if(IDX_TBL_SEARCH_EXCEPTION){
+      LOG.info("Got exception while locating index table, " +
+      		"skipping " + getName() + " optimization" );
+      return canApply;
+    }//17
+    if(GBY_KEY_HAS_NON_INDEX_COLS){
+      LOG.info("Group by key has some non-indexed columns, " +
+      		"Cannot apply rewrite " + getName() + " optimization" );
+      return canApply;
     }
-
+    canApply = true;
     return canApply;
 
   }
 
 
   public class RewriteGBUsingIndexProcCtx implements NodeProcessorCtx {
+    private String indexTableName;
+    private ParseContext parseContext;
+    private Hive hiveDb;
+    private boolean replaceTableWithIdxTable;
+
+
+    /**
+     * True if the base table has compact summary index associated with it
+     */
+    private boolean hasValidTableScan;
+
+    //Map for base table to index table mapping
+    //TableScan operator for base table will be modified to read from index table
+    private final HashMap<String, String> baseToIdxTableMap;
+
+    public RewriteGBUsingIndexProcCtx() {
+      baseToIdxTableMap = new HashMap<String, String>();
+    }
+
+    public void addTable(String baseTableName, String indexTableName) {
+      baseToIdxTableMap.put(baseTableName, indexTableName);
+    }
+
+    public String findBaseTable(String baseTableName)  {
+      return baseToIdxTableMap.get(baseTableName);
+    }
+
   }
 
 
