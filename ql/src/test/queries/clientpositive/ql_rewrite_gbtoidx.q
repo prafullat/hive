@@ -9,4 +9,10 @@ LOAD DATA LOCAL INPATH '/home/pkalmegh/hivelabs/src/hive/input1.txt' OVERWRITE I
 LOAD DATA LOCAL INPATH '/home/pkalmegh/hivelabs/src/hive/input2.txt' OVERWRITE INTO TABLE idx_tbl;
 
 
-EXPLAIN SELECT DISTINCT key, value FROM tbl WHERE value = 2;
+CREATE INDEX tbl_key_idx ON TABLE tbl(key) AS 'org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler' WITH DEFERRED REBUILD;
+ALTER INDEX tbl_key_idx ON tbl REBUILD;
+
+CREATE INDEX idx_tbl_key_idx ON TABLE idx_tbl(key) AS 'org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler' WITH DEFERRED REBUILD;
+ALTER INDEX idx_tbl_key_idx ON idx_tbl REBUILD;
+
+SELECT count(*) FROM tbl group by value;

@@ -20,7 +20,6 @@ package org.apache.hadoop.hive.ql.optimizer;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -33,6 +32,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.Index;
 import org.apache.hadoop.hive.metastore.api.Order;
+import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
 import org.apache.hadoop.hive.ql.exec.ExtractOperator;
 import org.apache.hadoop.hive.ql.exec.FilterOperator;
 import org.apache.hadoop.hive.ql.exec.GroupByOperator;
@@ -49,6 +49,7 @@ import org.apache.hadoop.hive.ql.parse.OpParseContext;
 import org.apache.hadoop.hive.ql.parse.ParseContext;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
 import org.apache.hadoop.hive.ql.plan.AggregationDesc;
+import org.apache.hadoop.hive.ql.plan.ExprNodeColumnDesc;
 import org.apache.hadoop.hive.ql.plan.ExprNodeConstantDesc;
 import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
 import org.apache.hadoop.hive.ql.plan.ExprNodeGenericFuncDesc;
@@ -56,12 +57,16 @@ import org.apache.hadoop.hive.ql.plan.FilterDesc;
 import org.apache.hadoop.hive.ql.plan.GroupByDesc;
 import org.apache.hadoop.hive.ql.plan.ReduceSinkDesc;
 import org.apache.hadoop.hive.ql.plan.SelectDesc;
+import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFEvaluator;
+import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFCount.GenericUDAFCountEvaluator;
 
 
 public class RewriteGBUsingIndex implements Transform {
+  private static int count = 0;
   private ParseContext parseContext;
   private Hive hiveDb;
   private LinkedHashMap<Operator<? extends Serializable>, OpParseContext> opToParseCtxMap;
+  private final LinkedHashMap<String, String> colInternalToExternalMap = new LinkedHashMap<String, String>();
   protected final Log LOG = LogFactory.getLog(this.getClass().getName());
 
   //vars
@@ -73,7 +78,7 @@ public class RewriteGBUsingIndex implements Transform {
   boolean QUERY_HAS_ORDER_BY = false;
   boolean QUERY_HAS_DISTRIBUTE_BY = false;
   boolean QUERY_HAS_GROUP_BY = false;
-  boolean QUERY_HAS_DISTINCT = false; // TO-DO (could not find any place in operator DAG where TOK_SELECTDI flag was translated
+  boolean QUERY_HAS_DISTINCT = false;
   int AGG_FUNC_CNT = 0;
   int GBY_KEY_CNT = 0;
   boolean AGG_FUNC_IS_NOT_COUNT = false;
@@ -90,13 +95,15 @@ public class RewriteGBUsingIndex implements Transform {
   private static final String COMPACT_IDX_BUCKET_COL = "_bucketname";
   private static final String COMPACT_IDX_OFFSETS_ARRAY_COL = "_offsets";
   private String topTable = null;
-  private List<String> selColRefNameList = new ArrayList<String>();
+  private final List<String> selColRefNameList = new ArrayList<String>();
   private List<String> predColRefs = new ArrayList<String>();
   private final List<String> gbKeyNameList = new ArrayList<String>();
   private final RewriteGBUsingIndexProcCtx context = new RewriteGBUsingIndexProcCtx();
   private final List<List<AggregationDesc>> colRefAggFuncInputList = new ArrayList<List<AggregationDesc>>();
 
-
+  RewriteGBUsingIndex(){
+    count++;
+  }
 
   @Override
   public ParseContext transform(ParseContext pctx) throws SemanticException {
@@ -109,11 +116,16 @@ public class RewriteGBUsingIndex implements Transform {
       e.printStackTrace();
     }
 
-    if( shouldApplyOptimization() == true ) {
-      return parseContext;
+    if(count == 3){
+      if( shouldApplyOptimization() == true ) {
+        return parseContext;
+      }else{
+        return null;
+      }
+
     }
 
-    return null;
+    return parseContext;
   }
 
   public String getName() {
@@ -167,14 +179,18 @@ public class RewriteGBUsingIndex implements Transform {
     while(topOpItr.hasNext()){
       topTable = topOpItr.next();
       Operator<? extends Serializable> topOp = topOpMap.get(topTable);
-      checkSingleDAG(topOp);
+      retValue = checkSingleDAG(topOp);
+      if(!retValue) {
+        break;
+      }
     }
     retValue = checkIfOptimizationCanApply();
     return retValue;
   }
 
 
-  private void checkSingleDAG(Operator<? extends Serializable> topOp) {
+  private boolean checkSingleDAG(Operator<? extends Serializable> topOp) {
+    boolean result = true;
       NO_OF_TABLES++;
       if(topTable.contains(":")){
         NO_OF_SUBQUERIES++;
@@ -189,14 +205,208 @@ public class RewriteGBUsingIndex implements Transform {
           List<Index> indexTables = getIndexes(tsTable, idxType);
           if (indexTables.size() == 0) {
             TABLE_HAS_NO_INDEX = true;
-            return;
+            return false;
           }else{
-            DAGTraversal(topOp.getChildOperators(), indexTables);
+            result = DAGTraversal(topOp.getChildOperators(), indexTables);
           }
         }
+      }
+      return result;
+  }
 
+  private boolean DAGTraversal(List<Operator<? extends Serializable>> topOpChildrenList, List<Index> indexTables){
+    boolean result = true;
+    List<Operator<? extends Serializable>> childrenList = topOpChildrenList;
+    while(childrenList != null && childrenList.size() > 0){
+      for (Operator<? extends Serializable> operator : childrenList) {
+        if(null != operator){
+          if(operator instanceof JoinOperator){
+            QUERY_HAS_JOIN = true;
+            return false;
+          }else if(operator instanceof ExtractOperator){
+            result = processExtractOperator(operator);
+          }else if(operator instanceof GroupByOperator){
+            result = processGroupByOperator(operator);
+          }else if(operator instanceof FilterOperator){
+            result = processFilterOperator(operator);
+          }else if(operator instanceof SelectOperator){
+            result = processSelectOperator(operator, indexTables);
+         }
+          if(!result){
+            childrenList = null;
+            break;
+          }else{
+            childrenList = operator.getChildOperators();
+          }
+        }
+      }
+    }
+
+    //result = checkIndexInformation(indexTables);
+    return result;
+  }
+
+
+  private boolean processGroupByOperator(Operator<? extends Serializable> operator){
+    if(parseContext.getGroupOpToInputTables().containsKey(operator)){
+      QUERY_HAS_GROUP_BY = true;
+      GroupByDesc conf = (GroupByDesc) operator.getConf();
+      ArrayList<AggregationDesc> aggrList = conf.getAggregators();
+      if(aggrList != null && aggrList.size() > 0){
+          for (AggregationDesc aggregationDesc : aggrList) {
+            AGG_FUNC_CNT++;
+            if(AGG_FUNC_CNT > 1) {
+              return false;
+            }
+            String aggFunc = aggregationDesc.getGenericUDAFName();
+            if(!aggFunc.equals("count")){
+              AGG_FUNC_IS_NOT_COUNT = true;
+              return false;
+            }else{
+              GenericUDAFEvaluator aggEval = aggregationDesc.getGenericUDAFEvaluator();
+              if(aggEval instanceof GenericUDAFCountEvaluator){
+                LOG.info("here");
+              }
+              ArrayList<ExprNodeDesc> para = aggregationDesc.getParameters();
+              if(para == null || para.size() == 0){
+                AGG_FUNC_COLS_FETCH_EXCEPTION =  true;
+                return false;
+              }else{
+                ExprNodeDesc end = para.get(0);
+                if(end instanceof ExprNodeColumnDesc){
+                  LOG.info("Code to specify GBY_NOT_ON_CNT_KEYS");
+                }else if(end instanceof ExprNodeConstantDesc){
+                  GBY_NOT_ON_COUNT_KEYS = true;
+                  return false;
+                }
+              }
+            }
+            colRefAggFuncInputList.add(aggrList);
+          }
+      }else{
+        QUERY_HAS_DISTINCT = true;
+        return false;
+      }
+      ArrayList<ExprNodeDesc> keyList = conf.getKeys();
+      if(keyList == null || keyList.size() == 0){
+        GBY_KEYS_FETCH_EXCEPTION = true;
+        return false;
+      }
+      GBY_KEY_CNT = keyList.size();
+      for (ExprNodeDesc exprNodeDesc : keyList) {
+        gbKeyNameList.addAll(exprNodeDesc.getCols());
+      }
+
+    }
+    return true;
+  }
+
+  private boolean processExtractOperator(Operator<? extends Serializable> operator){
+    if(operator.getParentOperators() != null && operator.getParentOperators().size() >0){
+      Operator<? extends Serializable> interim = operator.getParentOperators().get(0);
+      if(interim instanceof ReduceSinkOperator){
+        ReduceSinkDesc conf = (ReduceSinkDesc) interim.getConf();
+        ArrayList<ExprNodeDesc> partCols = conf.getPartitionCols();
+        int nr = conf.getNumReducers();
+        if(nr == -1){
+          if(partCols != null && partCols.size() > 0){
+            QUERY_HAS_DISTRIBUTE_BY = true;
+            return false;
+          }else{
+            QUERY_HAS_SORT_BY = true;
+            return false;
+          }
+        }else if(nr == 1){
+          QUERY_HAS_ORDER_BY = true;
+          return false;
+        }
 
       }
+    }
+    return true;
+  }
+
+  private boolean processFilterOperator(Operator<? extends Serializable> operator){
+    FilterDesc conf = (FilterDesc)operator.getConf();
+    ExprNodeGenericFuncDesc oldengfd = (ExprNodeGenericFuncDesc) conf.getPredicate();
+    if(oldengfd == null){
+      WHR_CLAUSE_COLS_FETCH_EXCEPTION = true;
+      return false;
+    }
+    List<String> colList = oldengfd.getCols();
+    if(colList == null || colList.size() == 0){
+      WHR_CLAUSE_COLS_FETCH_EXCEPTION = true;
+      return false;
+    }
+    predColRefs = colList;
+    return true;
+  }
+
+  private boolean processSelectOperator(Operator<? extends Serializable> operator, List<Index> indexTables){
+    List<Operator<? extends Serializable>> childrenList = operator.getChildOperators();
+    Operator<? extends Serializable> child = childrenList.get(0);
+    if(child instanceof GroupByOperator){
+      SelectDesc conf = (SelectDesc)operator.getConf();
+      ArrayList<ExprNodeDesc> selColList = conf.getColList();
+      int colCnt = 0;
+      if(selColList != null && selColList.size() != 0){
+        for (ExprNodeDesc exprNodeDesc : selColList) {
+          if(exprNodeDesc instanceof ExprNodeColumnDesc){
+            List<String> exprColList = exprNodeDesc.getCols();
+            if(!((ExprNodeColumnDesc) exprNodeDesc).getIsPartitionColOrVirtualCol()){
+              for (String colName : exprColList) {
+                colInternalToExternalMap.put("_col"+ colCnt++, colName);
+              }
+            }
+          }
+        }
+      }
+      return true;
+    }else{
+      int colSelCnt = 0;
+      int colIdxCnt = 0;
+      List<String> indexSourceCols = new ArrayList<String>();
+      for (int i = 0; i < indexTables.size(); i++) {
+        Index index = null;
+        index = indexTables.get(i);
+        StorageDescriptor sd = index.getSd();
+        List<FieldSchema> idxColList = sd.getCols();
+        for (FieldSchema fieldSchema : idxColList) {
+          indexSourceCols.add(fieldSchema.getName());
+        }
+
+      }
+      SelectDesc conf = (SelectDesc)operator.getConf();
+      ArrayList<ExprNodeDesc> selColList = conf.getColList();
+
+      if(selColList == null || selColList.size() == 0){
+        SEL_CLAUSE_COLS_FETCH_EXCEPTION = true;
+        return false;
+      }
+      for (ExprNodeDesc exprNodeDesc : selColList) {
+        List<String> exprColList = exprNodeDesc.getCols();
+        for (String colName : exprColList) {
+          colSelCnt++;
+          if(QUERY_HAS_GROUP_BY && colInternalToExternalMap != null && colInternalToExternalMap.size() > 0){
+            String extName = colInternalToExternalMap.get(colName);
+            if(indexSourceCols.contains(extName)){
+              colIdxCnt++;
+            }
+          }else{
+            if(indexSourceCols.contains(colName)){
+              colIdxCnt++;
+            }
+          }
+        }
+        selColRefNameList.addAll(exprColList);
+      }
+      if(colIdxCnt != colSelCnt){
+        SEL_HAS_NON_COL_REF = true;
+        return false;
+      }
+    }
+
+    return true;
   }
 
   private boolean checkIndexInformation(List<Index> indexTables){
@@ -345,149 +555,6 @@ public class RewriteGBUsingIndex implements Transform {
   }
 
 
-  private void DAGTraversal(List<Operator<? extends Serializable>> topOpChildrenList, List<Index> indexTables){
-    List<Operator<? extends Serializable>> childrenList = topOpChildrenList;
-    while(childrenList != null && childrenList.size() > 0){
-      for (Operator<? extends Serializable> operator : childrenList) {
-        if(null != operator){
-          if(operator instanceof JoinOperator){
-            QUERY_HAS_JOIN = true;
-            return;
-          }else if(operator instanceof ExtractOperator){
-            processExtractOperator(operator);
-          }else if(operator instanceof GroupByOperator){
-            processGroupByOperator(operator);
-          }else if(operator instanceof FilterOperator){
-            processFilterOperator(operator);
-          }else if(operator instanceof SelectOperator){
-            processSelectOperator(operator, indexTables);
-         }
-        }
-      }
-    }
-    checkIndexInformation(indexTables);
-  }
-
-
-  private void processGroupByOperator(Operator<? extends Serializable> operator){
-    if(parseContext.getGroupOpToInputTables().containsKey(operator)){
-      QUERY_HAS_GROUP_BY = true;
-      GroupByDesc conf = (GroupByDesc) operator.getConf();
-      ArrayList<AggregationDesc> aggrList = conf.getAggregators();
-      if(aggrList != null){
-        if(aggrList.size() > 0){
-          AGG_FUNC_CNT++;
-          if(AGG_FUNC_CNT > 1) {
-            return;
-          }
-          for (AggregationDesc aggregationDesc : aggrList) {
-            String aggFunc = aggregationDesc.getGenericUDAFName();
-            if(!aggFunc.equals("count")){
-              AGG_FUNC_IS_NOT_COUNT = true;
-              return;
-            }else{
-              ArrayList<ExprNodeDesc> para = aggregationDesc.getParameters();
-              if(para == null || para.size() == 0){
-                AGG_FUNC_COLS_FETCH_EXCEPTION =  true;
-                return;
-              }else{
-                ExprNodeDesc end = para.get(0);
-                if(end instanceof ExprNodeConstantDesc){
-                  GBY_NOT_ON_COUNT_KEYS = true;
-                  return;
-                }
-              }
-            }
-            colRefAggFuncInputList.add(aggrList);
-          }
-        }else{
-          QUERY_HAS_DISTINCT = true;
-          return;
-        }
-
-      }
-      ArrayList<ExprNodeDesc> keyList = conf.getKeys();
-      if(keyList == null || keyList.size() == 0){
-        GBY_KEYS_FETCH_EXCEPTION = true;
-        return;
-      }
-      GBY_KEY_CNT = keyList.size();
-      for (ExprNodeDesc exprNodeDesc : keyList) {
-        gbKeyNameList.addAll(exprNodeDesc.getCols());
-      }
-
-    }
-
-  }
-
-  private void processExtractOperator(Operator<? extends Serializable> operator){
-    if(operator.getParentOperators() != null && operator.getParentOperators().size() >0){
-      Operator<? extends Serializable> interim = operator.getParentOperators().get(0);
-      if(interim instanceof ReduceSinkOperator){
-        ReduceSinkDesc conf = (ReduceSinkDesc) interim.getConf();
-        ArrayList<ExprNodeDesc> partCols = conf.getPartitionCols();
-        if(partCols == null || partCols.size() == 0){
-          QUERY_HAS_DISTRIBUTE_BY = true;
-          return;
-        }
-        int nr = conf.getNumReducers();
-        if(nr == -1){
-          QUERY_HAS_SORT_BY = true;
-          return;
-        }else if(nr == 1){
-          QUERY_HAS_ORDER_BY = true;
-          return;
-        }
-      }
-    }
-  }
-
-  private void processFilterOperator(Operator<? extends Serializable> operator){
-    FilterDesc conf = (FilterDesc)operator.getConf();
-    ExprNodeGenericFuncDesc oldengfd = (ExprNodeGenericFuncDesc) conf.getPredicate();
-    if(oldengfd == null){
-      WHR_CLAUSE_COLS_FETCH_EXCEPTION = true;
-      return;
-    }
-    List<String> colList = oldengfd.getCols();
-    if(colList == null || colList.size() == 0){
-      WHR_CLAUSE_COLS_FETCH_EXCEPTION = true;
-      return;
-    }
-    predColRefs = colList;
-  }
-
-  private void processSelectOperator(Operator<? extends Serializable> operator, List<Index> indexTables){
-    int colSelCnt = 0;
-    int colIdxCnt = 0;
-    Collection<String> indexSourceCols = null;
-    for (int i = 0; i < indexTables.size(); i++) {
-      Index index = null;
-      index = indexTables.get(i);
-      indexSourceCols = index.getParameters().values();
-    }
-    SelectDesc conf = (SelectDesc)operator.getConf();
-    ArrayList<ExprNodeDesc> selColList = conf.getColList();
-    if(selColList == null || selColList.size() == 0){
-      SEL_CLAUSE_COLS_FETCH_EXCEPTION = true;
-      return;
-    }
-    for (ExprNodeDesc exprNodeDesc : selColList) {
-      List<String> colList = exprNodeDesc.getCols();
-      for (String colName : colList) {
-        colSelCnt++;
-        if(indexSourceCols.contains(colName)){
-          colIdxCnt++;
-        }
-      }
-      selColRefNameList = colList;
-    }
-    if(colIdxCnt != colSelCnt){
-      SEL_HAS_NON_COL_REF = true;
-      return;
-    }
-  }
-
 
 
   private boolean checkIfOptimizationCanApply(){
@@ -528,7 +595,7 @@ public class RewriteGBUsingIndex implements Transform {
           "that is not supported with " + getName() + " optimization" );
       return canApply;
     }//7
-    if(AGG_FUNC_CNT != 1){
+    if(AGG_FUNC_CNT > 1){
       LOG.info("More than 1 agg funcs: " +
       		"Not supported by " + getName() + " optimization" );
       return canApply;
@@ -582,7 +649,7 @@ public class RewriteGBUsingIndex implements Transform {
       LOG.info("Group by key has some non-indexed columns, " +
       		"Cannot apply rewrite " + getName() + " optimization" );
       return canApply;
-    }
+    }//18
     canApply = true;
     return canApply;
 
