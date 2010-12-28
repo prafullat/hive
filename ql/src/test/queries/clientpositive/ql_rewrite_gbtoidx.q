@@ -15,4 +15,4 @@ ALTER INDEX tbl_key_idx ON tbl REBUILD;
 CREATE INDEX idx_tbl_key_idx ON TABLE idx_tbl(key) AS 'org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler' WITH DEFERRED REBUILD;
 ALTER INDEX idx_tbl_key_idx ON idx_tbl REBUILD;
 
-SELECT count(*) FROM tbl group by value;
+EXPLAIN SELECT key FROM tbl group by key;

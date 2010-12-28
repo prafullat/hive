@@ -25,28 +25,30 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
-import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.Index;
-import org.apache.hadoop.hive.metastore.api.Order;
 import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
+import org.apache.hadoop.hive.ql.exec.ColumnInfo;
 import org.apache.hadoop.hive.ql.exec.ExtractOperator;
 import org.apache.hadoop.hive.ql.exec.FilterOperator;
 import org.apache.hadoop.hive.ql.exec.GroupByOperator;
 import org.apache.hadoop.hive.ql.exec.JoinOperator;
 import org.apache.hadoop.hive.ql.exec.Operator;
 import org.apache.hadoop.hive.ql.exec.ReduceSinkOperator;
+import org.apache.hadoop.hive.ql.exec.RowSchema;
 import org.apache.hadoop.hive.ql.exec.SelectOperator;
 import org.apache.hadoop.hive.ql.exec.TableScanOperator;
 import org.apache.hadoop.hive.ql.lib.NodeProcessorCtx;
 import org.apache.hadoop.hive.ql.metadata.Hive;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.metadata.Table;
-import org.apache.hadoop.hive.ql.parse.OpParseContext;
+import org.apache.hadoop.hive.ql.parse.ASTNode;
+import org.apache.hadoop.hive.ql.parse.HiveParser;
 import org.apache.hadoop.hive.ql.parse.ParseContext;
+import org.apache.hadoop.hive.ql.parse.QBParseInfo;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
 import org.apache.hadoop.hive.ql.plan.AggregationDesc;
 import org.apache.hadoop.hive.ql.plan.ExprNodeColumnDesc;
@@ -57,16 +59,12 @@ import org.apache.hadoop.hive.ql.plan.FilterDesc;
 import org.apache.hadoop.hive.ql.plan.GroupByDesc;
 import org.apache.hadoop.hive.ql.plan.ReduceSinkDesc;
 import org.apache.hadoop.hive.ql.plan.SelectDesc;
-import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFEvaluator;
-import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFCount.GenericUDAFCountEvaluator;
 
 
 public class RewriteGBUsingIndex implements Transform {
   private static int count = 0;
   private ParseContext parseContext;
   private Hive hiveDb;
-  private LinkedHashMap<Operator<? extends Serializable>, OpParseContext> opToParseCtxMap;
-  private final LinkedHashMap<String, String> colInternalToExternalMap = new LinkedHashMap<String, String>();
   protected final Log LOG = LogFactory.getLog(this.getClass().getName());
 
   //vars
@@ -87,9 +85,10 @@ public class RewriteGBUsingIndex implements Transform {
   boolean SEL_CLAUSE_COLS_FETCH_EXCEPTION = false;
   boolean GBY_KEYS_FETCH_EXCEPTION = false;
   boolean GBY_KEY_HAS_NON_INDEX_COLS = false;
-  boolean SEL_HAS_NON_COL_REF = false;
+  boolean SEL_HAS_NON_COL_REF = true;//Not sure why this is used...change to false here when implementation is included
   boolean GBY_NOT_ON_COUNT_KEYS = false;
   boolean IDX_TBL_SEARCH_EXCEPTION = false;
+
   private static final String SUPPORTED_INDEX_TYPE =
     "org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler";
   private static final String COMPACT_IDX_BUCKET_COL = "_bucketname";
@@ -99,7 +98,8 @@ public class RewriteGBUsingIndex implements Transform {
   private List<String> predColRefs = new ArrayList<String>();
   private final List<String> gbKeyNameList = new ArrayList<String>();
   private final RewriteGBUsingIndexProcCtx context = new RewriteGBUsingIndexProcCtx();
-  private final List<List<AggregationDesc>> colRefAggFuncInputList = new ArrayList<List<AggregationDesc>>();
+  private final List<List<String>> colRefAggFuncInputList = new ArrayList<List<String>>();
+  private final HashMap<String, String> colInternalToExternalMap = new LinkedHashMap<String, String>();
 
   RewriteGBUsingIndex(){
     count++;
@@ -108,7 +108,6 @@ public class RewriteGBUsingIndex implements Transform {
   @Override
   public ParseContext transform(ParseContext pctx) throws SemanticException {
     parseContext = pctx;
-    opToParseCtxMap = parseContext.getOpParseCtx();
     try {
       hiveDb = Hive.get(parseContext.getConf());
     } catch (HiveException e) {
@@ -194,7 +193,7 @@ public class RewriteGBUsingIndex implements Transform {
       NO_OF_TABLES++;
       if(topTable.contains(":")){
         NO_OF_SUBQUERIES++;
-        LOG.info("Table - " + topTable + " contains subquery.");
+        return false;
       }
       if(topOp instanceof TableScanOperator){
         TableScanOperator ts = (TableScanOperator) topOp;
@@ -230,7 +229,7 @@ public class RewriteGBUsingIndex implements Transform {
           }else if(operator instanceof FilterOperator){
             result = processFilterOperator(operator);
           }else if(operator instanceof SelectOperator){
-            result = processSelectOperator(operator, indexTables);
+            result = processSelectOperator(operator);
          }
           if(!result){
             childrenList = null;
@@ -242,7 +241,9 @@ public class RewriteGBUsingIndex implements Transform {
       }
     }
 
-    //result = checkIndexInformation(indexTables);
+    if(result){
+        result = checkIndexInformation(indexTables);
+    }
     return result;
   }
 
@@ -263,29 +264,42 @@ public class RewriteGBUsingIndex implements Transform {
               AGG_FUNC_IS_NOT_COUNT = true;
               return false;
             }else{
-              GenericUDAFEvaluator aggEval = aggregationDesc.getGenericUDAFEvaluator();
-              if(aggEval instanceof GenericUDAFCountEvaluator){
-                LOG.info("here");
-              }
-              ArrayList<ExprNodeDesc> para = aggregationDesc.getParameters();
-              if(para == null || para.size() == 0){
+             ArrayList<ExprNodeDesc> para = aggregationDesc.getParameters();
+              if(para == null){
                 AGG_FUNC_COLS_FETCH_EXCEPTION =  true;
                 return false;
+              }else if(para.size() == 0){
+                LOG.info("count(*) case");
+                GBY_NOT_ON_COUNT_KEYS = true;
+                return false;
               }else{
-                ExprNodeDesc end = para.get(0);
-                if(end instanceof ExprNodeColumnDesc){
-                  LOG.info("Code to specify GBY_NOT_ON_CNT_KEYS");
-                }else if(end instanceof ExprNodeConstantDesc){
-                  GBY_NOT_ON_COUNT_KEYS = true;
-                  return false;
+                for(int i=0; i< para.size(); i++){
+                  ExprNodeDesc end = para.get(i);
+                  colRefAggFuncInputList.add(para.get(i).getCols());
+                  if(end instanceof ExprNodeConstantDesc){
+                    LOG.info("count(const) case");
+                    GBY_NOT_ON_COUNT_KEYS = true;
+                    return false;
+                  }else if(end instanceof ExprNodeColumnDesc){
+                    selColRefNameList.add(((ExprNodeColumnDesc) end).getColumn());
+                  }
                 }
               }
             }
-            colRefAggFuncInputList.add(aggrList);
           }
       }else{
-        QUERY_HAS_DISTINCT = true;
-        return false;
+        QBParseInfo qbParseInfo =  parseContext.getQB().getParseInfo();
+        Set<String> clauseNameSet = qbParseInfo.getClauseNames();
+        if (clauseNameSet.size() != 1) {
+          return false;
+        }
+        Iterator<String> clauseNameIter = clauseNameSet.iterator();
+        String clauseName = clauseNameIter.next();
+        ASTNode rootSelExpr = qbParseInfo.getSelForClause(clauseName);
+        boolean isDistinct = (rootSelExpr.getType() == HiveParser.TOK_SELECTDI);
+        if(isDistinct) {
+          QUERY_HAS_DISTINCT = true;
+        }
       }
       ArrayList<ExprNodeDesc> keyList = conf.getKeys();
       if(keyList == null || keyList.size() == 0){
@@ -294,7 +308,17 @@ public class RewriteGBUsingIndex implements Transform {
       }
       GBY_KEY_CNT = keyList.size();
       for (ExprNodeDesc exprNodeDesc : keyList) {
-        gbKeyNameList.addAll(exprNodeDesc.getCols());
+        if(exprNodeDesc instanceof ExprNodeColumnDesc){
+          gbKeyNameList.addAll(exprNodeDesc.getCols());
+        }else if(exprNodeDesc instanceof ExprNodeGenericFuncDesc){
+          ExprNodeGenericFuncDesc endfg = (ExprNodeGenericFuncDesc)exprNodeDesc;
+          List<ExprNodeDesc> childExprs = endfg.getChildExprs();
+          for (ExprNodeDesc end : childExprs) {
+            if(end instanceof ExprNodeColumnDesc){
+              gbKeyNameList.addAll(exprNodeDesc.getCols());
+            }
+          }
+        }
       }
 
     }
@@ -342,75 +366,53 @@ public class RewriteGBUsingIndex implements Transform {
     return true;
   }
 
-  private boolean processSelectOperator(Operator<? extends Serializable> operator, List<Index> indexTables){
+  private boolean processSelectOperator(Operator<? extends Serializable> operator){
     List<Operator<? extends Serializable>> childrenList = operator.getChildOperators();
     Operator<? extends Serializable> child = childrenList.get(0);
     if(child instanceof GroupByOperator){
-      SelectDesc conf = (SelectDesc)operator.getConf();
-      ArrayList<ExprNodeDesc> selColList = conf.getColList();
-      int colCnt = 0;
-      if(selColList != null && selColList.size() != 0){
-        for (ExprNodeDesc exprNodeDesc : selColList) {
-          if(exprNodeDesc instanceof ExprNodeColumnDesc){
-            List<String> exprColList = exprNodeDesc.getCols();
-            if(!((ExprNodeColumnDesc) exprNodeDesc).getIsPartitionColOrVirtualCol()){
-              for (String colName : exprColList) {
-                colInternalToExternalMap.put("_col"+ colCnt++, colName);
-              }
-            }
-          }
-        }
-      }
       return true;
     }else{
-      int colSelCnt = 0;
-      int colIdxCnt = 0;
-      List<String> indexSourceCols = new ArrayList<String>();
-      for (int i = 0; i < indexTables.size(); i++) {
-        Index index = null;
-        index = indexTables.get(i);
-        StorageDescriptor sd = index.getSd();
-        List<FieldSchema> idxColList = sd.getCols();
-        for (FieldSchema fieldSchema : idxColList) {
-          indexSourceCols.add(fieldSchema.getName());
-        }
-
-      }
       SelectDesc conf = (SelectDesc)operator.getConf();
       ArrayList<ExprNodeDesc> selColList = conf.getColList();
-
       if(selColList == null || selColList.size() == 0){
         SEL_CLAUSE_COLS_FETCH_EXCEPTION = true;
         return false;
-      }
-      for (ExprNodeDesc exprNodeDesc : selColList) {
-        List<String> exprColList = exprNodeDesc.getCols();
-        for (String colName : exprColList) {
-          colSelCnt++;
-          if(QUERY_HAS_GROUP_BY && colInternalToExternalMap != null && colInternalToExternalMap.size() > 0){
-            String extName = colInternalToExternalMap.get(colName);
-            if(indexSourceCols.contains(extName)){
-              colIdxCnt++;
-            }
-          }else{
-            if(indexSourceCols.contains(colName)){
-              colIdxCnt++;
+      }else{
+        if(QUERY_HAS_GROUP_BY){
+          RowSchema rs = operator.getSchema();
+          ArrayList<ColumnInfo> colInfo = rs.getSignature();
+          for (ColumnInfo columnInfo : colInfo) {
+            if(columnInfo.getAlias() != null && (!columnInfo.getAlias().contains("_"))){
+              selColRefNameList.add(columnInfo.getAlias());
+              colInternalToExternalMap.put(columnInfo.getInternalName(), columnInfo.getAlias());
             }
           }
+        }else{
+          for (ExprNodeDesc exprNodeDesc : selColList) {
+            if(exprNodeDesc instanceof ExprNodeColumnDesc){
+              selColRefNameList.addAll(exprNodeDesc.getCols());
+            }else if(exprNodeDesc instanceof ExprNodeGenericFuncDesc){
+              ExprNodeGenericFuncDesc endfg = (ExprNodeGenericFuncDesc)exprNodeDesc;
+              List<ExprNodeDesc> childExprs = endfg.getChildExprs();
+              for (ExprNodeDesc end : childExprs) {
+                if(end instanceof ExprNodeColumnDesc){
+                  selColRefNameList.addAll(exprNodeDesc.getCols());
+                }
+              }
+            }
+          }
+
         }
-        selColRefNameList.addAll(exprColList);
+
       }
-      if(colIdxCnt != colSelCnt){
-        SEL_HAS_NON_COL_REF = true;
-        return false;
-      }
-    }
+  }
 
     return true;
   }
 
+
   private boolean checkIndexInformation(List<Index> indexTables){
-    Index idx = null;
+    Index index = null;
     Hive hiveInstance = hiveDb;
 
     // This code block iterates over indexes on the table and picks up the
@@ -418,15 +420,15 @@ public class RewriteGBUsingIndex implements Transform {
     for (int idxCtr = 0; idxCtr < indexTables.size(); idxCtr++)  {
       boolean removeGroupBy = true;
       boolean optimizeCount = false;
+      List<String> idxKeyColsNames = new ArrayList<String>();
 
-      idx = indexTables.get(idxCtr);
+      index = indexTables.get(idxCtr);
 
       //Getting index key columns
-      List<Order> idxColList = idx.getSd().getSortCols();
-
-      Set<String> idxKeyColsNames = new TreeSet<String>();
-      for (int i = 0;i < idxColList.size(); i++) {
-        idxKeyColsNames.add(idxColList.get(i).getCol().toLowerCase());
+      StorageDescriptor sd = index.getSd();
+      List<FieldSchema> idxColList = sd.getCols();
+      for (FieldSchema fieldSchema : idxColList) {
+        idxKeyColsNames.add(fieldSchema.getName());
       }
 
       // Check that the index schema is as expected. This code block should
@@ -436,8 +438,8 @@ public class RewriteGBUsingIndex implements Transform {
       // compatibility instead of this overhead for every rewrite invocation.
       ArrayList<String> idxTblColNames = new ArrayList<String>();
       try {
-        Table idxTbl = hiveInstance.getTable(idx.getDbName(),
-            idx.getIndexTableName());
+        Table idxTbl = hiveInstance.getTable(index.getDbName(),
+            index.getIndexTableName());
         for (FieldSchema idxTblCol : idxTbl.getCols()) {
           idxTblColNames.add(idxTblCol.getName());
         }
@@ -451,9 +453,9 @@ public class RewriteGBUsingIndex implements Transform {
 
       //--------------------------------------------
       //Check if all columns in select list are part of index key columns
-      if (idxKeyColsNames.containsAll(selColRefNameList) == false) {
+      if (!idxKeyColsNames.containsAll(selColRefNameList)) {
         LOG.info("Select list has non index key column : " +
-            " Cannot use this index  " + idx.getIndexName());
+            " Cannot use this index  " + index.getIndexName());
         continue;
       }
 
@@ -462,9 +464,9 @@ public class RewriteGBUsingIndex implements Transform {
       // as all columns from index appear in group-by-key list.
       if (QUERY_HAS_DISTINCT) {
         // Check if all columns from index are part of select list too
-        if (selColRefNameList.containsAll(idxKeyColsNames) == false)  {
+        if (!selColRefNameList.containsAll(idxKeyColsNames))  {
           LOG.info("Index has non select list columns " +
-              " Cannot use this index  " + idx.getIndexName());
+              " Cannot use this index  " + index.getIndexName());
           continue;
         }
       }
@@ -473,9 +475,9 @@ public class RewriteGBUsingIndex implements Transform {
       // Check if all columns in where predicate are part of index key columns
       // TODO: Currently we allow all predicates , would it be more efficient
       // (or at least not worse) to read from index_table and not from baseTable?
-      if (idxKeyColsNames.containsAll(predColRefs) == false) {
+      if (!idxKeyColsNames.containsAll(predColRefs)) {
         LOG.info("Predicate column ref list has non index key column : " +
-            " Cannot use this index  " + idx.getIndexName());
+            " Cannot use this index  " + index.getIndexName());
         continue;
       }
 
@@ -487,12 +489,12 @@ public class RewriteGBUsingIndex implements Transform {
         // E.g. select c1, c2 from src group by c2, c1;
         // we can rewrite this one to:
         // select c1, c2 from src_cmpt_idx;
-        if (idxKeyColsNames.containsAll(gbKeyNameList) == false) {
+        if (!idxKeyColsNames.containsAll(gbKeyNameList)) {
           GBY_KEY_HAS_NON_INDEX_COLS = true;
           return false;
         }
 
-        if (gbKeyNameList.containsAll(idxKeyColsNames) == false)  {
+        if (!gbKeyNameList.containsAll(idxKeyColsNames))  {
           // GB key and idx key are not same, don't remove GroupBy, but still do index scan
           removeGroupBy = false;
         }
@@ -511,7 +513,7 @@ public class RewriteGBUsingIndex implements Transform {
         //     FUTURE: GB Key has dup idxKeyCols. Develop a rewrite to eliminate the dup key cols
         //            from GB key.
         if (QUERY_HAS_GROUP_BY &&
-            gbKeyNameList.size() != GBY_KEY_CNT) {
+            idxKeyColsNames.size() < GBY_KEY_CNT) {
           LOG.info("Group by key has only some non-indexed columns, GroupBy will be"
               + " preserved by rewrite " + getName() + " optimization" );
           removeGroupBy = false;
@@ -542,11 +544,11 @@ public class RewriteGBUsingIndex implements Transform {
       }
 
       //Now that we are good to do this optimization, set parameters in context
-      //which would be used by transforation proceduer as inputs.
+      //which would be used by transformation procedure as inputs.
 
-      //subquery is needed only in case of optimizecount and complex gb keys?
+      //sub-query is needed only in case of optimizecount and complex gb keys?
       if( !(optimizeCount == true && removeGroupBy == false) ) {
-        context.addTable(topTable, idx.getIndexTableName());
+        context.addTable(topTable, index.getIndexTableName());
       }
 
     }
@@ -615,12 +617,12 @@ public class RewriteGBUsingIndex implements Transform {
           + "skipping " + getName() + " optimization" );
       return canApply;
     }//11
-    if(QUERY_HAS_DISTINCT){
+/*    if(QUERY_HAS_DISTINCT){
       LOG.info("Select-list has distinct. " +
           "Cannot apply the rewrite " + getName() + " optimization" );
       return canApply;
     }//12
-    if(SEL_HAS_NON_COL_REF){
+*/    if(SEL_HAS_NON_COL_REF){
       LOG.info("Select-list has some non-col-ref expression. " +
           "Cannot apply the rewrite " + getName() + " optimization" );
       return canApply;
