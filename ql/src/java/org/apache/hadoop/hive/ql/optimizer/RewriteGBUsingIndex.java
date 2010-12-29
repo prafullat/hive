@@ -18,21 +18,28 @@
 
 package org.apache.hadoop.hive.ql.optimizer;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.Stack;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.Index;
 import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
+import org.apache.hadoop.hive.ql.Context;
 import org.apache.hadoop.hive.ql.exec.ColumnInfo;
 import org.apache.hadoop.hive.ql.exec.ExtractOperator;
+import org.apache.hadoop.hive.ql.exec.FileSinkOperator;
 import org.apache.hadoop.hive.ql.exec.FilterOperator;
 import org.apache.hadoop.hive.ql.exec.GroupByOperator;
 import org.apache.hadoop.hive.ql.exec.JoinOperator;
@@ -41,15 +48,34 @@ import org.apache.hadoop.hive.ql.exec.ReduceSinkOperator;
 import org.apache.hadoop.hive.ql.exec.RowSchema;
 import org.apache.hadoop.hive.ql.exec.SelectOperator;
 import org.apache.hadoop.hive.ql.exec.TableScanOperator;
+import org.apache.hadoop.hive.ql.lib.DefaultGraphWalker;
+import org.apache.hadoop.hive.ql.lib.DefaultRuleDispatcher;
+import org.apache.hadoop.hive.ql.lib.Dispatcher;
+import org.apache.hadoop.hive.ql.lib.GraphWalker;
+import org.apache.hadoop.hive.ql.lib.Node;
+import org.apache.hadoop.hive.ql.lib.NodeProcessor;
 import org.apache.hadoop.hive.ql.lib.NodeProcessorCtx;
+import org.apache.hadoop.hive.ql.lib.PreOrderWalker;
+import org.apache.hadoop.hive.ql.lib.Rule;
+import org.apache.hadoop.hive.ql.lib.RuleRegExp;
 import org.apache.hadoop.hive.ql.metadata.Hive;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.metadata.Table;
 import org.apache.hadoop.hive.ql.parse.ASTNode;
+import org.apache.hadoop.hive.ql.parse.BaseSemanticAnalyzer;
 import org.apache.hadoop.hive.ql.parse.HiveParser;
+import org.apache.hadoop.hive.ql.parse.OpParseContext;
 import org.apache.hadoop.hive.ql.parse.ParseContext;
+import org.apache.hadoop.hive.ql.parse.ParseDriver;
+import org.apache.hadoop.hive.ql.parse.ParseException;
+import org.apache.hadoop.hive.ql.parse.ParseUtils;
+import org.apache.hadoop.hive.ql.parse.QB;
 import org.apache.hadoop.hive.ql.parse.QBParseInfo;
+import org.apache.hadoop.hive.ql.parse.RowResolver;
+import org.apache.hadoop.hive.ql.parse.SemanticAnalyzer;
+import org.apache.hadoop.hive.ql.parse.SemanticAnalyzerFactory;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
+import org.apache.hadoop.hive.ql.parse.BaseSemanticAnalyzer.tableSpec;
 import org.apache.hadoop.hive.ql.plan.AggregationDesc;
 import org.apache.hadoop.hive.ql.plan.ExprNodeColumnDesc;
 import org.apache.hadoop.hive.ql.plan.ExprNodeConstantDesc;
@@ -59,15 +85,19 @@ import org.apache.hadoop.hive.ql.plan.FilterDesc;
 import org.apache.hadoop.hive.ql.plan.GroupByDesc;
 import org.apache.hadoop.hive.ql.plan.ReduceSinkDesc;
 import org.apache.hadoop.hive.ql.plan.SelectDesc;
+import org.apache.hadoop.hive.ql.plan.TableScanDesc;
+import org.apache.hadoop.hive.serde2.SerDeException;
+import org.apache.hadoop.hive.serde2.objectinspector.StructField;
+import org.apache.hadoop.hive.serde2.objectinspector.StructObjectInspector;
+import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoUtils;
 
 
 public class RewriteGBUsingIndex implements Transform {
-  private static int count = 0;
   private ParseContext parseContext;
   private Hive hiveDb;
   protected final Log LOG = LogFactory.getLog(this.getClass().getName());
 
-  //vars
+  /***************************************Can Apply Optimization Flags***************************************/
   int NO_OF_SUBQUERIES = 0;
   int NO_OF_TABLES = 0;
   boolean QUERY_HAS_JOIN = false;
@@ -76,7 +106,7 @@ public class RewriteGBUsingIndex implements Transform {
   boolean QUERY_HAS_ORDER_BY = false;
   boolean QUERY_HAS_DISTRIBUTE_BY = false;
   boolean QUERY_HAS_GROUP_BY = false;
-  boolean QUERY_HAS_DISTINCT = false;
+  boolean QUERY_HAS_DISTINCT = false; //This still uses QBParseInfo to make decision. Needs to be changed if QB dependency is not desired.
   int AGG_FUNC_CNT = 0;
   int GBY_KEY_CNT = 0;
   boolean AGG_FUNC_IS_NOT_COUNT = false;
@@ -85,10 +115,13 @@ public class RewriteGBUsingIndex implements Transform {
   boolean SEL_CLAUSE_COLS_FETCH_EXCEPTION = false;
   boolean GBY_KEYS_FETCH_EXCEPTION = false;
   boolean GBY_KEY_HAS_NON_INDEX_COLS = false;
-  boolean SEL_HAS_NON_COL_REF = true;//Not sure why this is used...change to false here when implementation is included
+  boolean SEL_HAS_NON_COL_REF = false;//Not sure why this is used
   boolean GBY_NOT_ON_COUNT_KEYS = false;
   boolean IDX_TBL_SEARCH_EXCEPTION = false;
+  boolean SHOULD_APPEND_SUBQUERY = false;
+  boolean REMOVE_GROUP_BY = false;
 
+  /***************************************Index Validation Variables***************************************/
   private static final String SUPPORTED_INDEX_TYPE =
     "org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler";
   private static final String COMPACT_IDX_BUCKET_COL = "_bucketname";
@@ -97,13 +130,30 @@ public class RewriteGBUsingIndex implements Transform {
   private final List<String> selColRefNameList = new ArrayList<String>();
   private List<String> predColRefs = new ArrayList<String>();
   private final List<String> gbKeyNameList = new ArrayList<String>();
-  private final RewriteGBUsingIndexProcCtx context = new RewriteGBUsingIndexProcCtx();
+  private RewriteGBUsingIndexProcCtx rewriteContext = new RewriteGBUsingIndexProcCtx();
   private final List<List<String>> colRefAggFuncInputList = new ArrayList<List<String>>();
   private final HashMap<String, String> colInternalToExternalMap = new LinkedHashMap<String, String>();
 
-  RewriteGBUsingIndex(){
-    count++;
-  }
+
+  /***************************************SubqueryAppend Variables***************************************/
+  ParseContext subqueryPctx = null;
+
+  //Initialise all data structures required to copy RowResolver and RowSchema from subquery DAG to original DAG operators
+  ArrayList<String> newOutputCols = new ArrayList<String>();
+  Map<String, ExprNodeDesc> newColExprMap = new HashMap<String, ExprNodeDesc>();
+  ArrayList<ExprNodeDesc> newColList = new ArrayList<ExprNodeDesc>();
+  ArrayList<ColumnInfo> newRS = new ArrayList<ColumnInfo>();
+  RowResolver newRR = new RowResolver();
+
+  // Get the parentOperatos List for FileSinkOperator. We need this later to set the parentOperators for original DAG operator
+  List<Operator<? extends Serializable>> subqFSParentList = null;
+  //We need the reference to this SelectOperator so that the original DAG can be appended here
+  Operator<? extends Serializable> subqLastSelectOp = null;
+
+  //OperatorToParseContexts for original DAG and subquery DAG
+  LinkedHashMap<Operator<? extends Serializable>, OpParseContext> origOpOldOpc = null;
+  LinkedHashMap<Operator<? extends Serializable>, OpParseContext> subqOpOldOpc = null;
+  /****************************************************************************************************/
 
   @Override
   public ParseContext transform(ParseContext pctx) throws SemanticException {
@@ -115,16 +165,67 @@ public class RewriteGBUsingIndex implements Transform {
       e.printStackTrace();
     }
 
-    if(count == 3){
-      if( shouldApplyOptimization() == true ) {
+    rewriteContext = new RewriteGBUsingIndexProcCtx();
+    rewriteContext.hiveDb = hiveDb;
+    rewriteContext.parseContext = parseContext;
+
+
+    if(isQueryInValid()){
+        return parseContext;
+    }else{
+      if(shouldApplyOptimization()){
+        LOG.info("Applying Rewrite to Original Query.");
+        reWriteOriginalQuery();
         return parseContext;
       }else{
         return null;
       }
-
     }
 
-    return parseContext;
+  }
+
+  private void reWriteOriginalQuery() throws SemanticException{
+    //TO-DO
+    replaceTSAndSelOps();
+    if(REMOVE_GROUP_BY){
+
+    }
+    if(SHOULD_APPEND_SUBQUERY){
+      generateSubquery();
+      processSubquery();
+      processOriginalDAG();
+      toStringTree(parseContext);
+    }
+
+  }
+
+  private void replaceTSAndSelOps(){
+    // create a walker which walks the tree in a DFS manner while maintaining
+    // the operator stack. The dispatcher
+    // generates the plan from the operator tree
+    Map<Rule, NodeProcessor> opRules = new LinkedHashMap<Rule, NodeProcessor>();
+    opRules.put(new RuleRegExp("R1", "TS%"), new RewriteTSProc());
+    opRules.put(new RuleRegExp("R2", "SEL%"), new RewriteSelOpProc());
+
+    // The dispatcher fires the processor corresponding to the closest matching
+    // rule and passes the context along
+    Dispatcher disp = new DefaultRuleDispatcher(new RewriteDefaultProc(), opRules, rewriteContext);
+    GraphWalker ogw = new PreOrderWalker(disp);
+
+    // Create a list of topop nodes
+    ArrayList<Node> topNodes = new ArrayList<Node>();
+    topNodes.addAll(parseContext.getTopOps().values());
+    try {
+      ogw.startWalking(topNodes, null);
+    } catch (SemanticException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
+
+  }
+  private boolean isQueryInValid(){
+    QBParseInfo qbParseInfo =  parseContext.getQB().getParseInfo();
+    return qbParseInfo.isInsertToTable();
   }
 
   public String getName() {
@@ -176,6 +277,7 @@ public class RewriteGBUsingIndex implements Transform {
     HashMap<String, Operator<? extends Serializable>> topOpMap = parseContext.getTopOps();
     Iterator<String> topOpItr = topOpMap.keySet().iterator();
     while(topOpItr.hasNext()){
+      NO_OF_SUBQUERIES = 0;
       topTable = topOpItr.next();
       Operator<? extends Serializable> topOp = topOpMap.get(topTable);
       retValue = checkSingleDAG(topOp);
@@ -275,14 +377,15 @@ public class RewriteGBUsingIndex implements Transform {
               }else{
                 for(int i=0; i< para.size(); i++){
                   ExprNodeDesc end = para.get(i);
-                  colRefAggFuncInputList.add(para.get(i).getCols());
+
                   if(end instanceof ExprNodeConstantDesc){
                     LOG.info("count(const) case");
-                    GBY_NOT_ON_COUNT_KEYS = true;
-                    return false;
+                    //selColRefNameList.add(((ExprNodeConstantDesc) end).getValue().toString());
+                    //GBY_NOT_ON_COUNT_KEYS = true;
+                    //return false;
                   }else if(end instanceof ExprNodeColumnDesc){
                     selColRefNameList.add(((ExprNodeColumnDesc) end).getColumn());
-                  }
+                    colRefAggFuncInputList.add(para.get(i).getCols());                  }
                 }
               }
             }
@@ -548,10 +651,14 @@ public class RewriteGBUsingIndex implements Transform {
 
       //sub-query is needed only in case of optimizecount and complex gb keys?
       if( !(optimizeCount == true && removeGroupBy == false) ) {
-        context.addTable(topTable, index.getIndexTableName());
+        REMOVE_GROUP_BY = removeGroupBy;
+        rewriteContext.addTable(topTable, index.getIndexTableName());
+      }else{
+        SHOULD_APPEND_SUBQUERY = true;
       }
 
     }
+
     return true;
 
   }
@@ -659,16 +766,8 @@ public class RewriteGBUsingIndex implements Transform {
 
 
   public class RewriteGBUsingIndexProcCtx implements NodeProcessorCtx {
-    private String indexTableName;
     private ParseContext parseContext;
     private Hive hiveDb;
-    private boolean replaceTableWithIdxTable;
-
-
-    /**
-     * True if the base table has compact summary index associated with it
-     */
-    private boolean hasValidTableScan;
 
     //Map for base table to index table mapping
     //TableScan operator for base table will be modified to read from index table
@@ -687,6 +786,513 @@ public class RewriteGBUsingIndex implements Transform {
     }
 
   }
+
+  public static class RewriteDefaultProc implements NodeProcessor {
+
+    //No-Op
+    @Override
+    public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx procCtx,
+        Object... nodeOutputs) throws SemanticException {
+
+      return null;
+    }
+
+  }
+
+    public static class RewriteSelOpProc implements NodeProcessor {
+
+
+      @Override
+      public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx procCtx,
+          Object... nodeOutputs) throws SemanticException {
+
+        RewriteGBUsingIndexProcCtx rewriteContext = (RewriteGBUsingIndexProcCtx)procCtx;
+        ParseContext parseContext = rewriteContext.parseContext;
+        HiveConf conf = parseContext.getConf();
+        SemanticAnalyzer semAna = new SemanticAnalyzer(conf);
+        SelectOperator selOpr = (SelectOperator) nd;
+
+        ParseDriver pd = new ParseDriver();
+
+
+        String funcStr = "select size(`_offsets`) from dummyTable";
+        ASTNode tree = null;
+        try {
+          tree = pd.parse(funcStr, null);
+        } catch (ParseException e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
+        }
+        ASTNode funcNode = (ASTNode) tree.getChild(0).getChild(1).getChild(1).getChild(0).getChild(0);
+
+        LinkedHashMap<Operator<? extends Serializable>, OpParseContext> opCtxMap =
+          parseContext.getOpParseCtx();
+
+
+        OpParseContext selCtx = opCtxMap.get(selOpr.getParentOperators().get(0));
+
+        ExprNodeDesc exprNode = semAna.genExprNodeDesc(funcNode, selCtx.getRowResolver());
+
+        SelectOperator selOperator = (SelectOperator)nd;
+        SelectDesc selDesc = selOperator.getConf();
+
+        ArrayList<ExprNodeDesc> colList = selDesc.getColList();
+        colList.set(0, exprNode);
+
+        ArrayList<String> colNameList = selDesc.getOutputColumnNames();
+
+        Map<String, ExprNodeDesc> colExprMap = selOperator.getColumnExprMap();
+        colExprMap.put(colNameList.get(0), exprNode);
+        selOperator.setColumnExprMap(colExprMap);
+        return null;
+      }
+    }
+
+
+  public static class RewriteTSProc implements NodeProcessor {
+
+    public void setUpTableDesc(TableScanDesc tsDesc,Table table, String alias)  {
+
+      tsDesc.setGatherStats(false);
+
+      String tblName = table.getTableName();
+      tableSpec tblSpec = createTableScanDesc(table, alias);
+      String k = tblName + Path.SEPARATOR;
+      tsDesc.setStatsAggPrefix(k);
+    }
+
+    private tableSpec createTableScanDesc(Table table, String alias) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    @Override
+    public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx procCtx,
+        Object... nodeOutputs) throws SemanticException {
+
+      RewriteGBUsingIndexProcCtx rewriteContext = (RewriteGBUsingIndexProcCtx)procCtx;
+
+      TableScanOperator scanOperator = (TableScanOperator)nd;
+      HashMap<TableScanOperator, Table>  topToTable =
+        rewriteContext.parseContext.getTopToTable();
+
+      String baseTableName = topToTable.get(scanOperator).getTableName();
+      if( rewriteContext.findBaseTable(baseTableName) == null ) {
+        return null;
+      }
+
+      //Get the lineage information corresponding to this
+      //and modify it ?
+      TableScanDesc indexTableScanDesc = new TableScanDesc();
+      indexTableScanDesc.setGatherStats(false);
+
+      String tableName = rewriteContext.findBaseTable(baseTableName);
+
+      tableSpec ts = new tableSpec(rewriteContext.hiveDb,
+          rewriteContext.parseContext.getConf(),
+          tableName
+      );
+      String k = tableName + Path.SEPARATOR;
+      indexTableScanDesc.setStatsAggPrefix(k);
+      scanOperator.setConf(indexTableScanDesc);
+
+      topToTable.remove(scanOperator);
+      //Scan operator now points to other table
+      topToTable.put(scanOperator, ts.tableHandle);
+      rewriteContext.parseContext.setTopToTable(topToTable);
+
+      OpParseContext operatorContext =
+        rewriteContext.parseContext.getOpParseCtx().get(scanOperator);
+      RowResolver rr = new RowResolver();
+
+      try {
+        StructObjectInspector rowObjectInspector = (StructObjectInspector) ts.tableHandle.getDeserializer().getObjectInspector();
+        List<? extends StructField> fields = rowObjectInspector
+        .getAllStructFieldRefs();
+        for (int i = 0; i < fields.size(); i++) {
+          rr.put(tableName, fields.get(i).getFieldName(), new ColumnInfo(fields
+              .get(i).getFieldName(), TypeInfoUtils
+              .getTypeInfoFromObjectInspector(fields.get(i)
+                  .getFieldObjectInspector()), tableName, false));
+        }
+      } catch (SerDeException e) {
+        throw new RuntimeException(e);
+      }
+      //Set row resolver for new table
+      operatorContext.setRowResolver(rr);
+      return null;
+    }
+  }
+
+  /***********************************************************************************************/
+  /* Method to print the operators in the DAG and their child operators */
+  private void toStringTree(ParseContext pCtx){
+    HashMap<String, Operator<? extends Serializable>> top = pCtx.getTopOps();
+    Iterator<String> tabItr = top.keySet().iterator();
+    while(tabItr.hasNext()){
+      String tab = tabItr.next();
+      LOG.info("Printing DAG for table:" + tab );
+      Operator<? extends Serializable> pList = top.get(tab);
+        while(pList != null){
+          LOG.info("Operator = " + pList.getName() + "("
+              + ((Operator<? extends Serializable>) pList).getIdentifier() + ")" );
+
+          if(pList.getChildOperators() == null || pList.getChildOperators().size() == 0){
+            pList = null;
+            break;
+          }else{
+            List<Operator<? extends Serializable>> cList = pList.getChildOperators();
+            for (Operator<? extends Serializable> operator : cList) {
+              if(null != operator){
+                pList = operator;
+                continue;
+              }
+            }
+          }
+        }
+    }
+  }
+
+
+  private NodeProcessor getDefaultProc() {
+    return new NodeProcessor() {
+      @Override
+      public Object process(Node nd, Stack<Node> stack,
+          NodeProcessorCtx procCtx, Object... nodeOutputs) throws SemanticException {
+        return null;
+      }
+    };
+  }
+
+  private void generateSubquery() throws SemanticException{
+    origOpOldOpc = parseContext.getOpParseCtx();
+    //Creates the operator DAG for subquery
+    Dispatcher disp = new DefaultRuleDispatcher(new SubqueryParseContextGenerator(), new LinkedHashMap<Rule, NodeProcessor>(),
+        new SubqueryOptProcCtx());
+    DefaultGraphWalker ogw = new DefaultGraphWalker(disp);
+    ArrayList<Node> topNodes = new ArrayList<Node>();
+    topNodes.addAll(parseContext.getTopOps().values());
+    ogw.startWalking(topNodes, null);
+    subqOpOldOpc = subqueryPctx.getOpParseCtx();
+  }
+
+  private void processSubquery() throws SemanticException{
+    Map<Rule, NodeProcessor> opRules = new LinkedHashMap<Rule, NodeProcessor>();
+    //appends subquery DAG to original DAG
+    opRules.put(new RuleRegExp("R1", "FS%"), new SubqueryDAGProc());
+
+    // The dispatcher fires the processor corresponding to the closest matching
+    // rule and passes the context along
+    Dispatcher disp = new DefaultRuleDispatcher(getDefaultProc(), opRules,
+        new SubqueryOptProcCtx());
+    GraphWalker ogw = new DefaultGraphWalker(disp);
+
+    // Create a list of topop nodes
+    ArrayList<Node> topNodes = new ArrayList<Node>();
+    topNodes.addAll(subqueryPctx.getTopOps().values());
+    ogw.startWalking(topNodes, null);
+
+  }
+
+  private void processOriginalDAG() throws SemanticException{
+    Map<Rule, NodeProcessor> opRules = new LinkedHashMap<Rule, NodeProcessor>();
+
+    //appends subquery DAG to original DAG
+    opRules.put(new RuleRegExp("R1", "TS%"), new OriginalDAGProc());
+
+    // The dispatcher fires the processor corresponding to the closest matching
+    // rule and passes the context along
+    Dispatcher disp = new DefaultRuleDispatcher(getDefaultProc(), opRules,
+        new SubqueryOptProcCtx());
+    GraphWalker ogw = new DefaultGraphWalker(disp);
+
+    // Create a list of topop nodes
+    ArrayList<Node> topNodes = new ArrayList<Node>();
+    topNodes.addAll(parseContext.getTopOps().values());
+    ogw.startWalking(topNodes, null);
+
+  }
+
+
+
+/*
+ *Class to instantialte SemanticAnalyzer and create the operator DAG for subquery
+ *Method generateDAGForSubquery() returns the new ParseContext object for the subquery DAG
+ */
+  public class SubqueryParseContextGenerator implements NodeProcessor {
+
+    public SubqueryParseContextGenerator() {
+    }
+
+    private ParseContext generateDAGForSubquery(){
+      HiveConf conf = parseContext.getConf();
+      Context ctx;
+      ParseContext subPCtx = null;
+      try {
+        ctx = new Context(conf);
+      String command = "Select key from tbl_idx group by key";
+      ParseDriver pd = new ParseDriver();
+      ASTNode tree = pd.parse(command, ctx);
+      tree = ParseUtils.findRootNonNullToken(tree);
+
+      BaseSemanticAnalyzer sem = SemanticAnalyzerFactory.get(conf, tree);
+      doSemanticAnalysis(ctx, sem, tree);
+
+      subPCtx = ((SemanticAnalyzer) sem).getParseContext();
+      toStringTree(subPCtx);
+
+      LOG.info("Sub-query Semantic Analysis Completed");
+      } catch (IOException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      } catch (ParseException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      } catch (SemanticException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
+      return subPCtx;
+
+    }
+
+    @SuppressWarnings("unchecked")
+    private Operator<Serializable> doSemanticAnalysis(Context ctx, BaseSemanticAnalyzer sem, ASTNode ast) throws SemanticException {
+
+      if(sem instanceof SemanticAnalyzer){
+        QB qb = new QB(null, null, false);
+        ASTNode child = ast;
+        ParseContext subPCtx = ((SemanticAnalyzer) sem).getParseContext();
+        subPCtx.setContext(ctx);
+        ((SemanticAnalyzer) sem).init(subPCtx);
+
+
+        LOG.info("Starting Sub-query Semantic Analysis");
+        ((SemanticAnalyzer) sem).doPhase1(child, qb, ((SemanticAnalyzer) sem).initPhase1Ctx());
+        LOG.info("Completed phase 1 of Sub-query Semantic Analysis");
+
+        ((SemanticAnalyzer) sem).getMetaData(qb);
+        LOG.info("Completed getting MetaData in Sub-query Semantic Analysis");
+
+        LOG.info("Sub-query Abstract syntax tree: " + ast.toStringTree());
+        Operator<Serializable> sinkOp = ((SemanticAnalyzer) sem).genPlan(qb);
+
+        //LOG.info("Processing for Sub-query = " + sinkOp.getName() + "(" + ((Operator<Serializable>) sinkOp).getIdentifier() + ")");
+        LOG.info("Sub-query Completed plan generation");
+         return sinkOp;
+
+      } else {
+        return null;
+      }
+
+    }
+
+    @Override
+    public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx procCtx,
+        Object... nodeOutputs) throws SemanticException {
+      subqueryPctx = generateDAGForSubquery();
+      return null;
+    }
+
+  }
+
+
+  public class OriginalDAGProc implements NodeProcessor {
+
+    @Override
+    public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx procCtx,
+        Object... nodeOutputs) throws SemanticException {
+      LOG.info("Processing node - " + nd.getName());
+      appendSubquery();
+      return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void appendSubquery(){
+
+      //origOp is the TableScanOperator for the original DAG
+      HashMap<String, Operator<? extends Serializable>> origTopMap = parseContext.getTopOps();
+      Iterator<String> origTabItr = origTopMap.keySet().iterator();
+      String origTab = origTabItr.next();
+      Operator<? extends Serializable> origOp = origTopMap.get(origTab);
+      List<Operator<? extends Serializable>> origChildrenList = origOp.getChildOperators();
+
+      /*
+       * origChildrenList has the child operators for the TableScanOperator of the original DAG
+       * We need to get rid of the TS operator of original DAG and append rest of the tree to the sub-query operator DAG
+       * This code sets the parentOperators of first operator in origChildrenList to subqFSParentList
+       * subqFSParentList contains the parentOperators list of the FileSinkOperator of the sub-query operator DAG
+       *
+       * subqLastOp is the last SelectOperator of sub-query DAG. The rest of the original operator DAG needs to be appended here
+       * Hence, set the subqLastOp's child operators to be origChildrenList
+       */
+      if(origChildrenList != null && origChildrenList.size() > 0){
+        origChildrenList.get(0).setParentOperators(subqFSParentList);
+      }
+      if(subqLastSelectOp != null){
+        subqLastSelectOp.setChildOperators(origChildrenList);
+      }
+
+      //Loop through the rest of the original operator DAG and set appropriate column informations, RowResolvers and RowSchema
+      List<Operator<? extends Serializable>> origList = origChildrenList;
+        while(origList != null && origList.size() > 0){
+          for (Operator<? extends Serializable> operator : origList) {
+            if(null != operator){
+              //Set columnExprMap + RowSchema + RowResolver - required by all operators
+              operator.setColumnExprMap(newColExprMap);
+              operator.getSchema().setSignature(newRS);
+              origOpOldOpc.get(operator).setRowResolver(newRR);
+
+              //We need to add operator context in the sub-query OpToParseContext Map (subqOpOldOpc) for those operators
+              // in original DAG that are appended to sub-query DAG
+              RowResolver rr = origOpOldOpc.get(operator).getRowResolver();
+              OpParseContext ctx = new OpParseContext(rr);
+              subqOpOldOpc.put(operator, ctx);
+
+              //Copy colList and outputColumns for SelectOperator from sub-query DAG SelectOperator
+              if(operator instanceof SelectOperator) {
+                SelectDesc conf = (SelectDesc) operator.getConf();
+                conf.setColList(newColList);
+                conf.setOutputColumnNames(newOutputCols);
+              //Copy output columns of SelectOperator from sub-query DAG to predicates of FilterOperator
+              }else if(operator instanceof FilterOperator) {
+                FilterDesc conf = (FilterDesc)operator.getConf();
+                ExprNodeGenericFuncDesc oldengfd = (ExprNodeGenericFuncDesc) conf.getPredicate().clone();
+                List<ExprNodeDesc> endExprList = oldengfd.getChildExprs();
+                List<ExprNodeDesc> newChildren = new ArrayList<ExprNodeDesc>();
+
+                for (ExprNodeDesc exprNodeDesc : endExprList) {
+                  if(exprNodeDesc instanceof ExprNodeColumnDesc){
+                    ExprNodeColumnDesc encd = (ExprNodeColumnDesc) exprNodeDesc.clone();
+                    encd.setColumn(newOutputCols.get(0));
+                    newChildren.add(encd);
+                  }else{
+                    newChildren.add(exprNodeDesc);
+                  }
+                }
+                oldengfd.setChildExprs(newChildren);
+                conf.setPredicate(oldengfd);
+              //Break loop if FileSinkOperator is visited in the original DAG
+              }else if(operator instanceof FileSinkOperator) {
+                origList = null;
+                break;
+              }
+              //Continue Looping until we reach end of original DAG i.e. FileSinkOperator
+              origList = operator.getChildOperators();
+              continue;
+            }
+          }
+        }
+
+        /*
+         * The operator DAG plan is generated in the order FROM-WHERE-GROUPBY-ORDERBY-SELECT
+         * We have appended the original operator DAG at the end of the sub-query operator DAG
+         *      as the sub-query will always be a part of FROM processing
+         *
+         * Now we need to insert the final sub-query+original DAG to the original ParseContext
+         * parseContext.setOpParseCtx(subqOpOldOpc) sets the subqOpOldOpc OpToParseContext map to the original context
+         * parseContext.setTopOps(subqTopMap) sets the topOps map to contain the sub-query topOps map
+         * parseContext.setTopToTable(newTopToTable) sets the original topToTable to contain sub-query top TableScanOperator
+         */
+        HashMap<TableScanOperator, Table> newTopToTable = (HashMap<TableScanOperator, Table>) parseContext.getTopToTable().clone();
+        newTopToTable.remove(origOp);
+
+        HashMap<String, Operator<? extends Serializable>> subqTopMap = subqueryPctx.getTopOps();
+        Iterator<String> subqTabItr = subqTopMap.keySet().iterator();
+        String subqTab = subqTabItr.next();
+        Operator<? extends Serializable> subqOp = subqTopMap.get(subqTab);
+
+        Table tbl = subqueryPctx.getTopToTable().get(subqOp);
+        newTopToTable.put((TableScanOperator) subqOp, tbl);
+        parseContext.setTopToTable(newTopToTable);
+        parseContext.setTopOps(subqTopMap);
+        parseContext.setOpParseCtx(subqOpOldOpc);
+
+    }
+
+
+  }
+
+
+  /*
+   * Class to append operator DAG of subquery to original operator DAG
+   */
+  public class SubqueryDAGProc implements NodeProcessor {
+
+
+    public SubqueryDAGProc() {
+    }
+
+    @Override
+    public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx procCtx,
+        Object... nodeOutputs) throws SemanticException {
+      LOG.info("Processing node - " + nd.getName());
+      FileSinkOperator fs = (FileSinkOperator) nd;
+      getSelectOperatorSchema(fs);
+      return null;
+    }
+
+    private void getSelectOperatorSchema(FileSinkOperator fs){
+      subqFSParentList = fs.getParentOperators();
+      subqLastSelectOp =  subqFSParentList.get(0);
+      //Retrieve information only if this is a SelectOperator (This will be true for all operator DAGs
+      if(subqLastSelectOp instanceof SelectOperator){
+          RowResolver oldRR = subqOpOldOpc.get(subqLastSelectOp).getRowResolver();
+          SelectDesc oldConf = (SelectDesc) subqLastSelectOp.getConf();
+          Map<String, ExprNodeDesc> oldColumnExprMap = subqLastSelectOp.getColumnExprMap();
+          ArrayList<ExprNodeDesc> oldColList = oldConf.getColList();
+
+          String internalName = null;
+          for(int i=0; i < oldConf.getOutputColumnNames().size(); i++){
+            internalName = oldConf.getOutputColumnNames().get(i);
+            //Fetch all output columns (required by SelectOperators in original DAG)
+            newOutputCols.add(new String(internalName));
+            if(oldColumnExprMap != null){
+              ExprNodeColumnDesc oldDesc = (ExprNodeColumnDesc) oldColumnExprMap.get(internalName);
+              ExprNodeColumnDesc newDesc = (ExprNodeColumnDesc) oldDesc.clone();
+              newDesc.setColumn(internalName);
+              //Fetch columnExprMap (required by SelectOperator and FilterOperator in original DAG)
+              newColExprMap.put(internalName, newDesc);
+            }
+
+            ExprNodeDesc exprNodeDesc = oldColList.get(i);
+            ExprNodeColumnDesc newDesc = (ExprNodeColumnDesc) exprNodeDesc.clone();
+            newDesc.setColumn(internalName);
+            //Fetch colList (required by SelectOperators in original DAG)
+            newColList.add(newDesc);
+
+          }
+
+          //We need to set the alias for the new index table subquery
+          for (int i = 0; i < newOutputCols.size(); i++) {
+            internalName = newOutputCols.get(i);
+            String[] nm = oldRR.reverseLookup(internalName);
+            ColumnInfo col;
+            try {
+              col = oldRR.get(nm[0], nm[1]);
+              if(nm[0] == null){
+                nm[0] = "v1";
+              }
+              // Fetch RowResolver and RowSchema (required by SelectOperator and FilterOperator in original DAG)
+              newRR.put(nm[0], nm[1], col);
+              newRS.add(col);
+            } catch (SemanticException e) {
+              // TODO Auto-generated catch block
+              e.printStackTrace();
+            }
+          }
+      }
+
+      subqOpOldOpc.remove(fs);
+      subqueryPctx.setOpParseCtx(subqOpOldOpc);
+
+    }
+
+  }
+
+  public class SubqueryOptProcCtx implements NodeProcessorCtx {
+  }
+
 
 
 }
