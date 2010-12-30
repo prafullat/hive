@@ -186,17 +186,38 @@ public class RewriteGBUsingIndex implements Transform {
 
   private void reWriteOriginalQuery() throws SemanticException{
     //TO-DO
-    replaceTSAndSelOps();
-    if(REMOVE_GROUP_BY){
 
+    if(REMOVE_GROUP_BY){
+      removeGroupByOps();
     }
+    replaceTSAndSelOps();
     if(SHOULD_APPEND_SUBQUERY){
       generateSubquery();
       processSubquery();
       processOriginalDAG();
-      toStringTree(parseContext);
     }
+    toStringTree(parseContext);
+  }
 
+  private void removeGroupByOps() throws SemanticException{
+    Map<Rule, NodeProcessor> opRules = new LinkedHashMap<Rule, NodeProcessor>();
+
+    toStringTree(parseContext);
+        // process group-by pattern
+    opRules.put(new RuleRegExp("R1", "TS%"),
+        getRemoveGroupByProc());
+    // The dispatcher fires the processor corresponding to the closest matching
+    // rule and passes the context along
+    Dispatcher disp = new DefaultRuleDispatcher(getDefaultProc(), opRules,
+        new GroupByOptProcCtx());
+    GraphWalker ogw = new DefaultGraphWalker(disp);
+
+    // Create a list of topop nodes
+    ArrayList<Node> topNodes = new ArrayList<Node>();
+    topNodes.addAll(parseContext.getTopOps().values());
+    ogw.startWalking(topNodes, null);
+
+    toStringTree(parseContext);
   }
 
   private void replaceTSAndSelOps(){
@@ -485,7 +506,7 @@ public class RewriteGBUsingIndex implements Transform {
           RowSchema rs = operator.getSchema();
           ArrayList<ColumnInfo> colInfo = rs.getSignature();
           for (ColumnInfo columnInfo : colInfo) {
-            if(columnInfo.getAlias() != null && (!columnInfo.getAlias().contains("_"))){
+            if(columnInfo.getAlias() != null && (!columnInfo.getAlias().contains("_c"))){
               selColRefNameList.add(columnInfo.getAlias());
               colInternalToExternalMap.put(columnInfo.getInternalName(), columnInfo.getAlias());
             }
@@ -799,22 +820,43 @@ public class RewriteGBUsingIndex implements Transform {
 
   }
 
-    public static class RewriteSelOpProc implements NodeProcessor {
+    public class RewriteSelOpProc implements NodeProcessor {
 
 
       @Override
       public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx procCtx,
           Object... nodeOutputs) throws SemanticException {
-
         RewriteGBUsingIndexProcCtx rewriteContext = (RewriteGBUsingIndexProcCtx)procCtx;
-        ParseContext parseContext = rewriteContext.parseContext;
-        HiveConf conf = parseContext.getConf();
+        ParseContext pctx = rewriteContext.parseContext;
+        processNewSelect((SelectOperator)nd, pctx);
+        return null;
+      }
+
+      private ASTNode getFuncNode(ASTNode root){
+        ASTNode func = null;
+        ArrayList<Node> cList = root.getChildren();
+        while(cList != null && cList.size() > 0){
+          for (Node node : cList) {
+            if(null != node){
+              ASTNode curr = (ASTNode)node;
+              if(curr.getType() == HiveParser.TOK_FUNCTION){
+                func = curr;
+                cList = null;
+                break;
+              }else{
+                cList = curr.getChildren();
+                continue;
+              }
+            }
+          }
+        }
+        return func;
+      }
+
+      private void processNewSelect(Operator<? extends Serializable> selOperator, ParseContext pctx) throws SemanticException{
+        HiveConf conf = pctx.getConf();
         SemanticAnalyzer semAna = new SemanticAnalyzer(conf);
-        SelectOperator selOpr = (SelectOperator) nd;
-
         ParseDriver pd = new ParseDriver();
-
-
         String funcStr = "select size(`_offsets`) from dummyTable";
         ASTNode tree = null;
         try {
@@ -823,33 +865,100 @@ public class RewriteGBUsingIndex implements Transform {
           // TODO Auto-generated catch block
           e.printStackTrace();
         }
-        ASTNode funcNode = (ASTNode) tree.getChild(0).getChild(1).getChild(1).getChild(0).getChild(0);
 
+        ASTNode funcNode = getFuncNode((ASTNode) tree.getChildren().get(0));
         LinkedHashMap<Operator<? extends Serializable>, OpParseContext> opCtxMap =
-          parseContext.getOpParseCtx();
+          pctx.getOpParseCtx();
+        List<Operator<? extends Serializable>> parentList = selOperator.getParentOperators();
+        Operator<? extends Serializable> tsOp = null;
+        while(parentList != null && parentList.size() > 0){
+          for (Operator<? extends Serializable> operator : parentList) {
+            if(operator != null){
+              if(operator instanceof TableScanOperator){
+                tsOp = operator;
+                parentList = null;
+                break;
+              }else{
+                parentList = operator.getParentOperators();
+                continue;
+              }
+            }
+          }
+        }
 
-
-        OpParseContext selCtx = opCtxMap.get(selOpr.getParentOperators().get(0));
-
+        OpParseContext selCtx = opCtxMap.get(tsOp);
         ExprNodeDesc exprNode = semAna.genExprNodeDesc(funcNode, selCtx.getRowResolver());
+        String offsetCol = null;
+        if(exprNode instanceof ExprNodeGenericFuncDesc){
+          List<ExprNodeDesc> exprList = ((ExprNodeGenericFuncDesc) exprNode).getChildExprs();
+          for (ExprNodeDesc exprNodeDesc : exprList) {
+            if(exprNodeDesc instanceof ExprNodeColumnDesc){
+              offsetCol = ((ExprNodeColumnDesc) exprNodeDesc).getColumn();
+            }
+          }
+        }
 
-        SelectOperator selOperator = (SelectOperator)nd;
-        SelectDesc selDesc = selOperator.getConf();
+        SelectDesc selDesc = (SelectDesc) selOperator.getConf();
+
+
+        RowSchema rs = selOperator.getSchema();
+        ArrayList<ColumnInfo> newRS = new ArrayList<ColumnInfo>();
+        ArrayList<ColumnInfo> sign = rs.getSignature();
+        for (ColumnInfo columnInfo : sign) {
+          String alias = columnInfo.getAlias();
+          if(alias.contains("_c")){
+            columnInfo.setAlias(offsetCol);
+          }
+          newRS.add(columnInfo);
+        }
+        selOperator.getSchema().setSignature(newRS);
 
         ArrayList<ExprNodeDesc> colList = selDesc.getColList();
-        colList.set(0, exprNode);
+        int i = 0;
+        for (; i< colList.size(); i++) {
+          ExprNodeDesc exprNodeDesc = colList.get(i);
+          if(exprNodeDesc instanceof ExprNodeColumnDesc){
+            if(((ExprNodeColumnDesc) exprNodeDesc).getColumn().contains("_c")){
+              colList.set(i, exprNode);
+              break;
+            }
+          }
+        }
 
-        ArrayList<String> colNameList = selDesc.getOutputColumnNames();
+        selDesc.setColList(colList);
 
-        Map<String, ExprNodeDesc> colExprMap = selOperator.getColumnExprMap();
-        colExprMap.put(colNameList.get(0), exprNode);
-        selOperator.setColumnExprMap(colExprMap);
-        return null;
+        Map<String, ExprNodeDesc> origColExprMap = selOperator.getColumnExprMap();
+        Map<String, ExprNodeDesc> newColExprMap = new LinkedHashMap<String, ExprNodeDesc>();
+
+        Set<String> internalNamesList = origColExprMap.keySet();
+        for (String internal : internalNamesList) {
+          ExprNodeDesc end = origColExprMap.get(internal).clone();
+          if(end instanceof ExprNodeColumnDesc){
+            if(((ExprNodeColumnDesc) end).getColumn().contains("_c")){
+              newColExprMap.put(internal, exprNode);
+            }else{
+              newColExprMap.put(internal, end);
+            }
+          }else{
+            newColExprMap.put(internal, end);
+          }
+        }
+        selOperator.setColumnExprMap(newColExprMap);
+
+/*
+        ArrayList<String> outputColumnNames = new ArrayList<String>();
+        outputColumnNames.add("_col0");
+        selDesc.setOutputColumnNames(outputColumnNames);
+*/
+
       }
+
+
+
     }
 
 
-  public static class RewriteTSProc implements NodeProcessor {
+  public class RewriteTSProc implements NodeProcessor {
 
     public void setUpTableDesc(TableScanDesc tsDesc,Table table, String alias)  {
 
@@ -1024,13 +1133,12 @@ public class RewriteGBUsingIndex implements Transform {
     public SubqueryParseContextGenerator() {
     }
 
-    private ParseContext generateDAGForSubquery(){
+    private ParseContext generateDAGForSubquery(String command){
       HiveConf conf = parseContext.getConf();
       Context ctx;
       ParseContext subPCtx = null;
       try {
         ctx = new Context(conf);
-      String command = "Select key from tbl_idx group by key";
       ParseDriver pd = new ParseDriver();
       ASTNode tree = pd.parse(command, ctx);
       tree = ParseUtils.findRootNonNullToken(tree);
@@ -1090,7 +1198,7 @@ public class RewriteGBUsingIndex implements Transform {
     @Override
     public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx procCtx,
         Object... nodeOutputs) throws SemanticException {
-      subqueryPctx = generateDAGForSubquery();
+      subqueryPctx = generateDAGForSubquery("Select key from tbl_idx group by key");
       return null;
     }
 
@@ -1292,6 +1400,115 @@ public class RewriteGBUsingIndex implements Transform {
 
   public class SubqueryOptProcCtx implements NodeProcessorCtx {
   }
+
+
+  /********************************GROUP BY Remove Procedure******************************************/
+  private NodeProcessor getRemoveGroupByProc() {
+    return new RemoveGroupByProcessor();
+  }
+
+  public class RemoveGroupByProcessor implements NodeProcessor {
+    @Override
+    public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx procCtx,
+        Object... nodeOutputs) throws SemanticException {
+      LOG.info("Processing node - " + nd.getName());
+      // GBY,RS,GBY... (top to bottom)
+      TableScanOperator op = (TableScanOperator) nd;
+      removeGroupBy(op);
+      return null;
+    }
+
+    private void removeGroupBy(TableScanOperator curr){
+      List<Operator<? extends Serializable>>  newParentList = new ArrayList<Operator<? extends Serializable>>();
+      List<Operator<? extends Serializable>>  newChildrenList = new ArrayList<Operator<? extends Serializable>>();
+      List<Operator<? extends Serializable>>  currChildren = new ArrayList<Operator<? extends Serializable>>();
+      LinkedHashMap<Operator<? extends Serializable>, OpParseContext> opc = parseContext.getOpParseCtx();
+
+      currChildren = curr.getChildOperators();
+      while(currChildren != null && currChildren.size() > 0){
+        for (Operator<? extends Serializable> operator : currChildren) {
+          if(null != operator){
+
+            if(operator instanceof GroupByOperator){
+              if(!parseContext.getGroupOpToInputTables().containsKey(operator)){
+                newChildrenList = operator.getChildOperators();
+                newParentList.get(0).setChildOperators(newChildrenList);
+                newChildrenList.get(0).setParentOperators(newParentList);
+              }else{
+                parseContext.getGroupOpToInputTables().remove(operator);
+              }
+              opc.remove(operator);
+            }else if(operator instanceof ReduceSinkOperator){
+              opc.remove(operator);
+            }else if(operator instanceof SelectOperator){
+              List<Operator<? extends Serializable>> childrenList = operator.getChildOperators();
+              Operator<? extends Serializable> child = childrenList.get(0);
+              if(child instanceof GroupByOperator){
+                newParentList = operator.getParentOperators();
+                opc.remove(operator);
+              }else{
+                HashMap<String, String> internalToAlias = new LinkedHashMap<String, String>();
+                RowSchema rs = operator.getSchema();
+                ArrayList<ColumnInfo> sign = rs.getSignature();
+                for (ColumnInfo columnInfo : sign) {
+                  String alias = null;
+                  String internalName = null;
+                  alias = columnInfo.getAlias();
+                  internalName = columnInfo.getInternalName();
+                  internalToAlias.put(internalName, alias);
+                }
+
+                Map<String, ExprNodeDesc> origColExprMap = operator.getColumnExprMap();
+                Map<String, ExprNodeDesc> newColExprMap = new LinkedHashMap<String, ExprNodeDesc>();
+
+                Set<String> internalNamesList = origColExprMap.keySet();
+                for (String internal : internalNamesList) {
+                  ExprNodeDesc end = origColExprMap.get(internal).clone();
+                  if(end instanceof ExprNodeColumnDesc){
+                    ((ExprNodeColumnDesc) end).setColumn(internalToAlias.get(internal));
+                  }
+                  newColExprMap.put(internal, end);
+                }
+                operator.setColumnExprMap(newColExprMap);
+
+
+                SelectDesc selDesc = (SelectDesc) operator.getConf();
+                ArrayList<ExprNodeDesc> oldColList = selDesc.getColList();
+                ArrayList<ExprNodeDesc> newColList = new ArrayList<ExprNodeDesc>();
+
+                for (int i = 0; i < oldColList.size(); i++) {
+                  ExprNodeDesc exprNodeDesc = oldColList.get(i).clone();
+                  if(exprNodeDesc instanceof ExprNodeColumnDesc){
+                    String internal = ((ExprNodeColumnDesc)exprNodeDesc).getColumn();
+                    ((ExprNodeColumnDesc) exprNodeDesc).setColumn(internalToAlias.get(internal));
+                    newColList.add(exprNodeDesc);
+                  }
+                }
+                selDesc.setColList(newColList);
+
+/*                ArrayList<String> outputColumnNames = new ArrayList<String>();
+                outputColumnNames.add("_col0");
+                selDesc.setOutputColumnNames(outputColumnNames);
+*/
+              }
+
+            }else if(operator instanceof FileSinkOperator){
+              currChildren = null;
+              break;
+            }
+            currChildren = operator.getChildOperators();
+            continue;
+          }
+        }
+      }
+//
+    }
+
+  }
+
+  public class GroupByOptProcCtx implements NodeProcessorCtx {
+  }
+
 
 
 

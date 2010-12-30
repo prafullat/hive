@@ -199,13 +199,12 @@ public class SubqueryAppendOptimizer implements Transform {
     public SubqueryParseContextGenerator() {
     }
 
-    private ParseContext generateDAGForSubquery(){
+    private ParseContext generateDAGForSubquery(String command){
       HiveConf conf = pctx.getConf();
       Context ctx;
       ParseContext subPCtx = null;
       try {
         ctx = new Context(conf);
-      String command = "Select key from tbl_idx group by key";
       ParseDriver pd = new ParseDriver();
       ASTNode tree = pd.parse(command, ctx);
       tree = ParseUtils.findRootNonNullToken(tree);
@@ -265,7 +264,7 @@ public class SubqueryAppendOptimizer implements Transform {
     @Override
     public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx procCtx,
         Object... nodeOutputs) throws SemanticException {
-      subqueryPctx = generateDAGForSubquery();
+      subqueryPctx = generateDAGForSubquery("Select key from tbl_idx group by key");
       return null;
     }
 

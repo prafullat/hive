@@ -25,13 +25,13 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Stack;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.ql.exec.ColumnInfo;
 import org.apache.hadoop.hive.ql.exec.FileSinkOperator;
-import org.apache.hadoop.hive.ql.exec.FilterOperator;
 import org.apache.hadoop.hive.ql.exec.GroupByOperator;
 import org.apache.hadoop.hive.ql.exec.Operator;
 import org.apache.hadoop.hive.ql.exec.ReduceSinkOperator;
@@ -49,12 +49,9 @@ import org.apache.hadoop.hive.ql.lib.Rule;
 import org.apache.hadoop.hive.ql.lib.RuleRegExp;
 import org.apache.hadoop.hive.ql.parse.OpParseContext;
 import org.apache.hadoop.hive.ql.parse.ParseContext;
-import org.apache.hadoop.hive.ql.parse.QBParseInfo;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
 import org.apache.hadoop.hive.ql.plan.ExprNodeColumnDesc;
 import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
-import org.apache.hadoop.hive.ql.plan.ExprNodeGenericFuncDesc;
-import org.apache.hadoop.hive.ql.plan.FilterDesc;
 import org.apache.hadoop.hive.ql.plan.SelectDesc;
 
 
@@ -137,19 +134,9 @@ public class GroupByRemoveOptimizer implements Transform {
       LOG.info("Processing node - " + nd.getName());
       // GBY,RS,GBY... (top to bottom)
       TableScanOperator op = (TableScanOperator) nd;
-      if(isQueryInValid()){
-        return parseContext;
-    }else{
       removeGroupBy(op);
-    }
       return null;
     }
-
-    private boolean isQueryInValid(){
-      QBParseInfo qbParseInfo =  parseContext.getQB().getParseInfo();
-      return qbParseInfo.isInsertToTable();
-    }
-
 
     private void removeGroupBy(TableScanOperator curr){
       List<Operator<? extends Serializable>>  newParentList = new ArrayList<Operator<? extends Serializable>>();
@@ -161,8 +148,6 @@ public class GroupByRemoveOptimizer implements Transform {
       while(currChildren != null && currChildren.size() > 0){
         for (Operator<? extends Serializable> operator : currChildren) {
           if(null != operator){
-            String alias = null;
-            String internalName = null;
 
             if(operator instanceof GroupByOperator){
               if(!parseContext.getGroupOpToInputTables().containsKey(operator)){
@@ -180,54 +165,52 @@ public class GroupByRemoveOptimizer implements Transform {
               Operator<? extends Serializable> child = childrenList.get(0);
               if(child instanceof GroupByOperator){
                 newParentList = operator.getParentOperators();
+                opc.remove(operator);
               }else{
+                HashMap<String, String> internalToAlias = new LinkedHashMap<String, String>();
                 RowSchema rs = operator.getSchema();
                 ArrayList<ColumnInfo> sign = rs.getSignature();
                 for (ColumnInfo columnInfo : sign) {
+                  String alias = null;
+                  String internalName = null;
                   alias = columnInfo.getAlias();
                   internalName = columnInfo.getInternalName();
+                  internalToAlias.put(internalName, alias);
                 }
 
                 Map<String, ExprNodeDesc> origColExprMap = operator.getColumnExprMap();
                 Map<String, ExprNodeDesc> newColExprMap = new LinkedHashMap<String, ExprNodeDesc>();
-                ExprNodeColumnDesc end = (ExprNodeColumnDesc) origColExprMap.get(internalName).clone();
-                end.setColumn(alias);
-                newColExprMap.put(internalName, end);
+
+                Set<String> internalNamesList = origColExprMap.keySet();
+                for (String internal : internalNamesList) {
+                  ExprNodeDesc end = origColExprMap.get(internal).clone();
+                  if(end instanceof ExprNodeColumnDesc){
+                    ((ExprNodeColumnDesc) end).setColumn(internalToAlias.get(internal));
+                  }
+                  newColExprMap.put(internal, end);
+                }
+                operator.setColumnExprMap(newColExprMap);
+
 
                 SelectDesc selDesc = (SelectDesc) operator.getConf();
                 ArrayList<ExprNodeDesc> oldColList = selDesc.getColList();
                 ArrayList<ExprNodeDesc> newColList = new ArrayList<ExprNodeDesc>();
+
                 for (int i = 0; i < oldColList.size(); i++) {
-                  ExprNodeDesc exprNodeDesc = oldColList.get(i);
-                  ExprNodeColumnDesc newDesc = (ExprNodeColumnDesc) exprNodeDesc.clone();
-                  newDesc.setColumn(alias);
-                  newColList.add(newDesc);
+                  ExprNodeDesc exprNodeDesc = oldColList.get(i).clone();
+                  if(exprNodeDesc instanceof ExprNodeColumnDesc){
+                    String internal = ((ExprNodeColumnDesc)exprNodeDesc).getColumn();
+                    ((ExprNodeColumnDesc) exprNodeDesc).setColumn(internalToAlias.get(internal));
+                    newColList.add(exprNodeDesc);
+                  }
                 }
                 selDesc.setColList(newColList);
 
-                ArrayList<String> outputColumnNames = new ArrayList<String>();
+/*                ArrayList<String> outputColumnNames = new ArrayList<String>();
                 outputColumnNames.add("_col0");
                 selDesc.setOutputColumnNames(outputColumnNames);
-
+*/
               }
-
-            }else if (operator instanceof FilterOperator){
-              FilterDesc conf = (FilterDesc)operator.getConf();
-              ExprNodeGenericFuncDesc oldengfd = (ExprNodeGenericFuncDesc) conf.getPredicate().clone();
-              List<ExprNodeDesc> endExprList = oldengfd.getChildExprs();
-              List<ExprNodeDesc> newChildren = new ArrayList<ExprNodeDesc>();
-
-              for (ExprNodeDesc exprNodeDesc : endExprList) {
-                if(exprNodeDesc instanceof ExprNodeColumnDesc){
-                  ExprNodeColumnDesc encd = (ExprNodeColumnDesc) exprNodeDesc.clone();
-                  encd.setColumn(alias);
-                  newChildren.add(encd);
-                }else{
-                  newChildren.add(exprNodeDesc);
-                }
-              }
-              oldengfd.setChildExprs(newChildren);
-              conf.setPredicate(oldengfd);
 
             }else if(operator instanceof FileSinkOperator){
               currChildren = null;
