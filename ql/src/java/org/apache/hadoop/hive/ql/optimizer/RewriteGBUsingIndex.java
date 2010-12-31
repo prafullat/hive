@@ -120,6 +120,7 @@ public class RewriteGBUsingIndex implements Transform {
   boolean IDX_TBL_SEARCH_EXCEPTION = false;
   boolean SHOULD_APPEND_SUBQUERY = false;
   boolean REMOVE_GROUP_BY = false;
+  boolean QUERY_HAS_KEY_MANIP_FUNC = false;
 
   /***************************************Index Validation Variables***************************************/
   private static final String SUPPORTED_INDEX_TYPE =
@@ -132,7 +133,10 @@ public class RewriteGBUsingIndex implements Transform {
   private final List<String> gbKeyNameList = new ArrayList<String>();
   private RewriteGBUsingIndexProcCtx rewriteContext = new RewriteGBUsingIndexProcCtx();
   private final List<List<String>> colRefAggFuncInputList = new ArrayList<List<String>>();
-  private final HashMap<String, String> colInternalToExternalMap = new LinkedHashMap<String, String>();
+  //private final HashMap<String, String> colInternalToExternalMap = new LinkedHashMap<String, String>();
+  private String selReplacementCommand = null;
+  private String indexName = null;
+  private String subqueryCommand = null;
 
 
   /***************************************SubqueryAppend Variables***************************************/
@@ -189,13 +193,20 @@ public class RewriteGBUsingIndex implements Transform {
 
     if(REMOVE_GROUP_BY){
       removeGroupByOps();
+      selReplacementCommand = "select size(`_offsets`) from dummyTable";
+      replaceTSOp();
+      replaceSelOP();
     }
-    replaceTSAndSelOps();
+
     if(SHOULD_APPEND_SUBQUERY){
+      subqueryCommand = "select year(l_shipdate), size(`_offsets`) as CNT from default__lineitem_lineitem_lshipdate_idx__";
       generateSubquery();
       processSubquery();
       processOriginalDAG();
+      selReplacementCommand = "select sum(CNT) from dummytable";
+      replaceSelOP();
     }
+
     toStringTree(parseContext);
   }
 
@@ -220,14 +231,33 @@ public class RewriteGBUsingIndex implements Transform {
     toStringTree(parseContext);
   }
 
-  private void replaceTSAndSelOps(){
+  private void replaceTSOp(){
     // create a walker which walks the tree in a DFS manner while maintaining
     // the operator stack. The dispatcher
     // generates the plan from the operator tree
     Map<Rule, NodeProcessor> opRules = new LinkedHashMap<Rule, NodeProcessor>();
     opRules.put(new RuleRegExp("R1", "TS%"), new RewriteTSProc());
-    opRules.put(new RuleRegExp("R2", "SEL%"), new RewriteSelOpProc());
 
+    // The dispatcher fires the processor corresponding to the closest matching
+    // rule and passes the context along
+    Dispatcher disp = new DefaultRuleDispatcher(new RewriteDefaultProc(), opRules, rewriteContext);
+    GraphWalker ogw = new PreOrderWalker(disp);
+
+    // Create a list of topop nodes
+    ArrayList<Node> topNodes = new ArrayList<Node>();
+    topNodes.addAll(parseContext.getTopOps().values());
+    try {
+      ogw.startWalking(topNodes, null);
+    } catch (SemanticException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
+
+  }
+
+  private void replaceSelOP(){
+    Map<Rule, NodeProcessor> opRules = new LinkedHashMap<Rule, NodeProcessor>();
+    opRules.put(new RuleRegExp("R1", "SEL%"), new RewriteSelOpProc());
     // The dispatcher fires the processor corresponding to the closest matching
     // rule and passes the context along
     Dispatcher disp = new DefaultRuleDispatcher(new RewriteDefaultProc(), opRules, rewriteContext);
@@ -398,7 +428,6 @@ public class RewriteGBUsingIndex implements Transform {
               }else{
                 for(int i=0; i< para.size(); i++){
                   ExprNodeDesc end = para.get(i);
-
                   if(end instanceof ExprNodeConstantDesc){
                     LOG.info("count(const) case");
                     //selColRefNameList.add(((ExprNodeConstantDesc) end).getValue().toString());
@@ -406,7 +435,8 @@ public class RewriteGBUsingIndex implements Transform {
                     //return false;
                   }else if(end instanceof ExprNodeColumnDesc){
                     selColRefNameList.add(((ExprNodeColumnDesc) end).getColumn());
-                    colRefAggFuncInputList.add(para.get(i).getCols());                  }
+                    colRefAggFuncInputList.add(para.get(i).getCols());
+                  }
                 }
               }
             }
@@ -434,12 +464,15 @@ public class RewriteGBUsingIndex implements Transform {
       for (ExprNodeDesc exprNodeDesc : keyList) {
         if(exprNodeDesc instanceof ExprNodeColumnDesc){
           gbKeyNameList.addAll(exprNodeDesc.getCols());
+          selColRefNameList.add(((ExprNodeColumnDesc) exprNodeDesc).getColumn());
         }else if(exprNodeDesc instanceof ExprNodeGenericFuncDesc){
           ExprNodeGenericFuncDesc endfg = (ExprNodeGenericFuncDesc)exprNodeDesc;
           List<ExprNodeDesc> childExprs = endfg.getChildExprs();
           for (ExprNodeDesc end : childExprs) {
             if(end instanceof ExprNodeColumnDesc){
+              QUERY_HAS_KEY_MANIP_FUNC = true;
               gbKeyNameList.addAll(exprNodeDesc.getCols());
+              selColRefNameList.add(((ExprNodeColumnDesc) end).getColumn());
             }
           }
         }
@@ -503,7 +536,7 @@ public class RewriteGBUsingIndex implements Transform {
         return false;
       }else{
         if(QUERY_HAS_GROUP_BY){
-          RowSchema rs = operator.getSchema();
+/*          RowSchema rs = operator.getSchema();
           ArrayList<ColumnInfo> colInfo = rs.getSignature();
           for (ColumnInfo columnInfo : colInfo) {
             if(columnInfo.getAlias() != null && (!columnInfo.getAlias().contains("_c"))){
@@ -511,7 +544,7 @@ public class RewriteGBUsingIndex implements Transform {
               colInternalToExternalMap.put(columnInfo.getInternalName(), columnInfo.getAlias());
             }
           }
-        }else{
+*/        }else{
           for (ExprNodeDesc exprNodeDesc : selColList) {
             if(exprNodeDesc instanceof ExprNodeColumnDesc){
               selColRefNameList.addAll(exprNodeDesc.getCols());
@@ -547,7 +580,7 @@ public class RewriteGBUsingIndex implements Transform {
       List<String> idxKeyColsNames = new ArrayList<String>();
 
       index = indexTables.get(idxCtr);
-
+      indexName = index.getIndexTableName();
       //Getting index key columns
       StorageDescriptor sd = index.getSd();
       List<FieldSchema> idxColList = sd.getCols();
@@ -671,7 +704,7 @@ public class RewriteGBUsingIndex implements Transform {
       //which would be used by transformation procedure as inputs.
 
       //sub-query is needed only in case of optimizecount and complex gb keys?
-      if( !(optimizeCount == true && removeGroupBy == false) ) {
+      if(QUERY_HAS_KEY_MANIP_FUNC == false && !(optimizeCount == true && removeGroupBy == false) ) {
         REMOVE_GROUP_BY = removeGroupBy;
         rewriteContext.addTable(topTable, index.getIndexTableName());
       }else{
@@ -828,7 +861,30 @@ public class RewriteGBUsingIndex implements Transform {
           Object... nodeOutputs) throws SemanticException {
         RewriteGBUsingIndexProcCtx rewriteContext = (RewriteGBUsingIndexProcCtx)procCtx;
         ParseContext pctx = rewriteContext.parseContext;
-        processNewSelect((SelectOperator)nd, pctx);
+        Operator<? extends Serializable> selOp = null;
+        if(SHOULD_APPEND_SUBQUERY){
+          SelectOperator topSel = (SelectOperator)nd;
+          List<Operator<? extends Serializable>> childOps = topSel.getChildOperators();
+
+          while(childOps != null && childOps.size() > 0){
+            for (Operator<? extends Serializable> operator : childOps) {
+              if(operator != null){
+                if(operator instanceof SelectOperator){
+                  selOp = operator;
+                  childOps = null;
+                  break;
+                }else{
+                  childOps = operator.getChildOperators();
+                  continue;
+                }
+              }
+            }
+          }
+        }else{
+          selOp = (SelectOperator)nd;
+        }
+
+        processNewSelect(selOp, pctx);
         return null;
       }
 
@@ -857,12 +913,11 @@ public class RewriteGBUsingIndex implements Transform {
         HiveConf conf = pctx.getConf();
         SemanticAnalyzer semAna = new SemanticAnalyzer(conf);
         ParseDriver pd = new ParseDriver();
-        String funcStr = "select size(`_offsets`) from dummyTable";
         ASTNode tree = null;
         try {
-          tree = pd.parse(funcStr, null);
+          tree = pd.parse(selReplacementCommand, null);
         } catch (ParseException e) {
-          // TODO Auto-generated catch block
+          // TODO Auto-generated catch blockprocessNewSelect
           e.printStackTrace();
         }
 
@@ -874,7 +929,7 @@ public class RewriteGBUsingIndex implements Transform {
         while(parentList != null && parentList.size() > 0){
           for (Operator<? extends Serializable> operator : parentList) {
             if(operator != null){
-              if(operator instanceof TableScanOperator){
+              if(operator instanceof SelectOperator){
                 tsOp = operator;
                 parentList = null;
                 break;
@@ -886,14 +941,14 @@ public class RewriteGBUsingIndex implements Transform {
           }
         }
 
-        OpParseContext selCtx = opCtxMap.get(tsOp);
-        ExprNodeDesc exprNode = semAna.genExprNodeDesc(funcNode, selCtx.getRowResolver());
-        String offsetCol = null;
+        OpParseContext tsCtx = opCtxMap.get(tsOp);
+        ExprNodeDesc exprNode = semAna.genExprNodeDesc(funcNode, tsCtx.getRowResolver());
+        String aggFuncCol = null;
         if(exprNode instanceof ExprNodeGenericFuncDesc){
           List<ExprNodeDesc> exprList = ((ExprNodeGenericFuncDesc) exprNode).getChildExprs();
           for (ExprNodeDesc exprNodeDesc : exprList) {
             if(exprNodeDesc instanceof ExprNodeColumnDesc){
-              offsetCol = ((ExprNodeColumnDesc) exprNodeDesc).getColumn();
+              aggFuncCol = ((ExprNodeColumnDesc) exprNodeDesc).getColumn();
             }
           }
         }
@@ -907,7 +962,7 @@ public class RewriteGBUsingIndex implements Transform {
         for (ColumnInfo columnInfo : sign) {
           String alias = columnInfo.getAlias();
           if(alias.contains("_c")){
-            columnInfo.setAlias(offsetCol);
+            columnInfo.setAlias(aggFuncCol);
           }
           newRS.add(columnInfo);
         }
@@ -1198,7 +1253,7 @@ public class RewriteGBUsingIndex implements Transform {
     @Override
     public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx procCtx,
         Object... nodeOutputs) throws SemanticException {
-      subqueryPctx = generateDAGForSubquery("Select key from tbl_idx group by key");
+      subqueryPctx = generateDAGForSubquery(subqueryCommand);
       return null;
     }
 
@@ -1355,19 +1410,57 @@ public class RewriteGBUsingIndex implements Transform {
             internalName = oldConf.getOutputColumnNames().get(i);
             //Fetch all output columns (required by SelectOperators in original DAG)
             newOutputCols.add(new String(internalName));
+
             if(oldColumnExprMap != null){
-              ExprNodeColumnDesc oldDesc = (ExprNodeColumnDesc) oldColumnExprMap.get(internalName);
-              ExprNodeColumnDesc newDesc = (ExprNodeColumnDesc) oldDesc.clone();
-              newDesc.setColumn(internalName);
-              //Fetch columnExprMap (required by SelectOperator and FilterOperator in original DAG)
-              newColExprMap.put(internalName, newDesc);
+              ExprNodeDesc end = oldColumnExprMap.get(internalName);
+              if(end instanceof ExprNodeColumnDesc){
+                ExprNodeColumnDesc oldDesc = (ExprNodeColumnDesc)end ;
+                ExprNodeColumnDesc newDesc = (ExprNodeColumnDesc) oldDesc.clone();
+                newDesc.setColumn(internalName);
+                //Fetch columnExprMap (required by SelectOperator and FilterOperator in original DAG)
+                newColExprMap.put(internalName, newDesc);
+              }else if(end instanceof ExprNodeGenericFuncDesc){
+                ExprNodeGenericFuncDesc oldDesc = (ExprNodeGenericFuncDesc)end ;
+                ExprNodeGenericFuncDesc newDesc = (ExprNodeGenericFuncDesc) oldDesc.clone();
+                List<ExprNodeDesc> childExprs = newDesc.getChildExprs();
+                List<ExprNodeDesc> newChildExprs = new ArrayList<ExprNodeDesc>();
+                for (ExprNodeDesc childEnd : childExprs) {
+                  if(childEnd instanceof ExprNodeColumnDesc){
+                    ((ExprNodeColumnDesc) childEnd).setColumn(internalName);
+                    newChildExprs.add(childEnd);
+                  }
+                  newDesc.setChildExprs(newChildExprs);
+                  newColExprMap.put(internalName, newDesc);
+                }
+                //Fetch columnExprMap (required by SelectOperator and FilterOperator in original DAG)
+              }else if(end instanceof ExprNodeConstantDesc){
+
+              }
+            }
+            if(oldColList != null){
+              ExprNodeDesc exprNodeDesc = oldColList.get(i);
+              if(exprNodeDesc instanceof ExprNodeColumnDesc){
+                ExprNodeColumnDesc newDesc = (ExprNodeColumnDesc) exprNodeDesc.clone();
+                newDesc.setColumn(internalName);
+                //Fetch colList (required by SelectOperators in original DAG)
+                newColList.add(newDesc);
+              }else if(exprNodeDesc instanceof ExprNodeGenericFuncDesc){
+                ExprNodeGenericFuncDesc oldDesc = (ExprNodeGenericFuncDesc)exprNodeDesc ;
+                ExprNodeGenericFuncDesc newDesc = (ExprNodeGenericFuncDesc) oldDesc.clone();
+                List<ExprNodeDesc> childExprs = newDesc.getChildExprs();
+                List<ExprNodeDesc> newChildExprs = new ArrayList<ExprNodeDesc>();
+                for (ExprNodeDesc childEnd : childExprs) {
+                  if(childEnd instanceof ExprNodeColumnDesc){
+                    ((ExprNodeColumnDesc) childEnd).setColumn(internalName);
+                    newChildExprs.add(childEnd);
+                  }
+                  newDesc.setChildExprs(newChildExprs);
+                  newColList.add(newDesc);
+                }
+
+              }
             }
 
-            ExprNodeDesc exprNodeDesc = oldColList.get(i);
-            ExprNodeColumnDesc newDesc = (ExprNodeColumnDesc) exprNodeDesc.clone();
-            newDesc.setColumn(internalName);
-            //Fetch colList (required by SelectOperators in original DAG)
-            newColList.add(newDesc);
 
           }
 
