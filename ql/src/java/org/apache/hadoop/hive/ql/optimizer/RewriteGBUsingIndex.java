@@ -199,11 +199,11 @@ public class RewriteGBUsingIndex implements Transform {
     }
 
     if(SHOULD_APPEND_SUBQUERY){
-      subqueryCommand = "select year(l_shipdate), size(`_offsets`) as CNT from default__lineitem_lineitem_lshipdate_idx__";
+      subqueryCommand = "select year(l_shipdate) as YEAR, size(`_offsets`) as CNT from default__lineitem_lineitem_lshipdate_idx__";
       generateSubquery();
       processSubquery();
       processOriginalDAG();
-      selReplacementCommand = "select sum(CNT) from dummytable";
+      selReplacementCommand = "select L_ORDERKEY, sum(L_ORDERKEY) as TOTAL from lineitem group by L_ORDERKEY";
       replaceSelOP();
     }
 
@@ -257,7 +257,7 @@ public class RewriteGBUsingIndex implements Transform {
 
   private void replaceSelOP(){
     Map<Rule, NodeProcessor> opRules = new LinkedHashMap<Rule, NodeProcessor>();
-    opRules.put(new RuleRegExp("R1", "SEL%"), new RewriteSelOpProc());
+    opRules.put(new RuleRegExp("R1", "TS%"), new RewriteSelOpProc());
     // The dispatcher fires the processor corresponding to the closest matching
     // rule and passes the context along
     Dispatcher disp = new DefaultRuleDispatcher(new RewriteDefaultProc(), opRules, rewriteContext);
@@ -854,38 +854,163 @@ public class RewriteGBUsingIndex implements Transform {
   }
 
     public class RewriteSelOpProc implements NodeProcessor {
+      private Map<String, ExprNodeDesc> tsSelColExprMap = new LinkedHashMap<String, ExprNodeDesc>();
+      private Map<String, ExprNodeDesc> gbySelColExprMap = new LinkedHashMap<String, ExprNodeDesc>();
+      private final Map<String, ExprNodeDesc> fsSelColExprMap = new LinkedHashMap<String, ExprNodeDesc>();
 
+      private final ArrayList<ExprNodeDesc> gbySelColList = new ArrayList<ExprNodeDesc>();
+      private final ArrayList<ExprNodeDesc> fsSelColList = new ArrayList<ExprNodeDesc>();
 
       @Override
       public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx procCtx,
           Object... nodeOutputs) throws SemanticException {
-        RewriteGBUsingIndexProcCtx rewriteContext = (RewriteGBUsingIndexProcCtx)procCtx;
-        ParseContext pctx = rewriteContext.parseContext;
-        Operator<? extends Serializable> selOp = null;
-        if(SHOULD_APPEND_SUBQUERY){
-          SelectOperator topSel = (SelectOperator)nd;
-          List<Operator<? extends Serializable>> childOps = topSel.getChildOperators();
 
-          while(childOps != null && childOps.size() > 0){
-            for (Operator<? extends Serializable> operator : childOps) {
-              if(operator != null){
-                if(operator instanceof SelectOperator){
-                  selOp = operator;
+        if(SHOULD_APPEND_SUBQUERY){
+          processGenericUDAF();
+        }
+
+        Operator<? extends Serializable> tsOp = (TableScanOperator)nd;
+        Operator<? extends Serializable> selOp = null;
+        List<Operator<? extends Serializable>> childOps = tsOp.getChildOperators();
+
+        while(childOps != null && childOps.size() > 0){
+          for (Operator<? extends Serializable> operator : childOps) {
+            if(operator != null){
+              if(operator instanceof SelectOperator){
+                selOp = operator;
+                if(SHOULD_APPEND_SUBQUERY){
+                  processSelOp(selOp);
+                  childOps = operator.getChildOperators();;
+                  continue;
+                }else{
+                  processGenericUDF(selOp);
                   childOps = null;
                   break;
-                }else{
-                  childOps = operator.getChildOperators();
-                  continue;
                 }
+              }else if(operator instanceof FileSinkOperator){
+                childOps = null;
+                break;
+              }else{
+                childOps = operator.getChildOperators();
+                continue;
               }
             }
           }
-        }else{
-          selOp = (SelectOperator)nd;
         }
 
-        processNewSelect(selOp, pctx);
+
         return null;
+      }
+
+
+      private void processSelOp(Operator<? extends Serializable> selOperator){
+
+        List<Operator<? extends Serializable>> parentOps = selOperator.getParentOperators();
+        Operator<? extends Serializable> parentOp = parentOps.iterator().next();
+        List<Operator<? extends Serializable>> childOps = selOperator.getChildOperators();
+        Operator<? extends Serializable> childOp = childOps.iterator().next();
+        SelectDesc selDesc = (SelectDesc) selOperator.getConf();
+
+        if(parentOp instanceof TableScanOperator){
+          tsSelColExprMap = selOperator.getColumnExprMap();
+        }else if (childOp instanceof GroupByOperator){
+          gbySelColExprMap = selOperator.getColumnExprMap();
+          /* colExprMap */
+          Set<String> internalNamesList = gbySelColExprMap.keySet();
+          for (String internal : internalNamesList) {
+            ExprNodeDesc end = gbySelColExprMap.get(internal).clone();
+            if(end instanceof ExprNodeGenericFuncDesc){
+              List<ExprNodeDesc> colExprs = ((ExprNodeGenericFuncDesc)end).getChildExprs();
+              for (ExprNodeDesc colExpr : colExprs) {
+                if(colExpr instanceof ExprNodeColumnDesc){
+                  fsSelColExprMap.put(internal, colExpr);
+                  gbySelColList.add(colExpr);
+                  fsSelColList.add(colExpr);
+                }
+              }
+
+            }else if(end instanceof ExprNodeColumnDesc){
+              fsSelColExprMap.put(internal, end);
+              gbySelColList.add(end);
+              fsSelColList.add(end);
+            }
+          }
+
+          selOperator.setColumnExprMap(tsSelColExprMap);
+          selDesc.setColList(gbySelColList);
+        }else if(childOp instanceof FileSinkOperator){
+          selOperator.setColumnExprMap(fsSelColExprMap);
+          selDesc.setColList(fsSelColList);
+        }
+
+        LOG.info("Coming here");
+      }
+
+      private void processGenericUDAF() throws SemanticException{
+        SubqueryParseContextGenerator newDAGCreator = new SubqueryParseContextGenerator();
+        ParseContext newDAGCtx = newDAGCreator.generateDAGForSubquery(selReplacementCommand);
+        Map<GroupByOperator, Set<String>> newGbyOpMap = newDAGCtx.getGroupOpToInputTables();
+        GroupByOperator newGbyOperator = newGbyOpMap.keySet().iterator().next();
+
+
+        Map<GroupByOperator, Set<String>> oldGbyOpMap = parseContext.getGroupOpToInputTables();
+        GroupByOperator oldGbyOperator = oldGbyOpMap.keySet().iterator().next();
+        GroupByDesc oldConf = oldGbyOperator.getConf();
+        ArrayList<AggregationDesc> oldAggrList = oldConf.getAggregators();
+        if(oldAggrList != null && oldAggrList.size() > 0){
+          for (AggregationDesc aggregationDesc : oldAggrList) {
+            if(aggregationDesc != null && aggregationDesc.getGenericUDAFName().equals("count")){
+              oldAggrList.remove(aggregationDesc);
+              break;
+            }
+
+          }
+        }
+
+        ExprNodeColumnDesc encdExpr = null;
+
+        GroupByDesc newConf = newGbyOperator.getConf();
+        ArrayList<AggregationDesc> newAggrList = newConf.getAggregators();
+        if(newAggrList != null && newAggrList.size() > 0){
+          for (AggregationDesc aggregationDesc : newAggrList) {
+            ArrayList<ExprNodeDesc> paraList = aggregationDesc.getParameters();
+            for (int i=0; i< paraList.size(); i++) {
+              ExprNodeDesc exprNodeDesc = paraList.get(i);
+              if(exprNodeDesc instanceof ExprNodeColumnDesc){
+                ExprNodeColumnDesc encd = (ExprNodeColumnDesc)exprNodeDesc;
+                encd.setColumn("_col1");
+                encd.setTabAlias(null);
+                exprNodeDesc = encd;
+                encdExpr = (ExprNodeColumnDesc) encd.clone();
+              }
+              paraList.set(i, exprNodeDesc);
+            }
+            oldAggrList.add(aggregationDesc);
+          }
+        }
+
+        Map<String, ExprNodeDesc> newColExprMap = new LinkedHashMap<String, ExprNodeDesc>();
+        ArrayList<ExprNodeDesc> newKeys = new ArrayList<ExprNodeDesc>();
+        encdExpr.setColumn("_col0");
+        newColExprMap.put("_col0", encdExpr);
+        newKeys.add(encdExpr);
+
+        RowSchema oldRS = oldGbyOperator.getSchema();
+
+        ArrayList<ColumnInfo> oldSign = oldRS.getSignature();
+        ArrayList<ColumnInfo> newSign = new ArrayList<ColumnInfo>();
+        for (ColumnInfo columnInfo : oldSign) {
+          columnInfo.setAlias(null);
+          newSign.add(columnInfo);
+        }
+        oldRS.setSignature(newSign);
+        oldGbyOperator.setSchema(oldRS);
+        oldConf.setKeys(newKeys);
+        oldConf.setAggregators(oldAggrList);
+        oldGbyOperator.setColumnExprMap(newColExprMap);
+        oldGbyOperator.setConf(oldConf);
+        parseContext.setGroupOpToInputTables(oldGbyOpMap);
+
       }
 
       private ASTNode getFuncNode(ASTNode root){
@@ -909,27 +1034,40 @@ public class RewriteGBUsingIndex implements Transform {
         return func;
       }
 
-      private void processNewSelect(Operator<? extends Serializable> selOperator, ParseContext pctx) throws SemanticException{
-        HiveConf conf = pctx.getConf();
-        SemanticAnalyzer semAna = new SemanticAnalyzer(conf);
-        ParseDriver pd = new ParseDriver();
+      private void processGenericUDF(Operator<? extends Serializable> selOperator) throws SemanticException{
+
+        HiveConf conf = parseContext.getConf();
+        Context ctx = null;
         ASTNode tree = null;
+        BaseSemanticAnalyzer sem = null;
         try {
-          tree = pd.parse(selReplacementCommand, null);
+        ctx = new Context(conf);
+        ParseDriver pd = new ParseDriver();
+        tree = pd.parse(selReplacementCommand, ctx);
+        tree = ParseUtils.findRootNonNullToken(tree);
+        sem = SemanticAnalyzerFactory.get(conf, tree);
+
         } catch (ParseException e) {
-          // TODO Auto-generated catch blockprocessNewSelect
+          // TODO Auto-generated catch block
+          e.printStackTrace();
+        } catch (SemanticException e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
+        } catch (IOException e) {
+          // TODO Auto-generated catch block
           e.printStackTrace();
         }
 
-        ASTNode funcNode = getFuncNode((ASTNode) tree.getChildren().get(0));
+
+        ASTNode funcNode = getFuncNode(tree);
         LinkedHashMap<Operator<? extends Serializable>, OpParseContext> opCtxMap =
-          pctx.getOpParseCtx();
+          parseContext.getOpParseCtx();
         List<Operator<? extends Serializable>> parentList = selOperator.getParentOperators();
         Operator<? extends Serializable> tsOp = null;
         while(parentList != null && parentList.size() > 0){
           for (Operator<? extends Serializable> operator : parentList) {
             if(operator != null){
-              if(operator instanceof SelectOperator){
+              if(operator instanceof TableScanOperator){
                 tsOp = operator;
                 parentList = null;
                 break;
@@ -941,9 +1079,11 @@ public class RewriteGBUsingIndex implements Transform {
           }
         }
 
+
         OpParseContext tsCtx = opCtxMap.get(tsOp);
-        ExprNodeDesc exprNode = semAna.genExprNodeDesc(funcNode, tsCtx.getRowResolver());
+        ExprNodeDesc exprNode = ((SemanticAnalyzer) sem).genExprNodeDesc(funcNode, tsCtx.getRowResolver());
         String aggFuncCol = null;
+
         if(exprNode instanceof ExprNodeGenericFuncDesc){
           List<ExprNodeDesc> exprList = ((ExprNodeGenericFuncDesc) exprNode).getChildExprs();
           for (ExprNodeDesc exprNodeDesc : exprList) {
@@ -1130,14 +1270,16 @@ public class RewriteGBUsingIndex implements Transform {
 
   private void generateSubquery() throws SemanticException{
     origOpOldOpc = parseContext.getOpParseCtx();
-    //Creates the operator DAG for subquery
+    subqueryPctx = (new SubqueryParseContextGenerator()).generateDAGForSubquery(subqueryCommand);
+
+/*    //Creates the operator DAG for subquery
     Dispatcher disp = new DefaultRuleDispatcher(new SubqueryParseContextGenerator(), new LinkedHashMap<Rule, NodeProcessor>(),
         new SubqueryOptProcCtx());
     DefaultGraphWalker ogw = new DefaultGraphWalker(disp);
     ArrayList<Node> topNodes = new ArrayList<Node>();
     topNodes.addAll(parseContext.getTopOps().values());
     ogw.startWalking(topNodes, null);
-    subqOpOldOpc = subqueryPctx.getOpParseCtx();
+*/    subqOpOldOpc = subqueryPctx.getOpParseCtx();
   }
 
   private void processSubquery() throws SemanticException{
@@ -1183,7 +1325,7 @@ public class RewriteGBUsingIndex implements Transform {
  *Class to instantialte SemanticAnalyzer and create the operator DAG for subquery
  *Method generateDAGForSubquery() returns the new ParseContext object for the subquery DAG
  */
-  public class SubqueryParseContextGenerator implements NodeProcessor {
+  public class SubqueryParseContextGenerator {
 
     public SubqueryParseContextGenerator() {
     }
@@ -1250,13 +1392,13 @@ public class RewriteGBUsingIndex implements Transform {
 
     }
 
-    @Override
+/*    @Override
     public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx procCtx,
         Object... nodeOutputs) throws SemanticException {
       subqueryPctx = generateDAGForSubquery(subqueryCommand);
       return null;
     }
-
+*/
   }
 
 
@@ -1301,24 +1443,26 @@ public class RewriteGBUsingIndex implements Transform {
         while(origList != null && origList.size() > 0){
           for (Operator<? extends Serializable> operator : origList) {
             if(null != operator){
-              //Set columnExprMap + RowSchema + RowResolver - required by all operators
-              operator.setColumnExprMap(newColExprMap);
-              operator.getSchema().setSignature(newRS);
-              origOpOldOpc.get(operator).setRowResolver(newRR);
-
-              //We need to add operator context in the sub-query OpToParseContext Map (subqOpOldOpc) for those operators
-              // in original DAG that are appended to sub-query DAG
-              RowResolver rr = origOpOldOpc.get(operator).getRowResolver();
-              OpParseContext ctx = new OpParseContext(rr);
-              subqOpOldOpc.put(operator, ctx);
 
               //Copy colList and outputColumns for SelectOperator from sub-query DAG SelectOperator
               if(operator instanceof SelectOperator) {
+                //Set columnExprMap + RowSchema + RowResolver - required by all operators
+                operator.setColumnExprMap(newColExprMap);
+                origOpOldOpc.get(operator).setRowResolver(newRR);
+                if(!(operator.getChildOperators().iterator().next() instanceof FileSinkOperator)){
+                  operator.getSchema().setSignature(newRS);
+                }
+
+
                 SelectDesc conf = (SelectDesc) operator.getConf();
                 conf.setColList(newColList);
                 conf.setOutputColumnNames(newOutputCols);
               //Copy output columns of SelectOperator from sub-query DAG to predicates of FilterOperator
               }else if(operator instanceof FilterOperator) {
+                //Set columnExprMap + RowSchema + RowResolver - required by all operators
+                operator.setColumnExprMap(newColExprMap);
+                origOpOldOpc.get(operator).setRowResolver(newRR);
+
                 FilterDesc conf = (FilterDesc)operator.getConf();
                 ExprNodeGenericFuncDesc oldengfd = (ExprNodeGenericFuncDesc) conf.getPredicate().clone();
                 List<ExprNodeDesc> endExprList = oldengfd.getChildExprs();
@@ -1340,6 +1484,14 @@ public class RewriteGBUsingIndex implements Transform {
                 origList = null;
                 break;
               }
+
+
+              //We need to add operator context in the sub-query OpToParseContext Map (subqOpOldOpc) for those operators
+              // in original DAG that are appended to sub-query DAG
+              RowResolver rr = origOpOldOpc.get(operator).getRowResolver();
+              OpParseContext ctx = new OpParseContext(rr);
+              subqOpOldOpc.put(operator, ctx);
+
               //Continue Looping until we reach end of original DAG i.e. FileSinkOperator
               origList = operator.getChildOperators();
               continue;
