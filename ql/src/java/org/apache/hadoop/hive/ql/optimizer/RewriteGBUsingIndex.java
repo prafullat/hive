@@ -141,6 +141,7 @@ public class RewriteGBUsingIndex implements Transform {
 
   /***************************************SubqueryAppend Variables***************************************/
   ParseContext subqueryPctx = null;
+  ParseContext newDAGCtx = null;
 
   //Initialise all data structures required to copy RowResolver and RowSchema from subquery DAG to original DAG operators
   ArrayList<String> newOutputCols = new ArrayList<String>();
@@ -887,6 +888,10 @@ public class RewriteGBUsingIndex implements Transform {
                   childOps = null;
                   break;
                 }
+              }else if(operator instanceof ReduceSinkOperator){
+                replaceRSOp(operator);
+                childOps = operator.getChildOperators();
+                continue;
               }else if(operator instanceof FileSinkOperator){
                 childOps = null;
                 break;
@@ -902,6 +907,16 @@ public class RewriteGBUsingIndex implements Transform {
         return null;
       }
 
+      private void replaceRSOp(Operator<? extends Serializable> rsOp){
+        RowResolver oldRR = parseContext.getOpParseCtx().get(rsOp).getRowResolver();
+        //parseContext.getOpParseCtx().remove(rsOp);
+        RowResolver newRSOpRR = new RowResolver();
+        ASTNode tree = newDAGCtx.getParseTree();
+
+        OpParseContext ctx = new OpParseContext(newRSOpRR);
+       // parseContext.getOpParseCtx().put(rsOp, ctx);
+
+      }
 
       private void processSelOp(Operator<? extends Serializable> selOperator){
 
@@ -943,12 +958,11 @@ public class RewriteGBUsingIndex implements Transform {
           selDesc.setColList(fsSelColList);
         }
 
-        LOG.info("Coming here");
       }
 
       private void processGenericUDAF() throws SemanticException{
         SubqueryParseContextGenerator newDAGCreator = new SubqueryParseContextGenerator();
-        ParseContext newDAGCtx = newDAGCreator.generateDAGForSubquery(selReplacementCommand);
+        newDAGCtx = newDAGCreator.generateDAGForSubquery(selReplacementCommand);
         Map<GroupByOperator, Set<String>> newGbyOpMap = newDAGCtx.getGroupOpToInputTables();
         GroupByOperator newGbyOperator = newGbyOpMap.keySet().iterator().next();
 
@@ -967,7 +981,7 @@ public class RewriteGBUsingIndex implements Transform {
           }
         }
 
-        ExprNodeColumnDesc encdExpr = null;
+        ArrayList<ExprNodeColumnDesc> encdExprs = new ArrayList<ExprNodeColumnDesc>();
 
         GroupByDesc newConf = newGbyOperator.getConf();
         ArrayList<AggregationDesc> newAggrList = newConf.getAggregators();
@@ -981,7 +995,7 @@ public class RewriteGBUsingIndex implements Transform {
                 encd.setColumn("_col1");
                 encd.setTabAlias(null);
                 exprNodeDesc = encd;
-                encdExpr = (ExprNodeColumnDesc) encd.clone();
+                encdExprs.add((ExprNodeColumnDesc) encd.clone());
               }
               paraList.set(i, exprNodeDesc);
             }
@@ -991,9 +1005,16 @@ public class RewriteGBUsingIndex implements Transform {
 
         Map<String, ExprNodeDesc> newColExprMap = new LinkedHashMap<String, ExprNodeDesc>();
         ArrayList<ExprNodeDesc> newKeys = new ArrayList<ExprNodeDesc>();
-        encdExpr.setColumn("_col0");
-        newColExprMap.put("_col0", encdExpr);
-        newKeys.add(encdExpr);
+
+        for(int i =0; i< encdExprs.size(); i++){
+          ExprNodeColumnDesc encd = encdExprs.get(i);
+          String col = "_col" + i ;
+          encd.setColumn(col);
+          newColExprMap.put(col, encd);
+          newKeys.add(encd);
+        }
+
+
 
         RowSchema oldRS = oldGbyOperator.getSchema();
 
@@ -1178,7 +1199,7 @@ public class RewriteGBUsingIndex implements Transform {
 
       TableScanOperator scanOperator = (TableScanOperator)nd;
       HashMap<TableScanOperator, Table>  topToTable =
-        rewriteContext.parseContext.getTopToTable();
+        parseContext.getTopToTable();
 
       String baseTableName = topToTable.get(scanOperator).getTableName();
       if( rewriteContext.findBaseTable(baseTableName) == null ) {
@@ -1193,7 +1214,7 @@ public class RewriteGBUsingIndex implements Transform {
       String tableName = rewriteContext.findBaseTable(baseTableName);
 
       tableSpec ts = new tableSpec(rewriteContext.hiveDb,
-          rewriteContext.parseContext.getConf(),
+          parseContext.getConf(),
           tableName
       );
       String k = tableName + Path.SEPARATOR;
@@ -1201,13 +1222,15 @@ public class RewriteGBUsingIndex implements Transform {
       scanOperator.setConf(indexTableScanDesc);
 
       topToTable.remove(scanOperator);
+
       //Scan operator now points to other table
       topToTable.put(scanOperator, ts.tableHandle);
-      rewriteContext.parseContext.setTopToTable(topToTable);
+      parseContext.setTopToTable(topToTable);
 
       OpParseContext operatorContext =
-        rewriteContext.parseContext.getOpParseCtx().get(scanOperator);
+        parseContext.getOpParseCtx().get(scanOperator);
       RowResolver rr = new RowResolver();
+      parseContext.getOpParseCtx().remove(scanOperator);
 
       try {
         StructObjectInspector rowObjectInspector = (StructObjectInspector) ts.tableHandle.getDeserializer().getObjectInspector();
@@ -1224,6 +1247,8 @@ public class RewriteGBUsingIndex implements Transform {
       }
       //Set row resolver for new table
       operatorContext.setRowResolver(rr);
+      parseContext.getOpParseCtx().put(scanOperator, operatorContext);
+
       return null;
     }
   }
@@ -1509,8 +1534,8 @@ public class RewriteGBUsingIndex implements Transform {
          * parseContext.setTopOps(subqTopMap) sets the topOps map to contain the sub-query topOps map
          * parseContext.setTopToTable(newTopToTable) sets the original topToTable to contain sub-query top TableScanOperator
          */
-        HashMap<TableScanOperator, Table> newTopToTable = (HashMap<TableScanOperator, Table>) parseContext.getTopToTable().clone();
-        newTopToTable.remove(origOp);
+        //HashMap<TableScanOperator, Table> newTopToTable = (HashMap<TableScanOperator, Table>) parseContext.getTopToTable().clone();
+        //newTopToTable.remove(origOp);
 
         HashMap<String, Operator<? extends Serializable>> subqTopMap = subqueryPctx.getTopOps();
         Iterator<String> subqTabItr = subqTopMap.keySet().iterator();
@@ -1518,8 +1543,9 @@ public class RewriteGBUsingIndex implements Transform {
         Operator<? extends Serializable> subqOp = subqTopMap.get(subqTab);
 
         Table tbl = subqueryPctx.getTopToTable().get(subqOp);
-        newTopToTable.put((TableScanOperator) subqOp, tbl);
-        parseContext.setTopToTable(newTopToTable);
+        //newTopToTable.put((TableScanOperator) subqOp, tbl);
+        parseContext.getTopToTable().clear();
+        parseContext.getTopToTable().put((TableScanOperator) subqOp, tbl);
         parseContext.setTopOps(subqTopMap);
         parseContext.setOpParseCtx(subqOpOldOpc);
 
