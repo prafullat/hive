@@ -106,6 +106,9 @@ public class HiveConf extends Configuration {
     // run in local mode only if number of tasks (for map and reduce each) is
     // less than this
     LOCALMODEMAXTASKS("hive.exec.mode.local.auto.tasks.max", 4),
+    // if true, DROP TABLE/VIEW does not fail if table/view doesn't exist and IF EXISTS is
+    // not specified
+    DROPIGNORESNONEXISTENT("hive.exec.drop.ignorenonexistent", true),
 
     // hadoop stuff
     HADOOPBIN("hadoop.bin.path", System.getenv("HADOOP_HOME") + "/bin/hadoop"),
@@ -160,6 +163,8 @@ public class HiveConf extends Configuration {
 
     // CLI
     CLIIGNOREERRORS("hive.cli.errors.ignore", false),
+
+    HIVE_METASTORE_FS_HANDLER_CLS("hive.metastore.fs.handler.class", "org.apache.hadoop.hive.metastore.HiveMetaStoreFsImpl"),
 
     // Things we log in the jobconf
 
@@ -255,7 +260,7 @@ public class HiveConf extends Configuration {
     HIVECONVERTJOIN("hive.auto.convert.join", false),
     HIVESKEWJOINKEY("hive.skewjoin.key", 1000000),
     HIVESKEWJOINMAPJOINNUMMAPTASK("hive.skewjoin.mapjoin.map.tasks", 10000),
-    HIVESKEWJOINMAPJOINMINSPLIT("hive.skewjoin.mapjoin.min.split", 33554432), //32M
+    HIVESKEWJOINMAPJOINMINSPLIT("hive.skewjoin.mapjoin.min.split", 33554432L), //32M
     MAPREDMINSPLITSIZE("mapred.min.split.size", 1),
     HIVEMERGEMAPONLY("hive.mergejob.maponly", true),
 
