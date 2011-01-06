@@ -44,9 +44,11 @@ public class QBParseInfo {
   private final HashMap<String, ASTNode> aliasToSrc;
   private final HashMap<String, ASTNode> nameToDest;
   private final HashMap<String, TableSample> nameToSample;
+  private final Map<ASTNode, String> exprToColumnAlias;
   private final Map<String, ASTNode> destToSelExpr;
   private final HashMap<String, ASTNode> destToWhereExpr;
   private final HashMap<String, ASTNode> destToGroupby;
+  private final Map<String, ASTNode> destToHaving;
 
   private boolean isAnalyzeCommand; // used for the analyze command (statistics)
   private boolean isInsertToTable;  // used for insert overwrite command (statistics)
@@ -98,9 +100,11 @@ public class QBParseInfo {
     aliasToSrc = new HashMap<String, ASTNode>();
     nameToDest = new HashMap<String, ASTNode>();
     nameToSample = new HashMap<String, TableSample>();
+    exprToColumnAlias = new HashMap<ASTNode, String>();
     destToSelExpr = new LinkedHashMap<String, ASTNode>();
     destToWhereExpr = new HashMap<String, ASTNode>();
     destToGroupby = new HashMap<String, ASTNode>();
+    destToHaving = new HashMap<String, ASTNode>();
     destToClusterby = new HashMap<String, ASTNode>();
     destToDistributeby = new HashMap<String, ASTNode>();
     destToSortby = new HashMap<String, ASTNode>();
@@ -127,6 +131,15 @@ public class QBParseInfo {
     destToAggregationExprs.put(clause, aggregationTrees);
   }
 
+  public void addAggregationExprsForClause(String clause,
+      LinkedHashMap<String, ASTNode> aggregationTrees) {
+    if (destToAggregationExprs.containsKey(clause)) {
+      destToAggregationExprs.get(clause).putAll(aggregationTrees);
+    } else {
+      destToAggregationExprs.put(clause, aggregationTrees);
+    }
+  }
+
   public HashMap<String, ASTNode> getAggregationExprsForClause(String clause) {
     return destToAggregationExprs.get(clause);
   }
@@ -145,6 +158,10 @@ public class QBParseInfo {
 
   public void setWhrExprForClause(String clause, ASTNode ast) {
     destToWhereExpr.put(clause, ast);
+  }
+
+  public void setHavingExprForClause(String clause, ASTNode ast) {
+    destToHaving.put(clause, ast);
   }
 
   public void setGroupByExprForClause(String clause, ASTNode ast) {
@@ -245,6 +262,14 @@ public class QBParseInfo {
     return destToGroupby;
   }
 
+  public ASTNode getHavingForClause(String clause) {
+    return destToHaving.get(clause);
+  }
+
+  public Map<String, ASTNode> getDestToHaving() {
+    return destToHaving;
+  }
+
   public ASTNode getSelForClause(String clause) {
     return destToSelExpr.get(clause);
   }
@@ -328,6 +353,22 @@ public class QBParseInfo {
 
   public void setTabSample(String alias, TableSample tableSample) {
     nameToSample.put(alias.toLowerCase(), tableSample);
+  }
+
+  public String getExprToColumnAlias(ASTNode expr) {
+    return exprToColumnAlias.get(expr);
+  }
+
+  public Map<ASTNode, String> getAllExprToColumnAlias() {
+    return exprToColumnAlias;
+  }
+
+  public boolean hasExprToColumnAlias(ASTNode expr) {
+    return exprToColumnAlias.containsKey(expr);
+  }
+
+  public void setExprToColumnAlias(ASTNode expr, String alias) {
+    exprToColumnAlias.put(expr,  alias);
   }
 
   public void setDestLimit(String dest, Integer limit) {
@@ -435,8 +476,7 @@ public class QBParseInfo {
   }
 
   public void addLateralViewForAlias(String alias, ASTNode lateralView) {
-    String lowerAlias = alias.toLowerCase();
-    ArrayList<ASTNode> lateralViews = aliasToLateralViews.get(lowerAlias);
+    ArrayList<ASTNode> lateralViews = aliasToLateralViews.get(alias);
     if (lateralViews == null) {
       lateralViews = new ArrayList<ASTNode>();
       aliasToLateralViews.put(alias, lateralViews);
