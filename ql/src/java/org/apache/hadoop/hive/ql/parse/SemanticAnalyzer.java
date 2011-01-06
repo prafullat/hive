@@ -341,6 +341,17 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     return aggregationTrees;
   }
 
+  private void doPhase1GetColumnAliasesFromSelect(
+      ASTNode selectExpr, QBParseInfo qbp) {
+    for (int i = 0; i < selectExpr.getChildCount(); ++i) {
+      ASTNode selExpr = (ASTNode) selectExpr.getChild(i);
+      if ((selExpr.getToken().getType() == HiveParser.TOK_SELEXPR) && (selExpr.getChildCount() == 2)) {
+        String columnAlias = unescapeIdentifier(selExpr.getChild(1).getText());
+        qbp.setExprToColumnAlias((ASTNode) selExpr.getChild(0), columnAlias);
+      }
+    }
+  }
+
   /**
    * DFS-scan the expressionTree to find all aggregation subtrees and put them
    * in aggregations.
@@ -578,6 +589,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       throw new SemanticException(ErrorMsg.LATERAL_VIEW_INVALID_CHILD
           .getMsg(lateralView));
     }
+    alias = alias.toLowerCase();
     qb.getParseInfo().addLateralViewForAlias(alias, lateralView);
     qb.addAlias(alias);
     return alias;
@@ -627,6 +639,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         }
 
         LinkedHashMap<String, ASTNode> aggregations = doPhase1GetAggregationsFromSelect(ast);
+        doPhase1GetColumnAliasesFromSelect(ast, qbp);
         qbp.setAggregationExprsForClause(ctx_1.dest, aggregations);
         qbp.setDistinctFuncExprsForClause(ctx_1.dest,
             doPhase1GetDistinctFuncExprs(aggregations));
@@ -724,6 +737,11 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         }
         qbp.setGroupByExprForClause(ctx_1.dest, ast);
         skipRecursion = true;
+        break;
+
+      case HiveParser.TOK_HAVING:
+        qbp.setHavingExprForClause(ctx_1.dest, ast);
+        qbp.addAggregationExprsForClause(ctx_1.dest, doPhase1GetAggregationsFromSelect(ast));
         break;
 
       case HiveParser.TOK_LIMIT:
@@ -1305,6 +1323,29 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     opParseCtx.put(op, ctx);
     op.augmentPlan();
     return op;
+  }
+
+  @SuppressWarnings("nls")
+  private Operator genHavingPlan(String dest, QB qb, Operator input)
+      throws SemanticException {
+
+    ASTNode havingExpr = qb.getParseInfo().getHavingForClause(dest);
+
+    OpParseContext inputCtx = opParseCtx.get(input);
+    RowResolver inputRR = inputCtx.getRowResolver();
+    Map<ASTNode, String> exprToColumnAlias = qb.getParseInfo().getAllExprToColumnAlias();
+    for (ASTNode astNode : exprToColumnAlias.keySet()) {
+      if (inputRR.getExpression(astNode) != null) {
+        inputRR.put("", exprToColumnAlias.get(astNode), inputRR.getExpression(astNode));
+      }
+    }
+    ASTNode condn = (ASTNode) havingExpr.getChild(0);
+
+    Operator output = putOpInsertMap(OperatorFactory.getAndMakeChild(
+        new FilterDesc(genExprNodeDesc(condn, inputRR), false), new RowSchema(
+        inputRR.getColumnInfos()), input), inputRR);
+
+    return output;
   }
 
   @SuppressWarnings("nls")
@@ -2041,6 +2082,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
             && (out_rwsch.get(null, colAlias) != null)) {
           throw new SemanticException(ErrorMsg.AMBIGUOUS_COLUMN.getMsg(colAlias));
         }
+
         out_rwsch.put(tabAlias, colAlias, new ColumnInfo(
             getColumnInternalName(pos), exp.getTypeInfo(), tabAlias, false));
 
@@ -5420,6 +5462,14 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
           } else {
             curr = genGroupByPlan1MR(dest, qb, curr);
           }
+        }
+
+        // Insert HAVING plan here
+        if (qbp.getHavingForClause(dest) != null) {
+          if (getGroupByForClause(qbp, dest).size() == 0) {
+            throw new SemanticException("HAVING specified without GROUP BY");
+          }
+          curr = genHavingPlan(dest, qb, curr);
         }
 
         curr = genSelectPlan(dest, qb, curr);

@@ -57,6 +57,7 @@ TOK_SERDEPROPS;
 TOK_EXPLIST;
 TOK_ALIASLIST;
 TOK_GROUPBY;
+TOK_HAVING;
 TOK_ORDERBY;
 TOK_CLUSTERBY;
 TOK_DISTRIBUTEBY;
@@ -194,6 +195,7 @@ TOK_INDEXCOMMENT;
 TOK_DESCDATABASE;
 TOK_DATABASEPROPERTIES;
 TOK_DBPROPLIST;
+TOK_ALTERDATABASE_PROPERTIES;
 }
 
 
@@ -427,14 +429,14 @@ indexPropertiesList
 dropIndexStatement
 @init { msgs.push("drop index statement");}
 @after {msgs.pop();}
-    : KW_DROP KW_INDEX indexName=Identifier KW_ON tab=Identifier
-    ->^(TOK_DROPINDEX $indexName $tab)
+    : KW_DROP KW_INDEX ifExists? indexName=Identifier KW_ON tab=Identifier
+    ->^(TOK_DROPINDEX $indexName $tab ifExists?)
     ;
 
 dropTableStatement
 @init { msgs.push("drop statement"); }
 @after { msgs.pop(); }
-    : KW_DROP KW_TABLE Identifier  -> ^(TOK_DROPTABLE Identifier)
+    : KW_DROP KW_TABLE ifExists? Identifier -> ^(TOK_DROPTABLE Identifier ifExists?)
     ;
 
 alterStatement
@@ -447,6 +449,8 @@ alterStatement
             KW_VIEW! alterViewStatementSuffix
         |
             KW_INDEX! alterIndexStatementSuffix
+        |
+            KW_DATABASE! alterDatabaseStatementSuffix
         )
     ;
 
@@ -487,6 +491,19 @@ alterIndexStatementSuffix
       indexProperties
       ->^(TOK_ALTERINDEX_PROPERTIES $tableName $indexName indexProperties)
     )
+    ;
+
+alterDatabaseStatementSuffix
+@init { msgs.push("alter database statement"); }
+@after { msgs.pop(); }
+    : alterDatabaseSuffixProperties
+    ;
+    
+alterDatabaseSuffixProperties
+@init { msgs.push("alter database properties statement"); }
+@after { msgs.pop(); }
+    : name=Identifier KW_SET KW_DBPROPERTIES dbProperties
+    -> ^(TOK_ALTERDATABASE_PROPERTIES $name dbProperties)
     ;
 
 alterStatementSuffixRename
@@ -555,8 +572,8 @@ partitionLocation
 alterStatementSuffixDropPartitions
 @init { msgs.push("drop partition statement"); }
 @after { msgs.pop(); }
-    : Identifier KW_DROP partitionSpec (COMMA partitionSpec)*
-    -> ^(TOK_ALTERTABLE_DROPPARTS Identifier partitionSpec+)
+    : Identifier KW_DROP ifExists? partitionSpec (COMMA partitionSpec)*
+    -> ^(TOK_ALTERTABLE_DROPPARTS Identifier partitionSpec+ ifExists?)
     ;
 
 alterStatementSuffixProperties
@@ -738,8 +755,8 @@ createFunctionStatement
 dropFunctionStatement
 @init { msgs.push("drop temporary function statement"); }
 @after { msgs.pop(); }
-    : KW_DROP KW_TEMPORARY KW_FUNCTION Identifier
-    -> ^(TOK_DROPFUNCTION Identifier)
+    : KW_DROP KW_TEMPORARY KW_FUNCTION ifExists? Identifier
+    -> ^(TOK_DROPFUNCTION Identifier ifExists?)
     ;
 
 createViewStatement
@@ -763,8 +780,7 @@ createViewStatement
 dropViewStatement
 @init { msgs.push("drop view statement"); }
 @after { msgs.pop(); }
-    : KW_DROP KW_VIEW Identifier
-    -> ^(TOK_DROPVIEW Identifier)
+    : KW_DROP KW_VIEW ifExists? Identifier -> ^(TOK_DROPVIEW Identifier ifExists?)
     ;
 
 showStmtIdentifier
@@ -1087,12 +1103,13 @@ regular_body
    fromClause
    whereClause?
    groupByClause?
+   havingClause?
    orderByClause?
    clusterByClause?
    distributeByClause?
    sortByClause?
    limitClause? -> ^(TOK_QUERY fromClause ^(TOK_INSERT insertClause
-                     selectClause whereClause? groupByClause? orderByClause? clusterByClause?
+                     selectClause whereClause? groupByClause? havingClause? orderByClause? clusterByClause?
                      distributeByClause? sortByClause? limitClause?))
    |
    selectStatement
@@ -1104,12 +1121,13 @@ selectStatement
    fromClause
    whereClause?
    groupByClause?
+   havingClause?
    orderByClause?
    clusterByClause?
    distributeByClause?
    sortByClause?
    limitClause? -> ^(TOK_QUERY fromClause ^(TOK_INSERT ^(TOK_DESTINATION ^(TOK_DIR TOK_TMP_FILE))
-                     selectClause whereClause? groupByClause? orderByClause? clusterByClause?
+                     selectClause whereClause? groupByClause? havingClause? orderByClause? clusterByClause?
                      distributeByClause? sortByClause? limitClause?))
    ;
 
@@ -1120,23 +1138,25 @@ body
    selectClause
    whereClause?
    groupByClause?
+   havingClause?
    orderByClause?
    clusterByClause?
    distributeByClause?
    sortByClause?
    limitClause? -> ^(TOK_INSERT insertClause?
-                     selectClause whereClause? groupByClause? orderByClause? clusterByClause?
+                     selectClause whereClause? groupByClause? havingClause? orderByClause? clusterByClause?
                      distributeByClause? sortByClause? limitClause?)
    |
    selectClause
    whereClause?
    groupByClause?
+   havingClause?
    orderByClause?
    clusterByClause?
    distributeByClause?
    sortByClause?
    limitClause? -> ^(TOK_INSERT ^(TOK_DESTINATION ^(TOK_DIR TOK_TMP_FILE))
-                     selectClause whereClause? groupByClause? orderByClause? clusterByClause?
+                     selectClause whereClause? groupByClause? havingClause? orderByClause? clusterByClause?
                      distributeByClause? sortByClause? limitClause?)
    ;
 
@@ -1425,6 +1445,20 @@ groupByClause
 
 groupByExpression
 @init { msgs.push("group by expression"); }
+@after { msgs.pop(); }
+    :
+    expression
+    ;
+
+havingClause
+@init { msgs.push("having clause"); }
+@after { msgs.pop(); }
+    :
+    KW_HAVING havingCondition -> ^(TOK_HAVING havingCondition)
+    ;
+
+havingCondition
+@init { msgs.push("having condition"); }
 @after { msgs.pop(); }
     :
     expression
@@ -1782,6 +1816,7 @@ KW_DESC : 'DESC';
 KW_ORDER : 'ORDER';
 KW_BY : 'BY';
 KW_GROUP : 'GROUP';
+KW_HAVING : 'HAVING';
 KW_WHERE : 'WHERE';
 KW_FROM : 'FROM';
 KW_AS : 'AS';
