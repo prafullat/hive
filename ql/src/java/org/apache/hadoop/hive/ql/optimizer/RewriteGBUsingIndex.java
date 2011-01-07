@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -100,7 +101,6 @@ public class RewriteGBUsingIndex implements Transform {
 
   /***************************************Can Apply Optimization Flags***************************************/
   int NO_OF_SUBQUERIES = 0;
-  int NO_OF_TABLES = 0;
   boolean QUERY_HAS_JOIN = false;
   boolean TABLE_HAS_NO_INDEX = false;
   boolean QUERY_HAS_SORT_BY = false;
@@ -122,13 +122,14 @@ public class RewriteGBUsingIndex implements Transform {
   boolean SHOULD_APPEND_SUBQUERY = false;
   boolean REMOVE_GROUP_BY = false;
   boolean QUERY_HAS_KEY_MANIP_FUNC = false;
+  boolean QUERY_HAS_MULTIPLE_SUBQUERIES = false;
+  boolean QUERY_HAS_MULTIPLE_TABLES = false;
 
   /***************************************Index Validation Variables***************************************/
   private static final String SUPPORTED_INDEX_TYPE =
     "org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler";
   private static final String COMPACT_IDX_BUCKET_COL = "_bucketname";
   private static final String COMPACT_IDX_OFFSETS_ARRAY_COL = "_offsets";
-  private String topTable = null;
   private final List<String> selColRefNameList = new ArrayList<String>();
   private List<String> predColRefs = new ArrayList<String>();
   private final List<String> gbKeyNameList = new ArrayList<String>();
@@ -140,6 +141,7 @@ public class RewriteGBUsingIndex implements Transform {
   private String subqueryCommand = null;
   private final ArrayList<String> indexKeyNames = new ArrayList<String>();
   private final Map<String, String> aliasToInternal = new LinkedHashMap<String, String>();
+  private String currentTableName = null;
 
 
   /***************************************SubqueryAppend Variables***************************************/
@@ -194,27 +196,40 @@ public class RewriteGBUsingIndex implements Transform {
 
   private void reWriteOriginalQuery() throws SemanticException{
     //TO-DO
-
-    if(REMOVE_GROUP_BY){
-      removeGroupByOps();
-      selReplacementCommand = "select size(`_offsets`) from dummyTable";
-      replaceTSOp();
-      replaceSelOP();
+    HashMap<String, Operator<? extends Serializable>> topOpMap = parseContext.getTopOps();
+    Iterator<String> topOpItr = topOpMap.keySet().iterator();
+    ArrayList<String> tsOpToProcess = new ArrayList<String>();
+    while(topOpItr.hasNext()){
+      String topOpTableName = topOpItr.next();
+      tsOpToProcess.add(topOpTableName);
     }
 
-    if(SHOULD_APPEND_SUBQUERY){
-      subqueryCommand = "select l_shipdate, size(`_offsets`) as CNT from default__lineitem_lineitem_lshipdate_idx__";
-      generateSubquery();
-      processSubquery();
-      processOriginalDAG();
-      selReplacementCommand = "select sum(l_shipdate) as TOTAL from lineitem group by l_shipdate";
-      replaceSelOP();
+    for (String topOpTableName : tsOpToProcess) {
+      currentTableName = topOpTableName;
+      TableScanOperator topOp = (TableScanOperator) topOpMap.get(topOpTableName);
+      if(REMOVE_GROUP_BY){
+        removeGroupByOps(topOp);
+        selReplacementCommand = "select size(`_offsets`) from " + indexName;
+        replaceTSOp(topOp);
+        replaceSelOP(topOp);
+      }
+
+      if(SHOULD_APPEND_SUBQUERY){
+        subqueryCommand = "select l_shipdate, size(`_offsets`) as CNT from " + indexName;
+        processSubquery();
+        processOriginalDAG(topOp);
+        selReplacementCommand = "select sum(l_shipdate) as TOTAL from lineitem group by l_shipdate";
+        replaceSelOP(topOp);
+      }
     }
+
+
+
 
     toStringTree(parseContext);
   }
 
-  private void removeGroupByOps() throws SemanticException{
+  private void removeGroupByOps(Operator<? extends Serializable> topOp) throws SemanticException{
     Map<Rule, NodeProcessor> opRules = new LinkedHashMap<Rule, NodeProcessor>();
 
     toStringTree(parseContext);
@@ -229,13 +244,12 @@ public class RewriteGBUsingIndex implements Transform {
 
     // Create a list of topop nodes
     ArrayList<Node> topNodes = new ArrayList<Node>();
-    topNodes.addAll(parseContext.getTopOps().values());
+    topNodes.add(topOp);
     ogw.startWalking(topNodes, null);
 
-    toStringTree(parseContext);
   }
 
-  private void replaceTSOp(){
+  private void replaceTSOp(Operator<? extends Serializable> topOp) throws SemanticException{
     // create a walker which walks the tree in a DFS manner while maintaining
     // the operator stack. The dispatcher
     // generates the plan from the operator tree
@@ -248,18 +262,14 @@ public class RewriteGBUsingIndex implements Transform {
     GraphWalker ogw = new PreOrderWalker(disp);
 
     // Create a list of topop nodes
+    // Create a list of topop nodes
     ArrayList<Node> topNodes = new ArrayList<Node>();
-    topNodes.addAll(parseContext.getTopOps().values());
-    try {
-      ogw.startWalking(topNodes, null);
-    } catch (SemanticException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    }
+    topNodes.add(topOp);
+    ogw.startWalking(topNodes, null);
 
   }
 
-  private void replaceSelOP(){
+  private void replaceSelOP(Operator<? extends Serializable> topOp) throws SemanticException{
     Map<Rule, NodeProcessor> opRules = new LinkedHashMap<Rule, NodeProcessor>();
     opRules.put(new RuleRegExp("R1", "TS%"), new RewriteSelOpProc());
     // The dispatcher fires the processor corresponding to the closest matchingindex
@@ -268,16 +278,12 @@ public class RewriteGBUsingIndex implements Transform {
     GraphWalker ogw = new PreOrderWalker(disp);
 
     // Create a list of topop nodes
+    // Create a list of topop nodes
     ArrayList<Node> topNodes = new ArrayList<Node>();
-    topNodes.addAll(parseContext.getTopOps().values());
-    try {
-      ogw.startWalking(topNodes, null);
-    } catch (SemanticException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    }
-
+    topNodes.add(topOp);
+    ogw.startWalking(topNodes, null);
   }
+
   private boolean isQueryInValid(){
     QBParseInfo qbParseInfo =  parseContext.getQB().getParseInfo();
     return qbParseInfo.isInsertToTable();
@@ -326,48 +332,66 @@ public class RewriteGBUsingIndex implements Transform {
     return matchingIndexes;
   }
 
-
-  protected boolean shouldApplyOptimization(){
+/*  protected boolean shouldApplyOptimization()  {
+    QB inputQb = parseContext.getQB();
     boolean retValue = true;
-    HashMap<String, Operator<? extends Serializable>> topOpMap = parseContext.getTopOps();
-    Iterator<String> topOpItr = topOpMap.keySet().iterator();
+    for (String subqueryAlias : inputQb.getSubqAliases()) {
+      QB childSubQueryQb = inputQb.getSubqForAlias(subqueryAlias).getQB();
+      //retValue |= checkSingleDAG(childSubQueryQb) ;
+    }
+    //retValue |= checkSingleDAG(inputQb) ;
+    return retValue;
+  }
+*/
+  protected boolean shouldApplyOptimization(){
+    boolean canApply = true;
+    HashMap<TableScanOperator, Table> topToTable = parseContext.getTopToTable();
+    Iterator<Table> valuesItr = topToTable.values().iterator();
+    Set<String> tableNameSet = new HashSet<String>();
+
+    while(valuesItr.hasNext()){
+      Table table = valuesItr.next();
+      tableNameSet.add(table.getTableName());
+    }
+
+    if(tableNameSet.size() > 1){
+      QUERY_HAS_MULTIPLE_TABLES = true;
+      return false;
+    }
+
+    Iterator<TableScanOperator> topOpItr = topToTable.keySet().iterator();
     while(topOpItr.hasNext()){
-      NO_OF_SUBQUERIES = 0;
-      topTable = topOpItr.next();
-      Operator<? extends Serializable> topOp = topOpMap.get(topTable);
-      retValue = checkSingleDAG(topOp);
-      if(!retValue) {
+      AGG_FUNC_CNT = 0;
+      GBY_KEY_CNT = 0;
+      TableScanOperator topOp = topOpItr.next();
+      Table table = topToTable.get(topOp);
+      currentTableName = table.getTableName();
+      canApply =  checkSingleDAG(topOp);
+      if(!canApply) {
         break;
       }
     }
-    retValue = checkIfOptimizationCanApply();
-    return retValue;
+    canApply = checkIfOptimizationCanApply();
+    return canApply;
   }
 
 
-  private boolean checkSingleDAG(Operator<? extends Serializable> topOp) {
-    boolean result = true;
-      NO_OF_TABLES++;
-      if(topTable.contains(":")){
-        NO_OF_SUBQUERIES++;
+  private boolean checkSingleDAG(TableScanOperator topOp) {
+    boolean canApply = true;
+    TableScanOperator ts = (TableScanOperator) topOp;
+    Table tsTable = parseContext.getTopToTable().get(ts);
+    if (tsTable != null) {
+      List<String> idxType = new ArrayList<String>();
+      idxType.add(SUPPORTED_INDEX_TYPE);
+      List<Index> indexTables = getIndexes(tsTable, idxType);
+      if (indexTables.size() == 0) {
+        TABLE_HAS_NO_INDEX = true;
         return false;
+      }else{
+        canApply = DAGTraversal(topOp.getChildOperators(), indexTables);
       }
-      if(topOp instanceof TableScanOperator){
-        TableScanOperator ts = (TableScanOperator) topOp;
-        Table tsTable = parseContext.getTopToTable().get(ts);
-        if (tsTable != null) {
-          List<String> idxType = new ArrayList<String>();
-          idxType.add(SUPPORTED_INDEX_TYPE);
-          List<Index> indexTables = getIndexes(tsTable, idxType);
-          if (indexTables.size() == 0) {
-            TABLE_HAS_NO_INDEX = true;
-            return false;
-          }else{
-            result = DAGTraversal(topOp.getChildOperators(), indexTables);
-          }
-        }
-      }
-      return result;
+    }
+    return canApply;
   }
 
   private boolean DAGTraversal(List<Operator<? extends Serializable>> topOpChildrenList, List<Index> indexTables){
@@ -377,8 +401,8 @@ public class RewriteGBUsingIndex implements Transform {
       for (Operator<? extends Serializable> operator : childrenList) {
         if(null != operator){
           if(operator instanceof JoinOperator){
-            QUERY_HAS_JOIN = true;
-            return false;
+            //QUERY_HAS_JOIN = true;
+            //return false;
           }else if(operator instanceof ExtractOperator){
             result = processExtractOperator(operator);
           }else if(operator instanceof GroupByOperator){
@@ -713,7 +737,7 @@ public class RewriteGBUsingIndex implements Transform {
       //sub-query is needed only in case of optimizecount and complex gb keys?
       if(QUERY_HAS_KEY_MANIP_FUNC == false && !(optimizeCount == true && removeGroupBy == false) ) {
         REMOVE_GROUP_BY = removeGroupBy;
-        rewriteContext.addTable(topTable, index.getIndexTableName());
+        rewriteContext.addTable(currentTableName, index.getIndexTableName());
       }else{
         SHOULD_APPEND_SUBQUERY = true;
       }
@@ -729,7 +753,7 @@ public class RewriteGBUsingIndex implements Transform {
 
   private boolean checkIfOptimizationCanApply(){
     boolean canApply = false;
-    if (NO_OF_TABLES != 1) {
+    if (QUERY_HAS_MULTIPLE_TABLES) {
       LOG.info("Query has more than one table " +
           "that is not supported with " + getName() + " optimization" );
       return canApply;
@@ -746,7 +770,7 @@ public class RewriteGBUsingIndex implements Transform {
 
     }//3
     if (TABLE_HAS_NO_INDEX) {
-      LOG.info("Table " + topTable + " does not have compact index. " +
+      LOG.info("Table " + currentTableName + " does not have compact index. " +
           "Cannot apply " + getName() + " optimization" );
       return canApply;
     }//4
@@ -765,7 +789,7 @@ public class RewriteGBUsingIndex implements Transform {
           "that is not supported with " + getName() + " optimization" );
       return canApply;
     }//7
-    if(AGG_FUNC_CNT > 1){
+    if(AGG_FUNC_CNT > 1 ){
       LOG.info("More than 1 agg funcs: " +
       		"Not supported by " + getName() + " optimization" );
       return canApply;
@@ -872,10 +896,6 @@ public class RewriteGBUsingIndex implements Transform {
       public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx procCtx,
           Object... nodeOutputs) throws SemanticException {
 
-        if(SHOULD_APPEND_SUBQUERY){
-          processGenericUDAF();
-        }
-
         Operator<? extends Serializable> tsOp = (TableScanOperator)nd;
         Operator<? extends Serializable> selOp = null;
         List<Operator<? extends Serializable>> childOps = tsOp.getChildOperators();
@@ -887,29 +907,58 @@ public class RewriteGBUsingIndex implements Transform {
                 selOp = operator;
                 if(SHOULD_APPEND_SUBQUERY){
                   processSelOp(selOp);
-                  childOps = operator.getChildOperators();;
-                  continue;
                 }else{
                   processGenericUDF(selOp);
                   childOps = null;
                   break;
                 }
-              }else if(operator instanceof ReduceSinkOperator){
-                childOps = operator.getChildOperators();
-                continue;
+              }else if(operator instanceof GroupByOperator && (parseContext.getGroupOpToInputTables().containsKey(operator))){
+                if(SHOULD_APPEND_SUBQUERY){
+                  processGenericUDAF((GroupByOperator) operator);
+                }
+              }else if(operator instanceof FilterOperator) {
+                if(SHOULD_APPEND_SUBQUERY){
+                  processFilOp(operator);
+                }
               }else if(operator instanceof FileSinkOperator){
                 childOps = null;
                 break;
-              }else{
-                childOps = operator.getChildOperators();
-                continue;
               }
+              childOps = operator.getChildOperators();
+              continue;
             }
           }
         }
 
 
         return null;
+      }
+
+      private void processFilOp(Operator<? extends Serializable> op){
+        FilterOperator filOp = (FilterOperator)op;
+        FilterDesc conf = filOp.getConf();
+        ExprNodeDesc exprNodeDesc = conf.getPredicate();
+        setFilterPredicateCol(exprNodeDesc);
+        conf.setPredicate(exprNodeDesc);
+        op = filOp;
+      }
+
+      private void setFilterPredicateCol(ExprNodeDesc exprNodeDesc){
+        if(exprNodeDesc instanceof ExprNodeColumnDesc){
+          ExprNodeColumnDesc encd = (ExprNodeColumnDesc)exprNodeDesc;
+          String col = encd.getColumn();
+          if(indexKeyNames.contains(col)){
+            encd.setColumn(aliasToInternal.get(col));
+          }
+          exprNodeDesc = encd;
+        }else if(exprNodeDesc instanceof ExprNodeGenericFuncDesc){
+          ExprNodeGenericFuncDesc engfd = (ExprNodeGenericFuncDesc)exprNodeDesc;
+          List<ExprNodeDesc> colExprs = engfd.getChildExprs();
+          for (ExprNodeDesc colExpr : colExprs) {
+            setFilterPredicateCol(colExpr);
+          }
+        }
+
       }
 
        private void processSelOp(Operator<? extends Serializable> selOperator){
@@ -954,14 +1003,12 @@ public class RewriteGBUsingIndex implements Transform {
 
       }
 
-      private void processGenericUDAF() throws SemanticException{
+      private void processGenericUDAF(GroupByOperator oldGbyOperator) throws SemanticException{
         SubqueryParseContextGenerator newDAGCreator = new SubqueryParseContextGenerator();
         newDAGCtx = newDAGCreator.generateDAGForSubquery(selReplacementCommand);
         Map<GroupByOperator, Set<String>> newGbyOpMap = newDAGCtx.getGroupOpToInputTables();
         GroupByOperator newGbyOperator = newGbyOpMap.keySet().iterator().next();
 
-        Map<GroupByOperator, Set<String>> oldGbyOpMap = parseContext.getGroupOpToInputTables();
-        GroupByOperator oldGbyOperator = oldGbyOpMap.keySet().iterator().next();
         GroupByDesc oldConf = oldGbyOperator.getConf();
         ArrayList<AggregationDesc> oldAggrList = oldConf.getAggregators();
         if(oldAggrList != null && oldAggrList.size() > 0){
@@ -1111,9 +1158,6 @@ public class RewriteGBUsingIndex implements Transform {
         oldConf.setAggregators(oldAggrList);
         oldGbyOperator.setColumnExprMap(newGbyColExprMap);
         oldGbyOperator.setConf(oldConf);
-        parseContext.setGroupOpToInputTables(oldGbyOpMap);
-
-
 
       }
 
@@ -1304,8 +1348,8 @@ public class RewriteGBUsingIndex implements Transform {
       indexTableScanDesc.setStatsAggPrefix(k);
       scanOperator.setConf(indexTableScanDesc);
 
-      topToTable.remove(scanOperator);
-      parseContext.getTopOps().remove(baseTableName);
+      topToTable.clear();
+      parseContext.getTopOps().clear();
 
       //Scan operator now points to other table
       scanOperator.setAlias(tableName);
@@ -1381,21 +1425,10 @@ public class RewriteGBUsingIndex implements Transform {
     };
   }
 
-  private void generateSubquery() throws SemanticException{
-    origOpOldOpc = parseContext.getOpParseCtx();
-    subqueryPctx = (new SubqueryParseContextGenerator()).generateDAGForSubquery(subqueryCommand);
-
-/*    //Creates the operator DAG for subquery
-    Dispatcher disp = new DefaultRuleDispatcher(new SubqueryParseContextGenerator(), new LinkedHashMap<Rule, NodeProcessor>(),
-        new SubqueryOptProcCtx());
-    DefaultGraphWalker ogw = new DefaultGraphWalker(disp);
-    ArrayList<Node> topNodes = new ArrayList<Node>();
-    topNodes.addAll(parseContext.getTopOps().values());
-    ogw.startWalking(topNodes, null);
-*/    subqOpOldOpc = subqueryPctx.getOpParseCtx();
-  }
-
   private void processSubquery() throws SemanticException{
+    subqueryPctx = (new SubqueryParseContextGenerator()).generateDAGForSubquery(subqueryCommand);
+    subqOpOldOpc = subqueryPctx.getOpParseCtx();
+
     Map<Rule, NodeProcessor> opRules = new LinkedHashMap<Rule, NodeProcessor>();
     //appends subquery DAG to original DAG
     opRules.put(new RuleRegExp("R1", "FS%"), new SubqueryDAGProc());
@@ -1413,7 +1446,7 @@ public class RewriteGBUsingIndex implements Transform {
 
   }
 
-  private void processOriginalDAG() throws SemanticException{
+  private void processOriginalDAG(Operator<? extends Serializable> topOp) throws SemanticException{
     Map<Rule, NodeProcessor> opRules = new LinkedHashMap<Rule, NodeProcessor>();
 
     //appends subquery DAG to original DAG
@@ -1427,7 +1460,8 @@ public class RewriteGBUsingIndex implements Transform {
 
     // Create a list of topop nodes
     ArrayList<Node> topNodes = new ArrayList<Node>();
-    topNodes.addAll(parseContext.getTopOps().values());
+    topNodes.add(topOp);
+
     ogw.startWalking(topNodes, null);
 
   }
@@ -1516,24 +1550,32 @@ public class RewriteGBUsingIndex implements Transform {
 
 
   public class OriginalDAGProc implements NodeProcessor {
+    OriginalDAGProc(){
+      origOpOldOpc = parseContext.getOpParseCtx();
+    }
+
 
     @Override
     public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx procCtx,
         Object... nodeOutputs) throws SemanticException {
       LOG.info("Processing node - " + nd.getName());
-      appendSubquery();
+      TableScanOperator tsOp = (TableScanOperator)nd;
+      appendSubquery(tsOp);
       return null;
     }
 
     @SuppressWarnings("unchecked")
-    private void appendSubquery(){
+    private void appendSubquery(TableScanOperator origOp){
 
-      //origOp is the TableScanOperator for the original DAG
+/*      //origOp is the TableScanOperator for the original DAG
       HashMap<String, Operator<? extends Serializable>> origTopMap = parseContext.getTopOps();
       Iterator<String> origTabItr = origTopMap.keySet().iterator();
+      while(origTabItr.hasNext()){
+
+      }
       String origTab = origTabItr.next();
       Operator<? extends Serializable> origOp = origTopMap.get(origTab);
-      List<Operator<? extends Serializable>> origChildrenList = origOp.getChildOperators();
+*/      List<Operator<? extends Serializable>> origChildrenList = origOp.getChildOperators();
 
       /*
        * origChildrenList has the child operators for the TableScanOperator of the original DAG
@@ -1560,7 +1602,8 @@ public class RewriteGBUsingIndex implements Transform {
               //Copy colList and outputColumns for SelectOperator from sub-query DAG SelectOperator
               if(operator instanceof SelectOperator) {
                 //Set columnExprMap + RowSchema + RowResolver - required by all operators
-                if(!(operator.getChildOperators().iterator().next() instanceof FileSinkOperator)){
+                Operator<? extends Serializable> selChild = operator.getChildOperators().iterator().next();
+                if( (!(selChild instanceof FileSinkOperator)) && (!(selChild instanceof ReduceSinkOperator))){
                   operator.setColumnExprMap(newColExprMap);
                   origOpOldOpc.get(operator).setRowResolver(newRR);
                   operator.getSchema().setSignature(newRS);
@@ -1580,9 +1623,11 @@ public class RewriteGBUsingIndex implements Transform {
 
               //Copy output columns of SelectOperator from sub-query DAG to predicates of FilterOperator
               }else if(operator instanceof FilterOperator) {
-                //Set columnExprMap + RowSchema + RowResolver - required by all operators
-                operator.setColumnExprMap(newColExprMap);
+                operator.getSchema().setSignature(newRS);
                 origOpOldOpc.get(operator).setRowResolver(newRR);
+                //Set columnExprMap + RowSchema + RowResolver - required by all operators
+ /*               operator.setColumnExprMap(newColExprMap);
+
 
                 FilterDesc conf = (FilterDesc)operator.getConf();
                 ExprNodeGenericFuncDesc oldengfd = (ExprNodeGenericFuncDesc) conf.getPredicate().clone();
@@ -1601,7 +1646,7 @@ public class RewriteGBUsingIndex implements Transform {
                 oldengfd.setChildExprs(newChildren);
                 conf.setPredicate(oldengfd);
               //Break loop if FileSinkOperator is visited in the original DAG
-              }else if(operator instanceof FileSinkOperator) {
+*/              }else if(operator instanceof FileSinkOperator) {
                 origList = null;
                 break;
               }
@@ -1640,10 +1685,23 @@ public class RewriteGBUsingIndex implements Transform {
 
         Table tbl = subqueryPctx.getTopToTable().get(subqOp);
         //newTopToTable.put((TableScanOperator) subqOp, tbl);
-        parseContext.getTopToTable().clear();
+        parseContext.getTopToTable().remove(origOp);
         parseContext.getTopToTable().put((TableScanOperator) subqOp, tbl);
-        parseContext.setTopOps(subqTopMap);
-        parseContext.setOpParseCtx(subqOpOldOpc);
+
+        String tabAlias = "";
+        if(currentTableName.contains(":")){
+          String[] tabToAlias = currentTableName.split(":");
+          if(tabToAlias.length > 1){
+            tabAlias = tabToAlias[0] + ":";
+          }
+        }
+
+        parseContext.getTopOps().remove(currentTableName);
+        parseContext.getTopOps().put(tabAlias + subqTab, subqOp);
+        //parseContext.setTopOps(subqTopMap);
+        parseContext.getOpParseCtx().remove(origOp);
+        parseContext.getOpParseCtx().putAll(subqOpOldOpc);
+        //parseContext.setOpParseCtx(subqOpOldOpc);
 
     }
 
@@ -1658,6 +1716,11 @@ public class RewriteGBUsingIndex implements Transform {
 
 
     public SubqueryDAGProc() {
+      newOutputCols.clear();
+      newColExprMap.clear();
+      newColList.clear();
+      newRS.clear();
+      newRR = new RowResolver();
     }
 
     @Override
