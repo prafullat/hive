@@ -21,15 +21,6 @@ FIELDS TERMINATED BY '|';
 CREATE INDEX lineitem_lshipdate_idx ON TABLE lineitem(l_shipdate) AS 'org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler' WITH DEFERRED REBUILD;
 ALTER INDEX lineitem_lshipdate_idx ON lineitem REBUILD;
 
-
-explain select l_shipdate, count(1)
-from lineitem
-group by l_shipdate;
-
-select l_shipdate, count(1)
-from lineitem
-group by l_shipdate;
-
 explain select l_shipdate, count(1)
 from lineitem
 group by l_shipdate;
@@ -118,4 +109,3 @@ lastyear.monthly_shipments as monthly_shipments_delta
           group by year(l_shipdate), month(l_shipdate)
         )  thisyear
   on lastyear.month = thisyear.month;
-
