@@ -21,6 +21,13 @@ FIELDS TERMINATED BY '|';
 CREATE INDEX lineitem_lshipdate_idx ON TABLE lineitem(l_shipdate) AS 'org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler' WITH DEFERRED REBUILD;
 ALTER INDEX lineitem_lshipdate_idx ON lineitem REBUILD;
 
+explain select DISTINCT l_shipdate
+from lineitem;
+
+select DISTINCT l_shipdate
+from lineitem;
+
+
 explain select l_shipdate, count(1)
 from lineitem
 group by l_shipdate;

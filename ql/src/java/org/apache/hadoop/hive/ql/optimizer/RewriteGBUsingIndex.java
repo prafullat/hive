@@ -44,7 +44,6 @@ import org.apache.hadoop.hive.ql.exec.ExtractOperator;
 import org.apache.hadoop.hive.ql.exec.FileSinkOperator;
 import org.apache.hadoop.hive.ql.exec.FilterOperator;
 import org.apache.hadoop.hive.ql.exec.GroupByOperator;
-import org.apache.hadoop.hive.ql.exec.JoinOperator;
 import org.apache.hadoop.hive.ql.exec.Operator;
 import org.apache.hadoop.hive.ql.exec.ReduceSinkOperator;
 import org.apache.hadoop.hive.ql.exec.RowSchema;
@@ -119,7 +118,6 @@ public class RewriteGBUsingIndex implements Transform {
     }
 
     rewriteContext = new RewriteGBUsingIndexProcCtx();
-    rewriteContext.hiveDb = hiveDb;
 
     CanApplyOptimization canApply = new CanApplyOptimization();
 
@@ -131,13 +129,12 @@ public class RewriteGBUsingIndex implements Transform {
         rewriteOriginalQuery();
         return parseContext;
       }else{
+        canApply.checkIfOptimizationCanApply();
         return null;
       }
     }
 
   }
-
-
 
 
 
@@ -162,7 +159,6 @@ public class RewriteGBUsingIndex implements Transform {
       }
     }
 
-    toStringTree(parseContext);
   }
 
   private void invokeRemoveGbyProc(Operator<? extends Serializable> topOp) throws SemanticException{
@@ -213,35 +209,7 @@ public class RewriteGBUsingIndex implements Transform {
 
 
   /***********************************************************************************************/
-  /* Method to print the operators in the DAG and their child operators */
-  private void toStringTree(ParseContext pCtx){
-    HashMap<String, Operator<? extends Serializable>> top = pCtx.getTopOps();
-    Iterator<String> tabItr = top.keySet().iterator();
-    while(tabItr.hasNext()){
-      String tab = tabItr.next();
-      LOG.info("Printing DAG for table:" + tab );
-      Operator<? extends Serializable> pList = top.get(tab);
-        while(pList != null){
-          LOG.info("Operator = " + pList.getName() + "("
-              + ((Operator<? extends Serializable>) pList).getIdentifier() + ")" );
-          if(pList.getChildOperators() == null || pList.getChildOperators().size() == 0){
-            pList = null;
-            break;
-          }else{
-            List<Operator<? extends Serializable>> cList = pList.getChildOperators();
-            for (Operator<? extends Serializable> operator : cList) {
-              if(null != operator){
-                pList = operator;
-                continue;
-              }
-            }
-          }
-        }
-    }
-  }
-
-
-  private SelectOperator getFirstSelectOperator(TableScanOperator tsOp){
+  private SelectOperator getSelectOperator(TableScanOperator tsOp){
     SelectOperator selOp = null;
     List<Operator<? extends Serializable>> childOps = tsOp.getChildOperators();
 
@@ -269,7 +237,6 @@ public class RewriteGBUsingIndex implements Transform {
   private class CanApplyOptimization {
 
     int NO_OF_SUBQUERIES = 0;
-    boolean QUERY_HAS_JOIN = false;
     boolean TABLE_HAS_NO_INDEX = false;
     boolean QUERY_HAS_SORT_BY = false;
     boolean QUERY_HAS_ORDER_BY = false;
@@ -288,7 +255,6 @@ public class RewriteGBUsingIndex implements Transform {
     boolean GBY_NOT_ON_COUNT_KEYS = false;
     boolean IDX_TBL_SEARCH_EXCEPTION = false;
     boolean QUERY_HAS_KEY_MANIP_FUNC = false;
-    boolean QUERY_HAS_MULTIPLE_SUBQUERIES = false;
     boolean QUERY_HAS_MULTIPLE_TABLES = false;
 
     /***************************************Index Validation Variables***************************************/
@@ -297,22 +263,10 @@ public class RewriteGBUsingIndex implements Transform {
     private static final String COMPACT_IDX_BUCKET_COL = "_bucketname";
     private static final String COMPACT_IDX_OFFSETS_ARRAY_COL = "_offsets";
     private final List<String> selColRefNameList = new ArrayList<String>();
-    private List<String> predColRefs = new ArrayList<String>();
+    private final List<String> predColRefs = new ArrayList<String>();
     private final List<String> gbKeyNameList = new ArrayList<String>();
     private final List<List<String>> colRefAggFuncInputList = new ArrayList<List<String>>();
 
-
-    /*  protected boolean shouldApplyOptimization()  {
-        QB inputQb = parseContext.getQB();
-        boolean retValue = true;
-        for (String subqueryAlias : inputQb.getSubqAliases()) {
-          QB childSubQueryQb = inputQb.getSubqForAlias(subqueryAlias).getQB();
-          //retValue |= checkSingleDAG(childSubQueryQb) ;
-        }
-        //retValue |= checkSingleDAG(inputQb) ;
-        return retValue;
-      }
-    */
 
       private boolean isQueryInsertToTable(){
         QBParseInfo qbParseInfo =  parseContext.getQB().getParseInfo();
@@ -351,7 +305,6 @@ public class RewriteGBUsingIndex implements Transform {
             break;
           }
         }
-        canApply = checkIfOptimizationCanApply();
         return canApply;
       }
 
@@ -381,10 +334,7 @@ public class RewriteGBUsingIndex implements Transform {
       while(childrenList != null && childrenList.size() > 0){
         for (Operator<? extends Serializable> operator : childrenList) {
           if(null != operator){
-            if(operator instanceof JoinOperator){
-              //QUERY_HAS_JOIN = true;
-              //return false;
-            }else if(operator instanceof ExtractOperator){
+            if(operator instanceof ExtractOperator){
               result = canApplyOnExtractOperator(operator);
             }else if(operator instanceof GroupByOperator){
               result = canApplyOnGroupByOperator(operator);
@@ -528,7 +478,10 @@ public class RewriteGBUsingIndex implements Transform {
         WHR_CLAUSE_COLS_FETCH_EXCEPTION = true;
         return false;
       }
-      predColRefs = colList;
+      for (String col : colList) {
+          predColRefs.add(col);
+      }
+
       return true;
     }
 
@@ -537,6 +490,20 @@ public class RewriteGBUsingIndex implements Transform {
       Operator<? extends Serializable> child = childrenList.get(0);
       if(child instanceof GroupByOperator){
         return true;
+      }else if(child instanceof FileSinkOperator){
+        Map<String, String> internalToAlias = new LinkedHashMap<String, String>();
+        RowSchema rs = operator.getSchema();
+        ArrayList<ColumnInfo> sign = rs.getSignature();
+        for (ColumnInfo columnInfo : sign) {
+          internalToAlias.put(columnInfo.getInternalName(), columnInfo.getAlias());
+        }
+        for (int i=0 ; i<predColRefs.size(); i++) {
+          String predCol = predColRefs.get(i);
+          if(predCol.contains("_c") && internalToAlias.get(predCol) != null){
+            predColRefs.set(i, internalToAlias.get(predCol));
+          }
+        }
+
       }else{
         SelectDesc conf = (SelectDesc)operator.getConf();
         ArrayList<ExprNodeDesc> selColList = conf.getColList();
@@ -613,6 +580,7 @@ public class RewriteGBUsingIndex implements Transform {
 
       // This code block iterates over indexes on the table and picks up the
       // first index that satisfies the rewrite criteria.
+      ArrayList<String> unusableIndexNames = new ArrayList<String>();
       for (int idxCtr = 0; idxCtr < indexTables.size(); idxCtr++)  {
         boolean removeGroupBy = true;
         boolean optimizeCount = false;
@@ -627,8 +595,6 @@ public class RewriteGBUsingIndex implements Transform {
           idxKeyColsNames.add(fieldSchema.getName());
           indexKeyNames.add(fieldSchema.getName());
         }
-
-
 
         // Check that the index schema is as expected. This code block should
         // catch problems of this rewrite breaking when the CompactIndexHandler
@@ -654,7 +620,8 @@ public class RewriteGBUsingIndex implements Transform {
         //Check if all columns in select list are part of index key columns
         if (!idxKeyColsNames.containsAll(selColRefNameList)) {
           LOG.info("Select list has non index key column : " +
-              " Cannot use this index  " + index.getIndexName());
+              " Cannot use this index " + index.getIndexName());
+          unusableIndexNames.add(index.getIndexName());
           continue;
         }
 
@@ -665,7 +632,8 @@ public class RewriteGBUsingIndex implements Transform {
           // Check if all columns from index are part of select list too
           if (!selColRefNameList.containsAll(idxKeyColsNames))  {
             LOG.info("Index has non select list columns " +
-                " Cannot use this index  " + index.getIndexName());
+                " Cannot use index  " + index.getIndexName());
+            unusableIndexNames.add(index.getIndexName());
             continue;
           }
         }
@@ -677,6 +645,7 @@ public class RewriteGBUsingIndex implements Transform {
         if (!idxKeyColsNames.containsAll(predColRefs)) {
           LOG.info("Predicate column ref list has non index key column : " +
               " Cannot use this index  " + index.getIndexName());
+          unusableIndexNames.add(index.getIndexName());
           continue;
         }
 
@@ -726,6 +695,7 @@ public class RewriteGBUsingIndex implements Transform {
               if (idxKeyColsNames.containsAll(colRefAggFuncInputList.get(aggFuncIdx)) == false) {
                 LOG.info("Agg Func input is not present in index key columns. Currently " +
                     "only agg func on index columns are supported by rewrite " + getName() + " optimization" );
+                unusableIndexNames.add(index.getIndexName());
                 continue;
               }
 
@@ -755,107 +725,102 @@ public class RewriteGBUsingIndex implements Transform {
 
       }
 
+      if(unusableIndexNames.size() == indexTables.size()){
+        LOG.info("No Valid Index Found to apply Optimization");
+        return false;
+      }
+
       return true;
 
     }
 
 
-    private boolean checkIfOptimizationCanApply(){
-      boolean canApply = false;
+    private void checkIfOptimizationCanApply(){
       if (QUERY_HAS_MULTIPLE_TABLES) {
         LOG.info("Query has more than one table " +
             "that is not supported with " + getName() + " optimization" );
-        return canApply;
+        return;
       }//1
       if (NO_OF_SUBQUERIES != 0) {
         LOG.info("Query has more than one subqueries " +
             "that is not supported with " + getName() + " optimization" );
-        return canApply;
+        return;
       }//2
-      if(QUERY_HAS_JOIN){
-        LOG.info("Query has joins, " +
-            "that is not supported with " + getName() + " optimization" );
-        return canApply;
-
-      }//3
       if (TABLE_HAS_NO_INDEX) {
         LOG.info("Table " + currentTableName + " does not have compact index. " +
             "Cannot apply " + getName() + " optimization" );
-        return canApply;
-      }//4
+        return;
+      }//3
       if(QUERY_HAS_DISTRIBUTE_BY){
         LOG.info("Query has distributeby clause, " +
             "that is not supported with " + getName() + " optimization" );
-        return canApply;
-      }//5
+        return;
+      }//4
       if(QUERY_HAS_SORT_BY){
         LOG.info("Query has sortby clause, " +
             "that is not supported with " + getName() + " optimization" );
-        return canApply;
-      }//6
+        return;
+      }//5
       if(QUERY_HAS_ORDER_BY){
         LOG.info("Query has orderby clause, " +
             "that is not supported with " + getName() + " optimization" );
-        return canApply;
-      }//7
+        return;
+      }//6
       if(AGG_FUNC_CNT > 1 ){
         LOG.info("More than 1 agg funcs: " +
             "Not supported by " + getName() + " optimization" );
-        return canApply;
-      }//8
+        return;
+      }//7
       if(AGG_FUNC_IS_NOT_COUNT){
         LOG.info("Agg func other than count is " +
             "not supported by " + getName() + " optimization" );
-        return canApply;
-      }//9
+        return;
+      }//8
       if(AGG_FUNC_COLS_FETCH_EXCEPTION){
         LOG.info("Got exception while locating child col refs " +
             "of agg func, skipping " + getName() + " optimization" );
-        return canApply;
-      }//10
+        return;
+      }//9
       if(WHR_CLAUSE_COLS_FETCH_EXCEPTION){
         LOG.info("Got exception while locating child col refs for where clause, "
             + "skipping " + getName() + " optimization" );
-        return canApply;
-      }//11
-  /*    if(QUERY_HAS_DISTINCT){
+        return;
+      }//10
+/*      if(QUERY_HAS_DISTINCT){
         LOG.info("Select-list has distinct. " +
             "Cannot apply the rewrite " + getName() + " optimization" );
-        return canApply;
-      }//12
-  */    if(SEL_HAS_NON_COL_REF){
+        return;
+      }//11
+*/      if(SEL_HAS_NON_COL_REF){
         LOG.info("Select-list has some non-col-ref expression. " +
             "Cannot apply the rewrite " + getName() + " optimization" );
-        return canApply;
-      }//13
+        return;
+      }//12
       if(SEL_CLAUSE_COLS_FETCH_EXCEPTION){
         LOG.info("Got exception while locating child col refs for select list, "
             + "skipping " + getName() + " optimization" );
-        return canApply;
-      }//14
+        return;
+      }//13
       if(GBY_KEYS_FETCH_EXCEPTION){
         LOG.info("Got exception while locating child col refs for GroupBy key, "
             + "skipping " + getName() + " optimization" );
-        return canApply;
-      }//15
+        return;
+      }//14
       if(GBY_NOT_ON_COUNT_KEYS){
         LOG.info("Currently count function needs group by on key columns, "
             + "Cannot apply this " + getName() + " optimization" );
-        return canApply;
-      }//16
+        return;
+      }//15
       if(IDX_TBL_SEARCH_EXCEPTION){
         LOG.info("Got exception while locating index table, " +
             "skipping " + getName() + " optimization" );
-        return canApply;
-      }//17
+        return;
+      }//16
       if(GBY_KEY_HAS_NON_INDEX_COLS){
         LOG.info("Group by key has some non-indexed columns, " +
             "Cannot apply rewrite " + getName() + " optimization" );
-        return canApply;
-      }//18
-      canApply = true;
-      return canApply;
-
+        return;
+      }//17
     }
 
 
@@ -864,7 +829,6 @@ public class RewriteGBUsingIndex implements Transform {
   /******************************************RewriteGBUsingIndexProcCtx*****************************************************/
 
   public class RewriteGBUsingIndexProcCtx implements NodeProcessorCtx {
-    private Hive hiveDb;
 
     //Map for base table to index table mapping
     //TableScan operator for base table will be modified to read from index table
@@ -909,8 +873,6 @@ public class RewriteGBUsingIndex implements Transform {
       doSemanticAnalysis(ctx, sem, tree);
 
       subPCtx = ((SemanticAnalyzer) sem).getParseContext();
-      toStringTree(subPCtx);
-
       LOG.info("Sub-query Semantic Analysis Completed");
       } catch (IOException e) {
         // TODO Auto-generated catch block
@@ -972,8 +934,8 @@ public class RewriteGBUsingIndex implements Transform {
       removeGroupBy(op);
       replaceOrigTableWithIndexTable(op);
 
-      SelectOperator selectOp = getFirstSelectOperator(op);
-      processGenericUDF(selectOp);
+      SelectOperator selectOp = getSelectOperator(op);
+      replaceIdxKeyWithSizeFunc(selectOp);
       return null;
     }
 
@@ -1003,10 +965,11 @@ public class RewriteGBUsingIndex implements Transform {
             }else if(operator instanceof SelectOperator){
               List<Operator<? extends Serializable>> childrenList = operator.getChildOperators();
               Operator<? extends Serializable> child = childrenList.get(0);
+              Operator<? extends Serializable> parent = operator.getParentOperators().get(0);
               if(child instanceof GroupByOperator){
                 newParentList = operator.getParentOperators();
                 opc.remove(operator);
-              }else{
+              }else if(!(parent instanceof SelectOperator)){
                 HashMap<String, String> internalToAlias = new LinkedHashMap<String, String>();
                 RowSchema rs = operator.getSchema();
                 ArrayList<ColumnInfo> sign = rs.getSignature();
@@ -1025,7 +988,9 @@ public class RewriteGBUsingIndex implements Transform {
                 for (String internal : internalNamesList) {
                   ExprNodeDesc end = origColExprMap.get(internal).clone();
                   if(end instanceof ExprNodeColumnDesc){
-                    ((ExprNodeColumnDesc) end).setColumn(internalToAlias.get(internal));
+                    if(internalToAlias.get(internal) != null){
+                      ((ExprNodeColumnDesc) end).setColumn(internalToAlias.get(internal));
+                    }
                   }
                   newColExprMap.put(internal, end);
                 }
@@ -1040,7 +1005,9 @@ public class RewriteGBUsingIndex implements Transform {
                   ExprNodeDesc exprNodeDesc = oldColList.get(i).clone();
                   if(exprNodeDesc instanceof ExprNodeColumnDesc){
                     String internal = ((ExprNodeColumnDesc)exprNodeDesc).getColumn();
-                    ((ExprNodeColumnDesc) exprNodeDesc).setColumn(internalToAlias.get(internal));
+                    if(internalToAlias.get(internal) != null){
+                      ((ExprNodeColumnDesc) exprNodeDesc).setColumn(internalToAlias.get(internal));
+                    }
                     newColList.add(exprNodeDesc);
                   }
                 }
@@ -1076,7 +1043,7 @@ public class RewriteGBUsingIndex implements Transform {
 
       String tableName = rewriteContext.findBaseTable(baseTableName);
 
-      tableSpec ts = new tableSpec(rewriteContext.hiveDb,
+      tableSpec ts = new tableSpec(hiveDb,
           parseContext.getConf(),
           tableName
       );
@@ -1141,7 +1108,7 @@ public class RewriteGBUsingIndex implements Transform {
       return func;
     }
 
-    private void processGenericUDF(Operator<? extends Serializable> selOperator) throws SemanticException{
+    private void replaceIdxKeyWithSizeFunc(Operator<? extends Serializable> selOperator) throws SemanticException{
 
       HiveConf conf = parseContext.getConf();
       Context ctx = null;
@@ -1190,7 +1157,7 @@ public class RewriteGBUsingIndex implements Transform {
 
       OpParseContext tsCtx = opCtxMap.get(tsOp);
       ExprNodeDesc exprNode = ((SemanticAnalyzer) sem).genExprNodeDesc(funcNode, tsCtx.getRowResolver());
-      String aggFuncCol = null;
+      String aggFuncCol = "";
 
       if(exprNode instanceof ExprNodeGenericFuncDesc){
         List<ExprNodeDesc> exprList = ((ExprNodeGenericFuncDesc) exprNode).getChildExprs();
@@ -1209,7 +1176,7 @@ public class RewriteGBUsingIndex implements Transform {
       ArrayList<ColumnInfo> sign = rs.getSignature();
       for (ColumnInfo columnInfo : sign) {
         String alias = columnInfo.getAlias();
-        if(alias.contains("_c")){
+        if(alias != null && alias.contains("_c")){
           columnInfo.setAlias(aggFuncCol);
         }
         newRS.add(columnInfo);
@@ -1262,10 +1229,7 @@ public class RewriteGBUsingIndex implements Transform {
   private class AppendSubqueryToOriginalDAG implements NodeProcessor {
     private Map<String, ExprNodeDesc> tsSelColExprMap = new LinkedHashMap<String, ExprNodeDesc>();
     private Map<String, ExprNodeDesc> gbySelColExprMap = new LinkedHashMap<String, ExprNodeDesc>();
-    private final Map<String, ExprNodeDesc> fsSelColExprMap = new LinkedHashMap<String, ExprNodeDesc>();
-
     private final ArrayList<ExprNodeDesc> gbySelColList = new ArrayList<ExprNodeDesc>();
-    private final ArrayList<ExprNodeDesc> fsSelColList = new ArrayList<ExprNodeDesc>();
 
     ParseContext subqueryPctx = null;
     ParseContext newDAGCtx = null;
@@ -1283,10 +1247,6 @@ public class RewriteGBUsingIndex implements Transform {
     //We need the reference to this SelectOperator so that the original DAG can be appended here
     Operator<? extends Serializable> subqSelectOp = null;
 
-    //OperatorToParseContexts for original DAG and subquery DAG
-    LinkedHashMap<Operator<? extends Serializable>, OpParseContext> origOpOldOpc = null;
-    LinkedHashMap<Operator<? extends Serializable>, OpParseContext> subqOpOldOpc = null;
-
 
     @Override
     public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx procCtx,
@@ -1300,39 +1260,46 @@ public class RewriteGBUsingIndex implements Transform {
       }
 
       String subqueryCommand = "select " + selKeys + " size(`_offsets`) as CNT from " + indexName;
-      createSubqueryDAG(subqueryCommand);
+      subqueryPctx = (new SubqueryParseContextGenerator()).generateDAGForSubquery(subqueryCommand);
       getSubquerySelectOpSchema();
 
-      appendSubquery(tsOp);
-      fixOperatorSchema((TableScanOperator)nd);
+      appendSubqueryToOriginalDAG(tsOp);
+      fixAllOperatorsSchema((TableScanOperator)nd);
       return null;
     }
 
 
-    private void createSubqueryDAG(String subqueryCommand){
-      origOpOldOpc = parseContext.getOpParseCtx();
-      subqueryPctx = (new SubqueryParseContextGenerator()).generateDAGForSubquery(subqueryCommand);
-      subqOpOldOpc = subqueryPctx.getOpParseCtx();
-
-    }
 
     private void getSubquerySelectOpSchema(){
+      newOutputCols.clear();
+      newColExprMap.clear();
+      newColList.clear();
+      newRS.clear();
+      newRR = new RowResolver();
+
       HashMap<TableScanOperator, Table> topOpMap = subqueryPctx.getTopToTable();
       Iterator<TableScanOperator> topOpItr = topOpMap.keySet().iterator();
       TableScanOperator tsOp = null;
-      if(topOpItr.hasNext()){
+      while(topOpItr.hasNext()){
         tsOp = topOpItr.next();
-      }
 
-      SelectOperator selOp = getFirstSelectOperator(tsOp);
+      SelectOperator selOp = getSelectOperator(tsOp);
       FileSinkOperator fs = (FileSinkOperator) selOp.getChildOperators().get(0);
       subqFSParentList = fs.getParentOperators();
       subqSelectOp =  selOp;
 
-      RowResolver oldRR = subqOpOldOpc.get(selOp).getRowResolver();
+      RowResolver oldRR = subqueryPctx.getOpParseCtx().get(selOp).getRowResolver();
       SelectDesc oldConf = (SelectDesc) selOp.getConf();
       Map<String, ExprNodeDesc> oldColumnExprMap = selOp.getColumnExprMap();
       ArrayList<ExprNodeDesc> oldColList = oldConf.getColList();
+
+      ArrayList<ColumnInfo> schemaSign = selOp.getSchema().getSignature();
+      for (ColumnInfo columnInfo : schemaSign) {
+        String internal = columnInfo.getInternalName();
+        String alias = columnInfo.getAlias();
+        aliasToInternal.put(alias, internal);
+      }
+
 
       String internalName = null;
       for(int i=0; i < oldConf.getOutputColumnNames().size(); i++){
@@ -1409,15 +1376,14 @@ public class RewriteGBUsingIndex implements Transform {
         }
       }
 
-
-      subqOpOldOpc.remove(fs);
-      subqueryPctx.setOpParseCtx(subqOpOldOpc);
-
+      subqueryPctx.getOpParseCtx().remove(fs);
+      //subqueryPctx.setOpParseCtx(subqOpOldOpc);
+      }
     }
 
 
     @SuppressWarnings("unchecked")
-    private void appendSubquery(TableScanOperator origOp){
+    private void appendSubqueryToOriginalDAG(TableScanOperator origOp){
 
      List<Operator<? extends Serializable>> origChildrenList = origOp.getChildOperators();
 
@@ -1437,59 +1403,6 @@ public class RewriteGBUsingIndex implements Transform {
         subqSelectOp.setChildOperators(origChildrenList);
       }
 
-      //Loop through the rest of the original operator DAG and set appropriate column informations, RowResolvers and RowSchema
-      List<Operator<? extends Serializable>> origList = origChildrenList;
-        while(origList != null && origList.size() > 0){
-          for (Operator<? extends Serializable> operator : origList) {
-            if(null != operator){
-
-              //Copy colList and outputColumns for SelectOperator from sub-query DAG SelectOperator
-              if(operator instanceof SelectOperator) {
-                //Set columnExprMap + RowSchema + RowResolver - required by all operators
-                Operator<? extends Serializable> selChild = operator.getChildOperators().iterator().next();
-                if( (!(selChild instanceof FileSinkOperator)) && (!(selChild instanceof ReduceSinkOperator))){
-                  operator.setColumnExprMap(newColExprMap);
-                  origOpOldOpc.get(operator).setRowResolver(newRR);
-                  operator.getSchema().setSignature(newRS);
-                  SelectDesc conf = (SelectDesc) operator.getConf();
-                  conf.setColList(newColList);
-                  conf.setOutputColumnNames(newOutputCols);
-
-                  ArrayList<ColumnInfo> schemaSign = operator.getSchema().getSignature();
-                  for (ColumnInfo columnInfo : schemaSign) {
-                    String internal = columnInfo.getInternalName();
-                    String alias = columnInfo.getAlias();
-                    aliasToInternal.put(alias, internal);
-                  }
-
-                }
-
-              //Copy output columns of SelectOperator from sub-query DAG to predicates of FilterOperator
-              }else if(operator instanceof FilterOperator) {
-                operator.getSchema().setSignature(newRS);
-                origOpOldOpc.get(operator).setRowResolver(newRR);
-             }else if(operator instanceof FileSinkOperator) {
-               RowResolver rr = origOpOldOpc.get(operator).getRowResolver();
-               OpParseContext ctx = new OpParseContext(rr);
-               subqOpOldOpc.put(operator, ctx);
-
-                origList = null;
-                break;
-              }
-
-              //We need to add operator context in the sub-query OpToParseContext Map (subqOpOldOpc) for those operators
-              // in original DAG that are appended to sub-query DAG
-              RowResolver rr = origOpOldOpc.get(operator).getRowResolver();
-              OpParseContext ctx = new OpParseContext(rr);
-              subqOpOldOpc.put(operator, ctx);
-
-              //Continue Looping until we reach end of original DAG i.e. FileSinkOperator
-              origList = operator.getChildOperators();
-              continue;
-            }
-          }
-        }
-
         /*
          * The operator DAG plan is generated in the order FROM-WHERE-GROUPBY-ORDERBY-SELECT
          * We have appended the original operator DAG at the end of the sub-query operator DAG
@@ -1500,8 +1413,6 @@ public class RewriteGBUsingIndex implements Transform {
          * parseContext.setTopOps(subqTopMap) sets the topOps map to contain the sub-query topOps map
          * parseContext.setTopToTable(newTopToTable) sets the original topToTable to contain sub-query top TableScanOperator
          */
-        //HashMap<TableScanOperator, Table> newTopToTable = (HashMap<TableScanOperator, Table>) parseContext.getTopToTable().clone();
-        //newTopToTable.remove(origOp);
 
         HashMap<String, Operator<? extends Serializable>> subqTopMap = subqueryPctx.getTopOps();
         Iterator<String> subqTabItr = subqTopMap.keySet().iterator();
@@ -1509,7 +1420,6 @@ public class RewriteGBUsingIndex implements Transform {
         Operator<? extends Serializable> subqOp = subqTopMap.get(subqTab);
 
         Table tbl = subqueryPctx.getTopToTable().get(subqOp);
-        //newTopToTable.put((TableScanOperator) subqOp, tbl);
         parseContext.getTopToTable().remove(origOp);
         parseContext.getTopToTable().put((TableScanOperator) subqOp, tbl);
 
@@ -1523,26 +1433,24 @@ public class RewriteGBUsingIndex implements Transform {
 
         parseContext.getTopOps().remove(currentTableName);
         parseContext.getTopOps().put(tabAlias + subqTab, subqOp);
-        //parseContext.setTopOps(subqTopMap);
         parseContext.getOpParseCtx().remove(origOp);
-        parseContext.getOpParseCtx().putAll(subqOpOldOpc);
-        //parseContext.setOpParseCtx(subqOpOldOpc);
-
+        parseContext.getOpParseCtx().putAll(subqueryPctx.getOpParseCtx());
+        LOG.info("Finished appending subquery");
     }
 
 
-    private void fixOperatorSchema(TableScanOperator tsOp) throws SemanticException{
+    private void fixAllOperatorsSchema(TableScanOperator tsOp) throws SemanticException{
       List<Operator<? extends Serializable>> childOps = tsOp.getChildOperators();
 
       while(childOps != null && childOps.size() > 0){
         for (Operator<? extends Serializable> operator : childOps) {
           if(operator != null){
             if(operator instanceof SelectOperator){
-              processSelOp(operator);
+              fixSelectOperatorSchema(operator);
             }else if(operator instanceof GroupByOperator && (parseContext.getGroupOpToInputTables().containsKey(operator))){
-              processGenericUDAF((GroupByOperator) operator);
+              fixGroupByOperatorSchema((GroupByOperator) operator);
             }else if(operator instanceof FilterOperator) {
-              processFilOp(operator);
+              fixFilterOperatorSchema(operator);
             }else if(operator instanceof FileSinkOperator){
               childOps = null;
               break;
@@ -1557,8 +1465,11 @@ public class RewriteGBUsingIndex implements Transform {
 
     }
 
-    private void processFilOp(Operator<? extends Serializable> op){
+    private void fixFilterOperatorSchema(Operator<? extends Serializable> op){
       FilterOperator filOp = (FilterOperator)op;
+      filOp.getSchema().setSignature(newRS);
+      parseContext.getOpParseCtx().get(filOp).setRowResolver(newRR);
+
       FilterDesc conf = filOp.getConf();
       ExprNodeDesc exprNodeDesc = conf.getPredicate();
       setFilterPredicateCol(exprNodeDesc);
@@ -1584,17 +1495,30 @@ public class RewriteGBUsingIndex implements Transform {
 
     }
 
-     private void processSelOp(Operator<? extends Serializable> selOperator){
+     private void fixSelectOperatorSchema(Operator<? extends Serializable> selOperator){
 
       List<Operator<? extends Serializable>> parentOps = selOperator.getParentOperators();
       Operator<? extends Serializable> parentOp = parentOps.iterator().next();
+      if(parentOp instanceof TableScanOperator){
+        tsSelColExprMap = selOperator.getColumnExprMap();
+      }
+
       List<Operator<? extends Serializable>> childOps = selOperator.getChildOperators();
       Operator<? extends Serializable> childOp = childOps.iterator().next();
       SelectDesc selDesc = (SelectDesc) selOperator.getConf();
 
-      if(parentOp instanceof TableScanOperator){
-        tsSelColExprMap = selOperator.getColumnExprMap();
-      }else if (childOp instanceof GroupByOperator){
+      //Copy colList and outputColumns for SelectOperator from sub-query DAG SelectOperator
+      if((!(parentOp instanceof TableScanOperator)) && (!(childOp instanceof FileSinkOperator))
+                                                    && (!(childOp instanceof ReduceSinkOperator))){
+        selOperator.setColumnExprMap(newColExprMap);
+        parseContext.getOpParseCtx().get(selOperator).setRowResolver(newRR);
+        selOperator.getSchema().setSignature(newRS);
+        SelectDesc conf = (SelectDesc) selOperator.getConf();
+        conf.setColList(newColList);
+        conf.setOutputColumnNames(newOutputCols);
+      }
+
+      if (childOp instanceof GroupByOperator){
         gbySelColExprMap = selOperator.getColumnExprMap();
         /* colExprMap */
         Set<String> internalNamesList = gbySelColExprMap.keySet();
@@ -1604,16 +1528,12 @@ public class RewriteGBUsingIndex implements Transform {
             List<ExprNodeDesc> colExprs = ((ExprNodeGenericFuncDesc)end).getChildExprs();
             for (ExprNodeDesc colExpr : colExprs) {
               if(colExpr instanceof ExprNodeColumnDesc){
-                fsSelColExprMap.put(internal, colExpr);
                 gbySelColList.add(colExpr);
-                fsSelColList.add(colExpr);
               }
             }
 
           }else if(end instanceof ExprNodeColumnDesc){
-            fsSelColExprMap.put(internal, end);
             gbySelColList.add(end);
-            fsSelColList.add(end);
           }
         }
 
@@ -1622,7 +1542,7 @@ public class RewriteGBUsingIndex implements Transform {
       }
     }
 
-    private void processGenericUDAF(GroupByOperator oldGbyOperator) throws SemanticException{
+    private void fixGroupByOperatorSchema(GroupByOperator oldGbyOperator) throws SemanticException{
       String table = currentTableName;
       if(table.contains(":")){
         String[] aliasAndTab = table.split(":");
@@ -1665,11 +1585,7 @@ public class RewriteGBUsingIndex implements Transform {
               String col = "cnt";
               if(aliasToInternal.containsKey(col)){
                 encd.setColumn(aliasToInternal.get(col));
-              }else{
-                LOG.info("GBY not on index key");
               }
-              //int sumPos = oldConf.getKeys().size();
-
               encd.setTabAlias(null);
               exprNodeDesc = encd;
             }
@@ -1689,10 +1605,7 @@ public class RewriteGBUsingIndex implements Transform {
           String col = encd.getColumn();
           if(indexKeyNames.contains(col)){
             encd.setColumn(aliasToInternal.get(col));
-          }else{
-            LOG.info("GBY not on index key");
           }
-
         }else if(exprNodeDesc instanceof ExprNodeGenericFuncDesc){
           List<ExprNodeDesc> colExprs = ((ExprNodeGenericFuncDesc)exprNodeDesc).getChildExprs();
           for (ExprNodeDesc colExpr : colExprs) {
@@ -1701,8 +1614,6 @@ public class RewriteGBUsingIndex implements Transform {
               String col = encd.getColumn();
               if(indexKeyNames.contains(col)){
                 encd.setColumn(aliasToInternal.get(col));
-              }else{
-                LOG.info("GBY not on index key");
               }
             }
           }
@@ -1721,8 +1632,6 @@ public class RewriteGBUsingIndex implements Transform {
           String col = encd.getColumn();
           if(indexKeyNames.contains(col)){
             encd.setColumn(aliasToInternal.get(col));
-          }else{
-            LOG.info("GBY not on index key");
           }
           exprNodeDesc = encd;
         }else if(exprNodeDesc instanceof ExprNodeGenericFuncDesc){
@@ -1734,8 +1643,6 @@ public class RewriteGBUsingIndex implements Transform {
               String col = encd.getColumn();
               if(indexKeyNames.contains(col)){
                 encd.setColumn(aliasToInternal.get(col));
-              }else{
-                LOG.info("GBY not on index key");
               }
 
             }
@@ -1755,12 +1662,20 @@ public class RewriteGBUsingIndex implements Transform {
 
 
       List<Operator<? extends Serializable>> childrenList = oldGbyOperator.getChildOperators();
-      Operator<? extends Serializable> childGBY = null;
+
       while(childrenList != null && childrenList.size() > 0){
         for (Operator<? extends Serializable> operator : childrenList) {
           if(operator != null){
             if(operator instanceof GroupByOperator){
-              childGBY = operator;
+              Operator<? extends Serializable> childGBY = operator;
+              GroupByDesc childConf = (GroupByDesc) childGBY.getConf();
+              ArrayList<AggregationDesc> childAggrList = childConf.getAggregators();
+              if(childAggrList != null && childAggrList.size() > 0){
+                for (AggregationDesc aggregationDesc : childAggrList) {
+                  aggregationDesc.setGenericUDAFEvaluator(eval);
+                  aggregationDesc.setGenericUDAFName("sum");
+                }
+              }
               childrenList = null;
               break;
             }else{
@@ -1768,15 +1683,6 @@ public class RewriteGBUsingIndex implements Transform {
               continue;
             }
           }
-        }
-      }
-
-      GroupByDesc childConf = (GroupByDesc) childGBY.getConf();
-      ArrayList<AggregationDesc> childAggrList = childConf.getAggregators();
-      if(childAggrList != null && childAggrList.size() > 0){
-        for (AggregationDesc aggregationDesc : childAggrList) {
-          aggregationDesc.setGenericUDAFEvaluator(eval);
-          aggregationDesc.setGenericUDAFName("sum");
         }
       }
 
