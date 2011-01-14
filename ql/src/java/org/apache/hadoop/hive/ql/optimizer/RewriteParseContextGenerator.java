@@ -19,7 +19,7 @@ import org.apache.hadoop.hive.ql.parse.SemanticAnalyzer;
 import org.apache.hadoop.hive.ql.parse.SemanticAnalyzerFactory;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
 
-public final class ParseContextGenerator {
+public final class RewriteParseContextGenerator {
   protected static Log LOG = LogFactory.getLog(RewriteIndexSubqueryProcFactory.class.getName());
   private ParseContext parseContext = null;
 
@@ -31,7 +31,7 @@ public final class ParseContextGenerator {
     this.parseContext = parseContext;
   }
 
-  public ParseContextGenerator() {
+  public RewriteParseContextGenerator() {
     // TODO Auto-generated constructor stub
   }
 

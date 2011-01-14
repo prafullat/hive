@@ -45,7 +45,7 @@ public class RewriteRemoveGroupbyCtx implements NodeProcessorCtx {
   private LinkedHashMap<Operator<? extends Serializable>, OpParseContext> opc = new LinkedHashMap<Operator<? extends Serializable>, OpParseContext>();
   private Hive hiveDb;
   private  ParseContext parseContext = null;
-  private RewriteGBUsingIndexCtx rewriteContext = null;
+  private RewriteCanApplyCtx canApplyCtx = null;
   private String indexName = "";
 
   public List<Operator<? extends Serializable>> getNewParentList() {
@@ -81,14 +81,13 @@ public class RewriteRemoveGroupbyCtx implements NodeProcessorCtx {
   }
 
 
-  public RewriteGBUsingIndexCtx getRewriteContext() {
-    return rewriteContext;
+  public RewriteCanApplyCtx getCanApplyCtx() {
+    return canApplyCtx;
   }
 
-  public void setRewriteContext(RewriteGBUsingIndexCtx rewriteContext) {
-    this.rewriteContext = rewriteContext;
+  public void setCanApplyCtx(RewriteCanApplyCtx canApplyCtx) {
+    this.canApplyCtx = canApplyCtx;
   }
-
 
   public Hive getHiveDb() {
     return hiveDb;

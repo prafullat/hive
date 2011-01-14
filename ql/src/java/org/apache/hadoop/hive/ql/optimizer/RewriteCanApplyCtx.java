@@ -1,6 +1,7 @@
 package org.apache.hadoop.hive.ql.optimizer;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -19,6 +20,10 @@ import org.apache.hadoop.hive.ql.parse.ParseContext;
 public class RewriteCanApplyCtx implements NodeProcessorCtx {
 
   protected final  Log LOG = LogFactory.getLog(RewriteCanApplyCtx.class.getName());
+
+  public RewriteCanApplyCtx() {
+    baseToIdxTableMap = new HashMap<String, String>();
+  }
 
    int NO_OF_SUBQUERIES = 0;
    boolean TABLE_HAS_NO_INDEX = false;
@@ -58,6 +63,20 @@ public class RewriteCanApplyCtx implements NodeProcessorCtx {
     return indexName;
   }
 
+
+   //Map for base table to index table mapping
+   //TableScan operator for base table will be modified to read from index table
+   private final HashMap<String, String> baseToIdxTableMap;
+
+   public void addTable(String baseTableName, String indexTableName) {
+     baseToIdxTableMap.put(baseTableName, indexTableName);
+   }
+
+   public String findBaseTable(String baseTableName)  {
+     return baseToIdxTableMap.get(baseTableName);
+   }
+
+
   public void setIndexName(String indexName) {
     this.indexName = indexName;
   }
@@ -82,17 +101,8 @@ public class RewriteCanApplyCtx implements NodeProcessorCtx {
     this.hiveDb = hiveDb;
   }
 
-  private RewriteGBUsingIndexCtx rewriteContext = null;
   private String currentTableName = null;
 
-
-  public RewriteGBUsingIndexCtx getRewriteContext() {
-    return rewriteContext;
-  }
-
-  public void setRewriteContext(RewriteGBUsingIndexCtx rewriteContext) {
-    this.rewriteContext = rewriteContext;
-  }
 
   public String getCurrentTableName() {
     return currentTableName;
@@ -298,7 +308,7 @@ public class RewriteCanApplyCtx implements NodeProcessorCtx {
       //sub-query is needed only in case of optimizecount and complex gb keys?
       if(QUERY_HAS_KEY_MANIP_FUNC == false && !(optimizeCount == true && removeGroupBy == false) ) {
         REMOVE_GROUP_BY = removeGroupBy;
-        rewriteContext.addTable(currentTableName, index.getIndexTableName());
+        addTable(currentTableName, index.getIndexTableName());
       }else{
         SHOULD_APPEND_SUBQUERY = true;
       }

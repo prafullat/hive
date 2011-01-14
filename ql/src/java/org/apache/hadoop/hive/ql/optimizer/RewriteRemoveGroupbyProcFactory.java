@@ -122,7 +122,7 @@ public final class RewriteRemoveGroupbyProcFactory {
 
 
       String baseTableName = topToTable.get(scanOperator).getTableName();
-      if( removeGbyCtx.getRewriteContext().findBaseTable(baseTableName) == null ) {
+      if( removeGbyCtx.getCanApplyCtx().findBaseTable(baseTableName) == null ) {
         LOG.debug("No mapping found for original table and index table name");
       }
 
@@ -131,7 +131,7 @@ public final class RewriteRemoveGroupbyProcFactory {
       TableScanDesc indexTableScanDesc = new TableScanDesc();
       indexTableScanDesc.setGatherStats(false);
 
-      String tableName = removeGbyCtx.getRewriteContext().findBaseTable(baseTableName);
+      String tableName = removeGbyCtx.getCanApplyCtx().findBaseTable(baseTableName);
 
       tableSpec ts = new tableSpec(removeGbyCtx.getHiveDb(),
           removeGbyCtx.getParseContext().getConf(),

@@ -60,7 +60,6 @@ public class RewriteGBUsingIndex implements Transform {
   protected final Log LOG = LogFactory.getLog(this.getClass().getName());
 
   private final RewriteCanApplyCtx canApplyCtx = new RewriteCanApplyCtx();
-  private final RewriteGBUsingIndexCtx rewriteContext =  new RewriteGBUsingIndexCtx();
   private final RewriteRemoveGroupbyCtx removeGbyCtx = new RewriteRemoveGroupbyCtx();
   private final RewriteIndexSubqueryCtx subqueryCtx = new RewriteIndexSubqueryCtx();
 
@@ -83,11 +82,9 @@ public class RewriteGBUsingIndex implements Transform {
 
     canApplyCtx.setParseContext(parseContext);
     canApplyCtx.setHiveDb(hiveDb);
-    canApplyCtx.setRewriteContext(rewriteContext);
 
     removeGbyCtx.setParseContext(parseContext);
     removeGbyCtx.setHiveDb(hiveDb);
-    removeGbyCtx.setRewriteContext(rewriteContext);
 
     subqueryCtx.setParseContext(parseContext);
 
@@ -222,6 +219,7 @@ public class RewriteGBUsingIndex implements Transform {
       if(canApplyCtx.REMOVE_GROUP_BY){
         removeGbyCtx.setIndexName(indexName);
         removeGbyCtx.setOpc(parseContext.getOpParseCtx());
+        removeGbyCtx.setCanApplyCtx(canApplyCtx);
         invokeRemoveGbyProc(topOp);
       }
 

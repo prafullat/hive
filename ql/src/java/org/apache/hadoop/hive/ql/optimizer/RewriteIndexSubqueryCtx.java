@@ -45,7 +45,7 @@ public class RewriteIndexSubqueryCtx implements NodeProcessorCtx {
   private ParseContext parseContext = null;
   private ParseContext subqueryPctx = null;
   private ParseContext newDAGCtx = null;
-  private final ParseContextGenerator pcg = new ParseContextGenerator();
+  private final RewriteParseContextGenerator pcg = new RewriteParseContextGenerator();
 
   private Set<String> indexKeyNames = new LinkedHashSet<String>();
   private String indexName = "";
@@ -201,7 +201,7 @@ public class RewriteIndexSubqueryCtx implements NodeProcessorCtx {
   }
 
 
-  public ParseContextGenerator getPcg() {
+  public RewriteParseContextGenerator getPcg() {
     return pcg;
   }
 
