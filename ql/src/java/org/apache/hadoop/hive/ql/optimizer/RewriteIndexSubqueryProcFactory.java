@@ -2,6 +2,8 @@ package org.apache.hadoop.hive.ql.optimizer;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +24,7 @@ import org.apache.hadoop.hive.ql.exec.TableScanOperator;
 import org.apache.hadoop.hive.ql.lib.Node;
 import org.apache.hadoop.hive.ql.lib.NodeProcessor;
 import org.apache.hadoop.hive.ql.lib.NodeProcessorCtx;
+import org.apache.hadoop.hive.ql.metadata.Table;
 import org.apache.hadoop.hive.ql.parse.RowResolver;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
 import org.apache.hadoop.hive.ql.plan.AggregationDesc;
@@ -165,6 +168,74 @@ public final class RewriteIndexSubqueryProcFactory {
   public static SubqueryFileSinkProc getSubqueryFileSinkProc(){
     return new SubqueryFileSinkProc();
   }
+
+  public static class AppendSubqueryToOriginalQueryProc implements NodeProcessor {
+    public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx ctx,
+        Object... nodeOutputs) throws SemanticException {
+      TableScanOperator operator = (TableScanOperator)nd;
+      subqueryCtx = (RewriteIndexSubqueryCtx)ctx;
+      List<Operator<? extends Serializable>> origChildrenList = operator.getChildOperators();
+
+
+      /* origChildrenList has the child operators for the TableScanOperator of the original DAG
+      * We need to get rid of the TS operator of original DAG and append rest of the tree to the sub-query operator DAG
+      * This code sets the parentOperators of first operator in origChildrenList to subqFSParentList
+      * subqFSParentList contains the parentOperators list of the FileSinkOperator of the sub-query operator DAG
+      *
+      * subqLastOp is the last SelectOperator of sub-query DAG. The rest of the original operator DAG needs to be appended here
+      * Hence, set the subqLastOp's child operators to be origChildrenList
+      *
+      * */
+
+     if(origChildrenList != null && origChildrenList.size() > 0){
+       origChildrenList.get(0).setParentOperators(subqueryCtx.getSubqFSParentList());
+     }
+     if(subqueryCtx.getSubqSelectOp() != null){
+       subqueryCtx.getSubqSelectOp().setChildOperators(origChildrenList);
+     }
+
+
+        /* The operator DAG plan is generated in the order FROM-WHERE-GROUPBY-ORDERBY-SELECT
+        * We have appended the original operator DAG at the end of the sub-query operator DAG
+        *      as the sub-query will always be a part of FROM processing
+        *
+        * Now we need to insert the final sub-query+original DAG to the original ParseContext
+        * parseContext.setOpParseCtx(subqOpOldOpc) sets the subqOpOldOpc OpToParseContext map to the original context
+        * parseContext.setTopOps(subqTopMap) sets the topOps map to contain the sub-query topOps map
+        * parseContext.setTopToTable(newTopToTable) sets the original topToTable to contain sub-query top TableScanOperator
+        */
+
+       HashMap<String, Operator<? extends Serializable>> subqTopMap = subqueryCtx.getSubqueryPctx().getTopOps();
+       Iterator<String> subqTabItr = subqTopMap.keySet().iterator();
+       String subqTab = subqTabItr.next();
+       Operator<? extends Serializable> subqOp = subqTopMap.get(subqTab);
+
+       Table tbl = subqueryCtx.getSubqueryPctx().getTopToTable().get(subqOp);
+       subqueryCtx.getParseContext().getTopToTable().remove(operator);
+       subqueryCtx.getParseContext().getTopToTable().put((TableScanOperator) subqOp, tbl);
+
+       String tabAlias = "";
+       if(subqueryCtx.getCurrentTableName().contains(":")){
+         String[] tabToAlias = subqueryCtx.getCurrentTableName().split(":");
+         if(tabToAlias.length > 1){
+           tabAlias = tabToAlias[0] + ":";
+         }
+       }
+
+       subqueryCtx.getParseContext().getTopOps().remove(subqueryCtx.getCurrentTableName());
+       subqueryCtx.getParseContext().getTopOps().put(tabAlias + subqTab, subqOp);
+       subqueryCtx.setNewTSOp(subqOp);
+       subqueryCtx.getParseContext().getOpParseCtx().remove(operator);
+       subqueryCtx.getParseContext().getOpParseCtx().putAll(subqueryCtx.getSubqueryPctx().getOpParseCtx());
+       LOG.info("Finished appending subquery");
+      return null;
+    }
+  }
+
+  public static AppendSubqueryToOriginalQueryProc getAppendSubqueryToOriginalQueryProc(){
+    return new AppendSubqueryToOriginalQueryProc();
+  }
+
 
 
   public static class NewQuerySelectSchemaProc implements NodeProcessor {

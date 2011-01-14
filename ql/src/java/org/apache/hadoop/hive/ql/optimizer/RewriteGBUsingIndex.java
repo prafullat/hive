@@ -33,7 +33,6 @@ import java.util.Stack;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.metastore.api.Index;
-import org.apache.hadoop.hive.ql.exec.FileSinkOperator;
 import org.apache.hadoop.hive.ql.exec.Operator;
 import org.apache.hadoop.hive.ql.exec.SelectOperator;
 import org.apache.hadoop.hive.ql.exec.TableScanOperator;
@@ -44,6 +43,7 @@ import org.apache.hadoop.hive.ql.lib.GraphWalker;
 import org.apache.hadoop.hive.ql.lib.Node;
 import org.apache.hadoop.hive.ql.lib.NodeProcessor;
 import org.apache.hadoop.hive.ql.lib.NodeProcessorCtx;
+import org.apache.hadoop.hive.ql.lib.PreOrderWalker;
 import org.apache.hadoop.hive.ql.lib.Rule;
 import org.apache.hadoop.hive.ql.lib.RuleRegExp;
 import org.apache.hadoop.hive.ql.metadata.Hive;
@@ -237,9 +237,7 @@ public class RewriteGBUsingIndex implements Transform {
           subqTopOp = topOpItr.next();
         }
         invokeSubquerySelectSchemaProc(subqTopOp);
-        subqueryCtx.getAppendSubqueryProc(topOp);
-        parseContext = subqueryCtx.getParseContext();
-        invokeFixAllOperatorSchemasProc(subqueryCtx.getNewTSOp());
+        invokeFixAllOperatorSchemasProc(topOp);
       }
     }
 
@@ -281,7 +279,7 @@ public class RewriteGBUsingIndex implements Transform {
 
     //appends subquery DAG to original DAG
     opRules.put(new RuleRegExp("R1", "FS%"), RewriteIndexSubqueryProcFactory.getSubqueryFileSinkProc());
-    opRules.put(new RuleRegExp("R1", "SEL%"), RewriteIndexSubqueryProcFactory.getSubquerySelectSchemaProc());
+    opRules.put(new RuleRegExp("R2", "SEL%"), RewriteIndexSubqueryProcFactory.getSubquerySelectSchemaProc());
 
     // The dispatcher fires the processor corresponding to the closest matching
     // rule and passes the context along
@@ -291,8 +289,8 @@ public class RewriteGBUsingIndex implements Transform {
     // Create a list of topop nodes
     ArrayList<Node> topNodes = new ArrayList<Node>();
     topNodes.add(topOp);
-
     ogw.startWalking(topNodes, null);
+    LOG.info("Finished Fetchin subquery select schema");
 
   }
 
@@ -304,57 +302,25 @@ public class RewriteGBUsingIndex implements Transform {
     Map<Rule, NodeProcessor> opRules = new LinkedHashMap<Rule, NodeProcessor>();
 
     //appends subquery DAG to original DAG
-    opRules.put(new RuleRegExp("R1", "GBY%"), RewriteIndexSubqueryProcFactory.getNewQueryGroupbySchemaProc());
-    opRules.put(new RuleRegExp("R2", "FIL%"), RewriteIndexSubqueryProcFactory.getNewQueryFilterSchemaProc());
-    opRules.put(new RuleRegExp("R3", "SEL%"), RewriteIndexSubqueryProcFactory.getNewQuerySelectSchemaProc());
+    opRules.put(new RuleRegExp("R1", "TS%"), RewriteIndexSubqueryProcFactory.getAppendSubqueryToOriginalQueryProc());
+    opRules.put(new RuleRegExp("R2", "SEL%"), RewriteIndexSubqueryProcFactory.getNewQuerySelectSchemaProc());
+    opRules.put(new RuleRegExp("R3", "FIL%"), RewriteIndexSubqueryProcFactory.getNewQueryFilterSchemaProc());
+    opRules.put(new RuleRegExp("R4", "GBY%"), RewriteIndexSubqueryProcFactory.getNewQueryGroupbySchemaProc());
 
     // The dispatcher fires the processor corresponding to the closest matching
     // rule and passes the context along
     Dispatcher disp = new DefaultRuleDispatcher(getDefaultProc(), opRules, subqueryCtx);
-    GraphWalker ogw = new PostOrderWalker(disp);
+    GraphWalker ogw = new PreOrderWalker(disp);
 
     // Create a list of topop nodes
     ArrayList<Node> topNodes = new ArrayList<Node>();
     topNodes.add(topOp);
 
     ogw.startWalking(topNodes, null);
+    this.parseContext = subqueryCtx.getParseContext();
+    LOG.info("Fixed all operator schema");
 
   }
-
-  public static class PostOrderWalker extends DefaultGraphWalker {
-
-    public PostOrderWalker(Dispatcher disp) {
-      super(disp);
-    }
-
-    /**
-     * Walk the given operator.
-     */
-    @Override
-    public void walk(Node nd) throws SemanticException {
-      if(nd instanceof FileSinkOperator) {
-        dispatch(nd, opStack);
-        getToWalk().clear();
-        //opStack.pop();
-        return;
-      }
-      opStack.push(nd);
-      dispatch(nd, opStack);
-
-
-      if ((nd.getChildren() == null)
-          || getDispatchedList().containsAll(nd.getChildren())) {
-        return;
-      }
-      // move all the children to the front of queue
-      getToWalk().removeAll(nd.getChildren());
-      getToWalk().addAll(0, nd.getChildren());
-      // add self to the end of the queue
-      getToWalk().add(nd);
-      opStack.pop();
-    }
-  }
-
 
 }
 

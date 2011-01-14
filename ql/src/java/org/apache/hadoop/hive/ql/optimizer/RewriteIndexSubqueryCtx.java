@@ -3,7 +3,6 @@ package org.apache.hadoop.hive.ql.optimizer;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -14,9 +13,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.ql.exec.ColumnInfo;
 import org.apache.hadoop.hive.ql.exec.Operator;
-import org.apache.hadoop.hive.ql.exec.TableScanOperator;
 import org.apache.hadoop.hive.ql.lib.NodeProcessorCtx;
-import org.apache.hadoop.hive.ql.metadata.Table;
 import org.apache.hadoop.hive.ql.parse.ParseContext;
 import org.apache.hadoop.hive.ql.parse.RowResolver;
 import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
@@ -208,7 +205,9 @@ public class RewriteIndexSubqueryCtx implements NodeProcessorCtx {
     return pcg;
   }
 
-
+  public void setNewTSOp(Operator<? extends Serializable> newTSOp) {
+    this.newTSOp = newTSOp;
+  }
 
   public Operator<? extends Serializable> getNewTSOp() {
     return newTSOp;
@@ -223,63 +222,6 @@ public class RewriteIndexSubqueryCtx implements NodeProcessorCtx {
     String subqueryCommand = "select " + selKeys + " size(`_offsets`) as CNT from " + indexName;
     subqueryPctx = pcg.generateDAGForSubquery(subqueryCommand);
 
-  }
-
-  public void getAppendSubqueryProc(TableScanOperator origOp){
-    List<Operator<? extends Serializable>> origChildrenList = origOp.getChildOperators();
-
-
-    /* origChildrenList has the child operators for the TableScanOperator of the original DAG
-    * We need to get rid of the TS operator of original DAG and append rest of the tree to the sub-query operator DAG
-    * This code sets the parentOperators of first operator in origChildrenList to subqFSParentList
-    * subqFSParentList contains the parentOperators list of the FileSinkOperator of the sub-query operator DAG
-    *
-    * subqLastOp is the last SelectOperator of sub-query DAG. The rest of the original operator DAG needs to be appended here
-    * Hence, set the subqLastOp's child operators to be origChildrenList
-    *
-    * */
-
-   if(origChildrenList != null && origChildrenList.size() > 0){
-     origChildrenList.get(0).setParentOperators(subqFSParentList);
-   }
-   if(subqSelectOp != null){
-     subqSelectOp.setChildOperators(origChildrenList);
-   }
-
-
-      /* The operator DAG plan is generated in the order FROM-WHERE-GROUPBY-ORDERBY-SELECT
-      * We have appended the original operator DAG at the end of the sub-query operator DAG
-      *      as the sub-query will always be a part of FROM processing
-      *
-      * Now we need to insert the final sub-query+original DAG to the original ParseContext
-      * parseContext.setOpParseCtx(subqOpOldOpc) sets the subqOpOldOpc OpToParseContext map to the original context
-      * parseContext.setTopOps(subqTopMap) sets the topOps map to contain the sub-query topOps map
-      * parseContext.setTopToTable(newTopToTable) sets the original topToTable to contain sub-query top TableScanOperator
-      */
-
-     HashMap<String, Operator<? extends Serializable>> subqTopMap = subqueryPctx.getTopOps();
-     Iterator<String> subqTabItr = subqTopMap.keySet().iterator();
-     String subqTab = subqTabItr.next();
-     Operator<? extends Serializable> subqOp = subqTopMap.get(subqTab);
-
-     Table tbl = subqueryPctx.getTopToTable().get(subqOp);
-     parseContext.getTopToTable().remove(origOp);
-     parseContext.getTopToTable().put((TableScanOperator) subqOp, tbl);
-
-     String tabAlias = "";
-     if(currentTableName.contains(":")){
-       String[] tabToAlias = currentTableName.split(":");
-       if(tabToAlias.length > 1){
-         tabAlias = tabToAlias[0] + ":";
-       }
-     }
-
-     parseContext.getTopOps().remove(currentTableName);
-     parseContext.getTopOps().put(tabAlias + subqTab, subqOp);
-     newTSOp = subqOp;
-     parseContext.getOpParseCtx().remove(origOp);
-     parseContext.getOpParseCtx().putAll(subqueryPctx.getOpParseCtx());
-     LOG.info("Finished appending subquery");
   }
 
 }
