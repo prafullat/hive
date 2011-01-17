@@ -8,6 +8,8 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.Index;
 import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
@@ -25,29 +27,81 @@ public class RewriteCanApplyCtx implements NodeProcessorCtx {
     baseToIdxTableMap = new HashMap<String, String>();
   }
 
-   int NO_OF_SUBQUERIES = 0;
-   boolean TABLE_HAS_NO_INDEX = false;
-   boolean QUERY_HAS_SORT_BY = false;
-   boolean QUERY_HAS_ORDER_BY = false;
-   boolean QUERY_HAS_DISTRIBUTE_BY = false;
-   boolean QUERY_HAS_GROUP_BY = false;
-   boolean QUERY_HAS_DISTINCT = false; //This still uses QBParseInfo to make decision. Needs to be changed if QB dependency is not desired.
-   int AGG_FUNC_CNT = 0;
-   int GBY_KEY_CNT = 0;
-   boolean AGG_FUNC_IS_NOT_COUNT = false;
-   boolean AGG_FUNC_COLS_FETCH_EXCEPTION = false;
-   boolean WHR_CLAUSE_COLS_FETCH_EXCEPTION = false;
-   boolean SEL_CLAUSE_COLS_FETCH_EXCEPTION = false;
-   boolean GBY_KEYS_FETCH_EXCEPTION = false;
-   boolean GBY_KEY_HAS_NON_INDEX_COLS = false;
-   boolean SEL_HAS_NON_COL_REF = false;//Not sure why this is used
-   boolean GBY_NOT_ON_COUNT_KEYS = false;
-   boolean IDX_TBL_SEARCH_EXCEPTION = false;
-   boolean QUERY_HAS_KEY_MANIP_FUNC = false;
-   boolean QUERY_HAS_MULTIPLE_TABLES = false;
-   boolean SHOULD_APPEND_SUBQUERY = false;
-   boolean REMOVE_GROUP_BY = false;
+  public static enum RewriteVars {
 
+   NO_OF_SUBQUERIES("hive.ql.rewrites.no.of.subqueries",0),
+   AGG_FUNC_CNT("hive.ql.rewrites.agg.func.cnt", 0),
+   GBY_KEY_CNT("hive.ql.rewrites.gby.key.cnt", 0),
+   TABLE_HAS_NO_INDEX("hive.ql.rewrites.table.has.no.index", false),
+   QUERY_HAS_SORT_BY("hive.ql.rewrites.query.has.sort.by", false),
+   QUERY_HAS_ORDER_BY("hive.ql.rewrites.query.has.order.by", false),
+   QUERY_HAS_DISTRIBUTE_BY("hive.ql.rewrites.query.has.distribute.by", false),
+   QUERY_HAS_GROUP_BY("hive.ql.rewrites.query.has.group.by", false),
+   QUERY_HAS_DISTINCT("hive.ql.rewrites.query.has.distinct", false), //This still uses QBParseInfo to make decision. Needs to be changed if QB dependency is not desired.
+   AGG_FUNC_IS_NOT_COUNT("hive.ql.rewrites.agg.func.is.not.count", false),
+   AGG_FUNC_COLS_FETCH_EXCEPTION("hive.ql.rewrites.agg.func.cols.fetch.exception", false),
+   WHR_CLAUSE_COLS_FETCH_EXCEPTION("hive.ql.rewrites.whr.clause.cols.fetch.exception", false),
+   SEL_CLAUSE_COLS_FETCH_EXCEPTION("hive.ql.rewrites.sel.clause.cols.fetch.exception", false),
+   GBY_KEYS_FETCH_EXCEPTION("hive.ql.rewrites.gby.keys.fetch.exception", false),
+   GBY_KEY_HAS_NON_INDEX_COLS("hive.ql.rewrites.gby.keys.has.non.index.cols", false),
+   SEL_HAS_NON_COL_REF("hive.ql.rewrites.sel.has.non.col.ref", false),
+   GBY_NOT_ON_COUNT_KEYS("hive.ql.rewrites.gby.not.on.count.keys", false),
+   IDX_TBL_SEARCH_EXCEPTION("hive.ql.rewrites.idx.tbl.search.exception", false),
+   QUERY_HAS_KEY_MANIP_FUNC("hive.ql.rewrites.query.has.key.manip.func", false),
+   QUERY_HAS_MULTIPLE_TABLES("hive.ql.rewrites.query.has.multiple.tables", false),
+   SHOULD_APPEND_SUBQUERY("hive.ql.rewrites.should.append.subquery", false),
+   REMOVE_GROUP_BY("hive.ql.rewrites.remove.group.by", false);
+
+    ;
+
+    public final String varname;
+    public final int defaultIntVal;
+    public final boolean defaultBoolVal;
+    public final Class<?> valClass;
+
+
+    RewriteVars(String varname, int defaultIntVal) {
+      this.varname = varname;
+      this.valClass = Integer.class;
+      this.defaultIntVal = defaultIntVal;
+      this.defaultBoolVal = false;
+    }
+
+    RewriteVars(String varname, boolean defaultBoolVal) {
+      this.varname = varname;
+      this.valClass = Boolean.class;
+      this.defaultIntVal = -1;
+      this.defaultBoolVal = defaultBoolVal;
+    }
+
+    @Override
+    public String toString() {
+      return varname;
+    }
+
+
+  }
+
+
+  public int getIntVar(Configuration conf, RewriteVars var) {
+    assert (var.valClass == Integer.class);
+    return conf.getInt(var.varname, var.defaultIntVal);
+  }
+
+  public void setIntVar(Configuration conf, RewriteVars var, int val) {
+    assert (var.valClass == Integer.class);
+    conf.setInt(var.varname, val);
+  }
+
+  public boolean getBoolVar(Configuration conf, RewriteVars var) {
+    assert (var.valClass == Boolean.class);
+    return conf.getBoolean(var.varname, var.defaultBoolVal);
+  }
+
+  public void setBoolVar(Configuration conf, RewriteVars var, boolean val) {
+    assert (var.valClass == Boolean.class);
+    conf.setBoolean(var.varname, val);
+  }
 
   /***************************************Index Validation Variables***************************************/
    final String SUPPORTED_INDEX_TYPE =
@@ -58,8 +112,20 @@ public class RewriteCanApplyCtx implements NodeProcessorCtx {
    final List<String> predColRefs = new ArrayList<String>();
    final List<String> gbKeyNameList = new ArrayList<String>();
    final List<List<String>> colRefAggFuncInputList = new ArrayList<List<String>>();
+   HiveConf conf = null;
    private String indexName = "";
-   public String getIndexName() {
+   int aggFuncCnt = 0;
+
+
+   public HiveConf getConf() {
+    return conf;
+  }
+
+  public void setConf(HiveConf conf) {
+    this.conf = conf;
+  }
+
+  public String getIndexName() {
     return indexName;
   }
 
@@ -199,7 +265,7 @@ public class RewriteCanApplyCtx implements NodeProcessorCtx {
           idxTblColNames.add(idxTblCol.getName());
         }
       } catch (HiveException e) {
-        IDX_TBL_SEARCH_EXCEPTION = true;
+        setBoolVar(conf, RewriteVars.IDX_TBL_SEARCH_EXCEPTION, true);
         return false;
       }
       assert(idxTblColNames.contains(COMPACT_IDX_BUCKET_COL));
@@ -218,7 +284,7 @@ public class RewriteCanApplyCtx implements NodeProcessorCtx {
       // We need to check if all columns from index appear in select list only
       // in case of DISTINCT queries, In case group by queries, it is okay as long
       // as all columns from index appear in group-by-key list.
-      if (QUERY_HAS_DISTINCT) {
+      if (getBoolVar(conf, RewriteVars.QUERY_HAS_DISTINCT)) {
         // Check if all columns from index are part of select list too
         if (!selColRefNameList.containsAll(idxKeyColsNames))  {
           LOG.info("Index has non select list columns " +
@@ -239,7 +305,7 @@ public class RewriteCanApplyCtx implements NodeProcessorCtx {
         continue;
       }
 
-      if (!QUERY_HAS_DISTINCT)  {
+      if (!getBoolVar(conf, RewriteVars.QUERY_HAS_DISTINCT))  {
         //--------------------------------------------
         // For group by, we need to check if all keys are from index columns
         // itself. Here GB key order can be different than index columns but that does
@@ -248,7 +314,7 @@ public class RewriteCanApplyCtx implements NodeProcessorCtx {
         // we can rewrite this one to:
         // select c1, c2 from src_cmpt_idx;
         if (!idxKeyColsNames.containsAll(gbKeyNameList)) {
-          GBY_KEY_HAS_NON_INDEX_COLS = true;
+          setBoolVar(conf, RewriteVars.GBY_KEY_HAS_NON_INDEX_COLS, true);
           return false;
         }
 
@@ -270,8 +336,8 @@ public class RewriteCanApplyCtx implements NodeProcessorCtx {
         // 3. GROUP BY idxKey, idxKey
         //     FUTURE: GB Key has dup idxKeyCols. Develop a rewrite to eliminate the dup key cols
         //            from GB key.
-        if (QUERY_HAS_GROUP_BY &&
-            idxKeyColsNames.size() < GBY_KEY_CNT) {
+        if (getBoolVar(conf, RewriteVars.QUERY_HAS_GROUP_BY) &&
+            idxKeyColsNames.size() < getIntVar(conf, RewriteVars.GBY_KEY_CNT)) {
           LOG.info("Group by key has only some non-indexed columns, GroupBy will be"
               + " preserved by rewrite " + getName() + " optimization" );
           removeGroupBy = false;
@@ -306,11 +372,11 @@ public class RewriteCanApplyCtx implements NodeProcessorCtx {
       //which would be used by transformation procedure as inputs.
 
       //sub-query is needed only in case of optimizecount and complex gb keys?
-      if(QUERY_HAS_KEY_MANIP_FUNC == false && !(optimizeCount == true && removeGroupBy == false) ) {
-        REMOVE_GROUP_BY = removeGroupBy;
+      if(getBoolVar(conf, RewriteVars.QUERY_HAS_KEY_MANIP_FUNC) == false && !(optimizeCount == true && removeGroupBy == false) ) {
+        setBoolVar(conf, RewriteVars.REMOVE_GROUP_BY, removeGroupBy);
         addTable(currentTableName, index.getIndexTableName());
       }else{
-        SHOULD_APPEND_SUBQUERY = true;
+        setBoolVar(conf, RewriteVars.SHOULD_APPEND_SUBQUERY, true);
       }
 
     }
@@ -327,87 +393,87 @@ public class RewriteCanApplyCtx implements NodeProcessorCtx {
 
 
   boolean checkIfOptimizationCanApply(){
-    if (QUERY_HAS_MULTIPLE_TABLES) {
+    if (getBoolVar(conf, RewriteVars.QUERY_HAS_MULTIPLE_TABLES)) {
       LOG.info("Query has more than one table " +
           "that is not supported with " + getName() + " optimization" );
       return false;
     }//1
-    if (NO_OF_SUBQUERIES != 0) {
+    if (getIntVar(conf, RewriteVars.NO_OF_SUBQUERIES) != 0) {
       LOG.info("Query has more than one subqueries " +
           "that is not supported with " + getName() + " optimization" );
       return false;
     }//2
-    if (TABLE_HAS_NO_INDEX) {
+    if (getBoolVar(conf, RewriteVars.TABLE_HAS_NO_INDEX)) {
       LOG.info("Table " + currentTableName + " does not have compact index. " +
           "Cannot apply " + getName() + " optimization" );
       return false;
     }//3
-    if(QUERY_HAS_DISTRIBUTE_BY){
+    if(getBoolVar(conf, RewriteVars.QUERY_HAS_DISTRIBUTE_BY)){
       LOG.info("Query has distributeby clause, " +
           "that is not supported with " + getName() + " optimization" );
       return false;
     }//4
-    if(QUERY_HAS_SORT_BY){
+    if(getBoolVar(conf, RewriteVars.QUERY_HAS_SORT_BY)){
       LOG.info("Query has sortby clause, " +
           "that is not supported with " + getName() + " optimization" );
       return false;
     }//5
-    if(QUERY_HAS_ORDER_BY){
+    if(getBoolVar(conf, RewriteVars.QUERY_HAS_ORDER_BY)){
       LOG.info("Query has orderby clause, " +
           "that is not supported with " + getName() + " optimization" );
       return false;
     }//6
-    if(AGG_FUNC_CNT > 1 ){
+    if(getIntVar(conf, RewriteVars.AGG_FUNC_CNT) > 1 ){
       LOG.info("More than 1 agg funcs: " +
           "Not supported by " + getName() + " optimization" );
       return false;
     }//7
-    if(AGG_FUNC_IS_NOT_COUNT){
+    if(getBoolVar(conf, RewriteVars.AGG_FUNC_IS_NOT_COUNT)){
       LOG.info("Agg func other than count is " +
           "not supported by " + getName() + " optimization" );
       return false;
     }//8
-    if(AGG_FUNC_COLS_FETCH_EXCEPTION){
+    if(getBoolVar(conf, RewriteVars.AGG_FUNC_COLS_FETCH_EXCEPTION)){
       LOG.info("Got exception while locating child col refs " +
           "of agg func, skipping " + getName() + " optimization" );
       return false;
     }//9
-    if(WHR_CLAUSE_COLS_FETCH_EXCEPTION){
+    if(getBoolVar(conf, RewriteVars.WHR_CLAUSE_COLS_FETCH_EXCEPTION)){
       LOG.info("Got exception while locating child col refs for where clause, "
           + "skipping " + getName() + " optimization" );
       return false;
     }//10
-/*      if(QUERY_HAS_DISTINCT){
+/*      if(getBoolVar(conf, RewriteVars.QUERY_HAS_DISTINCT)){
       LOG.info("Select-list has distinct. " +
           "Cannot apply the rewrite " + getName() + " optimization" );
       return false;
     }//11
-*/      if(SEL_HAS_NON_COL_REF){
+*/      if(getBoolVar(conf, RewriteVars.SEL_HAS_NON_COL_REF)){
       LOG.info("Select-list has some non-col-ref expression. " +
           "Cannot apply the rewrite " + getName() + " optimization" );
       return false;
     }//12
-    if(SEL_CLAUSE_COLS_FETCH_EXCEPTION){
+    if(getBoolVar(conf, RewriteVars.SEL_CLAUSE_COLS_FETCH_EXCEPTION)){
       LOG.info("Got exception while locating child col refs for select list, "
           + "skipping " + getName() + " optimization" );
       return false;
     }//13
-    if(GBY_KEYS_FETCH_EXCEPTION){
+    if(getBoolVar(conf, RewriteVars.GBY_KEYS_FETCH_EXCEPTION)){
       LOG.info("Got exception while locating child col refs for GroupBy key, "
           + "skipping " + getName() + " optimization" );
       return false;
     }//14
-    if(GBY_NOT_ON_COUNT_KEYS){
+    if(getBoolVar(conf, RewriteVars.GBY_NOT_ON_COUNT_KEYS)){
       LOG.info("Currently count function needs group by on key columns, "
           + "Cannot apply this " + getName() + " optimization" );
       return false;
     }//15
-    if(IDX_TBL_SEARCH_EXCEPTION){
+    if(getBoolVar(conf, RewriteVars.IDX_TBL_SEARCH_EXCEPTION)){
       LOG.info("Got exception while locating index table, " +
           "skipping " + getName() + " optimization" );
       return false;
     }//16
-    if(GBY_KEY_HAS_NON_INDEX_COLS){
+    if(getBoolVar(conf, RewriteVars.GBY_KEY_HAS_NON_INDEX_COLS)){
       LOG.info("Group by key has some non-indexed columns, " +
           "Cannot apply rewrite " + getName() + " optimization" );
       return false;

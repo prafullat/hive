@@ -34,6 +34,9 @@ import org.apache.hadoop.hive.ql.plan.ExprNodeGenericFuncDesc;
 import org.apache.hadoop.hive.ql.plan.FilterDesc;
 import org.apache.hadoop.hive.ql.plan.GroupByDesc;
 import org.apache.hadoop.hive.ql.plan.SelectDesc;
+import org.apache.hadoop.hive.serde2.typeinfo.ListTypeInfo;
+import org.apache.hadoop.hive.serde2.typeinfo.PrimitiveTypeInfo;
+import org.apache.hadoop.hive.serde2.typeinfo.TypeInfo;
 
 public final class RewriteIndexSubqueryProcFactory {
   protected final static Log LOG = LogFactory.getLog(RewriteIndexSubqueryProcFactory.class.getName());
@@ -266,6 +269,7 @@ public final class RewriteIndexSubqueryProcFactory {
       }
 
       if (childOp instanceof GroupByOperator){
+        subqueryCtx.getGbySelColList().clear();
         subqueryCtx.setGbySelColExprMap(operator.getColumnExprMap());
         /* colExprMap */
         Set<String> internalNamesList = subqueryCtx.getGbySelColExprMap().keySet();
@@ -275,12 +279,22 @@ public final class RewriteIndexSubqueryProcFactory {
             List<ExprNodeDesc> colExprs = ((ExprNodeGenericFuncDesc)end).getChildExprs();
             for (ExprNodeDesc colExpr : colExprs) {
               if(colExpr instanceof ExprNodeColumnDesc){
-                subqueryCtx.getGbySelColList().add(colExpr);
+                if(!subqueryCtx.getGbySelColList().contains(colExpr)){
+                  TypeInfo typeInfo = colExpr.getTypeInfo();
+                  if(typeInfo instanceof ListTypeInfo){
+                  PrimitiveTypeInfo pti = new PrimitiveTypeInfo();
+                  pti.setTypeName("int");
+                  colExpr.setTypeInfo(pti);
+                  }
+                  subqueryCtx.getGbySelColList().add(colExpr);
+                }
               }
             }
 
           }else if(end instanceof ExprNodeColumnDesc){
-            subqueryCtx.getGbySelColList().add(end);
+            if(!subqueryCtx.getGbySelColList().contains(end)){
+              subqueryCtx.getGbySelColList().add(end);
+            }
           }
         }
 

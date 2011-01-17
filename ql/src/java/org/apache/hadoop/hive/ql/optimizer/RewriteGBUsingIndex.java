@@ -49,6 +49,7 @@ import org.apache.hadoop.hive.ql.lib.RuleRegExp;
 import org.apache.hadoop.hive.ql.metadata.Hive;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.metadata.Table;
+import org.apache.hadoop.hive.ql.optimizer.RewriteCanApplyCtx.RewriteVars;
 import org.apache.hadoop.hive.ql.parse.ParseContext;
 import org.apache.hadoop.hive.ql.parse.QBParseInfo;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
@@ -82,6 +83,7 @@ public class RewriteGBUsingIndex implements Transform {
 
     canApplyCtx.setParseContext(parseContext);
     canApplyCtx.setHiveDb(hiveDb);
+    canApplyCtx.setConf(parseContext.getConf());
 
     removeGbyCtx.setParseContext(parseContext);
     removeGbyCtx.setHiveDb(hiveDb);
@@ -132,15 +134,15 @@ public class RewriteGBUsingIndex implements Transform {
     }
 
     if(tableNameSet.size() > 1){
-      canApplyCtx.QUERY_HAS_MULTIPLE_TABLES = true;
-      return false;
+      canApplyCtx.setBoolVar(parseContext.getConf(), RewriteVars.QUERY_HAS_MULTIPLE_TABLES, true);
+      return canApplyCtx.checkIfOptimizationCanApply();
     }
 
     HashMap<String,Operator<? extends Serializable>> topOps = parseContext.getTopOps();
     Iterator<TableScanOperator> topOpItr = topToTable.keySet().iterator();
     while(topOpItr.hasNext()){
-      canApplyCtx.AGG_FUNC_CNT = 0;
-      canApplyCtx.GBY_KEY_CNT = 0;
+      canApplyCtx.aggFuncCnt = 0;
+      canApplyCtx.setIntVar(parseContext.getConf(), RewriteVars.GBY_KEY_CNT, 0);
       TableScanOperator topOp = topOpItr.next();
       Table table = topToTable.get(topOp);
       currentTableName = table.getTableName();
@@ -170,10 +172,10 @@ public class RewriteGBUsingIndex implements Transform {
       idxType.add(canApplyCtx.SUPPORTED_INDEX_TYPE);
       List<Index> indexTables = canApplyCtx.getIndexes(tsTable, idxType);
       if (indexTables.size() == 0) {
-        canApplyCtx.TABLE_HAS_NO_INDEX = true;
+        canApplyCtx.setBoolVar(parseContext.getConf(), RewriteVars.TABLE_HAS_NO_INDEX, true);
         return false;
       }else{
-        DAGTraversal(topOp, indexTables);
+        checkEachDAGOperator(topOp, indexTables);
       }
       canApply = canApplyCtx.checkIfOptimizationCanApply();
       if(canApply){
@@ -184,7 +186,7 @@ public class RewriteGBUsingIndex implements Transform {
   }
 
 
-  private void DAGTraversal(Operator<? extends Serializable> topOp, List<Index> indexTables){
+  private void checkEachDAGOperator(Operator<? extends Serializable> topOp, List<Index> indexTables){
     Map<Rule, NodeProcessor> opRules = new LinkedHashMap<Rule, NodeProcessor>();
     opRules.put(new RuleRegExp("R1", "FIL%"), RewriteCanApplyProcFactory.canApplyOnFilterOperator());
     opRules.put(new RuleRegExp("R2", "GBY%"), RewriteCanApplyProcFactory.canApplyOnGroupByOperator());
@@ -216,14 +218,8 @@ public class RewriteGBUsingIndex implements Transform {
       canApplyCtx.setCurrentTableName(currentTableName);
 
       TableScanOperator topOp = (TableScanOperator) topOpMap.get(topOpTableName);
-      if(canApplyCtx.REMOVE_GROUP_BY){
-        removeGbyCtx.setIndexName(indexName);
-        removeGbyCtx.setOpc(parseContext.getOpParseCtx());
-        removeGbyCtx.setCanApplyCtx(canApplyCtx);
-        invokeRemoveGbyProc(topOp);
-      }
 
-      if(canApplyCtx.SHOULD_APPEND_SUBQUERY){
+      if(canApplyCtx.getBoolVar(parseContext.getConf(), RewriteVars.SHOULD_APPEND_SUBQUERY)){
         subqueryCtx.setIndexKeyNames(indexKeyNames);
         subqueryCtx.setIndexName(indexName);
         subqueryCtx.setCurrentTableName(currentTableName);
@@ -237,6 +233,17 @@ public class RewriteGBUsingIndex implements Transform {
         invokeSubquerySelectSchemaProc(subqTopOp);
         invokeFixAllOperatorSchemasProc(topOp);
       }
+
+      if(canApplyCtx.getBoolVar(parseContext.getConf(), RewriteVars.REMOVE_GROUP_BY)){
+        removeGbyCtx.setIndexName(indexName);
+        removeGbyCtx.setOpc(parseContext.getOpParseCtx());
+        removeGbyCtx.setCanApplyCtx(canApplyCtx);
+        invokeRemoveGbyProc(topOp);
+      }
+
+      canApplyCtx.setBoolVar(parseContext.getConf(), RewriteVars.REMOVE_GROUP_BY, false);
+      canApplyCtx.setBoolVar(parseContext.getConf(), RewriteVars.SHOULD_APPEND_SUBQUERY, false);
+
     }
 
   }

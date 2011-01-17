@@ -197,7 +197,7 @@ public class RewriteRemoveGroupbyCtx implements NodeProcessorCtx {
     ArrayList<ColumnInfo> sign = rs.getSignature();
     for (ColumnInfo columnInfo : sign) {
       String alias = columnInfo.getAlias();
-      if(alias != null && alias.contains("_c")){
+      if(alias != null && alias.startsWith("_c")){
         columnInfo.setAlias(aggFuncCol);
       }
       newRS.add(columnInfo);
@@ -209,7 +209,7 @@ public class RewriteRemoveGroupbyCtx implements NodeProcessorCtx {
     for (; i< colList.size(); i++) {
       ExprNodeDesc exprNodeDesc = colList.get(i);
       if(exprNodeDesc instanceof ExprNodeColumnDesc){
-        if(((ExprNodeColumnDesc) exprNodeDesc).getColumn().contains("_c")){
+        if(((ExprNodeColumnDesc) exprNodeDesc).getColumn().startsWith("_c")){
           colList.set(i, exprNode);
           break;
         }
@@ -225,7 +225,7 @@ public class RewriteRemoveGroupbyCtx implements NodeProcessorCtx {
     for (String internal : internalNamesList) {
       ExprNodeDesc end = origColExprMap.get(internal).clone();
       if(end instanceof ExprNodeColumnDesc){
-        if(((ExprNodeColumnDesc) end).getColumn().contains("_c")){
+        if(((ExprNodeColumnDesc) end).getColumn().startsWith("_c")){
           newColExprMap.put(internal, exprNode);
         }else{
           newColExprMap.put(internal, end);

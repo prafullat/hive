@@ -23,6 +23,7 @@ import org.apache.hadoop.hive.ql.exec.SelectOperator;
 import org.apache.hadoop.hive.ql.lib.Node;
 import org.apache.hadoop.hive.ql.lib.NodeProcessor;
 import org.apache.hadoop.hive.ql.lib.NodeProcessorCtx;
+import org.apache.hadoop.hive.ql.optimizer.RewriteCanApplyCtx.RewriteVars;
 import org.apache.hadoop.hive.ql.parse.ASTNode;
 import org.apache.hadoop.hive.ql.parse.HiveParser;
 import org.apache.hadoop.hive.ql.parse.QBParseInfo;
@@ -53,12 +54,12 @@ public final class RewriteCanApplyProcFactory {
       FilterDesc conf = (FilterDesc)operator.getConf();
       ExprNodeGenericFuncDesc oldengfd = (ExprNodeGenericFuncDesc) conf.getPredicate();
       if(oldengfd == null){
-        canApplyCtx.WHR_CLAUSE_COLS_FETCH_EXCEPTION = true;
+        canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.WHR_CLAUSE_COLS_FETCH_EXCEPTION, true);
         return false;
       }
       List<String> colList = oldengfd.getCols();
       if(colList == null || colList.size() == 0){
-        canApplyCtx.WHR_CLAUSE_COLS_FETCH_EXCEPTION = true;
+        canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.WHR_CLAUSE_COLS_FETCH_EXCEPTION, true);
         return false;
       }
       for (String col : colList) {
@@ -82,27 +83,27 @@ public final class RewriteCanApplyProcFactory {
      canApplyCtx = (RewriteCanApplyCtx)ctx;
 
      if(canApplyCtx.getParseContext().getGroupOpToInputTables().containsKey(operator)){
-       canApplyCtx.QUERY_HAS_GROUP_BY = true;
+       canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.QUERY_HAS_GROUP_BY, true);
        GroupByDesc conf = (GroupByDesc) operator.getConf();
        ArrayList<AggregationDesc> aggrList = conf.getAggregators();
        if(aggrList != null && aggrList.size() > 0){
            for (AggregationDesc aggregationDesc : aggrList) {
-             canApplyCtx.AGG_FUNC_CNT++;
-             if(canApplyCtx.AGG_FUNC_CNT > 1) {
+             canApplyCtx.setIntVar(canApplyCtx.getParseContext().getConf(), RewriteVars.AGG_FUNC_CNT, canApplyCtx.aggFuncCnt++);
+             if(canApplyCtx.getIntVar(canApplyCtx.getParseContext().getConf(), RewriteVars.AGG_FUNC_CNT) > 1) {
                return false;
              }
              String aggFunc = aggregationDesc.getGenericUDAFName();
              if(!aggFunc.equals("count")){
-               canApplyCtx.AGG_FUNC_IS_NOT_COUNT = true;
+               canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.AGG_FUNC_IS_NOT_COUNT, true);
                return false;
              }else{
               ArrayList<ExprNodeDesc> para = aggregationDesc.getParameters();
                if(para == null){
-                 canApplyCtx.AGG_FUNC_COLS_FETCH_EXCEPTION =  true;
+                 canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.AGG_FUNC_COLS_FETCH_EXCEPTION, true);
                  return false;
                }else if(para.size() == 0){
                  LOG.info("count(*) case");
-                 canApplyCtx.GBY_NOT_ON_COUNT_KEYS = true;
+                 canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.GBY_NOT_ON_COUNT_KEYS, true);
                  return false;
                }else{
                  for(int i=0; i< para.size(); i++){
@@ -131,15 +132,15 @@ public final class RewriteCanApplyProcFactory {
          ASTNode rootSelExpr = qbParseInfo.getSelForClause(clauseName);
          boolean isDistinct = (rootSelExpr.getType() == HiveParser.TOK_SELECTDI);
          if(isDistinct) {
-           canApplyCtx.QUERY_HAS_DISTINCT = true;
+           canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.QUERY_HAS_DISTINCT, true);
          }
        }
        ArrayList<ExprNodeDesc> keyList = conf.getKeys();
        if(keyList == null || keyList.size() == 0){
-         canApplyCtx.GBY_KEYS_FETCH_EXCEPTION = true;
+         canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.GBY_KEYS_FETCH_EXCEPTION, true);
          return false;
        }
-       canApplyCtx.GBY_KEY_CNT = keyList.size();
+       canApplyCtx.setIntVar(canApplyCtx.getParseContext().getConf(), RewriteVars.GBY_KEY_CNT, keyList.size());
        for (ExprNodeDesc exprNodeDesc : keyList) {
          if(exprNodeDesc instanceof ExprNodeColumnDesc){
            canApplyCtx.gbKeyNameList.addAll(exprNodeDesc.getCols());
@@ -149,7 +150,7 @@ public final class RewriteCanApplyProcFactory {
            List<ExprNodeDesc> childExprs = endfg.getChildExprs();
            for (ExprNodeDesc end : childExprs) {
              if(end instanceof ExprNodeColumnDesc){
-               canApplyCtx.QUERY_HAS_KEY_MANIP_FUNC = true;
+               canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.QUERY_HAS_KEY_MANIP_FUNC, true);
                canApplyCtx.gbKeyNameList.addAll(exprNodeDesc.getCols());
                canApplyCtx.selColRefNameList.add(((ExprNodeColumnDesc) end).getColumn());
              }
@@ -181,14 +182,14 @@ public final class RewriteCanApplyProcFactory {
          int nr = conf.getNumReducers();
          if(nr == -1){
            if(partCols != null && partCols.size() > 0){
-             canApplyCtx.QUERY_HAS_DISTRIBUTE_BY = true;
+             canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.QUERY_HAS_DISTRIBUTE_BY, true);
              return false;
            }else{
-             canApplyCtx.QUERY_HAS_SORT_BY = true;
+             canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.QUERY_HAS_SORT_BY, true);
              return false;
            }
          }else if(nr == 1){
-           canApplyCtx.QUERY_HAS_ORDER_BY = true;
+           canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.QUERY_HAS_ORDER_BY, true);
            return false;
          }
 
@@ -222,7 +223,7 @@ public final class RewriteCanApplyProcFactory {
        }
        for (int i=0 ; i< canApplyCtx.predColRefs.size(); i++) {
          String predCol = canApplyCtx.predColRefs.get(i);
-         if(predCol.contains("_c") && internalToAlias.get(predCol) != null){
+         if(predCol.startsWith("_c") && internalToAlias.get(predCol) != null){
            canApplyCtx.predColRefs.set(i, internalToAlias.get(predCol));
          }
        }
@@ -231,13 +232,13 @@ public final class RewriteCanApplyProcFactory {
        SelectDesc conf = (SelectDesc)operator.getConf();
        ArrayList<ExprNodeDesc> selColList = conf.getColList();
        if(selColList == null || selColList.size() == 0){
-         canApplyCtx.SEL_CLAUSE_COLS_FETCH_EXCEPTION = true;
+         canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.SEL_CLAUSE_COLS_FETCH_EXCEPTION, true);
          return false;
        }else{
-         if(!canApplyCtx.QUERY_HAS_GROUP_BY){
+         if(!canApplyCtx.getBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.QUERY_HAS_GROUP_BY)){
            for (ExprNodeDesc exprNodeDesc : selColList) {
              if(exprNodeDesc instanceof ExprNodeColumnDesc){
-               if(!((ExprNodeColumnDesc) exprNodeDesc).getColumn().contains("_c")){
+               if(!((ExprNodeColumnDesc) exprNodeDesc).getColumn().startsWith("_c")){
                  canApplyCtx.selColRefNameList.addAll(exprNodeDesc.getCols());
                }
              }else if(exprNodeDesc instanceof ExprNodeGenericFuncDesc){
@@ -245,7 +246,7 @@ public final class RewriteCanApplyProcFactory {
                List<ExprNodeDesc> childExprs = endfg.getChildExprs();
                for (ExprNodeDesc end : childExprs) {
                  if(end instanceof ExprNodeColumnDesc){
-                   if(!((ExprNodeColumnDesc) exprNodeDesc).getColumn().contains("_c")){
+                   if(!((ExprNodeColumnDesc) exprNodeDesc).getColumn().startsWith("_c")){
                      canApplyCtx.selColRefNameList.addAll(exprNodeDesc.getCols());
                    }
                  }
