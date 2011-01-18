@@ -45,7 +45,6 @@ public class RewriteIndexSubqueryCtx implements NodeProcessorCtx {
   private ParseContext parseContext = null;
   private ParseContext subqueryPctx = null;
   private ParseContext newDAGCtx = null;
-  private final RewriteParseContextGenerator pcg = new RewriteParseContextGenerator();
 
   private Set<String> indexKeyNames = new LinkedHashSet<String>();
   private String indexName = "";
@@ -200,11 +199,6 @@ public class RewriteIndexSubqueryCtx implements NodeProcessorCtx {
     this.eval = eval;
   }
 
-
-  public RewriteParseContextGenerator getPcg() {
-    return pcg;
-  }
-
   public void setNewTSOp(Operator<? extends Serializable> newTSOp) {
     this.newTSOp = newTSOp;
   }
@@ -218,9 +212,8 @@ public class RewriteIndexSubqueryCtx implements NodeProcessorCtx {
     for (String key : indexKeyNames) {
       selKeys += key + ",";
     }
-    pcg.setParseContext(parseContext);
     String subqueryCommand = "select " + selKeys + " size(`_offsets`) as CNT from " + indexName;
-    subqueryPctx = pcg.generateDAGForSubquery(subqueryCommand);
+    subqueryPctx = RewriteParseContextGenerator.generateOperatorTree(parseContext.getConf(), subqueryCommand);
 
   }
 

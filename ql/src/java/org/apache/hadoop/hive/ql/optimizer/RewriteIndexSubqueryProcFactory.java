@@ -25,6 +25,7 @@ import org.apache.hadoop.hive.ql.lib.Node;
 import org.apache.hadoop.hive.ql.lib.NodeProcessor;
 import org.apache.hadoop.hive.ql.lib.NodeProcessorCtx;
 import org.apache.hadoop.hive.ql.metadata.Table;
+import org.apache.hadoop.hive.ql.parse.ParseContext;
 import org.apache.hadoop.hive.ql.parse.RowResolver;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
 import org.apache.hadoop.hive.ql.plan.AggregationDesc;
@@ -329,7 +330,9 @@ public final class RewriteIndexSubqueryProcFactory {
           selReplacementCommand = "select sum(" + subqueryCtx.getIndexKeyNames().iterator().next() + ") as TOTAL from " + table
           + " group by " + subqueryCtx.getIndexKeyNames().iterator().next() + " ";
         }
-        subqueryCtx.setNewDAGCtx(subqueryCtx.getPcg().generateDAGForSubquery(selReplacementCommand));
+        ParseContext newDAGContext = RewriteParseContextGenerator.generateOperatorTree(subqueryCtx.getParseContext().getConf(),
+            selReplacementCommand);
+        subqueryCtx.setNewDAGCtx(newDAGContext);
         Map<GroupByOperator, Set<String>> newGbyOpMap = subqueryCtx.getNewDAGCtx().getGroupOpToInputTables();
         GroupByOperator newGbyOperator = newGbyOpMap.keySet().iterator().next();
 

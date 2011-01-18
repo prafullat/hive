@@ -113,7 +113,7 @@ public class RewriteCanApplyCtx implements NodeProcessorCtx {
    final List<String> gbKeyNameList = new ArrayList<String>();
    final List<List<String>> colRefAggFuncInputList = new ArrayList<List<String>>();
    HiveConf conf = null;
-   private String indexName = "";
+   private String indexTableName = "";
    int aggFuncCnt = 0;
 
 
@@ -125,8 +125,8 @@ public class RewriteCanApplyCtx implements NodeProcessorCtx {
     this.conf = conf;
   }
 
-  public String getIndexName() {
-    return indexName;
+  public String getIndexTableName() {
+    return indexTableName;
   }
 
 
@@ -144,7 +144,7 @@ public class RewriteCanApplyCtx implements NodeProcessorCtx {
 
 
   public void setIndexName(String indexName) {
-    this.indexName = indexName;
+    this.indexTableName = indexName;
   }
 
   public Set<String> getIndexKeyNames() {
@@ -243,7 +243,7 @@ public class RewriteCanApplyCtx implements NodeProcessorCtx {
       List<String> idxKeyColsNames = new ArrayList<String>();
 
       index = indexTables.get(idxCtr);
-      indexName = index.getIndexTableName();
+      indexTableName = index.getIndexTableName();
       //Getting index key columns
       StorageDescriptor sd = index.getSd();
       List<FieldSchema> idxColList = sd.getCols();
