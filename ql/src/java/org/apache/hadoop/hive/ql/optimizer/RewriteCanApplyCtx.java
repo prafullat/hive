@@ -19,12 +19,16 @@ import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.metadata.Table;
 import org.apache.hadoop.hive.ql.parse.ParseContext;
 
+/**
+ * RewriteCanApplyCtx class stores the context for the {@link RewriteCanApplyProcFactory} to determine
+ * if any index can be used and if the input query meets all the criteria for rewrite optimization.
+ */
 public class RewriteCanApplyCtx implements NodeProcessorCtx {
 
   protected final  Log LOG = LogFactory.getLog(RewriteCanApplyCtx.class.getName());
 
   public RewriteCanApplyCtx() {
-    baseToIdxTableMap = new HashMap<String, String>();
+
   }
 
   public static enum RewriteVars {
@@ -59,7 +63,7 @@ public class RewriteCanApplyCtx implements NodeProcessorCtx {
     public final boolean defaultBoolVal;
     public final Class<?> valClass;
 
-
+    //Constructors for int and boolean values
     RewriteVars(String varname, int defaultIntVal) {
       this.varname = varname;
       this.valClass = Integer.class;
@@ -82,7 +86,9 @@ public class RewriteCanApplyCtx implements NodeProcessorCtx {
 
   }
 
-
+  /*
+   * Methods to set and retrieve the RewriteVars enum variables
+   * */
   public int getIntVar(Configuration conf, RewriteVars var) {
     assert (var.valClass == Integer.class);
     return conf.getInt(var.varname, var.defaultIntVal);
@@ -104,17 +110,31 @@ public class RewriteCanApplyCtx implements NodeProcessorCtx {
   }
 
   /***************************************Index Validation Variables***************************************/
-   final String SUPPORTED_INDEX_TYPE =
+  //The SUPPORTED_INDEX_TYPE value will change when we implement a new index handler to retrieve correct result
+  // for count if the same key appears more than once within the same block
+  final String SUPPORTED_INDEX_TYPE =
     "org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler";
    final String COMPACT_IDX_BUCKET_COL = "_bucketname";
    final String COMPACT_IDX_OFFSETS_ARRAY_COL = "_offsets";
+
+   //Data structures that are populated in the RewriteCanApplyProcFactory methods to check if the index key meets all criteria
    final Set<String> selColRefNameList = new LinkedHashSet<String>();
    final List<String> predColRefs = new ArrayList<String>();
    final List<String> gbKeyNameList = new ArrayList<String>();
    final List<List<String>> colRefAggFuncInputList = new ArrayList<List<String>>();
-   HiveConf conf = null;
+
+   //Map for base table to index table mapping
+   //TableScan operator for base table will be modified to read from index table
+   private final HashMap<String, String> baseToIdxTableMap = new HashMap<String, String>();;
+   private HiveConf conf = null;
    private String indexTableName = "";
    int aggFuncCnt = 0;
+   private Set<String> indexKeyNames = new LinkedHashSet<String>();
+   private  ParseContext parseContext = null;
+   private Hive hiveDb;
+   private String currentTableName = null;
+
+
 
 
    public HiveConf getConf() {
@@ -128,11 +148,6 @@ public class RewriteCanApplyCtx implements NodeProcessorCtx {
   public String getIndexTableName() {
     return indexTableName;
   }
-
-
-   //Map for base table to index table mapping
-   //TableScan operator for base table will be modified to read from index table
-   private final HashMap<String, String> baseToIdxTableMap;
 
    public void addTable(String baseTableName, String indexTableName) {
      baseToIdxTableMap.put(baseTableName, indexTableName);
@@ -155,10 +170,6 @@ public class RewriteCanApplyCtx implements NodeProcessorCtx {
     this.indexKeyNames = indexKeyNames;
   }
 
-  private Set<String> indexKeyNames = new LinkedHashSet<String>();
-
-  private  ParseContext parseContext = null;
-  private Hive hiveDb;
   public Hive getHiveDb() {
     return hiveDb;
   }
@@ -166,9 +177,6 @@ public class RewriteCanApplyCtx implements NodeProcessorCtx {
   public void setHiveDb(Hive hiveDb) {
     this.hiveDb = hiveDb;
   }
-
-  private String currentTableName = null;
-
 
   public String getCurrentTableName() {
     return currentTableName;
@@ -191,7 +199,14 @@ public class RewriteCanApplyCtx implements NodeProcessorCtx {
   }
 
 
-   List<Index> getIndexes(Table baseTableMetaData, List<String> matchIndexTypes) {
+   /**
+   * Given a base table meta data, and a list of index types for which we need to find a matching index,
+   * this method returns a list of matching index tables.
+   * @param baseTableMetaData
+   * @param matchIndexTypes
+   * @return
+   */
+  List<Index> getIndexes(Table baseTableMetaData, List<String> matchIndexTypes) {
     List<Index> matchingIndexes = new ArrayList<Index>();
     List<Index> indexesOnTable = null;
 
@@ -230,12 +245,16 @@ public class RewriteCanApplyCtx implements NodeProcessorCtx {
 
 
 
+  /**
+   * This code block iterates over indexes on the table and picks
+   * up the first index that satisfies the rewrite criteria.
+   * @param indexTables
+   * @return
+   */
   boolean isIndexUsable(List<Index> indexTables){
     Index index = null;
     Hive hiveInstance = hiveDb;
 
-    // This code block iterates over indexes on the table and picks up the
-    // first index that satisfies the rewrite criteria.
     ArrayList<String> unusableIndexNames = new ArrayList<String>();
     for (int idxCtr = 0; idxCtr < indexTables.size(); idxCtr++)  {
       boolean removeGroupBy = true;
@@ -380,7 +399,7 @@ public class RewriteCanApplyCtx implements NodeProcessorCtx {
       }
 
     }
-
+    //If none of the index was found to be usable for rewrite
     if(unusableIndexNames.size() == indexTables.size()){
       LOG.info("No Valid Index Found to apply Optimization");
       return false;
@@ -391,7 +410,10 @@ public class RewriteCanApplyCtx implements NodeProcessorCtx {
   }
 
 
-
+  /**
+   * This method logs the reason for which we cannot apply the rewrite optimization.
+   * @return
+   */
   boolean checkIfOptimizationCanApply(){
     if (getBoolVar(conf, RewriteVars.QUERY_HAS_MULTIPLE_TABLES)) {
       LOG.info("Query has more than one table " +
@@ -443,41 +465,36 @@ public class RewriteCanApplyCtx implements NodeProcessorCtx {
           + "skipping " + getName() + " optimization" );
       return false;
     }//10
-/*      if(getBoolVar(conf, RewriteVars.QUERY_HAS_DISTINCT)){
-      LOG.info("Select-list has distinct. " +
-          "Cannot apply the rewrite " + getName() + " optimization" );
-      return false;
-    }//11
-*/      if(getBoolVar(conf, RewriteVars.SEL_HAS_NON_COL_REF)){
+     if(getBoolVar(conf, RewriteVars.SEL_HAS_NON_COL_REF)){
       LOG.info("Select-list has some non-col-ref expression. " +
           "Cannot apply the rewrite " + getName() + " optimization" );
       return false;
-    }//12
+    }//11
     if(getBoolVar(conf, RewriteVars.SEL_CLAUSE_COLS_FETCH_EXCEPTION)){
       LOG.info("Got exception while locating child col refs for select list, "
           + "skipping " + getName() + " optimization" );
       return false;
-    }//13
+    }//12
     if(getBoolVar(conf, RewriteVars.GBY_KEYS_FETCH_EXCEPTION)){
       LOG.info("Got exception while locating child col refs for GroupBy key, "
           + "skipping " + getName() + " optimization" );
       return false;
-    }//14
+    }//13
     if(getBoolVar(conf, RewriteVars.GBY_NOT_ON_COUNT_KEYS)){
       LOG.info("Currently count function needs group by on key columns, "
           + "Cannot apply this " + getName() + " optimization" );
       return false;
-    }//15
+    }//14
     if(getBoolVar(conf, RewriteVars.IDX_TBL_SEARCH_EXCEPTION)){
       LOG.info("Got exception while locating index table, " +
           "skipping " + getName() + " optimization" );
       return false;
-    }//16
+    }//15
     if(getBoolVar(conf, RewriteVars.GBY_KEY_HAS_NON_INDEX_COLS)){
       LOG.info("Group by key has some non-indexed columns, " +
           "Cannot apply rewrite " + getName() + " optimization" );
       return false;
-    }//17
+    }//16
     return true;
   }
 
