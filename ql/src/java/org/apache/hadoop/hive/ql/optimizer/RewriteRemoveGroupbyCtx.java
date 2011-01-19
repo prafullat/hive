@@ -1,51 +1,35 @@
 package org.apache.hadoop.hive.ql.optimizer;
 
-import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hive.conf.HiveConf;
-import org.apache.hadoop.hive.ql.Context;
-import org.apache.hadoop.hive.ql.exec.ColumnInfo;
 import org.apache.hadoop.hive.ql.exec.Operator;
-import org.apache.hadoop.hive.ql.exec.RowSchema;
-import org.apache.hadoop.hive.ql.exec.SelectOperator;
 import org.apache.hadoop.hive.ql.exec.TableScanOperator;
 import org.apache.hadoop.hive.ql.lib.Node;
 import org.apache.hadoop.hive.ql.lib.NodeProcessorCtx;
 import org.apache.hadoop.hive.ql.metadata.Hive;
 import org.apache.hadoop.hive.ql.parse.ASTNode;
-import org.apache.hadoop.hive.ql.parse.BaseSemanticAnalyzer;
 import org.apache.hadoop.hive.ql.parse.HiveParser;
 import org.apache.hadoop.hive.ql.parse.OpParseContext;
 import org.apache.hadoop.hive.ql.parse.ParseContext;
-import org.apache.hadoop.hive.ql.parse.ParseDriver;
-import org.apache.hadoop.hive.ql.parse.ParseException;
-import org.apache.hadoop.hive.ql.parse.ParseUtils;
-import org.apache.hadoop.hive.ql.parse.SemanticAnalyzer;
-import org.apache.hadoop.hive.ql.parse.SemanticAnalyzerFactory;
-import org.apache.hadoop.hive.ql.parse.SemanticException;
-import org.apache.hadoop.hive.ql.plan.ExprNodeColumnDesc;
-import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
-import org.apache.hadoop.hive.ql.plan.ExprNodeGenericFuncDesc;
-import org.apache.hadoop.hive.ql.plan.SelectDesc;
 
 public class RewriteRemoveGroupbyCtx implements NodeProcessorCtx {
 
-  protected final  Log LOG = LogFactory.getLog(RewriteRemoveGroupbyCtx.class.getName());
-
+  //We need these two ArrayLists to reset the parent operator list and child operator list in the operator tree
+  // once we remove the operators that represent the group-by construct
   private List<Operator<? extends Serializable>>  newParentList = new ArrayList<Operator<? extends Serializable>>();
   private List<Operator<? extends Serializable>>  newChildrenList = new ArrayList<Operator<? extends Serializable>>();
+
+  //We need to remove the operators from OpParseContext to remove them from the operator tree
   private LinkedHashMap<Operator<? extends Serializable>, OpParseContext> opc = new LinkedHashMap<Operator<? extends Serializable>, OpParseContext>();
   private Hive hiveDb;
-  private  ParseContext parseContext = null;
-  private RewriteCanApplyCtx canApplyCtx = null;
+  private ParseContext parseContext;
+
+  //We need the RewriteCanApplyCtx instance to retrieve the mapping from original table to index table in the
+  // getReplaceTableScanProc() method of the RewriteRemoveGroupbyProcFactory
+  private RewriteCanApplyCtx canApplyCtx;
   private String indexName = "";
 
   public List<Operator<? extends Serializable>> getNewParentList() {
@@ -107,7 +91,14 @@ public class RewriteRemoveGroupbyCtx implements NodeProcessorCtx {
 
 
 
-  ASTNode getFuncNode(ASTNode root){
+  /**
+   * Given a root node of the parse tree, this function returns the "first" TOK_FUNCTION node
+   * that matches the input function name
+   *
+   * @param root
+   * @return
+   */
+  ASTNode getFuncNode(ASTNode root, String funcName){
     ASTNode func = null;
     ArrayList<Node> cList = root.getChildren();
     while(cList != null && cList.size() > 0){
@@ -115,9 +106,15 @@ public class RewriteRemoveGroupbyCtx implements NodeProcessorCtx {
         if(null != node){
           ASTNode curr = (ASTNode)node;
           if(curr.getType() == HiveParser.TOK_FUNCTION){
-            func = curr;
-            cList = null;
-            break;
+            ArrayList<Node> funcChildren = curr.getChildren();
+            for (Node child : funcChildren) {
+              ASTNode funcChild = (ASTNode)child;
+              if(funcChild.getText().equals(funcName)){
+                func = curr;
+                cList = null;
+                break;
+              }
+            }
           }else{
             cList = curr.getChildren();
             continue;
@@ -129,137 +126,32 @@ public class RewriteRemoveGroupbyCtx implements NodeProcessorCtx {
   }
 
 
-  void replaceIdxKeyWithSizeFunc(Operator<? extends Serializable> selOperator) throws SemanticException{
-
-    HiveConf conf = parseContext.getConf();
-    Context ctx = null;
-    ASTNode tree = null;
-    BaseSemanticAnalyzer sem = null;
-    String newSelCommand = "select size(`_offsets`) from " + indexName;
-    try {
-    ctx = new Context(conf);
-    ParseDriver pd = new ParseDriver();
-    tree = pd.parse(newSelCommand, ctx);
-    tree = ParseUtils.findRootNonNullToken(tree);
-    sem = SemanticAnalyzerFactory.get(conf, tree);
-
-    } catch (ParseException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    } catch (SemanticException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    } catch (IOException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    }
-
-
-    ASTNode funcNode = getFuncNode(tree);
-    LinkedHashMap<Operator<? extends Serializable>, OpParseContext> opCtxMap =
-      parseContext.getOpParseCtx();
-    List<Operator<? extends Serializable>> parentList = selOperator.getParentOperators();
-    Operator<? extends Serializable> tsOp = null;
+  /**
+   * Given an input operator, this function returns the top TableScanOperator for the operator tree
+   * @param inputOp
+   * @return
+   */
+  Operator<? extends Serializable> getTopOperator(Operator<? extends Serializable> inputOp){
+    Operator<? extends Serializable>  tsOp = null;
+    List<Operator<? extends Serializable>> parentList = inputOp.getParentOperators();
     while(parentList != null && parentList.size() > 0){
-      for (Operator<? extends Serializable> operator : parentList) {
-        if(operator != null){
-          if(operator instanceof TableScanOperator){
-            tsOp = operator;
+      for (Operator<? extends Serializable> op : parentList) {
+        if(op != null){
+          if(op instanceof TableScanOperator){
+            tsOp = (TableScanOperator) op;
             parentList = null;
             break;
           }else{
-            parentList = operator.getParentOperators();
+            parentList = op.getParentOperators();
             continue;
           }
         }
       }
     }
 
-
-    OpParseContext tsCtx = opCtxMap.get(tsOp);
-    ExprNodeDesc exprNode = ((SemanticAnalyzer) sem).genExprNodeDesc(funcNode, tsCtx.getRowResolver());
-    String aggFuncCol = "";
-
-    if(exprNode instanceof ExprNodeGenericFuncDesc){
-      List<ExprNodeDesc> exprList = ((ExprNodeGenericFuncDesc) exprNode).getChildExprs();
-      for (ExprNodeDesc exprNodeDesc : exprList) {
-        if(exprNodeDesc instanceof ExprNodeColumnDesc){
-          aggFuncCol = ((ExprNodeColumnDesc) exprNodeDesc).getColumn();
-        }
-      }
-    }
-
-    SelectDesc selDesc = (SelectDesc) selOperator.getConf();
-
-
-    RowSchema rs = selOperator.getSchema();
-    ArrayList<ColumnInfo> newRS = new ArrayList<ColumnInfo>();
-    ArrayList<ColumnInfo> sign = rs.getSignature();
-    for (ColumnInfo columnInfo : sign) {
-      String alias = columnInfo.getAlias();
-      if(alias != null && alias.startsWith("_c")){
-        columnInfo.setAlias(aggFuncCol);
-      }
-      newRS.add(columnInfo);
-    }
-    selOperator.getSchema().setSignature(newRS);
-
-    ArrayList<ExprNodeDesc> colList = selDesc.getColList();
-    int i = 0;
-    for (; i< colList.size(); i++) {
-      ExprNodeDesc exprNodeDesc = colList.get(i);
-      if(exprNodeDesc instanceof ExprNodeColumnDesc){
-        if(((ExprNodeColumnDesc) exprNodeDesc).getColumn().startsWith("_c")){
-          colList.set(i, exprNode);
-          break;
-        }
-      }
-    }
-
-    selDesc.setColList(colList);
-
-    Map<String, ExprNodeDesc> origColExprMap = selOperator.getColumnExprMap();
-    Map<String, ExprNodeDesc> newColExprMap = new LinkedHashMap<String, ExprNodeDesc>();
-
-    Set<String> internalNamesList = origColExprMap.keySet();
-    for (String internal : internalNamesList) {
-      ExprNodeDesc end = origColExprMap.get(internal).clone();
-      if(end instanceof ExprNodeColumnDesc){
-        if(((ExprNodeColumnDesc) end).getColumn().startsWith("_c")){
-          newColExprMap.put(internal, exprNode);
-        }else{
-          newColExprMap.put(internal, end);
-        }
-      }else{
-        newColExprMap.put(internal, end);
-      }
-    }
-    selOperator.setColumnExprMap(newColExprMap);
-
+    return tsOp;
   }
-
-  SelectOperator getSelectOperator(TableScanOperator tsOp){
-    SelectOperator selOp = null;
-    List<Operator<? extends Serializable>> childOps = tsOp.getChildOperators();
-
-    while(childOps != null && childOps.size() > 0){
-      for (Operator<? extends Serializable> operator : childOps) {
-        if(operator != null){
-          if(operator instanceof SelectOperator){
-            selOp = (SelectOperator) operator;
-            childOps = null;
-            break;
-          }else{
-            childOps = operator.getChildOperators();
-            continue;
-          }
-        }
-      }
-    }
-    return selOp;
-  }
-
-
 
 
 }
+

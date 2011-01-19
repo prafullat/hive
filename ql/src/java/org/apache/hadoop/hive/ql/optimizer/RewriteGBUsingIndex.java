@@ -34,7 +34,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.metastore.api.Index;
 import org.apache.hadoop.hive.ql.exec.Operator;
-import org.apache.hadoop.hive.ql.exec.SelectOperator;
 import org.apache.hadoop.hive.ql.exec.TableScanOperator;
 import org.apache.hadoop.hive.ql.lib.DefaultGraphWalker;
 import org.apache.hadoop.hive.ql.lib.DefaultRuleDispatcher;
@@ -80,32 +79,28 @@ import org.apache.hadoop.hive.ql.parse.SemanticException;
  *    - in GROUP BY
  *  - Queries with agg func COUNT(literal) or COUNT(index key col ref)
  *    in SELECT
- *  - Queries with SELECT DISTINCT index key col refs
+ *  - Queries with SELECT DISTINCT index_key_col_refs
  *  - Queries having a subquery satisfying above condition (only the
  *    subquery is rewritten)
  *
  *  FUTURE:
- *  - Many of the checks for above criteria rely on equivalence of
- *    expressions, but such framework/mechanism of expression equivalence
- *    isn't present currently or developed yet. This needs to be supported
- *    in order for better robust checks. This is critically important for
+ *  - Many of the checks for above criteria rely on equivalence of expressions,
+ *    but such framework/mechanism of expression equivalence isn't present currently or developed yet.
+ *    This needs to be supported in order for better robust checks. This is critically important for
  *    correctness of a query rewrite system.
- *    - Also this code currently directly works on the parse tree data
- *      structs (AST nodes) for checking, manipulating query data structure.
- *      If such expr equiv mechanism is to be developed, it would be important
- *      to think and reflect on whether to continue use the parse tree
- *      data structs (and enhance those classes with such equivalence methods)
- *      or to create independent hierarchies of data structs and classes
- *      for the exprs and develop that equivalence mechanism on that new
- *      class hierarchy, code.
+ *  - This code currently uses index types with org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler.
+ *    However, the  CompactIndexHandler currently stores the distinct block offsets and not the row offsets.
+ *    Use of this index type will give erroneous results to compute COUNT if the same key appears more
+ *    than once within the same block. To address this issue, we plan to create a new index type in future.
  *
- *      @see RewriteCanApplyCtx
- *      @see RewriteCanApplyProcFactory
- *      @see RewriteRemoveGroupbyCtx
- *      @see RewriteRemoveGroupbyProcFactory
- *      @see RewriteIndexSubqueryCtx
- *      @see RewriteIndexSubqueryProcFactory
- *      @see RewriteParseContextGenerator
+ *
+ *  @see RewriteCanApplyCtx
+ *  @see RewriteCanApplyProcFactory
+ *  @see RewriteRemoveGroupbyCtx
+ *  @see RewriteRemoveGroupbyProcFactory
+ *  @see RewriteIndexSubqueryCtx
+ *  @see RewriteIndexSubqueryProcFactory
+ *  @see RewriteParseContextGenerator
  *
  */
 public class RewriteGBUsingIndex implements Transform {
@@ -395,27 +390,22 @@ public class RewriteGBUsingIndex implements Transform {
   private void invokeRemoveGbyProc(Operator<? extends Serializable> topOp) throws SemanticException{
     Map<Rule, NodeProcessor> opRules = new LinkedHashMap<Rule, NodeProcessor>();
 
-    //rule that replaces index key selection with size(_offsets) function in original query
-    opRules.put(new RuleRegExp("R1", "SEL%"), RewriteRemoveGroupbyProcFactory.getReplaceIdxKeyWithSizeFuncProc());
-    // remove group-by pattern from original operator tree
-    opRules.put(new RuleRegExp("R2", "GBY%RS%GBY%"), RewriteRemoveGroupbyProcFactory.getRemoveGroupByProc());
     // replace scan operator containing original table with index table
-    opRules.put(new RuleRegExp("R3", "TS%"), RewriteRemoveGroupbyProcFactory.getReplaceTableScanProc());
+    opRules.put(new RuleRegExp("R1", "TS%"), RewriteRemoveGroupbyProcFactory.getReplaceTableScanProc());
+    //rule that replaces index key selection with size(_offsets) function in original query
+    opRules.put(new RuleRegExp("R2", "SEL%"), RewriteRemoveGroupbyProcFactory.getReplaceIdxKeyWithSizeFuncProc());
+    // remove group-by pattern from original operator tree
+    opRules.put(new RuleRegExp("R3", "GBY%RS%GBY%"), RewriteRemoveGroupbyProcFactory.getRemoveGroupByProc());
 
     // The dispatcher fires the processor corresponding to the closest matching
     // rule and passes the context along
     Dispatcher disp = new DefaultRuleDispatcher(getDefaultProc(), opRules, removeGbyCtx);
-    GraphWalker ogw = new DefaultGraphWalker(disp);
+    GraphWalker ogw = new PreOrderWalker(disp);
 
     // Create a list of topop nodes
     ArrayList<Node> topNodes = new ArrayList<Node>();
     topNodes.add(topOp);
     ogw.startWalking(topNodes, null);
-
-    /*The reason we need to do this step after walking operator tree is that we need the TS operator to be
-     * replaced first before replacing idx keys with size(offsets)*/
-    SelectOperator selectOp = removeGbyCtx.getSelectOperator((TableScanOperator) topOp);
-    removeGbyCtx.replaceIdxKeyWithSizeFunc(selectOp);
 
     //Getting back new parseContext and new OpParseContext after GBY-RS-GBY is removed
     parseContext = removeGbyCtx.getParseContext();
