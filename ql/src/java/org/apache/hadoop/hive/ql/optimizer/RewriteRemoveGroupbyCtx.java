@@ -15,6 +15,9 @@ import org.apache.hadoop.hive.ql.parse.HiveParser;
 import org.apache.hadoop.hive.ql.parse.OpParseContext;
 import org.apache.hadoop.hive.ql.parse.ParseContext;
 
+/**
+ * RewriteRemoveGroupbyCtx  class stores the context for the {@link RewriteRemoveGroupbyProcFactory} processor factory methods
+ */
 public class RewriteRemoveGroupbyCtx implements NodeProcessorCtx {
 
   //We need these two ArrayLists to reset the parent operator list and child operator list in the operator tree

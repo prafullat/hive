@@ -47,6 +47,12 @@ import org.apache.hadoop.hive.serde2.objectinspector.StructField;
 import org.apache.hadoop.hive.serde2.objectinspector.StructObjectInspector;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoUtils;
 
+/**
+ * Factory of processors used by {@link RewriteGBUsingIndex} (see invokeRemoveGbyProc(..) method)
+ * Each of the processors are invoked according to a rule and serve towards removing
+ * group-by construct from original operator tree
+ *
+ */
 public final class RewriteRemoveGroupbyProcFactory {
   protected final static Log LOG = LogFactory.getLog(RewriteRemoveGroupbyProcFactory.class.getName());
   private static RewriteRemoveGroupbyCtx removeGbyCtx = null;
@@ -69,7 +75,7 @@ public final class RewriteRemoveGroupbyProcFactory {
    * to accommodate the new replacement and removal of group-by construct
    *
    */
-  public static class ReplaceIdxKeyWithSizeFunc implements NodeProcessor {
+  private static class ReplaceIdxKeyWithSizeFunc implements NodeProcessor {
     public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx ctx,
         Object... nodeOutputs) throws SemanticException {
       SelectOperator operator = (SelectOperator)nd;
@@ -224,7 +230,7 @@ public final class RewriteRemoveGroupbyProcFactory {
    * index table rather than scanning over the orginal table.
    *
    */
-  public static class RepaceTableScanOpProc implements NodeProcessor {
+  private static class RepaceTableScanOpProc implements NodeProcessor {
     public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx ctx,
         Object... nodeOutputs) throws SemanticException {
       TableScanOperator scanOperator = (TableScanOperator)nd;
@@ -300,7 +306,7 @@ public final class RewriteRemoveGroupbyProcFactory {
    * This processor removes the GroupBy operators and the interim ReduceSinkOperator from the OpParseContext
    *
    */
-  public static class RemoveGBYProc implements NodeProcessor {
+  private static class RemoveGBYProc implements NodeProcessor {
     public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx ctx,
         Object... nodeOutputs) throws SemanticException {
       GroupByOperator operator = (GroupByOperator)nd;

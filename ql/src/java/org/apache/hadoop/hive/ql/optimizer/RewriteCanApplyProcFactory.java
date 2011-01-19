@@ -56,7 +56,7 @@ public final class RewriteCanApplyProcFactory {
    * Check for conditions in FilterOperator that do not meet rewrite criteria.
    * Set the appropriate variables in {@link RewriteVars} enum.
    */
-  public static class CheckFilterProc implements NodeProcessor {
+  private static class CheckFilterProc implements NodeProcessor {
     public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx ctx,
         Object... nodeOutputs) throws SemanticException {
       FilterOperator operator = (FilterOperator)nd;
@@ -96,7 +96,7 @@ public final class RewriteCanApplyProcFactory {
    * Set the appropriate variables in {@link RewriteVars} enum.
    *
    */
-  public static class CheckGroupByProc implements NodeProcessor {
+  private static class CheckGroupByProc implements NodeProcessor {
      public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx ctx,
          Object... nodeOutputs) throws SemanticException {
        GroupByOperator operator = (GroupByOperator)nd;
@@ -218,7 +218,7 @@ public final class RewriteCanApplyProcFactory {
    * Set the appropriate variables in {@link RewriteVars} enum.
    *
    */
-  public static class CheckExtractProc implements NodeProcessor {
+  private static class CheckExtractProc implements NodeProcessor {
      public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx ctx,
          Object... nodeOutputs) throws SemanticException {
        ExtractOperator operator = (ExtractOperator)nd;
@@ -263,7 +263,7 @@ public final class RewriteCanApplyProcFactory {
    * Set the appropriate variables in {@link RewriteVars} enum.
    *
    */
-  public static class CheckSelectProc implements NodeProcessor {
+  private static class CheckSelectProc implements NodeProcessor {
      public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx ctx,
          Object... nodeOutputs) throws SemanticException {
        SelectOperator operator = (SelectOperator)nd;
