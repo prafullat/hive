@@ -8,14 +8,25 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Stack;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.ql.exec.ColumnInfo;
 import org.apache.hadoop.hive.ql.exec.Operator;
+import org.apache.hadoop.hive.ql.lib.DefaultGraphWalker;
+import org.apache.hadoop.hive.ql.lib.DefaultRuleDispatcher;
+import org.apache.hadoop.hive.ql.lib.Dispatcher;
+import org.apache.hadoop.hive.ql.lib.GraphWalker;
+import org.apache.hadoop.hive.ql.lib.Node;
+import org.apache.hadoop.hive.ql.lib.NodeProcessor;
 import org.apache.hadoop.hive.ql.lib.NodeProcessorCtx;
+import org.apache.hadoop.hive.ql.lib.PreOrderWalker;
+import org.apache.hadoop.hive.ql.lib.Rule;
+import org.apache.hadoop.hive.ql.lib.RuleRegExp;
 import org.apache.hadoop.hive.ql.parse.ParseContext;
 import org.apache.hadoop.hive.ql.parse.RowResolver;
+import org.apache.hadoop.hive.ql.parse.SemanticException;
 import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFEvaluator;
 
@@ -24,6 +35,14 @@ import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFEvaluator;
  *
  */
 public class RewriteIndexSubqueryCtx implements NodeProcessorCtx {
+
+  private RewriteIndexSubqueryCtx(){
+    //this prevents the class from getting instantiated
+  }
+
+  public static RewriteIndexSubqueryCtx getInstance(){
+    return new RewriteIndexSubqueryCtx();
+  }
   protected final Log LOG = LogFactory.getLog(RewriteIndexSubqueryCtx.class.getName());
 
   //This is populated in RewriteIndexSubqueryProcFactory's NewQuerySelectSchemaProc processor with the colExprMap of the
@@ -230,5 +249,88 @@ public class RewriteIndexSubqueryCtx implements NodeProcessorCtx {
     subqueryPctx = RewriteParseContextGenerator.generateOperatorTree(parseContext.getConf(), subqueryCommand);
 
   }
+
+  /**
+   * Walk the original operator tree using the {@link DefaultGraphWalker} using the rules.
+   * Each of the rules invoke respective methods from the {@link RewriteIndexSubqueryProcFactory}
+   * to
+   * @param topOp
+   * @throws SemanticException
+   */
+  public void invokeSubquerySelectSchemaProc(Operator<? extends Serializable> topOp) throws SemanticException{
+    Map<Rule, NodeProcessor> opRules = new LinkedHashMap<Rule, NodeProcessor>();
+    //removes the subquery FileSinkOperator from subquery OpParseContext as
+    //we do not need to append FS operator to original operator tree
+    opRules.put(new RuleRegExp("R1", "FS%"), RewriteIndexSubqueryProcFactory.getSubqueryFileSinkProc());
+    //copies the RowSchema, outputColumnNames, colList, RowResolver, columnExprMap to RewriteIndexSubqueryCtx data structures
+    opRules.put(new RuleRegExp("R2", "SEL%"), RewriteIndexSubqueryProcFactory.getSubquerySelectSchemaProc());
+
+    // The dispatcher fires the processor corresponding to the closest matching
+    // rule and passes the context along
+    Dispatcher disp = new DefaultRuleDispatcher(getDefaultProc(), opRules, this);
+    GraphWalker ogw = new DefaultGraphWalker(disp);
+
+    // Create a list of topop nodes
+    ArrayList<Node> topNodes = new ArrayList<Node>();
+    topNodes.add(topOp);
+    ogw.startWalking(topNodes, null);
+
+  }
+
+
+
+  /**
+   * Walk the original operator tree using the {@link PreOrderWalker} using the rules.
+   * This method appends the subquery operator tree to original operator tree
+   * It replaces the original table scan operator with index table scan operator
+   * Method also copies the information from {@link RewriteIndexSubqueryCtx} to
+   * appropriate operators from the original operator tree
+   * @param topOp
+   * @throws SemanticException
+   */
+  public void invokeFixAllOperatorSchemasProc(Operator<? extends Serializable> topOp) throws SemanticException{
+    Map<Rule, NodeProcessor> opRules = new LinkedHashMap<Rule, NodeProcessor>();
+
+    //appends subquery operator tree to original operator tree
+    opRules.put(new RuleRegExp("R1", "TS%"), RewriteIndexSubqueryProcFactory.getAppendSubqueryToOriginalQueryProc());
+
+    //copies RowSchema, outputColumnNames, colList, RowResolver, columnExprMap from RewriteIndexSubqueryCtx data structures
+    // to SelectOperator of original operator tree
+    opRules.put(new RuleRegExp("R2", "SEL%"), RewriteIndexSubqueryProcFactory.getNewQuerySelectSchemaProc());
+    //Manipulates the ExprNodeDesc from FilterOperator predicate list as per colList data structure from RewriteIndexSubqueryCtx
+    opRules.put(new RuleRegExp("R3", "FIL%"), RewriteIndexSubqueryProcFactory.getNewQueryFilterSchemaProc());
+    //Manipulates the ExprNodeDesc from GroupByOperator aggregation list, parameters list \
+    //as per colList data structure from RewriteIndexSubqueryCtx
+    opRules.put(new RuleRegExp("R4", "GBY%"), RewriteIndexSubqueryProcFactory.getNewQueryGroupbySchemaProc());
+
+    // The dispatcher fires the processor corresponding to the closest matching
+    // rule and passes the context along
+    Dispatcher disp = new DefaultRuleDispatcher(getDefaultProc(), opRules, this);
+    GraphWalker ogw = new PreOrderWalker(disp);
+
+    // Create a list of topop nodes
+    ArrayList<Node> topNodes = new ArrayList<Node>();
+    topNodes.add(topOp);
+
+    ogw.startWalking(topNodes, null);
+
+  }
+
+
+  /**
+   * Default procedure for {@link DefaultRuleDispatcher}
+   * @return
+   */
+  private NodeProcessor getDefaultProc() {
+    return new NodeProcessor() {
+      @Override
+      public Object process(Node nd, Stack<Node> stack,
+          NodeProcessorCtx procCtx, Object... nodeOutputs) throws SemanticException {
+        return null;
+      }
+    };
+  }
+
+
 
 }

@@ -21,30 +21,15 @@ package org.apache.hadoop.hive.ql.optimizer;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.Stack;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hive.metastore.api.Index;
+import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.exec.Operator;
 import org.apache.hadoop.hive.ql.exec.TableScanOperator;
-import org.apache.hadoop.hive.ql.lib.DefaultGraphWalker;
-import org.apache.hadoop.hive.ql.lib.DefaultRuleDispatcher;
-import org.apache.hadoop.hive.ql.lib.Dispatcher;
-import org.apache.hadoop.hive.ql.lib.GraphWalker;
-import org.apache.hadoop.hive.ql.lib.Node;
-import org.apache.hadoop.hive.ql.lib.NodeProcessor;
-import org.apache.hadoop.hive.ql.lib.NodeProcessorCtx;
-import org.apache.hadoop.hive.ql.lib.PreOrderWalker;
-import org.apache.hadoop.hive.ql.lib.Rule;
-import org.apache.hadoop.hive.ql.lib.RuleRegExp;
 import org.apache.hadoop.hive.ql.metadata.Hive;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.metadata.Table;
@@ -106,21 +91,20 @@ import org.apache.hadoop.hive.ql.parse.SemanticException;
 public class RewriteGBUsingIndex implements Transform {
   private ParseContext parseContext;
   private Hive hiveDb;
+  private HiveConf hiveConf;
   protected final Log LOG = LogFactory.getLog(this.getClass().getName());
 
   //Context for checking if this optimization can be applied to the input query
-  private final RewriteCanApplyCtx canApplyCtx = new RewriteCanApplyCtx();
+  private RewriteCanApplyCtx canApplyCtx;
   //Context for removing the group by construct operators from the operator tree
-  private final RewriteRemoveGroupbyCtx removeGbyCtx = new RewriteRemoveGroupbyCtx();
+  private RewriteRemoveGroupbyCtx removeGbyCtx;
   //Context for appending a subquery to scan over the index table
-  private final RewriteIndexSubqueryCtx subqueryCtx = new RewriteIndexSubqueryCtx();
+  private RewriteIndexSubqueryCtx subqueryCtx;
 
   //Stores the list of top TableScanOperator names for which the rewrite can be applied
-  ArrayList<String> tsOpToProcess = new ArrayList<String>();
+  private final ArrayList<String> tsOpToProcess = new ArrayList<String>();
 
-
-  private String indexTableName = "";
-  private Set<String> indexKeyNames = new LinkedHashSet<String>();
+  private HashMap<String, Set<String>> indexTableMap = new LinkedHashMap<String, Set<String>>();
 
   //Name of the current table on which rewrite is being performed
   private String currentTableName = null;
@@ -129,22 +113,14 @@ public class RewriteGBUsingIndex implements Transform {
   @Override
   public ParseContext transform(ParseContext pctx) throws SemanticException {
     parseContext = pctx;
+    hiveConf = parseContext.getConf();
     try {
-      hiveDb = Hive.get(parseContext.getConf());
+      hiveDb = Hive.get(hiveConf);
     } catch (HiveException e) {
       LOG.info("Exception in getting hive conf");
       e.printStackTrace();
     }
 
-     //Set the environment for all contexts
-    canApplyCtx.setParseContext(parseContext);
-    canApplyCtx.setHiveDb(hiveDb);
-    canApplyCtx.setConf(parseContext.getConf());
-
-    removeGbyCtx.setParseContext(parseContext);
-    removeGbyCtx.setHiveDb(hiveDb);
-
-    subqueryCtx.setParseContext(parseContext);
 
     /* Check if the input query is internal query that inserts in table (eg. ALTER INDEX...REBUILD etc.)
      * We do not apply optimization here.
@@ -155,13 +131,14 @@ public class RewriteGBUsingIndex implements Transform {
       /* Check if the input query passes all the tests to be eligible for a rewrite
        * If yes, rewrite original query; else, return the current parseContext
        * */
-
       if(shouldApplyOptimization()){
         LOG.debug("Rewriting Original Query.");
-        indexKeyNames = canApplyCtx.getIndexKeyNames();
-        indexTableName = canApplyCtx.getIndexTableName();
-        rewriteOriginalQuery();
+        Iterator<String> indexMapItr = indexTableMap.keySet().iterator();
+        while(indexMapItr.hasNext()){
+          rewriteOriginalQuery(indexMapItr.next());
+        }
       }
+      canApplyCtx.resetRewriteVars();
       return parseContext;
 
     }
@@ -182,52 +159,54 @@ public class RewriteGBUsingIndex implements Transform {
   /**
    * We traverse the current operator tree to check for conditions in which the
    * optimization cannot be applied.
-   * We set the appropriate values in {@link RewriteVars} enum.
    * @return
    */
-  private boolean shouldApplyOptimization(){
+  boolean shouldApplyOptimization(){
+    //Set the environment for all contexts
+    canApplyCtx = RewriteCanApplyCtx.getInstance();
+    canApplyCtx.setParseContext(parseContext);
+    canApplyCtx.setHiveDb(hiveDb);
+    canApplyCtx.setConf(hiveConf);
+
     boolean canApply = true;
+    if(canApplyCtx.ifQueryHasMultipleTables()){
+      //We do not apply this optimization for this case as of now.
+      canApply = checkIfOptimizationCanApply();
+    }else{
+      /*
+       * This code iterates over each TableScanOperator from the topOps map from ParseContext.
+       * For each operator tree originating from this top TableScanOperator, we determine
+       * if the optimization can be applied. If yes, we add the name of the top table to
+       * the tsOpToProcess to apply rewrite later on.
+       * */
+      HashMap<TableScanOperator, Table> topToTable = parseContext.getTopToTable();
+      HashMap<String,Operator<? extends Serializable>> topOps = parseContext.getTopOps();
+      Iterator<TableScanOperator> topOpItr = topToTable.keySet().iterator();
+      while(topOpItr.hasNext()){
+        canApplyCtx = RewriteCanApplyCtx.getInstance();
+        canApplyCtx.setParseContext(parseContext);
+        canApplyCtx.setHiveDb(hiveDb);
+        canApplyCtx.setConf(hiveConf);
 
-    /*
-     * This block of code iterates over the topToTable map from ParseContext
-     * to determine if the query has a scan over multiple tables.
-     * We do not apply this optimization for this case as of now.
-     *
-     * */
-    HashMap<TableScanOperator, Table> topToTable = parseContext.getTopToTable();
-    Iterator<Table> valuesItr = topToTable.values().iterator();
-    Set<String> tableNameSet = new HashSet<String>();
-    while(valuesItr.hasNext()){
-      Table table = valuesItr.next();
-      tableNameSet.add(table.getTableName());
-    }
-    if(tableNameSet.size() > 1){
-      canApplyCtx.setBoolVar(parseContext.getConf(), RewriteVars.QUERY_HAS_MULTIPLE_TABLES, true);
-      return canApplyCtx.checkIfOptimizationCanApply();
-    }
+        TableScanOperator topOp = topOpItr.next();
+        Table table = topToTable.get(topOp);
+        currentTableName = table.getTableName();
+        canApplyCtx.setCurrentTableName(currentTableName);
+        canApplyCtx.populateRewriteVars(topOp);
+        indexTableMap = canApplyCtx.getIndexTableInfoForRewrite(topOp);
 
-    /*
-     * This code iterates over each TableScanOperator from the topOps map from ParseContext.
-     * For each operator tree originating from this top TableScanOperator, we determine
-     * if the optimization can be applied. If yes, we add the name of the top table to
-     * the tsOpToProcess to apply rewrite later on.
-     * */
-    HashMap<String,Operator<? extends Serializable>> topOps = parseContext.getTopOps();
-    Iterator<TableScanOperator> topOpItr = topToTable.keySet().iterator();
-    while(topOpItr.hasNext()){
-      canApplyCtx.aggFuncCnt = 0;
-      canApplyCtx.setIntVar(parseContext.getConf(), RewriteVars.GBY_KEY_CNT, 0);
-      TableScanOperator topOp = topOpItr.next();
-      Table table = topToTable.get(topOp);
-      currentTableName = table.getTableName();
-      canApplyCtx.setCurrentTableName(currentTableName);
-      canApply =  checkSingleDAG(topOp);
-      if(canApply && topOps.containsValue(topOp)) {
-        Iterator<String> topOpNamesItr = topOps.keySet().iterator();
-        while(topOpNamesItr.hasNext()){
-          String topOpName = topOpNamesItr.next();
-          if(topOps.get(topOpName).equals(topOp)){
-            tsOpToProcess.add(topOpName);
+        if(indexTableMap.size() > 1){
+          LOG.info("Table has multiple valid index tables to apply rewrite.");
+        }
+        canApply = checkIfOptimizationCanApply();
+
+        if(canApply && topOps.containsValue(topOp)) {
+          Iterator<String> topOpNamesItr = topOps.keySet().iterator();
+          while(topOpNamesItr.hasNext()){
+            String topOpName = topOpNamesItr.next();
+            if(topOps.get(topOpName).equals(topOp)){
+              tsOpToProcess.add(topOpName);
+            }
           }
         }
       }
@@ -236,116 +215,35 @@ public class RewriteGBUsingIndex implements Transform {
   }
 
 
-
-  /**
-   * We retrieve the list of index tables on the current table (represented by the TableScanOperator)
-   * and return if there are no index tables to be used for rewriting the input query.
-   * Else, we walk the operator tree for which this TableScanOperator is the topOp.
-   * At the end, we check if all conditions have passed for rewrite. If yes, we
-   * determine if the the index is usable for rewrite. Else, we log the condition which
-   * did not meet the rewrite criterion.
-   *
-   * @param topOp
-   * @return
-   */
-  private boolean checkSingleDAG(TableScanOperator topOp) {
-    boolean canApply = true;
-    TableScanOperator ts = (TableScanOperator) topOp;
-    Table tsTable = parseContext.getTopToTable().get(ts);
-    if (tsTable != null) {
-      List<String> idxType = new ArrayList<String>();
-      idxType.add(canApplyCtx.SUPPORTED_INDEX_TYPE);
-      List<Index> indexTables = canApplyCtx.getIndexes(tsTable, idxType);
-      if (indexTables.size() == 0) {
-        canApplyCtx.setBoolVar(parseContext.getConf(), RewriteVars.TABLE_HAS_NO_INDEX, true);
-        return false;
-      }else{
-        checkEachDAGOperator(topOp);
-      }
-      canApply = canApplyCtx.checkIfOptimizationCanApply();
-      if(canApply){
-        canApply = canApplyCtx.isIndexUsable(indexTables);
-      }
-    }
-    return canApply;
-  }
-
-
-  /**
-   * This method walks all the nodes starting from topOp TableScanOperator node
-   * and invokes methods from {@link RewriteCanApplyProcFactory} for each of the rules
-   * added to the opRules map. We use the {@link DefaultGraphWalker} for a post-order
-   * traversal of the operator tree.
-   *
-   * The methods from {@link RewriteCanApplyProcFactory} set appropriate values in
-   * {@link RewriteVars} enum to specify if the criteria for rewrite optimization is met.
-   *
-   * @param topOp
-   */
-  private void checkEachDAGOperator(Operator<? extends Serializable> topOp){
-    Map<Rule, NodeProcessor> opRules = new LinkedHashMap<Rule, NodeProcessor>();
-    opRules.put(new RuleRegExp("R1", "FIL%"), RewriteCanApplyProcFactory.canApplyOnFilterOperator());
-    opRules.put(new RuleRegExp("R2", "GBY%"), RewriteCanApplyProcFactory.canApplyOnGroupByOperator());
-    opRules.put(new RuleRegExp("R3", "EXT%"), RewriteCanApplyProcFactory.canApplyOnExtractOperator());
-    opRules.put(new RuleRegExp("R4", "SEL%"), RewriteCanApplyProcFactory.canApplyOnSelectOperator());
-
-    // The dispatcher fires the processor corresponding to the closest matching
-    // rule and passes the context along
-    Dispatcher disp = new DefaultRuleDispatcher(getDefaultProc(), opRules, canApplyCtx);
-    GraphWalker ogw = new DefaultGraphWalker(disp);
-
-    // Create a list of topop nodes
-    ArrayList<Node> topNodes = new ArrayList<Node>();
-    topNodes.add(topOp);
-
-    try {
-      ogw.startWalking(topNodes, null);
-    } catch (SemanticException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    }
-
-  }
-
-
-  /**
-   * Default procedure for {@link DefaultRuleDispatcher}
-   * @return
-   */
-  private NodeProcessor getDefaultProc() {
-    return new NodeProcessor() {
-      @Override
-      public Object process(Node nd, Stack<Node> stack,
-          NodeProcessorCtx procCtx, Object... nodeOutputs) throws SemanticException {
-        return null;
-      }
-    };
-  }
-
-
-
   /**
    * Method to rewrite the input query if all optimization criteria is passed.
    * The method iterates over the tsOpToProcess {@link ArrayList} to apply the rewrites
    *
    * @throws SemanticException
    */
-  private void rewriteOriginalQuery() throws SemanticException{
+  private void rewriteOriginalQuery(String indexTableName) throws SemanticException{
     HashMap<String, Operator<? extends Serializable>> topOpMap = parseContext.getTopOps();
     for (String topOpTableName : tsOpToProcess) {
       currentTableName = topOpTableName;
-      canApplyCtx.setCurrentTableName(currentTableName);
+      //canApplyCtx.setCurrentTableName(currentTableName);
       TableScanOperator topOp = (TableScanOperator) topOpMap.get(topOpTableName);
 
       /* This part of the code checks if the 'REMOVE_GROUP_BY' value in RewriteVars enum is set to true.
        * If yes, it sets the environment for the RewriteRemoveGroupbyCtx context and invokes
        * method to apply rewrite by removing group by construct operators from the original operator tree.
        * */
-      if(canApplyCtx.getBoolVar(parseContext.getConf(), RewriteVars.REMOVE_GROUP_BY)){
+      if(canApplyCtx.getBoolVar(hiveConf, RewriteVars.REMOVE_GROUP_BY)){
+        removeGbyCtx = RewriteRemoveGroupbyCtx.getInstance();
+        removeGbyCtx.setParseContext(parseContext);
+        removeGbyCtx.setHiveDb(hiveDb);
         removeGbyCtx.setIndexName(indexTableName);
         removeGbyCtx.setOpc(parseContext.getOpParseCtx());
         removeGbyCtx.setCanApplyCtx(canApplyCtx);
-        invokeRemoveGbyProc(topOp);
+        removeGbyCtx.invokeRemoveGbyProc(topOp);
+        //Getting back new parseContext and new OpParseContext after GBY-RS-GBY is removed
+        parseContext = removeGbyCtx.getParseContext();
+        parseContext.setOpParseCtx(removeGbyCtx.getOpc());
+        LOG.info("Finished Group by Remove");
       }
 
       /* This part of the code checks if the 'SHOULD_APPEND_SUBQUERY' value in RewriteVars enum is set to true.
@@ -353,9 +251,11 @@ public class RewriteGBUsingIndex implements Transform {
        * method to append a new subquery that scans over the index table rather than the original table.
        * We first create the subquery context, then copy the RowSchema/RowResolver from subquery to original operator tree.
        * */
-      if(canApplyCtx.getBoolVar(parseContext.getConf(), RewriteVars.SHOULD_APPEND_SUBQUERY)){
-        subqueryCtx.setIndexKeyNames(indexKeyNames);
+      if(canApplyCtx.getBoolVar(hiveConf, RewriteVars.SHOULD_APPEND_SUBQUERY)){
+        subqueryCtx = RewriteIndexSubqueryCtx.getInstance();
+        subqueryCtx.setParseContext(parseContext);
         subqueryCtx.setIndexName(indexTableName);
+        subqueryCtx.setIndexKeyNames(indexTableMap.get(indexTableName));
         subqueryCtx.setCurrentTableName(currentTableName);
         subqueryCtx.createSubqueryContext();
         HashMap<TableScanOperator, Table> subqTopOpMap = subqueryCtx.getSubqueryPctx().getTopToTable();
@@ -364,124 +264,119 @@ public class RewriteGBUsingIndex implements Transform {
         if(topOpItr.hasNext()){
           subqTopOp = topOpItr.next();
         }
-        invokeSubquerySelectSchemaProc(subqTopOp);
-        invokeFixAllOperatorSchemasProc(topOp);
+        subqueryCtx.invokeSubquerySelectSchemaProc(subqTopOp);
+        LOG.info("Finished Fetching subquery select schema");
+
+        subqueryCtx.invokeFixAllOperatorSchemasProc(topOp);
+        parseContext = subqueryCtx.getParseContext();
+        LOG.info("Finished appending subquery");
       }
 
       //Finally we set the enum variables to false
-      canApplyCtx.setBoolVar(parseContext.getConf(), RewriteVars.REMOVE_GROUP_BY, false);
-      canApplyCtx.setBoolVar(parseContext.getConf(), RewriteVars.SHOULD_APPEND_SUBQUERY, false);
+      canApplyCtx.setBoolVar(hiveConf, RewriteVars.REMOVE_GROUP_BY, false);
+      canApplyCtx.setBoolVar(hiveConf, RewriteVars.SHOULD_APPEND_SUBQUERY, false);
 
     }
     LOG.info("Finished Rewriting query");
 
   }
 
-
-  /**
-   * Walk the original operator tree using the {@link DefaultGraphWalker} using the rules.
-   * Each of the rules invoke respective methods from the {@link RewriteRemoveGroupbyProcFactory}
-   * to remove the group-by constructs from the original query and replace the original
-   * {@link TableScanOperator} with the new index table scan operator.
-   *
-   * @param topOp
-   * @throws SemanticException
-   */
-  private void invokeRemoveGbyProc(Operator<? extends Serializable> topOp) throws SemanticException{
-    Map<Rule, NodeProcessor> opRules = new LinkedHashMap<Rule, NodeProcessor>();
-
-    // replace scan operator containing original table with index table
-    opRules.put(new RuleRegExp("R1", "TS%"), RewriteRemoveGroupbyProcFactory.getReplaceTableScanProc());
-    //rule that replaces index key selection with size(_offsets) function in original query
-    opRules.put(new RuleRegExp("R2", "SEL%"), RewriteRemoveGroupbyProcFactory.getReplaceIdxKeyWithSizeFuncProc());
-    // remove group-by pattern from original operator tree
-    opRules.put(new RuleRegExp("R3", "GBY%RS%GBY%"), RewriteRemoveGroupbyProcFactory.getRemoveGroupByProc());
-
-    // The dispatcher fires the processor corresponding to the closest matching
-    // rule and passes the context along
-    Dispatcher disp = new DefaultRuleDispatcher(getDefaultProc(), opRules, removeGbyCtx);
-    GraphWalker ogw = new PreOrderWalker(disp);
-
-    // Create a list of topop nodes
-    ArrayList<Node> topNodes = new ArrayList<Node>();
-    topNodes.add(topOp);
-    ogw.startWalking(topNodes, null);
-
-    //Getting back new parseContext and new OpParseContext after GBY-RS-GBY is removed
-    parseContext = removeGbyCtx.getParseContext();
-    parseContext.setOpParseCtx(removeGbyCtx.getOpc());
-    LOG.info("Finished Group by Remove");
-
+  private String getName() {
+    return "RewriteGBUsingIndex";
   }
 
 
   /**
-   * Walk the original operator tree using the {@link DefaultGraphWalker} using the rules.
-   * Each of the rules invoke respective methods from the {@link RewriteIndexSubqueryProcFactory}
-   * to
-   * @param topOp
-   * @throws SemanticException
+   * This method logs the reason for which we cannot apply the rewrite optimization.
+   * @return
    */
-  private void invokeSubquerySelectSchemaProc(Operator<? extends Serializable> topOp) throws SemanticException{
-    Map<Rule, NodeProcessor> opRules = new LinkedHashMap<Rule, NodeProcessor>();
-    //removes the subquery FileSinkOperator from subquery OpParseContext as
-    //we do not need to append FS operator to original operator tree
-    opRules.put(new RuleRegExp("R1", "FS%"), RewriteIndexSubqueryProcFactory.getSubqueryFileSinkProc());
-    //copies the RowSchema, outputColumnNames, colList, RowResolver, columnExprMap to RewriteIndexSubqueryCtx data structures
-    opRules.put(new RuleRegExp("R2", "SEL%"), RewriteIndexSubqueryProcFactory.getSubquerySelectSchemaProc());
-
-    // The dispatcher fires the processor corresponding to the closest matching
-    // rule and passes the context along
-    Dispatcher disp = new DefaultRuleDispatcher(getDefaultProc(), opRules, subqueryCtx);
-    GraphWalker ogw = new DefaultGraphWalker(disp);
-
-    // Create a list of topop nodes
-    ArrayList<Node> topNodes = new ArrayList<Node>();
-    topNodes.add(topOp);
-    ogw.startWalking(topNodes, null);
-    LOG.info("Finished Fetchin subquery select schema");
-
+  boolean checkIfOptimizationCanApply(){
+    if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.QUERY_HAS_MULTIPLE_TABLES)) {
+      LOG.info("Query has more than one table " +
+          "that is not supported with " + getName() + " optimization" );
+      return false;
+    }//1
+    if (canApplyCtx.getIntVar(hiveConf, RewriteVars.NO_OF_SUBQUERIES) != 0) {
+      LOG.info("Query has more than one subqueries " +
+          "that is not supported with " + getName() + " optimization" );
+      return false;
+    }//2
+    if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.TABLE_HAS_NO_INDEX)) {
+      LOG.info("Table " + currentTableName + " does not have compact index. " +
+          "Cannot apply " + getName() + " optimization" );
+      return false;
+    }//3
+    if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.QUERY_HAS_DISTRIBUTE_BY)){
+      LOG.info("Query has distributeby clause, " +
+          "that is not supported with " + getName() + " optimization" );
+      return false;
+    }//4
+    if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.QUERY_HAS_SORT_BY)){
+      LOG.info("Query has sortby clause, " +
+          "that is not supported with " + getName() + " optimization" );
+      return false;
+    }//5
+    if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.QUERY_HAS_ORDER_BY)){
+      LOG.info("Query has orderby clause, " +
+          "that is not supported with " + getName() + " optimization" );
+      return false;
+    }//6
+    if (canApplyCtx.getIntVar(hiveConf, RewriteVars.AGG_FUNC_CNT) > 1 ){
+      LOG.info("More than 1 agg funcs: " +
+          "Not supported by " + getName() + " optimization" );
+      return false;
+    }//7
+    if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.AGG_FUNC_IS_NOT_COUNT)){
+      LOG.info("Agg func other than count is " +
+          "not supported by " + getName() + " optimization" );
+      return false;
+    }//8
+    if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.AGG_FUNC_COLS_FETCH_EXCEPTION)){
+      LOG.info("Got exception while locating child col refs " +
+          "of agg func, skipping " + getName() + " optimization" );
+      return false;
+    }//9
+    if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.WHR_CLAUSE_COLS_FETCH_EXCEPTION)){
+      LOG.info("Got exception while locating child col refs for where clause, "
+          + "skipping " + getName() + " optimization" );
+      return false;
+    }//10
+     if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.SEL_HAS_NON_COL_REF)){
+      LOG.info("Select-list has some non-col-ref expression. " +
+          "Cannot apply the rewrite " + getName() + " optimization" );
+      return false;
+    }//11
+    if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.SEL_CLAUSE_COLS_FETCH_EXCEPTION)){
+      LOG.info("Got exception while locating child col refs for select list, "
+          + "skipping " + getName() + " optimization" );
+      return false;
+    }//12
+    if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.GBY_KEYS_FETCH_EXCEPTION)){
+      LOG.info("Got exception while locating child col refs for GroupBy key, "
+          + "skipping " + getName() + " optimization" );
+      return false;
+    }//13
+    if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.GBY_NOT_ON_COUNT_KEYS)){
+      LOG.info("Currently count function needs group by on key columns, "
+          + "Cannot apply this " + getName() + " optimization" );
+      return false;
+    }//14
+    if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.IDX_TBL_SEARCH_EXCEPTION)){
+      LOG.info("Got exception while locating index table, " +
+          "skipping " + getName() + " optimization" );
+      return false;
+    }//15
+    if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.GBY_KEY_HAS_NON_INDEX_COLS)){
+      LOG.info("Group by key has some non-indexed columns, " +
+          "Cannot apply rewrite " + getName() + " optimization" );
+      return false;
+    }//16
+    return true;
   }
 
 
 
-  /**
-   * This method appends the subquery operator tree to original operator tree
-   * It replaces the original table scan operator with index table scan operator
-   * Method also copies the information from {@link RewriteIndexSubqueryCtx} to
-   * appropriate operators from the original operator tree
-   * @param topOp
-   * @throws SemanticException
-   */
-  private void invokeFixAllOperatorSchemasProc(Operator<? extends Serializable> topOp) throws SemanticException{
-    Map<Rule, NodeProcessor> opRules = new LinkedHashMap<Rule, NodeProcessor>();
 
-    //appends subquery operator tree to original operator tree
-    opRules.put(new RuleRegExp("R1", "TS%"), RewriteIndexSubqueryProcFactory.getAppendSubqueryToOriginalQueryProc());
-
-    //copies RowSchema, outputColumnNames, colList, RowResolver, columnExprMap from RewriteIndexSubqueryCtx data structures
-    // to SelectOperator of original operator tree
-    opRules.put(new RuleRegExp("R2", "SEL%"), RewriteIndexSubqueryProcFactory.getNewQuerySelectSchemaProc());
-    //Manipulates the ExprNodeDesc from FilterOperator predicate list as per colList data structure from RewriteIndexSubqueryCtx
-    opRules.put(new RuleRegExp("R3", "FIL%"), RewriteIndexSubqueryProcFactory.getNewQueryFilterSchemaProc());
-    //Manipulates the ExprNodeDesc from GroupByOperator aggregation list, parameters list \
-    //as per colList data structure from RewriteIndexSubqueryCtx
-    opRules.put(new RuleRegExp("R4", "GBY%"), RewriteIndexSubqueryProcFactory.getNewQueryGroupbySchemaProc());
-
-    // The dispatcher fires the processor corresponding to the closest matching
-    // rule and passes the context along
-    Dispatcher disp = new DefaultRuleDispatcher(getDefaultProc(), opRules, subqueryCtx);
-    GraphWalker ogw = new PreOrderWalker(disp);
-
-    // Create a list of topop nodes
-    ArrayList<Node> topNodes = new ArrayList<Node>();
-    topNodes.add(topOp);
-
-    ogw.startWalking(topNodes, null);
-    this.parseContext = subqueryCtx.getParseContext();
-    LOG.info("Fixed all operator schema");
-
-  }
 
 }
 

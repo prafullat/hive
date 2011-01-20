@@ -67,13 +67,13 @@ public final class RewriteCanApplyProcFactory {
       ExprNodeGenericFuncDesc oldengfd = (ExprNodeGenericFuncDesc) conf.getPredicate();
       if(oldengfd == null){
         canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.WHR_CLAUSE_COLS_FETCH_EXCEPTION, true);
-        return false;
+        //return false;
       }
       //The predicate should have valid left and right columns
       List<String> colList = oldengfd.getCols();
       if(colList == null || colList.size() == 0){
         canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.WHR_CLAUSE_COLS_FETCH_EXCEPTION, true);
-        return false;
+        //return false;
       }
       //Add the predicate columns to RewriteCanApplyCtx's predColRefs list to check later
       //if index keys contain all filter predicate columns and vice-a-versa
@@ -110,25 +110,28 @@ public final class RewriteCanApplyProcFactory {
          ArrayList<AggregationDesc> aggrList = conf.getAggregators();
          if(aggrList != null && aggrList.size() > 0){
              for (AggregationDesc aggregationDesc : aggrList) {
-               canApplyCtx.setIntVar(canApplyCtx.getParseContext().getConf(), RewriteVars.AGG_FUNC_CNT, canApplyCtx.aggFuncCnt++);
+               int aggCnt = canApplyCtx.getAggFuncCnt();
+               canApplyCtx.setIntVar(canApplyCtx.getParseContext().getConf(), RewriteVars.AGG_FUNC_CNT, aggCnt);
+               canApplyCtx.setAggFuncCnt(aggCnt + 1);
+
                //In the current implementation, we do not support more than 1 agg funcs in group-by
                if(canApplyCtx.getIntVar(canApplyCtx.getParseContext().getConf(), RewriteVars.AGG_FUNC_CNT) > 1) {
-                 return false;
+                 //return false;
                }
                String aggFunc = aggregationDesc.getGenericUDAFName();
                if(!aggFunc.equals("count")){
                  canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.AGG_FUNC_IS_NOT_COUNT, true);
-                 return false;
+                 //return false;
                }else{
                 ArrayList<ExprNodeDesc> para = aggregationDesc.getParameters();
                 //for a valid aggregation, it needs to have non-null parameter list
                  if(para == null){
                    canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.AGG_FUNC_COLS_FETCH_EXCEPTION, true);
-                   return false;
+                   //return false;
                  }else if(para.size() == 0){
                    //"count(*) case
                    canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.GBY_NOT_ON_COUNT_KEYS, true);
-                   return false;
+                   //return false;
                  }else{
                    for(int i=0; i< para.size(); i++){
                      ExprNodeDesc end = para.get(i);
@@ -159,7 +162,7 @@ public final class RewriteCanApplyProcFactory {
            QBParseInfo qbParseInfo =  canApplyCtx.getParseContext().getQB().getParseInfo();
            Set<String> clauseNameSet = qbParseInfo.getClauseNames();
            if (clauseNameSet.size() != 1) {
-             return false;
+             //return false;
            }
            Iterator<String> clauseNameIter = clauseNameSet.iterator();
            String clauseName = clauseNameIter.next();
@@ -174,7 +177,7 @@ public final class RewriteCanApplyProcFactory {
          ArrayList<ExprNodeDesc> keyList = conf.getKeys();
          if(keyList == null || keyList.size() == 0){
            canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.GBY_KEYS_FETCH_EXCEPTION, true);
-           return false;
+           //return false;
          }
          //sets the no. of keys in groub by to be used later to determine is group-by has non-index cols
          //group-by needs to be preserved in such cases (eg.group-by using a function on index key. This is the subquery append case)
@@ -235,16 +238,16 @@ public final class RewriteCanApplyProcFactory {
              if(partCols != null && partCols.size() > 0){
                //query has distribute-by is there are non-zero partition columns
                canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.QUERY_HAS_DISTRIBUTE_BY, true);
-               return false;
+               //return false;
              }else{
                //we do not need partition columns in case of sort-by
                canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.QUERY_HAS_SORT_BY, true);
-               return false;
+               //return false;
              }
            }else if(nr == 1){
              //Query has order-by only if number of reducers is 1
              canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.QUERY_HAS_ORDER_BY, true);
-             return false;
+             //return false;
            }
 
          }
@@ -299,7 +302,7 @@ public final class RewriteCanApplyProcFactory {
          ArrayList<ExprNodeDesc> selColList = conf.getColList();
          if(selColList == null || selColList.size() == 0){
            canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.SEL_CLAUSE_COLS_FETCH_EXCEPTION, true);
-           return false;
+           //return false;
          }else{
            //since we are rewriting queries that contain group-by, this piece of code is not required
            // however, it is included for later optimizations
