@@ -395,10 +395,10 @@ public final class RewriteIndexSubqueryProcFactory {
           table = aliasAndTab[1];
         }
         String selReplacementCommand = "";
-        if(subqueryCtx.getIndexKeyNames().iterator().hasNext()){
+        if(subqueryCtx.getSelectColumnNames().iterator().hasNext()){
           //the query contains the sum aggregation GenericUDAF
-          selReplacementCommand = "select sum(" + subqueryCtx.getIndexKeyNames().iterator().next() + ") as TOTAL from " + table
-          + " group by " + subqueryCtx.getIndexKeyNames().iterator().next() + " ";
+          selReplacementCommand = "select sum(" + subqueryCtx.getSelectColumnNames().iterator().next() + ") as TOTAL from " + table
+          + " group by " + subqueryCtx.getSelectColumnNames().iterator().next() + " ";
         }
         //create a new ParseContext for the query to retrieve its operator tree, and the required GroupByOperator from it
         ParseContext newDAGContext = RewriteParseContextGenerator.generateOperatorTree(subqueryCtx.getParseContext().getConf(),
@@ -457,7 +457,7 @@ public final class RewriteIndexSubqueryProcFactory {
           if(exprNodeDesc instanceof ExprNodeColumnDesc){
             ExprNodeColumnDesc encd = (ExprNodeColumnDesc)exprNodeDesc;
             String col = encd.getColumn();
-            if(subqueryCtx.getIndexKeyNames().contains(col)){
+            if(subqueryCtx.getSelectColumnNames().contains(col)){
               encd.setColumn(subqueryCtx.getAliasToInternal().get(col));
             }
           }else if(exprNodeDesc instanceof ExprNodeGenericFuncDesc){
@@ -466,7 +466,7 @@ public final class RewriteIndexSubqueryProcFactory {
               if(colExpr instanceof ExprNodeColumnDesc){
                 ExprNodeColumnDesc encd = (ExprNodeColumnDesc)colExpr;
                 String col = encd.getColumn();
-                if(subqueryCtx.getIndexKeyNames().contains(col)){
+                if(subqueryCtx.getSelectColumnNames().contains(col)){
                   encd.setColumn(subqueryCtx.getAliasToInternal().get(col));
                 }
               }
@@ -485,7 +485,7 @@ public final class RewriteIndexSubqueryProcFactory {
           if(exprNodeDesc instanceof ExprNodeColumnDesc){
             ExprNodeColumnDesc encd = (ExprNodeColumnDesc)exprNodeDesc;
             String col = encd.getColumn();
-            if(subqueryCtx.getIndexKeyNames().contains(col)){
+            if(subqueryCtx.getSelectColumnNames().contains(col)){
               encd.setColumn(subqueryCtx.getAliasToInternal().get(col));
             }
             exprNodeDesc = encd;
@@ -496,7 +496,7 @@ public final class RewriteIndexSubqueryProcFactory {
               if(colExpr instanceof ExprNodeColumnDesc){
                 ExprNodeColumnDesc encd = (ExprNodeColumnDesc)colExpr;
                 String col = encd.getColumn();
-                if(subqueryCtx.getIndexKeyNames().contains(col)){
+                if(subqueryCtx.getSelectColumnNames().contains(col)){
                   encd.setColumn(subqueryCtx.getAliasToInternal().get(col));
                 }
 
@@ -581,7 +581,7 @@ public final class RewriteIndexSubqueryProcFactory {
     if(exprNodeDesc instanceof ExprNodeColumnDesc){
       ExprNodeColumnDesc encd = (ExprNodeColumnDesc)exprNodeDesc;
       String col = encd.getColumn();
-      if(subqueryCtx.getIndexKeyNames().contains(col)){
+      if(subqueryCtx.getSelectColumnNames().contains(col)){
         encd.setColumn(subqueryCtx.getAliasToInternal().get(col));
       }
       exprNodeDesc = encd;

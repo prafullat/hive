@@ -79,7 +79,7 @@ public class RewriteIndexSubqueryCtx implements NodeProcessorCtx {
   private ParseContext subqueryPctx = null;
   private ParseContext newDAGCtx = null;
 
-  private Set<String> indexKeyNames = new LinkedHashSet<String>();
+  private Set<String> selectColumnNames = new LinkedHashSet<String>();
   private String indexName = "";
   private String currentTableName = null;
 
@@ -87,12 +87,12 @@ public class RewriteIndexSubqueryCtx implements NodeProcessorCtx {
   private GenericUDAFEvaluator eval = null;
 
 
-  public Set<String> getIndexKeyNames() {
-    return indexKeyNames;
+  public Set<String> getSelectColumnNames() {
+    return selectColumnNames;
   }
 
-  public void setIndexKeyNames(Set<String> indexKeyNames) {
-    this.indexKeyNames = indexKeyNames;
+  public void setSelectColumnNames(Set<String> indexKeyNames) {
+    this.selectColumnNames = indexKeyNames;
   }
 
   public ArrayList<String> getNewOutputCols() {
@@ -242,7 +242,7 @@ public class RewriteIndexSubqueryCtx implements NodeProcessorCtx {
    */
   void createSubqueryContext() {
     String selKeys = "";
-    for (String key : indexKeyNames) {
+    for (String key : selectColumnNames) {
       selKeys += key + ",";
     }
     String subqueryCommand = "select " + selKeys + " size(`_offsets`) as CNT from " + indexName;

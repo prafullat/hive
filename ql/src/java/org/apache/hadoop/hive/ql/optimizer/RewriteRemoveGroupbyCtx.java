@@ -207,6 +207,32 @@ public class RewriteRemoveGroupbyCtx implements NodeProcessorCtx {
 
 
   /**
+   * Walk the original operator tree using the {@link PreOrderWalker} using the rules.
+   * Each of the rules invoke respective methods from the {@link RewriteRemoveGroupbyProcFactory}
+   * to replace the original {@link TableScanOperator} with the new index table scan operator.
+   *
+   * @param topOp
+   * @throws SemanticException
+   */
+  public void invokeReplaceTableScanProc(Operator<? extends Serializable> topOp) throws SemanticException{
+    Map<Rule, NodeProcessor> opRules = new LinkedHashMap<Rule, NodeProcessor>();
+
+    // replace scan operator containing original table with index table
+    opRules.put(new RuleRegExp("R1", "TS%"), RewriteRemoveGroupbyProcFactory.getReplaceTableScanProc());
+
+    // The dispatcher fires the processor corresponding to the closest matching
+    // rule and passes the context along
+    Dispatcher disp = new DefaultRuleDispatcher(getDefaultProc(), opRules, this);
+    GraphWalker ogw = new PreOrderWalker(disp);
+
+    // Create a list of topop nodes
+    ArrayList<Node> topNodes = new ArrayList<Node>();
+    topNodes.add(topOp);
+    ogw.startWalking(topNodes, null);
+
+  }
+
+  /**
    * Default procedure for {@link DefaultRuleDispatcher}
    * @return
    */

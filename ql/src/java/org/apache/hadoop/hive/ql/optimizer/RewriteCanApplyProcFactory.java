@@ -30,13 +30,11 @@ import org.apache.hadoop.hive.ql.parse.QBParseInfo;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
 import org.apache.hadoop.hive.ql.plan.AggregationDesc;
 import org.apache.hadoop.hive.ql.plan.ExprNodeColumnDesc;
-import org.apache.hadoop.hive.ql.plan.ExprNodeConstantDesc;
 import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
 import org.apache.hadoop.hive.ql.plan.ExprNodeGenericFuncDesc;
 import org.apache.hadoop.hive.ql.plan.FilterDesc;
 import org.apache.hadoop.hive.ql.plan.GroupByDesc;
 import org.apache.hadoop.hive.ql.plan.ReduceSinkDesc;
-import org.apache.hadoop.hive.ql.plan.SelectDesc;
 
 /**
  * Factory of methods used by {@link RewriteGBUsingIndex} (see checkEachDAGOperator(..) method)
@@ -78,7 +76,7 @@ public final class RewriteCanApplyProcFactory {
       //Add the predicate columns to RewriteCanApplyCtx's predColRefs list to check later
       //if index keys contain all filter predicate columns and vice-a-versa
       for (String col : colList) {
-        canApplyCtx.predColRefs.add(col);
+        canApplyCtx.getPredicateColumnsList().add(col);
       }
 
       return null;
@@ -130,27 +128,21 @@ public final class RewriteCanApplyProcFactory {
                    //return false;
                  }else if(para.size() == 0){
                    //"count(*) case
-                   canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.GBY_NOT_ON_COUNT_KEYS, true);
+                   canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.COUNT_ON_ALL_COLS, true);
                    //return false;
                  }else{
                    for(int i=0; i< para.size(); i++){
                      ExprNodeDesc end = para.get(i);
-                     if(end instanceof ExprNodeConstantDesc){
-                       //not sure if this needs to be restricted
-                       //count(const) case
-                       //selColRefNameList.add(((ExprNodeConstantDesc) end).getValue().toString());
-                       //GBY_NOT_ON_COUNT_KEYS = true;
-                       //return false;
-                     }else if(end instanceof ExprNodeColumnDesc){
-                       //Add the columns to RewriteCanApplyCtx's selColRefNameList list to check later
+                     if(end instanceof ExprNodeColumnDesc){
+                       //Add the columns to RewriteCanApplyCtx's selectColumnsList list to check later
                        //if index keys contain all select clause columns and vice-a-versa
                        //we get the select column 'actual' names only here if we have a agg func along with groub-by
                        //SelectOperator has internal names in its colList data structure
-                       canApplyCtx.selColRefNameList.add(((ExprNodeColumnDesc) end).getColumn());
+                       canApplyCtx.getSelectColumnsList().add(((ExprNodeColumnDesc) end).getColumn());
 
-                       //Add the columns to RewriteCanApplyCtx's colRefAggFuncInputList list to check later
+                       //Add the columns to RewriteCanApplyCtx's aggFuncColList list to check later
                        //if columns contained in agg func are index key columns
-                       canApplyCtx.colRefAggFuncInputList.add(para.get(i).getCols());
+                       canApplyCtx.getAggFuncColList().add(((ExprNodeColumnDesc) end).getColumn());
                      }
                    }
                  }
@@ -161,15 +153,14 @@ public final class RewriteCanApplyProcFactory {
            //this code uses query block to determine if the ASTNode tree contains the distinct TOK_SELECTDI token
            QBParseInfo qbParseInfo =  canApplyCtx.getParseContext().getQB().getParseInfo();
            Set<String> clauseNameSet = qbParseInfo.getClauseNames();
-           if (clauseNameSet.size() != 1) {
-             //return false;
-           }
-           Iterator<String> clauseNameIter = clauseNameSet.iterator();
-           String clauseName = clauseNameIter.next();
-           ASTNode rootSelExpr = qbParseInfo.getSelForClause(clauseName);
-           boolean isDistinct = (rootSelExpr.getType() == HiveParser.TOK_SELECTDI);
-           if(isDistinct) {
-             canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.QUERY_HAS_DISTINCT, true);
+           if (clauseNameSet.size() == 1) {
+             Iterator<String> clauseNameIter = clauseNameSet.iterator();
+             String clauseName = clauseNameIter.next();
+             ASTNode rootSelExpr = qbParseInfo.getSelForClause(clauseName);
+             boolean isDistinct = (rootSelExpr.getType() == HiveParser.TOK_SELECTDI);
+             if(isDistinct) {
+               canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.QUERY_HAS_DISTINCT, true);
+             }
            }
          }
 
@@ -186,10 +177,7 @@ public final class RewriteCanApplyProcFactory {
            if(exprNodeDesc instanceof ExprNodeColumnDesc){
              //Add the group-by keys to RewriteCanApplyCtx's gbKeyNameList list to check later
              //if all keys are from index columns
-             canApplyCtx.gbKeyNameList.addAll(exprNodeDesc.getCols());
-             //Add the columns to RewriteCanApplyCtx's selColRefNameList list to check later
-             //if index keys contain all select clause columns and vice-a-versa
-             canApplyCtx.selColRefNameList.add(((ExprNodeColumnDesc) exprNodeDesc).getColumn());
+             canApplyCtx.getGbKeyNameList().addAll(exprNodeDesc.getCols());
            }else if(exprNodeDesc instanceof ExprNodeGenericFuncDesc){
              ExprNodeGenericFuncDesc endfg = (ExprNodeGenericFuncDesc)exprNodeDesc;
              List<ExprNodeDesc> childExprs = endfg.getChildExprs();
@@ -198,8 +186,8 @@ public final class RewriteCanApplyProcFactory {
                  //Set QUERY_HAS_KEY_MANIP_FUNC to true which is used later to determine if the rewrite is a 'append subquery' case
                  //this is true in case the group-by key is a GenericUDF like year,month etc
                  canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.QUERY_HAS_KEY_MANIP_FUNC, true);
-                 canApplyCtx.gbKeyNameList.addAll(exprNodeDesc.getCols());
-                 canApplyCtx.selColRefNameList.add(((ExprNodeColumnDesc) end).getColumn());
+                 canApplyCtx.getGbKeyNameList().addAll(exprNodeDesc.getCols());
+                 canApplyCtx.getSelectColumnsList().add(((ExprNodeColumnDesc) end).getColumn());
                }
              }
            }
@@ -274,64 +262,34 @@ public final class RewriteCanApplyProcFactory {
 
        List<Operator<? extends Serializable>> childrenList = operator.getChildOperators();
        Operator<? extends Serializable> child = childrenList.get(0);
-       //if this SelectOperator is the parent of a GroupByOperator, we need not check for any criterion
-       if(child instanceof GroupByOperator){
-         return true;
-       }else if(child instanceof FileSinkOperator){
-         //if FilterOperator predicate has internal column names, we need to retrieve the 'actual' column names to
-         //check if index keys contain all filter predicate columns and vice-a-versa
+       if(child instanceof FileSinkOperator){
          Map<String, String> internalToAlias = new LinkedHashMap<String, String>();
          RowSchema rs = operator.getSchema();
          //to get the internal to alias mapping
          ArrayList<ColumnInfo> sign = rs.getSignature();
          for (ColumnInfo columnInfo : sign) {
            internalToAlias.put(columnInfo.getInternalName(), columnInfo.getAlias());
+
+           //Add the columns to RewriteCanApplyCtx's selectColumnsList list to check later
+           //if index keys contain all select clause columns and vice-a-versa
+           if(!columnInfo.getAlias().startsWith("_c")){
+             canApplyCtx.getSelectColumnsList().add(columnInfo.getAlias());
+           }
          }
-         //to reset internal names with actual names
-         for (int i=0 ; i< canApplyCtx.predColRefs.size(); i++) {
-           String predCol = canApplyCtx.predColRefs.get(i);
-           //hive query column names are not allowed to start with "_", so this check works
+
+         //if FilterOperator predicate has internal column names, we need to retrieve the 'actual' column names to
+         //check if index keys contain all filter predicate columns and vice-a-versa
+         Iterator<String> predItr = canApplyCtx.getPredicateColumnsList().iterator();
+         while(predItr.hasNext()){
+           String predCol = predItr.next();
+           String newPredCol = "";
            if(predCol.startsWith("_c") && internalToAlias.get(predCol) != null){
-             canApplyCtx.predColRefs.set(i, internalToAlias.get(predCol));
+             newPredCol = internalToAlias.get(predCol);
+             canApplyCtx.getPredicateColumnsList().remove(predCol);
+             canApplyCtx.getPredicateColumnsList().add(newPredCol);
            }
          }
-
-       }else{
-         //cases where we get select clause column's 'actual' names
-         SelectDesc conf = (SelectDesc)operator.getConf();
-         ArrayList<ExprNodeDesc> selColList = conf.getColList();
-         if(selColList == null || selColList.size() == 0){
-           canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.SEL_CLAUSE_COLS_FETCH_EXCEPTION, true);
-           //return false;
-         }else{
-           //since we are rewriting queries that contain group-by, this piece of code is not required
-           // however, it is included for later optimizations
-           if(!canApplyCtx.getBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.QUERY_HAS_GROUP_BY)){
-             for (ExprNodeDesc exprNodeDesc : selColList) {
-               if(exprNodeDesc instanceof ExprNodeColumnDesc){
-                 if(!((ExprNodeColumnDesc) exprNodeDesc).getColumn().startsWith("_c")){
-                   //Add the columns to RewriteCanApplyCtx's selColRefNameList list to check later
-                   //if index keys contain all select clause columns and vice-a-versa
-                   canApplyCtx.selColRefNameList.addAll(exprNodeDesc.getCols());
-                 }
-               }else if(exprNodeDesc instanceof ExprNodeGenericFuncDesc){
-                 ExprNodeGenericFuncDesc endfg = (ExprNodeGenericFuncDesc)exprNodeDesc;
-                 List<ExprNodeDesc> childExprs = endfg.getChildExprs();
-                 for (ExprNodeDesc end : childExprs) {
-                   if(end instanceof ExprNodeColumnDesc){
-                     if(!((ExprNodeColumnDesc) exprNodeDesc).getColumn().startsWith("_c")){
-                       canApplyCtx.selColRefNameList.addAll(exprNodeDesc.getCols());
-                     }
-                   }
-                 }
-               }
-             }
-
-           }
-
-         }
-     }
-
+       }
        return null;
      }
    }

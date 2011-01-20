@@ -54,29 +54,26 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
   }
 
   public static enum RewriteVars {
-
-   NO_OF_SUBQUERIES("hive.ql.rewrites.no.of.subqueries",0),
-   AGG_FUNC_CNT("hive.ql.rewrites.agg.func.cnt", 0),
-   GBY_KEY_CNT("hive.ql.rewrites.gby.key.cnt", 0),
-   TABLE_HAS_NO_INDEX("hive.ql.rewrites.table.has.no.index", false),
-   QUERY_HAS_SORT_BY("hive.ql.rewrites.query.has.sort.by", false),
-   QUERY_HAS_ORDER_BY("hive.ql.rewrites.query.has.order.by", false),
-   QUERY_HAS_DISTRIBUTE_BY("hive.ql.rewrites.query.has.distribute.by", false),
-   QUERY_HAS_GROUP_BY("hive.ql.rewrites.query.has.group.by", false),
-   QUERY_HAS_DISTINCT("hive.ql.rewrites.query.has.distinct", false), //This still uses QBParseInfo to make decision. Needs to be changed if QB dependency is not desired.
-   AGG_FUNC_IS_NOT_COUNT("hive.ql.rewrites.agg.func.is.not.count", false),
-   AGG_FUNC_COLS_FETCH_EXCEPTION("hive.ql.rewrites.agg.func.cols.fetch.exception", false),
-   WHR_CLAUSE_COLS_FETCH_EXCEPTION("hive.ql.rewrites.whr.clause.cols.fetch.exception", false),
-   SEL_CLAUSE_COLS_FETCH_EXCEPTION("hive.ql.rewrites.sel.clause.cols.fetch.exception", false),
-   GBY_KEYS_FETCH_EXCEPTION("hive.ql.rewrites.gby.keys.fetch.exception", false),
-   GBY_KEY_HAS_NON_INDEX_COLS("hive.ql.rewrites.gby.keys.has.non.index.cols", false),
-   SEL_HAS_NON_COL_REF("hive.ql.rewrites.sel.has.non.col.ref", false),
-   GBY_NOT_ON_COUNT_KEYS("hive.ql.rewrites.gby.not.on.count.keys", false),
-   IDX_TBL_SEARCH_EXCEPTION("hive.ql.rewrites.idx.tbl.search.exception", false),
-   QUERY_HAS_KEY_MANIP_FUNC("hive.ql.rewrites.query.has.key.manip.func", false),
-   QUERY_HAS_MULTIPLE_TABLES("hive.ql.rewrites.query.has.multiple.tables", false),
-   SHOULD_APPEND_SUBQUERY("hive.ql.rewrites.should.append.subquery", false),
-   REMOVE_GROUP_BY("hive.ql.rewrites.remove.group.by", false);
+    AGG_FUNC_CNT("hive.ql.rewrites.agg.func.cnt", 0),
+    GBY_KEY_CNT("hive.ql.rewrites.gby.key.cnt", 0),
+    TABLE_HAS_NO_INDEX("hive.ql.rewrites.table.has.no.index", false),
+    QUERY_HAS_SORT_BY("hive.ql.rewrites.query.has.sort.by", false),
+    QUERY_HAS_ORDER_BY("hive.ql.rewrites.query.has.order.by", false),
+    QUERY_HAS_DISTRIBUTE_BY("hive.ql.rewrites.query.has.distribute.by", false),
+    QUERY_HAS_GROUP_BY("hive.ql.rewrites.query.has.group.by", false),
+    QUERY_HAS_DISTINCT("hive.ql.rewrites.query.has.distinct", false), //This still uses QBParseInfo to make decision. Needs to be changed if QB dependency is not desired.
+    AGG_FUNC_IS_NOT_COUNT("hive.ql.rewrites.agg.func.is.not.count", false),
+    AGG_FUNC_COLS_FETCH_EXCEPTION("hive.ql.rewrites.agg.func.cols.fetch.exception", false),
+    WHR_CLAUSE_COLS_FETCH_EXCEPTION("hive.ql.rewrites.whr.clause.cols.fetch.exception", false),
+    SEL_CLAUSE_COLS_FETCH_EXCEPTION("hive.ql.rewrites.sel.clause.cols.fetch.exception", false),
+    GBY_KEYS_FETCH_EXCEPTION("hive.ql.rewrites.gby.keys.fetch.exception", false),
+    COUNT_ON_ALL_COLS("hive.ql.rewrites.gby.not.on.count.keys", false),
+    IDX_TBL_SEARCH_EXCEPTION("hive.ql.rewrites.idx.tbl.search.exception", false),
+    QUERY_HAS_KEY_MANIP_FUNC("hive.ql.rewrites.query.has.key.manip.func", false),
+    QUERY_HAS_MULTIPLE_TABLES("hive.ql.rewrites.query.has.multiple.tables", false),
+    SHOULD_APPEND_SUBQUERY("hive.ql.rewrites.should.append.subquery", false),
+    REMOVE_GROUP_BY("hive.ql.rewrites.remove.group.by", false),
+    REPLACE_TABLE_WITH_IDX_TABLE("hive.ql.rewrites.replace.table.with.idx.table", false);
     ;
 
     public final String varname;
@@ -132,7 +129,6 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
   }
 
   public void resetRewriteVars(){
-    setIntVar(conf, RewriteVars.NO_OF_SUBQUERIES,0);
     setIntVar(conf, RewriteVars.AGG_FUNC_CNT,0);
     setIntVar(conf, RewriteVars.GBY_KEY_CNT,0);
     setBoolVar(conf, RewriteVars.TABLE_HAS_NO_INDEX, false);
@@ -146,9 +142,7 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
     setBoolVar(conf, RewriteVars.WHR_CLAUSE_COLS_FETCH_EXCEPTION, false);
     setBoolVar(conf, RewriteVars.SEL_CLAUSE_COLS_FETCH_EXCEPTION, false);
     setBoolVar(conf, RewriteVars.GBY_KEYS_FETCH_EXCEPTION, false);
-    setBoolVar(conf, RewriteVars.GBY_KEY_HAS_NON_INDEX_COLS, false);
-    setBoolVar(conf, RewriteVars.SEL_HAS_NON_COL_REF, false);
-    setBoolVar(conf, RewriteVars.GBY_NOT_ON_COUNT_KEYS, false);
+    setBoolVar(conf, RewriteVars.COUNT_ON_ALL_COLS, false);
     setBoolVar(conf, RewriteVars.IDX_TBL_SEARCH_EXCEPTION, false);
     setBoolVar(conf, RewriteVars.QUERY_HAS_KEY_MANIP_FUNC, false);
     setBoolVar(conf, RewriteVars.QUERY_HAS_MULTIPLE_TABLES, false);
@@ -161,16 +155,16 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
   /***************************************Index Validation Variables***************************************/
   //The SUPPORTED_INDEX_TYPE value will change when we implement a new index handler to retrieve correct result
   // for count if the same key appears more than once within the same block
-  final String SUPPORTED_INDEX_TYPE =
+   final String SUPPORTED_INDEX_TYPE =
     "org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler";
    final String COMPACT_IDX_BUCKET_COL = "_bucketname";
    final String COMPACT_IDX_OFFSETS_ARRAY_COL = "_offsets";
 
    //Data structures that are populated in the RewriteCanApplyProcFactory methods to check if the index key meets all criteria
-   final Set<String> selColRefNameList = new LinkedHashSet<String>();
-   final List<String> predColRefs = new ArrayList<String>();
-   final List<String> gbKeyNameList = new ArrayList<String>();
-   final List<List<String>> colRefAggFuncInputList = new ArrayList<List<String>>();
+   Set<String> selectColumnsList = new LinkedHashSet<String>();
+   Set<String> predicateColumnsList = new LinkedHashSet<String>();
+   Set<String> gbKeyNameList = new LinkedHashSet<String>();
+   Set<String> aggFuncColList = new LinkedHashSet<String>();
 
    //Map for base table to index table mapping
    //TableScan operator for base table will be modified to read from index table
@@ -181,6 +175,37 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
    private Hive hiveDb;
    private String currentTableName = null;
 
+  public Set<String> getSelectColumnsList() {
+    return selectColumnsList;
+  }
+
+  public void setSelectColumnsList(Set<String> selectColumnsList) {
+    this.selectColumnsList = selectColumnsList;
+  }
+
+  public Set<String> getPredicateColumnsList() {
+    return predicateColumnsList;
+  }
+
+  public void setPredicateColumnsList(Set<String> predicateColumnsList) {
+    this.predicateColumnsList = predicateColumnsList;
+  }
+
+  public Set<String> getGbKeyNameList() {
+    return gbKeyNameList;
+  }
+
+  public void setGbKeyNameList(Set<String> gbKeyNameList) {
+    this.gbKeyNameList = gbKeyNameList;
+  }
+
+  public Set<String> getAggFuncColList() {
+    return aggFuncColList;
+  }
+
+  public void setAggFuncColList(Set<String> aggFuncColList) {
+    this.aggFuncColList = aggFuncColList;
+  }
 
   public HiveConf getConf() {
     return conf;
@@ -350,11 +375,8 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
 
   /**
    * We retrieve the list of index tables on the current table (represented by the TableScanOperator)
+   * which can be used to apply rewrite on the original query
    * and return if there are no index tables to be used for rewriting the input query.
-   * Else, we walk the operator tree for which this TableScanOperator is the topOp.
-   * At the end, we check if all conditions have passed for rewrite. If yes, we
-   * determine if the the index is usable for rewrite. Else, we log the condition which
-   * did not meet the rewrite criterion.
    *
    * @param topOp
    * @return
@@ -428,9 +450,9 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
 
       //--------------------------------------------
       //Check if all columns in select list are part of index key columns
-      if (!indexKeyNames.containsAll(selColRefNameList)) {
+      if (!indexKeyNames.containsAll(selectColumnsList)) {
         LOG.info("Select list has non index key column : " +
-            " Cannot use this index " + index.getIndexName());
+            " Cannot use index " + index.getIndexName());
         unusableIndexNames.add(index.getIndexName());
         continue;
       }
@@ -440,7 +462,7 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
       // as all columns from index appear in group-by-key list.
       if (getBoolVar(conf, RewriteVars.QUERY_HAS_DISTINCT)) {
         // Check if all columns from index are part of select list too
-        if (!selColRefNameList.containsAll(indexKeyNames))  {
+        if (!selectColumnsList.containsAll(indexKeyNames))  {
           LOG.info("Index has non select list columns " +
               " Cannot use index  " + index.getIndexName());
           unusableIndexNames.add(index.getIndexName());
@@ -452,9 +474,9 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
       // Check if all columns in where predicate are part of index key columns
       // TODO: Currently we allow all predicates , would it be more efficient
       // (or at least not worse) to read from index_table and not from baseTable?
-      if (!indexKeyNames.containsAll(predColRefs)) {
+      if (!indexKeyNames.containsAll(predicateColumnsList)) {
         LOG.info("Predicate column ref list has non index key column : " +
-            " Cannot use this index  " + index.getIndexName());
+            " Cannot use index  " + index.getIndexName());
         unusableIndexNames.add(index.getIndexName());
         continue;
       }
@@ -468,13 +490,38 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
         // we can rewrite this one to:
         // select c1, c2 from src_cmpt_idx;
         if (!indexKeyNames.containsAll(gbKeyNameList)) {
-          setBoolVar(conf, RewriteVars.GBY_KEY_HAS_NON_INDEX_COLS, true);
-          return indexToKeysMap;
+          LOG.info("Group by key has some non-indexed columns, " +
+              " Cannot use index  " + index.getIndexName());
+          unusableIndexNames.add(index.getIndexName());
+          continue;
+        }
+
+         // FUTURE: See if this can be relaxed.
+        // If we have agg function (currently only COUNT is supported), check if its input are
+        // from index. we currently support only that.
+        if (aggFuncColList.size() > 0)  {
+          if (indexKeyNames.containsAll(aggFuncColList) == false) {
+            LOG.info("Agg Func input is not present in index key columns. Currently " +
+                "only agg func on index columns are supported by rewrite optimization" );
+            unusableIndexNames.add(index.getIndexName());
+            continue;
+          }
+          // If we have count on some key, check if key is same as index key,
+          if (indexKeyNames.containsAll(aggFuncColList))  {
+            optimizeCount = true;
+          }
         }
 
         if (!gbKeyNameList.containsAll(indexKeyNames))  {
           // GB key and idx key are not same, don't remove GroupBy, but still do index scan
+          LOG.info("Index has some non-groupby columns, GroupBy will be"
+              + " preserved by rewrite optimization but original table scan"
+              + " will be replaced with index table scan." );
           removeGroupBy = false;
+          if(optimizeCount == false){
+            setBoolVar(conf, RewriteVars.REPLACE_TABLE_WITH_IDX_TABLE, true);
+          }
+
         }
 
         // This check prevents to remove GroupBy for cases where the GROUP BY key cols are
@@ -492,34 +539,12 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
         //            from GB key.
         if (getBoolVar(conf, RewriteVars.QUERY_HAS_GROUP_BY) &&
             indexKeyNames.size() < getIntVar(conf, RewriteVars.GBY_KEY_CNT)) {
-          LOG.info("Group by key has only some non-indexed columns, GroupBy will be"
+          LOG.info("Group by key has some non-indexed columns, GroupBy will be"
               + " preserved by rewrite optimization" );
           removeGroupBy = false;
         }
 
-        // FUTURE: See if this can be relaxed.
-        // If we have agg function (currently only COUNT is supported), check if its input are
-        // from index. we currently support only that.
-        if (colRefAggFuncInputList.size() > 0)  {
-          for (int aggFuncIdx = 0; aggFuncIdx < colRefAggFuncInputList.size(); aggFuncIdx++)  {
-            if (indexKeyNames.containsAll(colRefAggFuncInputList.get(aggFuncIdx)) == false) {
-              LOG.info("Agg Func input is not present in index key columns. Currently " +
-                  "only agg func on index columns are supported by rewrite optimization" );
-              unusableIndexNames.add(index.getIndexName());
-              continue;
-            }
 
-            // If we have count on some key, check if key is same as index key,
-            if (colRefAggFuncInputList.get(aggFuncIdx).size() > 0)  {
-              if (colRefAggFuncInputList.get(aggFuncIdx).containsAll(indexKeyNames))  {
-                optimizeCount = true;
-              }
-            }
-            else {
-              optimizeCount = true;
-            }
-          }
-        }
       }
 
       //Now that we are good to do this optimization, set parameters in context

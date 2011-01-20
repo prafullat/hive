@@ -133,9 +133,16 @@ public class RewriteGBUsingIndex implements Transform {
        * */
       if(shouldApplyOptimization()){
         LOG.debug("Rewriting Original Query.");
+        if(indexTableMap.size() > 1){
+          LOG.info("Table has multiple valid index tables to apply rewrite.");
+        }
+
         Iterator<String> indexMapItr = indexTableMap.keySet().iterator();
         while(indexMapItr.hasNext()){
           rewriteOriginalQuery(indexMapItr.next());
+          //we rewrite the original query using the first valid index encountered
+          //this can be changed if we have a better mechanism to decide which index will produce a better rewrite
+          break;
         }
       }
       canApplyCtx.resetRewriteVars();
@@ -159,6 +166,11 @@ public class RewriteGBUsingIndex implements Transform {
   /**
    * We traverse the current operator tree to check for conditions in which the
    * optimization cannot be applied.
+   *
+   * At the end, we check if all conditions have passed for rewrite. If yes, we
+   * determine if the the index is usable for rewrite. Else, we log the condition which
+   * did not meet the rewrite criterion.
+   *
    * @return
    */
   boolean shouldApplyOptimization(){
@@ -171,7 +183,7 @@ public class RewriteGBUsingIndex implements Transform {
     boolean canApply = true;
     if(canApplyCtx.ifQueryHasMultipleTables()){
       //We do not apply this optimization for this case as of now.
-      canApply = checkIfOptimizationCanApply();
+      canApply = checkIfAllRewriteCriteriaIsMet();
     }else{
       /*
        * This code iterates over each TableScanOperator from the topOps map from ParseContext.
@@ -195,10 +207,7 @@ public class RewriteGBUsingIndex implements Transform {
         canApplyCtx.populateRewriteVars(topOp);
         indexTableMap = canApplyCtx.getIndexTableInfoForRewrite(topOp);
 
-        if(indexTableMap.size() > 1){
-          LOG.info("Table has multiple valid index tables to apply rewrite.");
-        }
-        canApply = checkIfOptimizationCanApply();
+        canApply = checkIfAllRewriteCriteriaIsMet();
 
         if(canApply && topOps.containsValue(topOp)) {
           Iterator<String> topOpNamesItr = topOps.keySet().iterator();
@@ -228,6 +237,7 @@ public class RewriteGBUsingIndex implements Transform {
       //canApplyCtx.setCurrentTableName(currentTableName);
       TableScanOperator topOp = (TableScanOperator) topOpMap.get(topOpTableName);
 
+
       /* This part of the code checks if the 'REMOVE_GROUP_BY' value in RewriteVars enum is set to true.
        * If yes, it sets the environment for the RewriteRemoveGroupbyCtx context and invokes
        * method to apply rewrite by removing group by construct operators from the original operator tree.
@@ -239,7 +249,12 @@ public class RewriteGBUsingIndex implements Transform {
         removeGbyCtx.setIndexName(indexTableName);
         removeGbyCtx.setOpc(parseContext.getOpParseCtx());
         removeGbyCtx.setCanApplyCtx(canApplyCtx);
-        removeGbyCtx.invokeRemoveGbyProc(topOp);
+        //do we need to replace only the table and preserve group-by?
+        if(canApplyCtx.getBoolVar(hiveConf, RewriteVars.REPLACE_TABLE_WITH_IDX_TABLE)){
+          removeGbyCtx.invokeReplaceTableScanProc(topOp);
+        }else{
+          removeGbyCtx.invokeRemoveGbyProc(topOp);
+        }
         //Getting back new parseContext and new OpParseContext after GBY-RS-GBY is removed
         parseContext = removeGbyCtx.getParseContext();
         parseContext.setOpParseCtx(removeGbyCtx.getOpc());
@@ -255,7 +270,7 @@ public class RewriteGBUsingIndex implements Transform {
         subqueryCtx = RewriteIndexSubqueryCtx.getInstance();
         subqueryCtx.setParseContext(parseContext);
         subqueryCtx.setIndexName(indexTableName);
-        subqueryCtx.setIndexKeyNames(indexTableMap.get(indexTableName));
+        subqueryCtx.setSelectColumnNames(canApplyCtx.getSelectColumnsList());
         subqueryCtx.setCurrentTableName(currentTableName);
         subqueryCtx.createSubqueryContext();
         HashMap<TableScanOperator, Table> subqTopOpMap = subqueryCtx.getSubqueryPctx().getTopToTable();
@@ -272,9 +287,12 @@ public class RewriteGBUsingIndex implements Transform {
         LOG.info("Finished appending subquery");
       }
 
+
+
       //Finally we set the enum variables to false
       canApplyCtx.setBoolVar(hiveConf, RewriteVars.REMOVE_GROUP_BY, false);
       canApplyCtx.setBoolVar(hiveConf, RewriteVars.SHOULD_APPEND_SUBQUERY, false);
+      canApplyCtx.setBoolVar(hiveConf, RewriteVars.REPLACE_TABLE_WITH_IDX_TABLE, false);
 
     }
     LOG.info("Finished Rewriting query");
@@ -290,87 +308,72 @@ public class RewriteGBUsingIndex implements Transform {
    * This method logs the reason for which we cannot apply the rewrite optimization.
    * @return
    */
-  boolean checkIfOptimizationCanApply(){
+  boolean checkIfAllRewriteCriteriaIsMet(){
     if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.QUERY_HAS_MULTIPLE_TABLES)) {
       LOG.info("Query has more than one table " +
           "that is not supported with " + getName() + " optimization" );
       return false;
-    }//1
-    if (canApplyCtx.getIntVar(hiveConf, RewriteVars.NO_OF_SUBQUERIES) != 0) {
-      LOG.info("Query has more than one subqueries " +
-          "that is not supported with " + getName() + " optimization" );
-      return false;
-    }//2
+    }
     if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.TABLE_HAS_NO_INDEX)) {
       LOG.info("Table " + currentTableName + " does not have compact index. " +
           "Cannot apply " + getName() + " optimization" );
       return false;
-    }//3
+    }
     if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.QUERY_HAS_DISTRIBUTE_BY)){
       LOG.info("Query has distributeby clause, " +
           "that is not supported with " + getName() + " optimization" );
       return false;
-    }//4
+    }
     if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.QUERY_HAS_SORT_BY)){
       LOG.info("Query has sortby clause, " +
           "that is not supported with " + getName() + " optimization" );
       return false;
-    }//5
+    }
     if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.QUERY_HAS_ORDER_BY)){
       LOG.info("Query has orderby clause, " +
           "that is not supported with " + getName() + " optimization" );
       return false;
-    }//6
+    }
     if (canApplyCtx.getIntVar(hiveConf, RewriteVars.AGG_FUNC_CNT) > 1 ){
       LOG.info("More than 1 agg funcs: " +
           "Not supported by " + getName() + " optimization" );
       return false;
-    }//7
+    }
     if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.AGG_FUNC_IS_NOT_COUNT)){
       LOG.info("Agg func other than count is " +
           "not supported by " + getName() + " optimization" );
       return false;
-    }//8
+    }
+    if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.COUNT_ON_ALL_COLS)){
+      LOG.info("Currently count function needs group by on key columns. This is a count(*) case., "
+          + "Cannot apply this " + getName() + " optimization" );
+      return false;
+    }
     if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.AGG_FUNC_COLS_FETCH_EXCEPTION)){
       LOG.info("Got exception while locating child col refs " +
           "of agg func, skipping " + getName() + " optimization" );
       return false;
-    }//9
+    }
     if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.WHR_CLAUSE_COLS_FETCH_EXCEPTION)){
       LOG.info("Got exception while locating child col refs for where clause, "
           + "skipping " + getName() + " optimization" );
       return false;
-    }//10
-     if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.SEL_HAS_NON_COL_REF)){
-      LOG.info("Select-list has some non-col-ref expression. " +
-          "Cannot apply the rewrite " + getName() + " optimization" );
-      return false;
-    }//11
+    }
     if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.SEL_CLAUSE_COLS_FETCH_EXCEPTION)){
       LOG.info("Got exception while locating child col refs for select list, "
           + "skipping " + getName() + " optimization" );
       return false;
-    }//12
+    }
     if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.GBY_KEYS_FETCH_EXCEPTION)){
       LOG.info("Got exception while locating child col refs for GroupBy key, "
           + "skipping " + getName() + " optimization" );
       return false;
-    }//13
-    if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.GBY_NOT_ON_COUNT_KEYS)){
-      LOG.info("Currently count function needs group by on key columns, "
-          + "Cannot apply this " + getName() + " optimization" );
-      return false;
-    }//14
+    }
     if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.IDX_TBL_SEARCH_EXCEPTION)){
       LOG.info("Got exception while locating index table, " +
           "skipping " + getName() + " optimization" );
       return false;
-    }//15
-    if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.GBY_KEY_HAS_NON_INDEX_COLS)){
-      LOG.info("Group by key has some non-indexed columns, " +
-          "Cannot apply rewrite " + getName() + " optimization" );
-      return false;
-    }//16
+    }
     return true;
   }
 
