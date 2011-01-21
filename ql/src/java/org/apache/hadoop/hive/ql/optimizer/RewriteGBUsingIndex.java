@@ -175,10 +175,7 @@ public class RewriteGBUsingIndex implements Transform {
    */
   boolean shouldApplyOptimization(){
     //Set the environment for all contexts
-    canApplyCtx = RewriteCanApplyCtx.getInstance();
-    canApplyCtx.setParseContext(parseContext);
-    canApplyCtx.setHiveDb(hiveDb);
-    canApplyCtx.setConf(hiveConf);
+    canApplyCtx = RewriteCanApplyCtx.getInstance(parseContext, hiveDb, hiveConf);
 
     boolean canApply = true;
     if(canApplyCtx.ifQueryHasMultipleTables()){
@@ -195,11 +192,7 @@ public class RewriteGBUsingIndex implements Transform {
       HashMap<String,Operator<? extends Serializable>> topOps = parseContext.getTopOps();
       Iterator<TableScanOperator> topOpItr = topToTable.keySet().iterator();
       while(topOpItr.hasNext()){
-        canApplyCtx = RewriteCanApplyCtx.getInstance();
-        canApplyCtx.setParseContext(parseContext);
-        canApplyCtx.setHiveDb(hiveDb);
-        canApplyCtx.setConf(hiveConf);
-
+        canApplyCtx.resetCanApplyCtx();
         TableScanOperator topOp = topOpItr.next();
         Table table = topToTable.get(topOp);
         currentTableName = table.getTableName();
@@ -208,7 +201,6 @@ public class RewriteGBUsingIndex implements Transform {
         indexTableMap = canApplyCtx.getIndexTableInfoForRewrite(topOp);
 
         canApply = checkIfAllRewriteCriteriaIsMet();
-
         if(canApply && topOps.containsValue(topOp)) {
           Iterator<String> topOpNamesItr = topOps.keySet().iterator();
           while(topOpNamesItr.hasNext()){
@@ -218,7 +210,7 @@ public class RewriteGBUsingIndex implements Transform {
             }
           }
         }
-      }
+     }
     }
     return canApply;
   }
@@ -234,27 +226,15 @@ public class RewriteGBUsingIndex implements Transform {
     HashMap<String, Operator<? extends Serializable>> topOpMap = parseContext.getTopOps();
     for (String topOpTableName : tsOpToProcess) {
       currentTableName = topOpTableName;
-      //canApplyCtx.setCurrentTableName(currentTableName);
       TableScanOperator topOp = (TableScanOperator) topOpMap.get(topOpTableName);
-
 
       /* This part of the code checks if the 'REMOVE_GROUP_BY' value in RewriteVars enum is set to true.
        * If yes, it sets the environment for the RewriteRemoveGroupbyCtx context and invokes
        * method to apply rewrite by removing group by construct operators from the original operator tree.
        * */
       if(canApplyCtx.getBoolVar(hiveConf, RewriteVars.REMOVE_GROUP_BY)){
-        removeGbyCtx = RewriteRemoveGroupbyCtx.getInstance();
-        removeGbyCtx.setParseContext(parseContext);
-        removeGbyCtx.setHiveDb(hiveDb);
-        removeGbyCtx.setIndexName(indexTableName);
-        removeGbyCtx.setOpc(parseContext.getOpParseCtx());
-        removeGbyCtx.setCanApplyCtx(canApplyCtx);
-        //do we need to replace only the table and preserve group-by?
-        if(canApplyCtx.getBoolVar(hiveConf, RewriteVars.REPLACE_TABLE_WITH_IDX_TABLE)){
-          removeGbyCtx.invokeReplaceTableScanProc(topOp);
-        }else{
-          removeGbyCtx.invokeRemoveGbyProc(topOp);
-        }
+        removeGbyCtx = RewriteRemoveGroupbyCtx.getInstance(parseContext, hiveDb, indexTableName);
+        removeGbyCtx.invokeRemoveGbyProc(topOp);
         //Getting back new parseContext and new OpParseContext after GBY-RS-GBY is removed
         parseContext = removeGbyCtx.getParseContext();
         parseContext.setOpParseCtx(removeGbyCtx.getOpc());
@@ -267,12 +247,10 @@ public class RewriteGBUsingIndex implements Transform {
        * We first create the subquery context, then copy the RowSchema/RowResolver from subquery to original operator tree.
        * */
       if(canApplyCtx.getBoolVar(hiveConf, RewriteVars.SHOULD_APPEND_SUBQUERY)){
-        subqueryCtx = RewriteIndexSubqueryCtx.getInstance();
-        subqueryCtx.setParseContext(parseContext);
-        subqueryCtx.setIndexName(indexTableName);
-        subqueryCtx.setSelectColumnNames(canApplyCtx.getSelectColumnsList());
-        subqueryCtx.setCurrentTableName(currentTableName);
+        subqueryCtx = RewriteIndexSubqueryCtx.getInstance(parseContext, indexTableName, currentTableName,
+            canApplyCtx.getSelectColumnsList());
         subqueryCtx.createSubqueryContext();
+
         HashMap<TableScanOperator, Table> subqTopOpMap = subqueryCtx.getSubqueryPctx().getTopToTable();
         Iterator<TableScanOperator> topOpItr = subqTopOpMap.keySet().iterator();
         TableScanOperator subqTopOp = null;
@@ -287,12 +265,10 @@ public class RewriteGBUsingIndex implements Transform {
         LOG.info("Finished appending subquery");
       }
 
-
-
       //Finally we set the enum variables to false
       canApplyCtx.setBoolVar(hiveConf, RewriteVars.REMOVE_GROUP_BY, false);
       canApplyCtx.setBoolVar(hiveConf, RewriteVars.SHOULD_APPEND_SUBQUERY, false);
-      canApplyCtx.setBoolVar(hiveConf, RewriteVars.REPLACE_TABLE_WITH_IDX_TABLE, false);
+      //canApplyCtx.setBoolVar(hiveConf, RewriteVars.REPLACE_TABLE_WITH_IDX_TABLE, false);
 
     }
     LOG.info("Finished Rewriting query");
@@ -374,6 +350,12 @@ public class RewriteGBUsingIndex implements Transform {
           "skipping " + getName() + " optimization" );
       return false;
     }
+    if(indexTableMap.size() == 0){
+      LOG.info("No Valid Index Found to apply Rewrite, " +
+          "skipping " + getName() + " optimization" );
+      return false;
+    }
+
     return true;
   }
 

@@ -90,7 +90,7 @@ public final class RewriteRemoveGroupbyProcFactory {
 
       if(child instanceof GroupByOperator){
         //this is the interim SEL operator for the group-by construct, we do not need this in the re-written operator tree
-        removeGbyCtx.setNewParentList(operator.getParentOperators());
+        removeGbyCtx.getNewParentList().addAll(operator.getParentOperators());
         removeGbyCtx.getOpc().remove(operator);
       }else if(parent instanceof GroupByOperator){
 
@@ -240,16 +240,17 @@ public final class RewriteRemoveGroupbyProcFactory {
         removeGbyCtx.getParseContext().getTopToTable();
 
       //Check if we have a valid index on the original base table for the replacement
-      String baseTableName = topToTable.get(scanOperator).getTableName();
+/*      String baseTableName = topToTable.get(scanOperator).getTableName();
       if( removeGbyCtx.getCanApplyCtx().findBaseTable(baseTableName) == null ) {
         LOG.debug("No mapping found for original table and index table name");
       }
-
+*/
       //construct a new descriptor for the index table scan
       TableScanDesc indexTableScanDesc = new TableScanDesc();
       indexTableScanDesc.setGatherStats(false);
 
-      String tableName = removeGbyCtx.getCanApplyCtx().findBaseTable(baseTableName);
+      //String tableName = removeGbyCtx.getCanApplyCtx().findBaseTable(baseTableName);
+      String tableName = removeGbyCtx.getIndexName();
 
       tableSpec ts = new tableSpec(removeGbyCtx.getHiveDb(),
           removeGbyCtx.getParseContext().getConf(),
@@ -314,7 +315,7 @@ public final class RewriteRemoveGroupbyProcFactory {
       //On walking the operator tree using the rule 'GBY-RS-GBY', we get the GroupByOperator that is not in the 'groupOpToInputTables'
       //map in the ParseContext. Hence the check.
       if(!removeGbyCtx.getParseContext().getGroupOpToInputTables().containsKey(operator)){
-        removeGbyCtx.setNewChildrenList(operator.getChildOperators());
+        removeGbyCtx.getNewChildrenList().addAll(operator.getChildOperators());
 
         ReduceSinkOperator rsOp = (ReduceSinkOperator) operator.getParentOperators().get(0);
         removeGbyCtx.getOpc().remove(rsOp);

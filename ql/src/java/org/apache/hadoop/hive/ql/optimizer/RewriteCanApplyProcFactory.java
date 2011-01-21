@@ -101,7 +101,10 @@ public final class RewriteCanApplyProcFactory {
        canApplyCtx = (RewriteCanApplyCtx)ctx;
        //for each group-by clause in query, only one GroupByOperator of the GBY-RS-GBY sequence is stored in  getGroupOpToInputTables
        //we need to process only this operator
-       if(canApplyCtx.getParseContext().getGroupOpToInputTables().containsKey(operator)){
+       //Also, we do not rewrite for cases when same query branch has multiple group-by constructs
+       if(canApplyCtx.getParseContext().getGroupOpToInputTables().containsKey(operator) &&
+           canApplyCtx.getBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.QUERY_HAS_GROUP_BY) == false ){
+
          canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.QUERY_HAS_GROUP_BY, true);
 
          GroupByDesc conf = (GroupByDesc) operator.getConf();
@@ -114,7 +117,7 @@ public final class RewriteCanApplyProcFactory {
 
                //In the current implementation, we do not support more than 1 agg funcs in group-by
                if(canApplyCtx.getIntVar(canApplyCtx.getParseContext().getConf(), RewriteVars.AGG_FUNC_CNT) > 1) {
-                 //return false;
+                 return false;
                }
                String aggFunc = aggregationDesc.getGenericUDAFName();
                if(!aggFunc.equals("count")){
@@ -127,7 +130,7 @@ public final class RewriteCanApplyProcFactory {
                    canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.AGG_FUNC_COLS_FETCH_EXCEPTION, true);
                    //return false;
                  }else if(para.size() == 0){
-                   //"count(*) case
+                   //count(*) case
                    canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.COUNT_ON_ALL_COLS, true);
                    //return false;
                  }else{
@@ -164,12 +167,14 @@ public final class RewriteCanApplyProcFactory {
            }
          }
 
+
          //we need to have non-null groub-by keys for a valid groub-by operator
          ArrayList<ExprNodeDesc> keyList = conf.getKeys();
          if(keyList == null || keyList.size() == 0){
            canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.GBY_KEYS_FETCH_EXCEPTION, true);
            //return false;
          }
+
          //sets the no. of keys in groub by to be used later to determine is group-by has non-index cols
          //group-by needs to be preserved in such cases (eg.group-by using a function on index key. This is the subquery append case)
          canApplyCtx.setIntVar(canApplyCtx.getParseContext().getConf(), RewriteVars.GBY_KEY_CNT, keyList.size());
@@ -183,9 +188,10 @@ public final class RewriteCanApplyProcFactory {
              List<ExprNodeDesc> childExprs = endfg.getChildExprs();
              for (ExprNodeDesc end : childExprs) {
                if(end instanceof ExprNodeColumnDesc){
-                 //Set QUERY_HAS_KEY_MANIP_FUNC to true which is used later to determine if the rewrite is a 'append subquery' case
+                 //Set QUERY_HAS_GENERICUDF_ON_GROUPBY_KEY to true which is used later to determine
+                 //whether the rewrite is a 'append subquery' case
                  //this is true in case the group-by key is a GenericUDF like year,month etc
-                 canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.QUERY_HAS_KEY_MANIP_FUNC, true);
+                 canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.QUERY_HAS_GENERICUDF_ON_GROUPBY_KEY, true);
                  canApplyCtx.getGbKeyNameList().addAll(exprNodeDesc.getCols());
                  canApplyCtx.getSelectColumnsList().add(((ExprNodeColumnDesc) end).getColumn());
                }
@@ -269,7 +275,6 @@ public final class RewriteCanApplyProcFactory {
          ArrayList<ColumnInfo> sign = rs.getSignature();
          for (ColumnInfo columnInfo : sign) {
            internalToAlias.put(columnInfo.getInternalName(), columnInfo.getAlias());
-
            //Add the columns to RewriteCanApplyCtx's selectColumnsList list to check later
            //if index keys contain all select clause columns and vice-a-versa
            if(!columnInfo.getAlias().startsWith("_c")){

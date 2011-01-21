@@ -45,12 +45,14 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
 
   protected final  Log LOG = LogFactory.getLog(RewriteCanApplyCtx.class.getName());
 
-  private RewriteCanApplyCtx() {
-
+  private RewriteCanApplyCtx(ParseContext parseContext, Hive hiveDb, HiveConf conf) {
+    this.parseContext = parseContext;
+    this.hiveDb = hiveDb;
+    this.conf = conf;
   }
 
-  public static RewriteCanApplyCtx getInstance(){
-    return new RewriteCanApplyCtx();
+  public static RewriteCanApplyCtx getInstance(ParseContext parseContext, Hive hiveDb, HiveConf conf){
+    return new RewriteCanApplyCtx(parseContext, hiveDb, conf);
   }
 
   public static enum RewriteVars {
@@ -67,13 +69,13 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
     WHR_CLAUSE_COLS_FETCH_EXCEPTION("hive.ql.rewrites.whr.clause.cols.fetch.exception", false),
     SEL_CLAUSE_COLS_FETCH_EXCEPTION("hive.ql.rewrites.sel.clause.cols.fetch.exception", false),
     GBY_KEYS_FETCH_EXCEPTION("hive.ql.rewrites.gby.keys.fetch.exception", false),
-    COUNT_ON_ALL_COLS("hive.ql.rewrites.gby.not.on.count.keys", false),
+    COUNT_ON_ALL_COLS("hive.ql.rewrites.count.on.all.cols", false),
     IDX_TBL_SEARCH_EXCEPTION("hive.ql.rewrites.idx.tbl.search.exception", false),
-    QUERY_HAS_KEY_MANIP_FUNC("hive.ql.rewrites.query.has.key.manip.func", false),
+    QUERY_HAS_GENERICUDF_ON_GROUPBY_KEY("hive.ql.rewrites.query.has.genericudf.on.groupby.key", false),
     QUERY_HAS_MULTIPLE_TABLES("hive.ql.rewrites.query.has.multiple.tables", false),
     SHOULD_APPEND_SUBQUERY("hive.ql.rewrites.should.append.subquery", false),
     REMOVE_GROUP_BY("hive.ql.rewrites.remove.group.by", false),
-    REPLACE_TABLE_WITH_IDX_TABLE("hive.ql.rewrites.replace.table.with.idx.table", false);
+    //REPLACE_TABLE_WITH_IDX_TABLE("hive.ql.rewrites.replace.table.with.idx.table", false);
     ;
 
     public final String varname;
@@ -144,7 +146,7 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
     setBoolVar(conf, RewriteVars.GBY_KEYS_FETCH_EXCEPTION, false);
     setBoolVar(conf, RewriteVars.COUNT_ON_ALL_COLS, false);
     setBoolVar(conf, RewriteVars.IDX_TBL_SEARCH_EXCEPTION, false);
-    setBoolVar(conf, RewriteVars.QUERY_HAS_KEY_MANIP_FUNC, false);
+    setBoolVar(conf, RewriteVars.QUERY_HAS_GENERICUDF_ON_GROUPBY_KEY, false);
     setBoolVar(conf, RewriteVars.QUERY_HAS_MULTIPLE_TABLES, false);
     setBoolVar(conf, RewriteVars.SHOULD_APPEND_SUBQUERY, false);
     setBoolVar(conf, RewriteVars.REMOVE_GROUP_BY, false);
@@ -169,11 +171,20 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
    //Map for base table to index table mapping
    //TableScan operator for base table will be modified to read from index table
    private final HashMap<String, String> baseToIdxTableMap = new HashMap<String, String>();;
-   private HiveConf conf = null;
+   private final HiveConf conf;
    private int aggFuncCnt = 0;
-   private  ParseContext parseContext = null;
-   private Hive hiveDb;
-   private String currentTableName = null;
+   private final ParseContext parseContext;
+   private final Hive hiveDb;
+   private String currentTableName = "";
+
+   void resetCanApplyCtx(){
+     aggFuncCnt = 0;
+     selectColumnsList.clear();
+     predicateColumnsList.clear();
+     gbKeyNameList.clear();
+     aggFuncColList.clear();
+     currentTableName = "";
+   }
 
   public Set<String> getSelectColumnsList() {
     return selectColumnsList;
@@ -211,10 +222,6 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
     return conf;
   }
 
-  public void setConf(HiveConf conf) {
-    this.conf = conf;
-  }
-
    public int getAggFuncCnt() {
     return aggFuncCnt;
   }
@@ -235,10 +242,6 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
     return hiveDb;
   }
 
-  public void setHiveDb(Hive hiveDb) {
-    this.hiveDb = hiveDb;
-  }
-
   public String getCurrentTableName() {
     return currentTableName;
   }
@@ -249,10 +252,6 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
 
   public  ParseContext getParseContext() {
     return parseContext;
-  }
-
-  public void setParseContext(ParseContext parseContext) {
-    this.parseContext = parseContext;
   }
 
 
@@ -291,7 +290,7 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
     Map<Rule, NodeProcessor> opRules = new LinkedHashMap<Rule, NodeProcessor>();
     opRules.put(new RuleRegExp("R1", "FIL%"), RewriteCanApplyProcFactory.canApplyOnFilterOperator());
     opRules.put(new RuleRegExp("R2", "GBY%"), RewriteCanApplyProcFactory.canApplyOnGroupByOperator());
-    opRules.put(new RuleRegExp("R3", "OP%"), RewriteCanApplyProcFactory.canApplyOnExtractOperator());
+    opRules.put(new RuleRegExp("R3", "RS%OP%"), RewriteCanApplyProcFactory.canApplyOnExtractOperator());
     opRules.put(new RuleRegExp("R4", "SEL%"), RewriteCanApplyProcFactory.canApplyOnSelectOperator());
 
     // The dispatcher fires the processor corresponding to the closest matching
@@ -410,7 +409,6 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
     Hive hiveInstance = hiveDb;
     HashMap<String, Set<String>> indexToKeysMap = new LinkedHashMap<String, Set<String>>();
 
-    ArrayList<String> unusableIndexNames = new ArrayList<String>();
     for (int idxCtr = 0; idxCtr < indexTables.size(); idxCtr++)  {
       String indexTableName = "";
       final Set<String> indexKeyNames = new LinkedHashSet<String>();
@@ -453,11 +451,10 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
       if (!indexKeyNames.containsAll(selectColumnsList)) {
         LOG.info("Select list has non index key column : " +
             " Cannot use index " + index.getIndexName());
-        unusableIndexNames.add(index.getIndexName());
         continue;
       }
 
-      // We need to check if all columns from index appear in select list only
+/*      // We need to check if all columns from index appear in select list only
       // in case of DISTINCT queries, In case group by queries, it is okay as long
       // as all columns from index appear in group-by-key list.
       if (getBoolVar(conf, RewriteVars.QUERY_HAS_DISTINCT)) {
@@ -469,7 +466,7 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
           continue;
         }
       }
-
+*/
       //--------------------------------------------
       // Check if all columns in where predicate are part of index key columns
       // TODO: Currently we allow all predicates , would it be more efficient
@@ -477,11 +474,10 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
       if (!indexKeyNames.containsAll(predicateColumnsList)) {
         LOG.info("Predicate column ref list has non index key column : " +
             " Cannot use index  " + index.getIndexName());
-        unusableIndexNames.add(index.getIndexName());
         continue;
       }
 
-      if (!getBoolVar(conf, RewriteVars.QUERY_HAS_DISTINCT))  {
+  //    if (!getBoolVar(conf, RewriteVars.QUERY_HAS_DISTINCT))  {
         //--------------------------------------------
         // For group by, we need to check if all keys are from index columns
         // itself. Here GB key order can be different than index columns but that does
@@ -492,7 +488,6 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
         if (!indexKeyNames.containsAll(gbKeyNameList)) {
           LOG.info("Group by key has some non-indexed columns, " +
               " Cannot use index  " + index.getIndexName());
-          unusableIndexNames.add(index.getIndexName());
           continue;
         }
 
@@ -503,11 +498,10 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
           if (indexKeyNames.containsAll(aggFuncColList) == false) {
             LOG.info("Agg Func input is not present in index key columns. Currently " +
                 "only agg func on index columns are supported by rewrite optimization" );
-            unusableIndexNames.add(index.getIndexName());
             continue;
           }
           // If we have count on some key, check if key is same as index key,
-          if (indexKeyNames.containsAll(aggFuncColList))  {
+          if (aggFuncColList.containsAll(indexKeyNames))  {
             optimizeCount = true;
           }
         }
@@ -518,10 +512,10 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
               + " preserved by rewrite optimization but original table scan"
               + " will be replaced with index table scan." );
           removeGroupBy = false;
-          if(optimizeCount == false){
+/*          if(optimizeCount == false){
             setBoolVar(conf, RewriteVars.REPLACE_TABLE_WITH_IDX_TABLE, true);
           }
-
+*/
         }
 
         // This check prevents to remove GroupBy for cases where the GROUP BY key cols are
@@ -545,28 +539,22 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
         }
 
 
-      }
+  //    }
 
       //Now that we are good to do this optimization, set parameters in context
       //which would be used by transformation procedure as inputs.
 
       //sub-query is needed only in case of optimizecount and complex gb keys?
-      if(getBoolVar(conf, RewriteVars.QUERY_HAS_KEY_MANIP_FUNC) == false && !(optimizeCount == true && removeGroupBy == false) ) {
+      if(getBoolVar(conf, RewriteVars.QUERY_HAS_GENERICUDF_ON_GROUPBY_KEY) == false
+          && !(optimizeCount == true && removeGroupBy == false) ) {
         setBoolVar(conf, RewriteVars.REMOVE_GROUP_BY, removeGroupBy);
         addTable(currentTableName, index.getIndexTableName());
       }else{
         setBoolVar(conf, RewriteVars.SHOULD_APPEND_SUBQUERY, true);
       }
+      //we add all index tables which can be used for rewrite and defer the decision of using a particular index for later
+      //this is to allow choosing a index if a better mechanism is designed later to chose a better rewrite
       indexToKeysMap.put(indexTableName, indexKeyNames);
-    }
-    //If none of the index was found to be usable for rewrite
-    if(unusableIndexNames.size() == indexTables.size()){
-      LOG.info("No Valid Index Found to apply Optimization");
-      return indexToKeysMap;
-    }else{
-      for (String unusableIndex : unusableIndexNames) {
-        indexToKeysMap.remove(unusableIndex);
-      }
     }
     return indexToKeysMap;
 

@@ -195,7 +195,7 @@ public final class RewriteIndexSubqueryProcFactory {
       subqueryCtx = (RewriteIndexSubqueryCtx)ctx;
       //Store the list of FileSinkOperator's parent operators as we later append the original query
       //at the end of the subquery operator tree (without the FileSinkOperator).
-      subqueryCtx.setSubqFSParentList(operator.getParentOperators());
+      subqueryCtx.getSubqFSParentList().addAll(operator.getParentOperators());
       subqueryCtx.getSubqueryPctx().getOpParseCtx().remove(operator);
       return null;
     }
@@ -262,19 +262,19 @@ public final class RewriteIndexSubqueryProcFactory {
        subqueryCtx.getParseContext().getTopToTable().put((TableScanOperator) subqOp, tbl);
 
        String tabAlias = "";
-       if(subqueryCtx.getCurrentTableName().contains(":")){
-         String[] tabToAlias = subqueryCtx.getCurrentTableName().split(":");
+       if(subqueryCtx.getBaseTableName().contains(":")){
+         String[] tabToAlias = subqueryCtx.getBaseTableName().split(":");
          if(tabToAlias.length > 1){
            tabAlias = tabToAlias[0] + ":";
          }
        }
        //remove original table and operator tree mapping from topOps
        //put the new table alias adn subquery index table as the key and the new operator tree as value in topOps
-       subqueryCtx.getParseContext().getTopOps().remove(subqueryCtx.getCurrentTableName());
+       subqueryCtx.getParseContext().getTopOps().remove(subqueryCtx.getBaseTableName());
        subqueryCtx.getParseContext().getTopOps().put(tabAlias + subqTab, subqOp);
 
        //we need this later
-       //subqueryCtx.setNewTSOp(subqOp);
+       subqueryCtx.setNewTSOp(subqOp);
 
        //remove original TableScanOperator from the original OpParsecontext
        //add all values from the subquery OpParseContext to the original OpParseContext
@@ -389,7 +389,7 @@ public final class RewriteIndexSubqueryProcFactory {
       //We need to replace the GroupByOperator which is in groupOpToInputTables map with the new GroupByOperator
       if(subqueryCtx.getParseContext().getGroupOpToInputTables().containsKey(operator)){
         //we need to get rif of the alias and construct a query only with the base table name
-        String table = subqueryCtx.getCurrentTableName();
+        String table = subqueryCtx.getBaseTableName();
         if(table.contains(":")){
           String[] aliasAndTab = table.split(":");
           table = aliasAndTab[1];

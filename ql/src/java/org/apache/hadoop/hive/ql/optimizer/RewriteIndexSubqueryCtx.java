@@ -4,7 +4,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -36,12 +35,18 @@ import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFEvaluator;
  */
 public class RewriteIndexSubqueryCtx implements NodeProcessorCtx {
 
-  private RewriteIndexSubqueryCtx(){
+  private RewriteIndexSubqueryCtx(ParseContext parseContext, String indexTableName,
+      String baseTableName, Set<String> selectColumnNames){
     //this prevents the class from getting instantiated
+    this.parseContext = parseContext;
+    this.indexName = indexTableName;
+    this.baseTableName = baseTableName;
+    this.selectColumnNames = selectColumnNames;
   }
 
-  public static RewriteIndexSubqueryCtx getInstance(){
-    return new RewriteIndexSubqueryCtx();
+  public static RewriteIndexSubqueryCtx getInstance(ParseContext parseContext, String indexTableName,
+      String baseTableName, Set<String> selectColumnNames){
+    return new RewriteIndexSubqueryCtx(parseContext, indexTableName, baseTableName, selectColumnNames );
   }
   protected final Log LOG = LogFactory.getLog(RewriteIndexSubqueryCtx.class.getName());
 
@@ -50,38 +55,38 @@ public class RewriteIndexSubqueryCtx implements NodeProcessorCtx {
   private Map<String, ExprNodeDesc> newSelColExprMap = new LinkedHashMap<String, ExprNodeDesc>();
   //The next two data structures are populated in RewriteIndexSubqueryProcFactory's NewQuerySelectSchemaProc processor
   //with the colExprMap of the SelectOperator whose child is GroupByOperator
-  private ArrayList<ExprNodeDesc> newSelColList = new ArrayList<ExprNodeDesc>();
+  private final ArrayList<ExprNodeDesc> newSelColList = new ArrayList<ExprNodeDesc>();
 
   // Initialise all data structures required to copy RowResolver, RowSchema, outputColumnNames, colList, colExprMap
   //from subquery DAG to original DAG operators
-  private ArrayList<String> newOutputCols = new ArrayList<String>();
+  private final ArrayList<String> newOutputCols = new ArrayList<String>();
   private Map<String, ExprNodeDesc> newColExprMap = new HashMap<String, ExprNodeDesc>();
-  private ArrayList<ExprNodeDesc> newColList = new ArrayList<ExprNodeDesc>();
-  private ArrayList<ColumnInfo> newRS = new ArrayList<ColumnInfo>();
+  private final ArrayList<ExprNodeDesc> newColList = new ArrayList<ExprNodeDesc>();
+  private final ArrayList<ColumnInfo> newRS = new ArrayList<ColumnInfo>();
   private RowResolver newRR = new RowResolver();
 
   //This is populated in RewriteIndexSubqueryProcFactory's SubquerySelectSchemaProc processor for later
   //use in NewQuerySelectSchemaProc processor
-  private Map<String, String> aliasToInternal = new LinkedHashMap<String, String>();
+  private final Map<String, String> aliasToInternal = new LinkedHashMap<String, String>();
 
   // Get the parentOperators List for FileSinkOperator. We need this later to set the
   // parentOperators for original DAG operator
-  private List<Operator<? extends Serializable>> subqFSParentList = null;
+  private final List<Operator<? extends Serializable>> subqFSParentList = new ArrayList<Operator<? extends Serializable>>();
 
   // We need the reference to this SelectOperator so that the original DAG can be appended here
-  private Operator<? extends Serializable> subqSelectOp = null;
+  private Operator<? extends Serializable> subqSelectOp;
 
   //We replace the original TS operator with new TS operator from subquery context to scan over the index table
   //rather than the original table
-  //private final Operator<? extends Serializable> newTSOp = null;
+  private Operator<? extends Serializable> newTSOp;
 
-  private ParseContext parseContext = null;
+  private final ParseContext parseContext;
+  private final Set<String> selectColumnNames;
+  private final String indexName;
+  private final String baseTableName;
+
   private ParseContext subqueryPctx = null;
   private ParseContext newDAGCtx = null;
-
-  private Set<String> selectColumnNames = new LinkedHashSet<String>();
-  private String indexName = "";
-  private String currentTableName = null;
 
   //We need the GenericUDAFEvaluator for GenericUDAF function "sum" when we append subquery to original operator tree
   private GenericUDAFEvaluator eval = null;
@@ -91,16 +96,8 @@ public class RewriteIndexSubqueryCtx implements NodeProcessorCtx {
     return selectColumnNames;
   }
 
-  public void setSelectColumnNames(Set<String> indexKeyNames) {
-    this.selectColumnNames = indexKeyNames;
-  }
-
   public ArrayList<String> getNewOutputCols() {
     return newOutputCols;
-  }
-
-  public void setNewOutputCols(ArrayList<String> newOutputCols) {
-    this.newOutputCols = newOutputCols;
   }
 
   public Map<String, ExprNodeDesc> getNewColExprMap() {
@@ -115,19 +112,11 @@ public class RewriteIndexSubqueryCtx implements NodeProcessorCtx {
     return newColList;
   }
 
-  public void setNewColList(ArrayList<ExprNodeDesc> newColList) {
-    this.newColList = newColList;
-  }
-
   public ArrayList<ColumnInfo> getNewRS() {
     return newRS;
   }
 
-  public void setNewRS(ArrayList<ColumnInfo> newRS) {
-    this.newRS = newRS;
-  }
-
-  public RowResolver getNewRR() {
+   public RowResolver getNewRR() {
     return newRR;
   }
 
@@ -137,10 +126,6 @@ public class RewriteIndexSubqueryCtx implements NodeProcessorCtx {
 
   public List<Operator<? extends Serializable>> getSubqFSParentList() {
     return subqFSParentList;
-  }
-
-  public void setSubqFSParentList(List<Operator<? extends Serializable>> subqFSParentList) {
-    this.subqFSParentList = subqFSParentList;
   }
 
   public Operator<? extends Serializable> getSubqSelectOp() {
@@ -155,17 +140,8 @@ public class RewriteIndexSubqueryCtx implements NodeProcessorCtx {
     return aliasToInternal;
   }
 
-  public void setAliasToInternal(Map<String, String> aliasToInternal) {
-    this.aliasToInternal = aliasToInternal;
-  }
-
-
   public ParseContext getParseContext() {
     return parseContext;
-  }
-
-  public void setParseContext(ParseContext parseContext) {
-    this.parseContext = parseContext;
   }
 
   public ParseContext getSubqueryPctx() {
@@ -196,27 +172,13 @@ public class RewriteIndexSubqueryCtx implements NodeProcessorCtx {
     return newSelColList;
   }
 
-  public void setNewSelColList(ArrayList<ExprNodeDesc> newSelColList) {
-    this.newSelColList = newSelColList;
-  }
-
   public String getIndexName() {
     return indexName;
   }
 
-  public void setIndexName(String indexName) {
-    this.indexName = indexName;
+  public String getBaseTableName() {
+    return baseTableName;
   }
-
-
-  public String getCurrentTableName() {
-    return currentTableName;
-  }
-
-  public void setCurrentTableName(String currentTableName) {
-    this.currentTableName = currentTableName;
-  }
-
 
   public GenericUDAFEvaluator getEval() {
     return eval;
@@ -226,7 +188,7 @@ public class RewriteIndexSubqueryCtx implements NodeProcessorCtx {
     this.eval = eval;
   }
 
-  /*
+
   public void setNewTSOp(Operator<? extends Serializable> newTSOp) {
     this.newTSOp = newTSOp;
   }
@@ -234,7 +196,7 @@ public class RewriteIndexSubqueryCtx implements NodeProcessorCtx {
   public Operator<? extends Serializable> getNewTSOp() {
     return newTSOp;
   }
-*/
+
   /**
    * We construct the string command for subquery using index key columns
    * and use the {@link RewriteParseContextGenerator} to generate a operator tree

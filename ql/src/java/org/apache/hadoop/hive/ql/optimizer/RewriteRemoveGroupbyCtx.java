@@ -30,87 +30,56 @@ import org.apache.hadoop.hive.ql.parse.SemanticException;
  */
 public class RewriteRemoveGroupbyCtx implements NodeProcessorCtx {
 
-  private RewriteRemoveGroupbyCtx(){
+  private RewriteRemoveGroupbyCtx(ParseContext parseContext, Hive hiveDb, String indexTableName){
     //this prevents the class from getting instantiated
+    this.parseContext = parseContext;
+    this.hiveDb = hiveDb;
+    this.indexName = indexTableName;
+    this.opc = parseContext.getOpParseCtx();
   }
 
-  public static RewriteRemoveGroupbyCtx getInstance(){
-    return new RewriteRemoveGroupbyCtx();
+  public static RewriteRemoveGroupbyCtx getInstance(ParseContext parseContext, Hive hiveDb, String indexTableName){
+    return new RewriteRemoveGroupbyCtx(parseContext, hiveDb, indexTableName);
   }
 
   //We need these two ArrayLists to reset the parent operator list and child operator list in the operator tree
   // once we remove the operators that represent the group-by construct
-  private List<Operator<? extends Serializable>>  newParentList = new ArrayList<Operator<? extends Serializable>>();
-  private List<Operator<? extends Serializable>>  newChildrenList = new ArrayList<Operator<? extends Serializable>>();
+  private final List<Operator<? extends Serializable>>  newParentList = new ArrayList<Operator<? extends Serializable>>();
+  private final List<Operator<? extends Serializable>>  newChildrenList = new ArrayList<Operator<? extends Serializable>>();
 
   //We need to remove the operators from OpParseContext to remove them from the operator tree
   private LinkedHashMap<Operator<? extends Serializable>, OpParseContext> opc = new LinkedHashMap<Operator<? extends Serializable>, OpParseContext>();
-  private Hive hiveDb;
-  private ParseContext parseContext;
+  private final Hive hiveDb;
+  private final ParseContext parseContext;
 
   //We need the RewriteCanApplyCtx instance to retrieve the mapping from original table to index table in the
   // getReplaceTableScanProc() method of the RewriteRemoveGroupbyProcFactory
-  private RewriteCanApplyCtx canApplyCtx;
-  private String indexName = "";
+  //private RewriteCanApplyCtx canApplyCtx;
+  private final String indexName;
 
   public List<Operator<? extends Serializable>> getNewParentList() {
     return newParentList;
-  }
-
-  public void setNewParentList(List<Operator<? extends Serializable>> newParentList) {
-    this.newParentList = newParentList;
   }
 
   public List<Operator<? extends Serializable>> getNewChildrenList() {
     return newChildrenList;
   }
 
-  public void setNewChildrenList(List<Operator<? extends Serializable>> newChildrenList) {
-    this.newChildrenList = newChildrenList;
-  }
-
   public LinkedHashMap<Operator<? extends Serializable>, OpParseContext> getOpc() {
     return opc;
-  }
-
-  public void setOpc(LinkedHashMap<Operator<? extends Serializable>, OpParseContext> opc) {
-    this.opc = opc;
   }
 
   public  ParseContext getParseContext() {
     return parseContext;
   }
 
-  public void setParseContext(ParseContext parseContext) {
-    this.parseContext = parseContext;
-  }
-
-
-  public RewriteCanApplyCtx getCanApplyCtx() {
-    return canApplyCtx;
-  }
-
-  public void setCanApplyCtx(RewriteCanApplyCtx canApplyCtx) {
-    this.canApplyCtx = canApplyCtx;
-  }
-
   public Hive getHiveDb() {
     return hiveDb;
   }
 
-  public void setHiveDb(Hive hiveDb) {
-    this.hiveDb = hiveDb;
-  }
-
-  public String getIndexName() {
+ public String getIndexName() {
     return indexName;
   }
-
-  public void setIndexName(String indexName) {
-    this.indexName = indexName;
-  }
-
-
 
   /**
    * Given a root node of the parse tree, this function returns the "first" TOK_FUNCTION node
