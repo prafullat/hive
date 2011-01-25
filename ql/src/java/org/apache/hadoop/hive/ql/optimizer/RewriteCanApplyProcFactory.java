@@ -124,6 +124,7 @@ public final class RewriteCanApplyProcFactory {
                  canApplyCtx.setBoolVar(canApplyCtx.getParseContext().getConf(), RewriteVars.AGG_FUNC_IS_NOT_COUNT, true);
                  //return false;
                }else{
+                 LOG.info("Comming here");
                 ArrayList<ExprNodeDesc> para = aggregationDesc.getParameters();
                 //for a valid aggregation, it needs to have non-null parameter list
                  if(para == null){
@@ -277,10 +278,10 @@ public final class RewriteCanApplyProcFactory {
            internalToAlias.put(columnInfo.getInternalName(), columnInfo.getAlias());
            //Add the columns to RewriteCanApplyCtx's selectColumnsList list to check later
            //if index keys contain all select clause columns and vice-a-versa
-           if(!columnInfo.getAlias().startsWith("_c")){
+/*           if(!columnInfo.getAlias().startsWith("_c")){
              canApplyCtx.getSelectColumnsList().add(columnInfo.getAlias());
            }
-         }
+*/         }
 
          //if FilterOperator predicate has internal column names, we need to retrieve the 'actual' column names to
          //check if index keys contain all filter predicate columns and vice-a-versa

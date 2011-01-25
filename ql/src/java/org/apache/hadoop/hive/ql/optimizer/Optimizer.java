@@ -70,11 +70,13 @@ public class Optimizer {
         transformations.add(new SortedMergeBucketMapJoinOptimizer());
       }
     }
+
     transformations.add(new UnionProcessor());
     transformations.add(new JoinReorder());
     if(HiveConf.getBoolVar(hiveConf, HiveConf.ConfVars.HIVEOPTREDUCEDEDUPLICATION)) {
       transformations.add(new ReduceSinkDeDuplication());
     }
+
   }
 
   /**

@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.logging.Log;
@@ -101,8 +102,9 @@ public class RewriteGBUsingIndex implements Transform {
   //Context for appending a subquery to scan over the index table
   private RewriteIndexSubqueryCtx subqueryCtx;
 
-  //Stores the list of top TableScanOperator names for which the rewrite can be applied
-  private final ArrayList<String> tsOpToProcess = new ArrayList<String>();
+  //Stores the list of top TableScanOperator names for which the rewrite can be applied and the action that needs to be performed for operator tree
+  //starting from this TableScanOperator
+  private final List<String> tsOpToProcess = new ArrayList<String>();
 
   private HashMap<String, Set<String>> indexTableMap = new LinkedHashMap<String, Set<String>>();
 
@@ -144,8 +146,10 @@ public class RewriteGBUsingIndex implements Transform {
           //this can be changed if we have a better mechanism to decide which index will produce a better rewrite
           break;
         }
+        canApplyCtx.resetRewriteVars();
+        canApplyCtx.resetCanApplyCtx();
+
       }
-      canApplyCtx.resetRewriteVars();
       return parseContext;
 
     }
@@ -192,7 +196,9 @@ public class RewriteGBUsingIndex implements Transform {
       HashMap<String,Operator<? extends Serializable>> topOps = parseContext.getTopOps();
       Iterator<TableScanOperator> topOpItr = topToTable.keySet().iterator();
       while(topOpItr.hasNext()){
+        canApplyCtx.resetRewriteVars();
         canApplyCtx.resetCanApplyCtx();
+
         TableScanOperator topOp = topOpItr.next();
         Table table = topToTable.get(topOp);
         currentTableName = table.getTableName();
@@ -264,11 +270,6 @@ public class RewriteGBUsingIndex implements Transform {
         parseContext = subqueryCtx.getParseContext();
         LOG.info("Finished appending subquery");
       }
-
-      //Finally we set the enum variables to false
-      canApplyCtx.setBoolVar(hiveConf, RewriteVars.REMOVE_GROUP_BY, false);
-      canApplyCtx.setBoolVar(hiveConf, RewriteVars.SHOULD_APPEND_SUBQUERY, false);
-      //canApplyCtx.setBoolVar(hiveConf, RewriteVars.REPLACE_TABLE_WITH_IDX_TABLE, false);
 
     }
     LOG.info("Finished Rewriting query");

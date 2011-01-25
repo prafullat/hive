@@ -21,33 +21,25 @@ FIELDS TERMINATED BY '|';
 CREATE INDEX lineitem_lshipdate_idx ON TABLE lineitem(l_shipdate) AS 'org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler' WITH DEFERRED REBUILD;
 ALTER INDEX lineitem_lshipdate_idx ON lineitem REBUILD;
 
-explain select year(l_shipdate) as year,
-count(1) as total 
-from lineitem
-group by year(l_shipdate);
+explain select DISTINCT l_shipdate from lineitem;
+select DISTINCT l_shipdate from lineitem;
 
-select year(l_shipdate) as year,
-count(1) as total 
-from lineitem
-group by year(l_shipdate);
 
-explain select year(l_shipdate) as year, month(l_shipdate) as month, count(1) as monthly_shipments
-from lineitem
-group by year(l_shipdate), month(l_shipdate);
+explain select l_shipdate, count(1) from lineitem group by l_shipdate;
+select l_shipdate, count(1) from lineitem group by l_shipdate;
 
-select year(l_shipdate) as year, month(l_shipdate) as month, count(1) as monthly_shipments
-from lineitem
-group by year(l_shipdate), month(l_shipdate);
 
-explain select year(l_shipdate) as year, month(l_shipdate) as month, count(1) as monthly_shipments
-from lineitem
-where year(l_shipdate) > 1998
-group by year(l_shipdate), month(l_shipdate);
+explain select l_shipdate, count(1) from lineitem where year(l_shipdate) >= 1992 and year(l_shipdate) <= 1996 group by l_shipdate;
+select l_shipdate, count(1) from lineitem where year(l_shipdate) >= 1992 and year(l_shipdate) <= 1996 group by l_shipdate;
 
-select year(l_shipdate) as year, month(l_shipdate) as month, count(1) as monthly_shipments
-from lineitem
-where year(l_shipdate) > 1998
-group by year(l_shipdate), month(l_shipdate);
+
+explain select year(l_shipdate) as year, count(1) as total from lineitem group by year(l_shipdate);
+select year(l_shipdate) as year, count(1) as total from lineitem group by year(l_shipdate);
+
+
+explain select year(l_shipdate) as year, month(l_shipdate) as month, count(1) as monthly_shipments from lineitem group by year(l_shipdate), month(l_shipdate); 
+select year(l_shipdate) as year, month(l_shipdate) as month, count(1) as monthly_shipments from lineitem group by year(l_shipdate), month(l_shipdate);
+
 
 explain select lastyear.month,
         thisyear.month,
