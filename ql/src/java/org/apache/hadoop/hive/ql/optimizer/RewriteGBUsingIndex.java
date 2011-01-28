@@ -169,7 +169,7 @@ public class RewriteGBUsingIndex implements Transform {
    * @return
    */
   boolean shouldApplyOptimization(){
-    boolean canApply = true;
+    boolean canApply = false;
     if(ifQueryHasMultipleTables()){
       //We do not apply this optimization for this case as of now.
       return false;
@@ -192,38 +192,40 @@ public class RewriteGBUsingIndex implements Transform {
         baseTableName = table.getTableName();
         HashMap<Index, Set<String>> indexTableMap = getIndexTableInfoForRewrite(topOp);
 
-        if(indexTableMap.size() == 0){
-          LOG.info("No Valid Index Found to apply Rewrite, " +
-              "skipping " + getName() + " optimization" );
-        } else if(indexTableMap.size() > 1){
-          LOG.info("Table has multiple valid index tables to apply rewrite.");
-        }
+        if(indexTableMap != null){
+          if(indexTableMap.size() == 0){
+            LOG.info("No Valid Index Found to apply Rewrite, " +
+                "skipping " + getName() + " optimization" );
+          } else if(indexTableMap.size() > 1){
+            LOG.info("Table has multiple valid index tables to apply rewrite.");
+          }else{
+            canApplyCtx.setBaseTableName(baseTableName);
+            canApplyCtx.populateRewriteVars(topOp);
 
-        canApplyCtx.setBaseTableName(baseTableName);
-        canApplyCtx.populateRewriteVars(topOp);
+            Iterator<Index> indexMapItr = indexTableMap.keySet().iterator();
+            Index index = null;
+            while(indexMapItr.hasNext()){
+              //we rewrite the original query using the first valid index encountered
+              //this can be changed if we have a better mechanism to decide which index will produce a better rewrite
+              index = indexMapItr.next();
+              if(canApplyCtx.isIndexUsableForQueryBranchRewrite(index, indexTableMap.get(index))){
+                break;
+              }
+            }
+            indexTableName = index.getIndexTableName();
 
-        Iterator<Index> indexMapItr = indexTableMap.keySet().iterator();
-        Index index = null;
-        while(indexMapItr.hasNext()){
-          //we rewrite the original query using the first valid index encountered
-          //this can be changed if we have a better mechanism to decide which index will produce a better rewrite
-          index = indexMapItr.next();
-          if(canApplyCtx.isIndexUsableForQueryBranchRewrite(index, indexTableMap.get(index))){
-            break;
-          }
-        }
-        indexTableName = index.getIndexTableName();
-
-        canApply = checkIfAllRewriteCriteriaIsMet(canApplyCtx);
-        if(canApply && topOps.containsValue(topOp)) {
-          Iterator<String> topOpNamesItr = topOps.keySet().iterator();
-          while(topOpNamesItr.hasNext()){
-            String topOpName = topOpNamesItr.next();
-            if(topOps.get(topOpName).equals(topOp)){
-              tsOpToProcess.put(topOpName, canApplyCtx);
+            canApply = checkIfAllRewriteCriteriaIsMet(canApplyCtx);
+            if(canApply && topOps.containsValue(topOp)) {
+              Iterator<String> topOpNamesItr = topOps.keySet().iterator();
+              while(topOpNamesItr.hasNext()){
+                String topOpName = topOpNamesItr.next();
+                if(topOps.get(topOpName).equals(topOp)){
+                  tsOpToProcess.put(topOpName, canApplyCtx);
+                }
+              }
             }
           }
-        }
+       }
      }
     }
     return canApply;
