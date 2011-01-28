@@ -3,11 +3,8 @@ package org.apache.hadoop.hive.ql.optimizer;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
@@ -16,11 +13,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.conf.HiveConf;
-import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.Index;
-import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
 import org.apache.hadoop.hive.ql.exec.Operator;
-import org.apache.hadoop.hive.ql.exec.TableScanOperator;
 import org.apache.hadoop.hive.ql.lib.DefaultGraphWalker;
 import org.apache.hadoop.hive.ql.lib.DefaultRuleDispatcher;
 import org.apache.hadoop.hive.ql.lib.Dispatcher;
@@ -31,9 +25,6 @@ import org.apache.hadoop.hive.ql.lib.NodeProcessorCtx;
 import org.apache.hadoop.hive.ql.lib.PreOrderWalker;
 import org.apache.hadoop.hive.ql.lib.Rule;
 import org.apache.hadoop.hive.ql.lib.RuleRegExp;
-import org.apache.hadoop.hive.ql.metadata.Hive;
-import org.apache.hadoop.hive.ql.metadata.HiveException;
-import org.apache.hadoop.hive.ql.metadata.Table;
 import org.apache.hadoop.hive.ql.parse.ParseContext;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
 
@@ -45,20 +36,19 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
 
   protected final  Log LOG = LogFactory.getLog(RewriteCanApplyCtx.class.getName());
 
-  private RewriteCanApplyCtx(ParseContext parseContext, Hive hiveDb, HiveConf conf) {
+  private RewriteCanApplyCtx(ParseContext parseContext, HiveConf conf) {
     this.parseContext = parseContext;
-    this.hiveDb = hiveDb;
-    this.conf = conf;
+    this.hiveConf = conf;
+    initRewriteVars();
   }
 
-  public static RewriteCanApplyCtx getInstance(ParseContext parseContext, Hive hiveDb, HiveConf conf){
-    return new RewriteCanApplyCtx(parseContext, hiveDb, conf);
+  public static RewriteCanApplyCtx getInstance(ParseContext parseContext, HiveConf conf){
+    return new RewriteCanApplyCtx(parseContext, conf);
   }
 
   public static enum RewriteVars {
     AGG_FUNC_CNT("hive.ql.rewrites.agg.func.cnt", 0),
     GBY_KEY_CNT("hive.ql.rewrites.gby.key.cnt", 0),
-    TABLE_HAS_NO_INDEX("hive.ql.rewrites.table.has.no.index", false),
     QUERY_HAS_SORT_BY("hive.ql.rewrites.query.has.sort.by", false),
     QUERY_HAS_ORDER_BY("hive.ql.rewrites.query.has.order.by", false),
     QUERY_HAS_DISTRIBUTE_BY("hive.ql.rewrites.query.has.distribute.by", false),
@@ -70,12 +60,10 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
     SEL_CLAUSE_COLS_FETCH_EXCEPTION("hive.ql.rewrites.sel.clause.cols.fetch.exception", false),
     GBY_KEYS_FETCH_EXCEPTION("hive.ql.rewrites.gby.keys.fetch.exception", false),
     COUNT_ON_ALL_COLS("hive.ql.rewrites.count.on.all.cols", false),
-    IDX_TBL_SEARCH_EXCEPTION("hive.ql.rewrites.idx.tbl.search.exception", false),
     QUERY_HAS_GENERICUDF_ON_GROUPBY_KEY("hive.ql.rewrites.query.has.genericudf.on.groupby.key", false),
     QUERY_HAS_MULTIPLE_TABLES("hive.ql.rewrites.query.has.multiple.tables", false),
     SHOULD_APPEND_SUBQUERY("hive.ql.rewrites.should.append.subquery", false),
-    REMOVE_GROUP_BY("hive.ql.rewrites.remove.group.by", false),
-    //REPLACE_TABLE_WITH_IDX_TABLE("hive.ql.rewrites.replace.table.with.idx.table", false);
+    REMOVE_GROUP_BY("hive.ql.rewrites.remove.group.by", false);
     ;
 
     public final String varname;
@@ -130,37 +118,28 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
     conf.setBoolean(var.varname, val);
   }
 
-  public void resetRewriteVars(){
-    setIntVar(conf, RewriteVars.AGG_FUNC_CNT,0);
-    setIntVar(conf, RewriteVars.GBY_KEY_CNT,0);
-    setBoolVar(conf, RewriteVars.TABLE_HAS_NO_INDEX, false);
-    setBoolVar(conf, RewriteVars.QUERY_HAS_SORT_BY, false);
-    setBoolVar(conf, RewriteVars.QUERY_HAS_ORDER_BY, false);
-    setBoolVar(conf, RewriteVars.QUERY_HAS_DISTRIBUTE_BY, false);
-    setBoolVar(conf, RewriteVars.QUERY_HAS_GROUP_BY, false);
-    setBoolVar(conf, RewriteVars.QUERY_HAS_DISTINCT, false);
-    setBoolVar(conf, RewriteVars.AGG_FUNC_IS_NOT_COUNT, false);
-    setBoolVar(conf, RewriteVars.AGG_FUNC_COLS_FETCH_EXCEPTION, false);
-    setBoolVar(conf, RewriteVars.WHR_CLAUSE_COLS_FETCH_EXCEPTION, false);
-    setBoolVar(conf, RewriteVars.SEL_CLAUSE_COLS_FETCH_EXCEPTION, false);
-    setBoolVar(conf, RewriteVars.GBY_KEYS_FETCH_EXCEPTION, false);
-    setBoolVar(conf, RewriteVars.COUNT_ON_ALL_COLS, false);
-    setBoolVar(conf, RewriteVars.IDX_TBL_SEARCH_EXCEPTION, false);
-    setBoolVar(conf, RewriteVars.QUERY_HAS_GENERICUDF_ON_GROUPBY_KEY, false);
-    setBoolVar(conf, RewriteVars.QUERY_HAS_MULTIPLE_TABLES, false);
-    setBoolVar(conf, RewriteVars.SHOULD_APPEND_SUBQUERY, false);
-    setBoolVar(conf, RewriteVars.REMOVE_GROUP_BY, false);
+  public void initRewriteVars(){
+    setIntVar(hiveConf, RewriteVars.AGG_FUNC_CNT,0);
+    setIntVar(hiveConf, RewriteVars.GBY_KEY_CNT,0);
+    setBoolVar(hiveConf, RewriteVars.QUERY_HAS_SORT_BY, false);
+    setBoolVar(hiveConf, RewriteVars.QUERY_HAS_ORDER_BY, false);
+    setBoolVar(hiveConf, RewriteVars.QUERY_HAS_DISTRIBUTE_BY, false);
+    setBoolVar(hiveConf, RewriteVars.QUERY_HAS_GROUP_BY, false);
+    setBoolVar(hiveConf, RewriteVars.QUERY_HAS_DISTINCT, false);
+    setBoolVar(hiveConf, RewriteVars.AGG_FUNC_IS_NOT_COUNT, false);
+    setBoolVar(hiveConf, RewriteVars.AGG_FUNC_COLS_FETCH_EXCEPTION, false);
+    setBoolVar(hiveConf, RewriteVars.WHR_CLAUSE_COLS_FETCH_EXCEPTION, false);
+    setBoolVar(hiveConf, RewriteVars.SEL_CLAUSE_COLS_FETCH_EXCEPTION, false);
+    setBoolVar(hiveConf, RewriteVars.GBY_KEYS_FETCH_EXCEPTION, false);
+    setBoolVar(hiveConf, RewriteVars.COUNT_ON_ALL_COLS, false);
+    setBoolVar(hiveConf, RewriteVars.QUERY_HAS_GENERICUDF_ON_GROUPBY_KEY, false);
+    setBoolVar(hiveConf, RewriteVars.QUERY_HAS_MULTIPLE_TABLES, false);
+    setBoolVar(hiveConf, RewriteVars.SHOULD_APPEND_SUBQUERY, false);
+    setBoolVar(hiveConf, RewriteVars.REMOVE_GROUP_BY, false);
   }
 
 
 
-  /***************************************Index Validation Variables***************************************/
-  //The SUPPORTED_INDEX_TYPE value will change when we implement a new index handler to retrieve correct result
-  // for count if the same key appears more than once within the same block
-   final String SUPPORTED_INDEX_TYPE =
-    "org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler";
-   final String COMPACT_IDX_BUCKET_COL = "_bucketname";
-   final String COMPACT_IDX_OFFSETS_ARRAY_COL = "_offsets";
 
    //Data structures that are populated in the RewriteCanApplyProcFactory methods to check if the index key meets all criteria
    Set<String> selectColumnsList = new LinkedHashSet<String>();
@@ -168,14 +147,10 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
    Set<String> gbKeyNameList = new LinkedHashSet<String>();
    Set<String> aggFuncColList = new LinkedHashSet<String>();
 
-   //Map for base table to index table mapping
-   //TableScan operator for base table will be modified to read from index table
-   private final HashMap<String, String> baseToIdxTableMap = new HashMap<String, String>();;
-   private final HiveConf conf;
+   private final HiveConf hiveConf;
    private int aggFuncCnt = 0;
    private final ParseContext parseContext;
-   private final Hive hiveDb;
-   private String currentTableName = "";
+   private String baseTableName = "";
 
    void resetCanApplyCtx(){
      aggFuncCnt = 0;
@@ -183,7 +158,7 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
      predicateColumnsList.clear();
      gbKeyNameList.clear();
      aggFuncColList.clear();
-     currentTableName = "";
+     baseTableName = "";
    }
 
   public Set<String> getSelectColumnsList() {
@@ -219,7 +194,7 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
   }
 
   public HiveConf getConf() {
-    return conf;
+    return hiveConf;
   }
 
    public int getAggFuncCnt() {
@@ -230,50 +205,18 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
     this.aggFuncCnt = aggFuncCnt;
   }
 
-  public void addTable(String baseTableName, String indexTableName) {
-     baseToIdxTableMap.put(baseTableName, indexTableName);
-   }
-
-   public String findBaseTable(String baseTableName)  {
-     return baseToIdxTableMap.get(baseTableName);
-   }
-
-  public Hive getHiveDb() {
-    return hiveDb;
+  public String getBaseTableName() {
+    return baseTableName;
   }
 
-  public String getCurrentTableName() {
-    return currentTableName;
-  }
-
-  public void setCurrentTableName(String currentTableName) {
-    this.currentTableName = currentTableName;
+  public void setBaseTableName(String baseTableName) {
+    this.baseTableName = baseTableName;
   }
 
   public  ParseContext getParseContext() {
     return parseContext;
   }
 
-
-  /**
-   * This block of code iterates over the topToTable map from ParseContext
-   * to determine if the query has a scan over multiple tables.
-   * @return
-   */
-  boolean ifQueryHasMultipleTables(){
-    HashMap<TableScanOperator, Table> topToTable = parseContext.getTopToTable();
-    Iterator<Table> valuesItr = topToTable.values().iterator();
-    Set<String> tableNameSet = new HashSet<String>();
-    while(valuesItr.hasNext()){
-      Table table = valuesItr.next();
-      tableNameSet.add(table.getTableName());
-    }
-    if(tableNameSet.size() > 1){
-      setBoolVar(parseContext.getConf(), RewriteVars.QUERY_HAS_MULTIPLE_TABLES, true);
-      return true;
-    }
-    return false;
-  }
 
   /**
    * This method walks all the nodes starting from topOp TableScanOperator node
@@ -327,239 +270,134 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
   }
 
 
-   /**
-   * Given a base table meta data, and a list of index types for which we need to find a matching index,
-   * this method returns a list of matching index tables.
-   * @param baseTableMetaData
-   * @param matchIndexTypes
-   * @return
-   */
-  List<Index> getIndexes(Table baseTableMetaData, List<String> matchIndexTypes) {
-    List<Index> matchingIndexes = new ArrayList<Index>();
-    List<Index> indexesOnTable = null;
+  //Map for base table to index table mapping
+  //TableScan operator for base table will be modified to read from index table
+  private final HashMap<String, String> baseToIdxTableMap = new HashMap<String, String>();;
 
-    try {
-      short maxNumOfIndexes = 1024; // XTODO: Hardcoding. Need to know if
-      // there's a limit (and what is it) on
-      // # of indexes that can be created
-      // on a table. If not, why is this param
-      // required by metastore APIs?
-      indexesOnTable = baseTableMetaData.getAllIndexes(maxNumOfIndexes);
 
-    } catch (HiveException e) {
-      return matchingIndexes; // Return empty list (trouble doing rewrite
-      // shouldn't stop regular query execution,
-      // if there's serious problem with metadata
-      // or anything else, it's assumed to be
-      // checked & handled in core hive code itself.
+  public void addTable(String baseTableName, String indexTableName) {
+     baseToIdxTableMap.put(baseTableName, indexTableName);
+   }
+
+   public String findBaseTable(String baseTableName)  {
+     return baseToIdxTableMap.get(baseTableName);
+   }
+
+
+  boolean isIndexUsableForQueryBranchRewrite(Index index, Set<String> indexKeyNames){
+    boolean isUsable = true;
+    boolean removeGroupBy = true;
+    boolean optimizeCount = false;
+
+    //--------------------------------------------
+    //Check if all columns in select list are part of index key columns
+    if (!indexKeyNames.containsAll(selectColumnsList)) {
+      LOG.info("Select list has non index key column : " +
+          " Cannot use index " + index.getIndexName());
+      return false;
     }
-
-    for (int i = 0; i < indexesOnTable.size(); i++) {
-      Index index = null;
-      index = indexesOnTable.get(i);
-      // The handler class implies the type of the index (e.g. compact
-      // summary index would be:
-      // "org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler").
-      String indexType = index.getIndexHandlerClass();
-      for (int  j = 0; j < matchIndexTypes.size(); j++) {
-        if (indexType.equals(matchIndexTypes.get(j))) {
-          matchingIndexes.add(index);
-          break;
-        }
-      }
-    }
-    return matchingIndexes;
-  }
-
-
-  /**
-   * We retrieve the list of index tables on the current table (represented by the TableScanOperator)
-   * which can be used to apply rewrite on the original query
-   * and return if there are no index tables to be used for rewriting the input query.
-   *
-   * @param topOp
-   * @return
-   */
-  HashMap<String, Set<String>> getIndexTableInfoForRewrite(TableScanOperator topOp) {
-    HashMap<String, Set<String>> indexTableMap = null;
-    TableScanOperator ts = (TableScanOperator) topOp;
-    Table tsTable = parseContext.getTopToTable().get(ts);
-    if (tsTable != null) {
-      List<String> idxType = new ArrayList<String>();
-      idxType.add(SUPPORTED_INDEX_TYPE);
-      List<Index> indexTables = getIndexes(tsTable, idxType);
-      if (indexTables.size() == 0) {
-        setBoolVar(parseContext.getConf(), RewriteVars.TABLE_HAS_NO_INDEX, true);
-      }else{
-        indexTableMap = populateIndexToKeysMap(indexTables);
-      }
-    }
-    return indexTableMap;
-  }
-
-
-  /**
-   * This code block iterates over indexes on the table and picks
-   * up the first index that satisfies the rewrite criteria.
-   * @param indexTables
-   * @return
-   */
-  HashMap<String, Set<String>> populateIndexToKeysMap(List<Index> indexTables){
-    Index index = null;
-    Hive hiveInstance = hiveDb;
-    HashMap<String, Set<String>> indexToKeysMap = new LinkedHashMap<String, Set<String>>();
-
-    for (int idxCtr = 0; idxCtr < indexTables.size(); idxCtr++)  {
-      String indexTableName = "";
-      final Set<String> indexKeyNames = new LinkedHashSet<String>();
-      boolean removeGroupBy = true;
-      boolean optimizeCount = false;
-
-      index = indexTables.get(idxCtr);
-      indexTableName = index.getIndexTableName();
-
-      //Getting index key columns
-      StorageDescriptor sd = index.getSd();
-      List<FieldSchema> idxColList = sd.getCols();
-      for (FieldSchema fieldSchema : idxColList) {
-        indexKeyNames.add(fieldSchema.getName());
-      }
-
-
-      // Check that the index schema is as expected. This code block should
-      // catch problems of this rewrite breaking when the CompactIndexHandler
-      // index is changed.
-      // This dependency could be better handled by doing init-time check for
-      // compatibility instead of this overhead for every rewrite invocation.
-      ArrayList<String> idxTblColNames = new ArrayList<String>();
-      try {
-        Table idxTbl = hiveInstance.getTable(index.getDbName(),
-            index.getIndexTableName());
-        for (FieldSchema idxTblCol : idxTbl.getCols()) {
-          idxTblColNames.add(idxTblCol.getName());
-        }
-      } catch (HiveException e) {
-        setBoolVar(conf, RewriteVars.IDX_TBL_SEARCH_EXCEPTION, true);
-        return indexToKeysMap;
-      }
-      assert(idxTblColNames.contains(COMPACT_IDX_BUCKET_COL));
-      assert(idxTblColNames.contains(COMPACT_IDX_OFFSETS_ARRAY_COL));
-      assert(idxTblColNames.size() == indexKeyNames.size() + 2);
-
-      //--------------------------------------------
-      //Check if all columns in select list are part of index key columns
-      if (!indexKeyNames.containsAll(selectColumnsList)) {
-        LOG.info("Select list has non index key column : " +
-            " Cannot use index " + index.getIndexName());
-        continue;
-      }
 
 /*      // We need to check if all columns from index appear in select list only
-      // in case of DISTINCT queries, In case group by queries, it is okay as long
-      // as all columns from index appear in group-by-key list.
-      if (getBoolVar(conf, RewriteVars.QUERY_HAS_DISTINCT)) {
-        // Check if all columns from index are part of select list too
-        if (!selectColumnsList.containsAll(indexKeyNames))  {
-          LOG.info("Index has non select list columns " +
-              " Cannot use index  " + index.getIndexName());
-          unusableIndexNames.add(index.getIndexName());
-          continue;
-        }
-      }
-*/
-      //--------------------------------------------
-      // Check if all columns in where predicate are part of index key columns
-      // TODO: Currently we allow all predicates , would it be more efficient
-      // (or at least not worse) to read from index_table and not from baseTable?
-      if (!indexKeyNames.containsAll(predicateColumnsList)) {
-        LOG.info("Predicate column ref list has non index key column : " +
+    // in case of DISTINCT queries, In case group by queries, it is okay as long
+    // as all columns from index appear in group-by-key list.
+    if (getBoolVar(conf, RewriteVars.QUERY_HAS_DISTINCT)) {
+      // Check if all columns from index are part of select list too
+      if (!selectColumnsList.containsAll(indexKeyNames))  {
+        LOG.info("Index has non select list columns " +
             " Cannot use index  " + index.getIndexName());
+        unusableIndexNames.add(index.getIndexName());
         continue;
       }
-
-  //    if (!getBoolVar(conf, RewriteVars.QUERY_HAS_DISTINCT))  {
-        //--------------------------------------------
-        // For group by, we need to check if all keys are from index columns
-        // itself. Here GB key order can be different than index columns but that does
-        // not really matter for final result.
-        // E.g. select c1, c2 from src group by c2, c1;
-        // we can rewrite this one to:
-        // select c1, c2 from src_cmpt_idx;
-        if (!indexKeyNames.containsAll(gbKeyNameList)) {
-          LOG.info("Group by key has some non-indexed columns, " +
-              " Cannot use index  " + index.getIndexName());
-          continue;
-        }
-
-         // FUTURE: See if this can be relaxed.
-        // If we have agg function (currently only COUNT is supported), check if its input are
-        // from index. we currently support only that.
-        if (aggFuncColList.size() > 0)  {
-          if (indexKeyNames.containsAll(aggFuncColList) == false) {
-            LOG.info("Agg Func input is not present in index key columns. Currently " +
-                "only agg func on index columns are supported by rewrite optimization" );
-            continue;
-          }
-          // If we have count on some key, check if key is same as index key,
-          if (aggFuncColList.containsAll(indexKeyNames))  {
-            optimizeCount = true;
-          }
-        }
-
-        if (!gbKeyNameList.containsAll(indexKeyNames))  {
-          // GB key and idx key are not same, don't remove GroupBy, but still do index scan
-          LOG.info("Index has some non-groupby columns, GroupBy will be"
-              + " preserved by rewrite optimization but original table scan"
-              + " will be replaced with index table scan." );
-          removeGroupBy = false;
-/*          if(optimizeCount == false){
-            setBoolVar(conf, RewriteVars.REPLACE_TABLE_WITH_IDX_TABLE, true);
-          }
-*/
-        }
-
-        // This check prevents to remove GroupBy for cases where the GROUP BY key cols are
-        // not simple expressions i.e. simple index key cols (in any order), but some
-        // expressions on the the key cols.
-        // e.g.
-        // 1. GROUP BY key, f(key)
-        //     FUTURE: If f(key) output is functionally dependent on key, then we should support
-        //            it. However we don't have mechanism/info about f() yet to decide that.
-        // 2. GROUP BY idxKey, 1
-        //     FUTURE: GB Key has literals along with idxKeyCols. Develop a rewrite to eliminate the
-        //            literals from GB key.
-        // 3. GROUP BY idxKey, idxKey
-        //     FUTURE: GB Key has dup idxKeyCols. Develop a rewrite to eliminate the dup key cols
-        //            from GB key.
-        if (getBoolVar(conf, RewriteVars.QUERY_HAS_GROUP_BY) &&
-            indexKeyNames.size() < getIntVar(conf, RewriteVars.GBY_KEY_CNT)) {
-          LOG.info("Group by key has some non-indexed columns, GroupBy will be"
-              + " preserved by rewrite optimization" );
-          removeGroupBy = false;
-        }
-
-
-  //    }
-
-      //Now that we are good to do this optimization, set parameters in context
-      //which would be used by transformation procedure as inputs.
-
-      //sub-query is needed only in case of optimizecount and complex gb keys?
-      if(getBoolVar(conf, RewriteVars.QUERY_HAS_GENERICUDF_ON_GROUPBY_KEY) == false
-          && !(optimizeCount == true && removeGroupBy == false) ) {
-        setBoolVar(conf, RewriteVars.REMOVE_GROUP_BY, removeGroupBy);
-        addTable(currentTableName, index.getIndexTableName());
-      }else{
-        setBoolVar(conf, RewriteVars.SHOULD_APPEND_SUBQUERY, true);
-      }
-      //we add all index tables which can be used for rewrite and defer the decision of using a particular index for later
-      //this is to allow choosing a index if a better mechanism is designed later to chose a better rewrite
-      indexToKeysMap.put(indexTableName, indexKeyNames);
     }
-    return indexToKeysMap;
+*/
+    //--------------------------------------------
+    // Check if all columns in where predicate are part of index key columns
+    // TODO: Currently we allow all predicates , would it be more efficient
+    // (or at least not worse) to read from index_table and not from baseTable?
+    if (!indexKeyNames.containsAll(predicateColumnsList)) {
+      LOG.info("Predicate column ref list has non index key column : " +
+          " Cannot use index  " + index.getIndexName());
+      return false;
+    }
 
+//    if (!getBoolVar(conf, RewriteVars.QUERY_HAS_DISTINCT))  {
+      //--------------------------------------------
+      // For group by, we need to check if all keys are from index columns
+      // itself. Here GB key order can be different than index columns but that does
+      // not really matter for final result.
+      // E.g. select c1, c2 from src group by c2, c1;
+      // we can rewrite this one to:
+      // select c1, c2 from src_cmpt_idx;
+      if (!indexKeyNames.containsAll(gbKeyNameList)) {
+        LOG.info("Group by key has some non-indexed columns, " +
+            " Cannot use index  " + index.getIndexName());
+        return false;
+      }
+
+       // FUTURE: See if this can be relaxed.
+      // If we have agg function (currently only COUNT is supported), check if its input are
+      // from index. we currently support only that.
+      if (aggFuncColList.size() > 0)  {
+        if (indexKeyNames.containsAll(aggFuncColList) == false) {
+          LOG.info("Agg Func input is not present in index key columns. Currently " +
+              "only agg func on index columns are supported by rewrite optimization" );
+          return false;
+        }
+        // If we have count on some key, check if key is same as index key,
+        if (aggFuncColList.containsAll(indexKeyNames))  {
+          optimizeCount = true;
+        }
+      }
+
+      if (!gbKeyNameList.containsAll(indexKeyNames))  {
+        // GB key and idx key are not same, don't remove GroupBy, but still do index scan
+        LOG.info("Index has some non-groupby columns, GroupBy will be"
+            + " preserved by rewrite optimization but original table scan"
+            + " will be replaced with index table scan." );
+        removeGroupBy = false;
+/*          if(optimizeCount == false){
+          setBoolVar(conf, RewriteVars.REPLACE_TABLE_WITH_IDX_TABLE, true);
+        }
+*/
+      }
+
+      // This check prevents to remove GroupBy for cases where the GROUP BY key cols are
+      // not simple expressions i.e. simple index key cols (in any order), but some
+      // expressions on the the key cols.
+      // e.g.
+      // 1. GROUP BY key, f(key)
+      //     FUTURE: If f(key) output is functionally dependent on key, then we should support
+      //            it. However we don't have mechanism/info about f() yet to decide that.
+      // 2. GROUP BY idxKey, 1
+      //     FUTURE: GB Key has literals along with idxKeyCols. Develop a rewrite to eliminate the
+      //            literals from GB key.
+      // 3. GROUP BY idxKey, idxKey
+      //     FUTURE: GB Key has dup idxKeyCols. Develop a rewrite to eliminate the dup key cols
+      //            from GB key.
+      if (getBoolVar(hiveConf, RewriteVars.QUERY_HAS_GROUP_BY) &&
+          indexKeyNames.size() < getIntVar(hiveConf, RewriteVars.GBY_KEY_CNT)) {
+        LOG.info("Group by key has some non-indexed columns, GroupBy will be"
+            + " preserved by rewrite optimization" );
+        removeGroupBy = false;
+      }
+
+
+//    }
+
+    //Now that we are good to do this optimization, set parameters in context
+    //which would be used by transformation procedure as inputs.
+
+    //sub-query is needed only in case of optimizecount and complex gb keys?
+    if(getBoolVar(hiveConf, RewriteVars.QUERY_HAS_GENERICUDF_ON_GROUPBY_KEY) == false
+        && !(optimizeCount == true && removeGroupBy == false) ) {
+      setBoolVar(hiveConf, RewriteVars.REMOVE_GROUP_BY, removeGroupBy);
+      addTable(baseTableName, index.getIndexTableName());
+    }else{
+      setBoolVar(hiveConf, RewriteVars.SHOULD_APPEND_SUBQUERY, true);
+    }
+
+    return isUsable;
   }
-
 
 
 }
