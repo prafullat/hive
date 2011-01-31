@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.hive.ql.parse;
 
-import static org.apache.hadoop.util.StringUtils.stringifyException;
-
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -145,7 +143,6 @@ import org.apache.hadoop.hive.ql.plan.TableScanDesc;
 import org.apache.hadoop.hive.ql.plan.UDTFDesc;
 import org.apache.hadoop.hive.ql.plan.UnionDesc;
 import org.apache.hadoop.hive.ql.plan.FilterDesc.sampleDesc;
-import org.apache.hadoop.hive.ql.rewrite.HiveRewriteEngine;
 import org.apache.hadoop.hive.ql.session.SessionState;
 import org.apache.hadoop.hive.ql.session.SessionState.ResourceType;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFEvaluator;
@@ -910,23 +907,22 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
 
             if (qb.isCTAS()) {
               qb.setIsQuery(false);
+              ctx.setResDir(null);
+              ctx.setResFile(null);
 
               // allocate a temporary output dir on the location of the table
               String location = conf.getVar(HiveConf.ConfVars.METASTOREWAREHOUSE);
               try {
-                fname = ctx.getExternalTmpFileURI
-                  (FileUtils.makeQualified(new Path(location), conf).toUri());
-
+                fname = ctx.getExternalTmpFileURI(
+                    FileUtils.makeQualified(new Path(location), conf).toUri());
               } catch (Exception e) {
-                throw new SemanticException("Error creating temporary folder on: "
-                                            + location, e);
+                throw new SemanticException("Error creating temporary folder on: " + location, e);
               }
-
             } else {
               qb.setIsQuery(true);
               fname = ctx.getMRTmpFileURI();
+              ctx.setResDir(new Path(fname));
             }
-            ctx.setResDir(new Path(fname));
           }
           qb.getMetaData().setDestForAlias(name, fname,
               (ast.getToken().getType() == HiveParser.TOK_DIR));
@@ -940,7 +936,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     } catch (HiveException e) {
       // Has to use full name to make sure it does not conflict with
       // org.apache.commons.lang.StringUtils
-      LOG.error(stringifyException(e));
+      LOG.error(org.apache.hadoop.util.StringUtils.stringifyException(e));
       throw new SemanticException(e.getMessage(), e);
     }
   }
@@ -976,7 +972,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       // an old SQL construct which has been eliminated in a later Hive
       // version, so we need to provide full debugging info to help
       // with fixing the view definition.
-      LOG.error(stringifyException(e));
+      LOG.error(org.apache.hadoop.util.StringUtils.stringifyException(e));
       StringBuilder sb = new StringBuilder();
       sb.append(e.getMessage());
       ErrorMsg.renderOrigin(sb, viewOrigin);
@@ -3619,9 +3615,9 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
           try {
             String ppath = dpCtx.getSPPath();
             ppath = ppath.substring(0, ppath.length()-1);
-            DummyPartition p = new DummyPartition(dest_tab,
-                                                  dest_tab.getDbName() + "@" + dest_tab.getTableName() + "@" + ppath);
-
+            DummyPartition p =
+              new DummyPartition(dest_tab,
+                                 dest_tab.getDbName() + "@" + dest_tab.getTableName() + "@" + ppath);
             outputs.add(new WriteEntity(p, false));
           } catch (HiveException e) {
             throw new SemanticException(e.getMessage());
@@ -5968,7 +5964,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     	tsDesc.setStatsAggPrefix(k);
 
     	// set up WritenEntity for replication
-    	outputs.add(new WriteEntity(tab));
+    	outputs.add(new WriteEntity(tab, true));
 
     	// add WriteEntity for each matching partition
     	if (tab.isPartitioned()) {
@@ -5979,7 +5975,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     	  if (partitions != null) {
     	    for (Partition partn : partitions) {
     	      // inputs.add(new ReadEntity(partn)); // is this needed at all?
-    	      outputs.add(new WriteEntity(partn));
+    	      outputs.add(new WriteEntity(partn, true));
           }
         }
     	}
@@ -6237,7 +6233,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
             } catch (HiveException e) {
               // Has to use full name to make sure it does not conflict with
               // org.apache.commons.lang.StringUtils
-              LOG.error(stringifyException(e));
+              LOG.error(org.apache.hadoop.util.StringUtils.stringifyException(e));
               throw new SemanticException(e.getMessage(), e);
             }
 
@@ -6599,11 +6595,14 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       if ((child = analyzeCreateTable(ast, qb)) == null) {
         return;
       }
+    } else {
+      SessionState.get().setCommandType(HiveOperation.QUERY);
     }
 
     // analyze create view command
     if (ast.getToken().getType() == HiveParser.TOK_CREATEVIEW) {
       child = analyzeCreateView(ast, qb);
+      SessionState.get().setCommandType(HiveOperation.CREATEVIEW);
       if (child == null) {
         return;
       }
@@ -6617,18 +6616,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     getMetaData(qb);
     LOG.info("Completed getting MetaData in Semantic Analysis");
 
-    LOG.info("Abstract syntax tree: " + ast.toStringTree());
-
-    if( HiveConf.getBoolVar(conf, HiveConf.ConfVars.HIVE_QL_REWRITE) ) {
-      if( ast.getToken().getType() == HiveParser.TOK_QUERY ) {
-        LOG.info("Abstract syntax tree before rewrites : " + ast.toStringTree());
-        //If we have query input invoke query rewrites on it.
-        HiveRewriteEngine rwEngine = new HiveRewriteEngine(db);
-        QB newRewrittenQb = rwEngine.invokeRewrites(qb, ast);
-        qb = newRewrittenQb;
-        LOG.info("Abstract syntax tree after rewrites : " + ast.toStringTree());
-      }
-    }
     // Save the result schema derived from the sink operator produced
     // by genPlan.  This has the correct column names, which clients
     // such as JDBC would prefer instead of the c0, c1 we'll end
@@ -7165,6 +7152,9 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
           storageFormat.storageHandler, shared.serdeProps, tblProps, ifNotExists);
 
       validateCreateTable(crtTblDesc);
+      // outputs is empty, which means this create table happens in the current
+      // database.
+      SessionState.get().setCommandType(HiveOperation.CREATETABLE);
       rootTasks.add(TaskFactory.get(new DDLWork(getInputs(), getOutputs(),
           crtTblDesc), conf));
       break;
@@ -7172,6 +7162,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     case CTLT: // create table like <tbl_name>
       CreateTableLikeDesc crtTblLikeDesc = new CreateTableLikeDesc(tableName,
           isExt, location, ifNotExists, likeTableName);
+      SessionState.get().setCommandType(HiveOperation.CREATETABLE);
       rootTasks.add(TaskFactory.get(new DDLWork(getInputs(), getOutputs(),
           crtTblLikeDesc), conf));
       break;
@@ -7195,6 +7186,8 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
           storageFormat.outputFormat, location, shared.serde, storageFormat.storageHandler, shared.serdeProps,
           tblProps, ifNotExists);
       qb.setTableDesc(crtTblDesc);
+
+      SessionState.get().setCommandType(HiveOperation.CREATETABLE_AS_SELECT);
 
       return selectStmt;
     default:

@@ -24,10 +24,12 @@ import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.PrintStream;
 import java.io.Serializable;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Deque;
@@ -346,7 +348,11 @@ public class QTestUtil {
       }
     }
     db.setCurrentDatabase(DEFAULT_DATABASE_NAME);
-
+    
+    List<String> roleNames = db.getAllRoleNames();
+      for (String roleName : roleNames) {
+        db.dropRole(roleName);
+    }
     // allocate and initialize a new conf since a test can
     // modify conf by using 'set' commands
     conf = new HiveConf (Driver.class);
@@ -399,6 +405,9 @@ public class QTestUtil {
   }
 
   public void createSources() throws Exception {
+    
+    startSessionState();
+    
     // Create a bunch of tables with columns key and value
     LinkedList<String> cols = new LinkedList<String>();
     cols.add("key");
@@ -500,7 +509,8 @@ public class QTestUtil {
     testWarehouse = conf.getVar(HiveConf.ConfVars.METASTOREWAREHOUSE);
     // conf.logVars(System.out);
     // System.out.flush();
-
+    
+    SessionState.start(conf);
     db = Hive.get(conf);
     fs = FileSystem.get(conf);
     drv = new Driver(conf);
@@ -551,6 +561,8 @@ public class QTestUtil {
       createSources();
     }
 
+    HiveConf.setVar(conf, HiveConf.ConfVars.HIVE_AUTHENTICATOR_MANAGER,
+    "org.apache.hadoop.hive.ql.security.DummyAuthenticator");
     CliSessionState ss = new CliSessionState(conf);
     assert ss != null;
     ss.in = System.in;
@@ -564,7 +576,7 @@ public class QTestUtil {
     ss.err = ss.out;
     ss.setIsSilent(true);
     SessionState oldSs = SessionState.get();
-    if (oldSs != null) {
+    if (oldSs != null && oldSs.out != null && oldSs.out != System.out) {
       oldSs.out.close();
     }
     SessionState.start(ss);
@@ -574,6 +586,19 @@ public class QTestUtil {
       ss.initFiles.add("../data/scripts/test_init_file.sql");
     }
     cliDriver.processInitFiles(ss);
+  }
+
+  private CliSessionState startSessionState()
+      throws FileNotFoundException, UnsupportedEncodingException {
+    
+    HiveConf.setVar(conf, HiveConf.ConfVars.HIVE_AUTHENTICATOR_MANAGER,
+        "org.apache.hadoop.hive.ql.security.DummyAuthenticator");
+
+    CliSessionState ss = new CliSessionState(conf);
+    assert ss != null;
+
+    SessionState.start(ss);
+    return ss;
   }
 
   public int executeOne(String tname) {
@@ -908,6 +933,7 @@ public class QTestUtil {
         "-I", "at junit",
         "-I", "Caused by:",
         "-I", "LOCK_QUERYID:",
+        "-I", "grantTime",
         "-I", "[.][.][.] [0-9]* more",
         (new File(logDir, tname + ".out")).getPath(),
         outFileName };
