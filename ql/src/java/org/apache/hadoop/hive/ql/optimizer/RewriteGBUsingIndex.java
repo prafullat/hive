@@ -208,13 +208,14 @@ public class RewriteGBUsingIndex implements Transform {
               //we rewrite the original query using the first valid index encountered
               //this can be changed if we have a better mechanism to decide which index will produce a better rewrite
               index = indexMapItr.next();
-              if(canApplyCtx.isIndexUsableForQueryBranchRewrite(index, indexTableMap.get(index))){
+              canApply = canApplyCtx.isIndexUsableForQueryBranchRewrite(index, indexTableMap.get(index));
+              if(canApply){
+                canApply = checkIfAllRewriteCriteriaIsMet(canApplyCtx);
                 break;
               }
             }
             indexTableName = index.getIndexTableName();
 
-            canApply = checkIfAllRewriteCriteriaIsMet(canApplyCtx);
             if(canApply && topOps.containsValue(topOp)) {
               Iterator<String> topOpNamesItr = topOps.keySet().iterator();
               while(topOpNamesItr.hasNext()){

@@ -285,7 +285,6 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
 
 
   boolean isIndexUsableForQueryBranchRewrite(Index index, Set<String> indexKeyNames){
-    boolean isUsable = true;
     boolean removeGroupBy = true;
     boolean optimizeCount = false;
 
@@ -297,19 +296,6 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
       return false;
     }
 
-/*      // We need to check if all columns from index appear in select list only
-    // in case of DISTINCT queries, In case group by queries, it is okay as long
-    // as all columns from index appear in group-by-key list.
-    if (getBoolVar(conf, RewriteVars.QUERY_HAS_DISTINCT)) {
-      // Check if all columns from index are part of select list too
-      if (!selectColumnsList.containsAll(indexKeyNames))  {
-        LOG.info("Index has non select list columns " +
-            " Cannot use index  " + index.getIndexName());
-        unusableIndexNames.add(index.getIndexName());
-        continue;
-      }
-    }
-*/
     //--------------------------------------------
     // Check if all columns in where predicate are part of index key columns
     // TODO: Currently we allow all predicates , would it be more efficient
@@ -320,7 +306,6 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
       return false;
     }
 
-//    if (!getBoolVar(conf, RewriteVars.QUERY_HAS_DISTINCT))  {
       //--------------------------------------------
       // For group by, we need to check if all keys are from index columns
       // itself. Here GB key order can be different than index columns but that does
@@ -355,10 +340,6 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
             + " preserved by rewrite optimization but original table scan"
             + " will be replaced with index table scan." );
         removeGroupBy = false;
-/*          if(optimizeCount == false){
-          setBoolVar(conf, RewriteVars.REPLACE_TABLE_WITH_IDX_TABLE, true);
-        }
-*/
       }
 
       // This check prevents to remove GroupBy for cases where the GROUP BY key cols are
@@ -382,8 +363,6 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
       }
 
 
-//    }
-
     //Now that we are good to do this optimization, set parameters in context
     //which would be used by transformation procedure as inputs.
 
@@ -392,11 +371,17 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
         && !(optimizeCount == true && removeGroupBy == false) ) {
       setBoolVar(hiveConf, RewriteVars.REMOVE_GROUP_BY, removeGroupBy);
       addTable(baseTableName, index.getIndexTableName());
-    }else{
+    }else if(getBoolVar(hiveConf, RewriteVars.QUERY_HAS_GENERICUDF_ON_GROUPBY_KEY) == true &&
+        getIntVar(hiveConf, RewriteVars.AGG_FUNC_CNT) == 1 &&
+        getBoolVar(hiveConf, RewriteVars.AGG_FUNC_IS_NOT_COUNT) == false){
       setBoolVar(hiveConf, RewriteVars.SHOULD_APPEND_SUBQUERY, true);
+      addTable(baseTableName, index.getIndexTableName());
+    }else{
+      LOG.info("No valid criteria met to apply rewrite." );
+      return false;
     }
 
-    return isUsable;
+    return true;
   }
 
 

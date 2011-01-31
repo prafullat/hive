@@ -112,7 +112,7 @@ public final class RewriteCanApplyProcFactory {
          if(aggrList != null && aggrList.size() > 0){
              for (AggregationDesc aggregationDesc : aggrList) {
                int aggCnt = canApplyCtx.getAggFuncCnt();
-               canApplyCtx.setIntVar(canApplyCtx.getConf(), RewriteVars.AGG_FUNC_CNT, aggCnt);
+               canApplyCtx.setIntVar(canApplyCtx.getConf(), RewriteVars.AGG_FUNC_CNT, aggCnt + 1);
                canApplyCtx.setAggFuncCnt(aggCnt + 1);
 
                //In the current implementation, we do not support more than 1 agg funcs in group-by
@@ -124,7 +124,6 @@ public final class RewriteCanApplyProcFactory {
                  canApplyCtx.setBoolVar(canApplyCtx.getConf(), RewriteVars.AGG_FUNC_IS_NOT_COUNT, true);
                  //return false;
                }else{
-                 LOG.info("Comming here");
                 ArrayList<ExprNodeDesc> para = aggregationDesc.getParameters();
                 //for a valid aggregation, it needs to have non-null parameter list
                  if(para == null){
