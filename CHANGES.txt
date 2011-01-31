@@ -6,6 +6,8 @@ Trunk -  Unreleased
 
   NEW FEATURES
 
+    HIVE-1636. Implement 'SHOW TABLES {FROM | IN} db_name' (Jonathan Natkins via cws)
+
     HIVE-1790. Support HAVING clause in Hive (Vaibhav Aggarwal via cws)
 
     HIVE-1304. Add function row_sequence in contrib (John Sichi via namit)
@@ -140,7 +142,35 @@ Trunk -  Unreleased
     HIVE-1858 Implement DROP {PARTITION, INDEX, TEMPORARY FUNCTION} IF EXISTS
     (Marcel Kornacker via jvs)
 
+    HIVE-78 Authorization model for Hive
+    (Yongqiang He via namit)
+
+    HIVE-1696  Add delegation token support to metastore
+    (Devaraj Das via namit)
+
+    HIVE-1862 Revive partition filtering in the Hive MetaStore
+    (Mac Yang via pauly)
+
+    HIVE-1923 Allow any type of stats publisher and aggregator in addition to
+    HBase and JDBC (Ning Zhang via namit)
+
+    HIVE-1910 Provide config parameters to control cache object pinning
+    (Mac Yang via namit)
+
+    HIVE-1820 Make Hive database data center aware
+    (Ning Zhang via namit)
+
+    HIVE-1929 A way to disable owner grants
+    (He Yongqiang via namit)
+
+    HIVE-1935 set hive.security.authorization.createtable.owner.grants to null
+    by default (He Yongqiang via namit)
+
   IMPROVEMENTS
+
+    HIVE-1692. FetchOperator.getInputFormatFromCache hides causal exception (Philip Zeyliger via cws)
+
+    HIVE-1899 Add a factory method for creating a synchronized wrapper for IMetaStoreClient (John Sichi via cws)
 
     HIVE-1852 Reduce unnecessary DFSClient.rename() calls (Ning Zhang via jssarma)
 
@@ -328,9 +358,21 @@ Trunk -  Unreleased
     confusing it with a release
     (Carl Steinbach via jvs)
 
+    HIVE-1907 Store jobid in ExecDriver
+    (namit via He Yongqiang)
+
+    HIVE-1865 redo zookeeper hive lock manager
+    (namit via He Yongqiang)
+
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HIVE-1915. Authorization on database level is broken.
+    (He Yongqiang via cws)
+
+    HIVE-1203. HiveInputFormat.getInputFormatFromCache "swallows" cause exception when trowing IOExcpetion
+    (Vladimir Klimontovich via cws)
 
     HIVE-1524. Parallel Execution fails if mapred.job.name is set
     (Ning Zhang via jssarma)
@@ -672,6 +714,28 @@ Trunk -  Unreleased
     HIVE-1840 Support ALTER DATABASE to change database properties
     (Ning Zhang via namit)
 
+    HIVE-1889 add an option (hive.index.compact.file.ignore.hdfs)
+    to ignore HDFS location stored in index files
+    (Yongqiang He via namit)
+
+    HIVE-1903 Can't join HBase tables if one's name is the beginning of
+    the other (John Sichi via namit)
+
+    HIVE-1912 Double escaping special chars when removing old partitions
+    in rmr (Ning Zhang via namit)
+
+    HIVE-1913 use partition level serde properties
+    (Yongiang He via namit)
+
+    HIVE-1917 CTAS (create-table-as-select) throws exception when showing
+    results (Ning Zhang via namit)
+
+    HIVE-1897 Alter command execution "when HDFS is down" results in holding
+    stale data in MetaStore (Chinna Rao Lalam via namit)
+
+    HIVE-1908 FileHandler leak on partial iteration of the resultset
+    (Chinna Rao Lalam via namit)
+
   TESTS
 
     HIVE-1464. improve  test query performance
@@ -690,6 +754,9 @@ Trunk -  Unreleased
 
     HIVE-1658. Fix describe [extended] column formatting
     (Thiruvel Thirumoolan via Ning Zhang)
+
+    HIVE-1829. Fix intermittent failures in TestRemoteMetaStore
+    (Carl Steinbach via jvs)
 
   TASKS
 

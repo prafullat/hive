@@ -54,14 +54,28 @@ public class HiveConf extends Configuration {
       HiveConf.ConfVars.METASTOREDIRECTORY,
       HiveConf.ConfVars.METASTOREWAREHOUSE,
       HiveConf.ConfVars.METASTOREURIS,
-      HiveConf.ConfVars.METATORETHRIFTRETRIES,
+      HiveConf.ConfVars.METASTORETHRIFTRETRIES,
       HiveConf.ConfVars.METASTOREPWD,
       HiveConf.ConfVars.METASTORECONNECTURLHOOK,
       HiveConf.ConfVars.METASTORECONNECTURLKEY,
       HiveConf.ConfVars.METASTOREATTEMPTS,
       HiveConf.ConfVars.METASTOREINTERVAL,
-      HiveConf.ConfVars.METASTOREFORCERELOADCONF,
+      HiveConf.ConfVars.METASTOREFORCERELOADCONF
       };
+
+  /**
+   * dbVars are the parameters can be set per database. If these
+   * parameters are set as a database property, when switching to that
+   * database, the HiveConf variable will be changed. The change of these
+   * parameters will effectively change the DFS and MapReduce clusters
+   * for different databases.
+   */
+  public static final HiveConf.ConfVars[] dbVars = {
+    HiveConf.ConfVars.HADOOPBIN,
+    HiveConf.ConfVars.HADOOPJT,
+    HiveConf.ConfVars.METASTOREWAREHOUSE,
+    HiveConf.ConfVars.SCRATCHDIR
+  };
 
   /**
    * ConfVars.
@@ -128,7 +142,11 @@ public class HiveConf extends Configuration {
     METASTOREWAREHOUSE("hive.metastore.warehouse.dir", ""),
     METASTOREURIS("hive.metastore.uris", ""),
     // Number of times to retry a connection to a Thrift metastore server
-    METATORETHRIFTRETRIES("hive.metastore.connect.retries", 3),
+    METASTORETHRIFTRETRIES("hive.metastore.connect.retries", 5),
+    // Number of seconds the client should wait between connection attempts
+    METASTORE_CLIENT_CONNECT_RETRY_DELAY("hive.metastore.client.connect.retry.delay", 1),
+    // Socket timeout for the client connection (in seconds)
+    METASTORE_CLIENT_SOCKET_TIMEOUT("hive.metastore.client.socket.timeout", 20),
     METASTOREPWD("javax.jdo.option.ConnectionPassword", ""),
     // Class name of JDO connection url hook
     METASTORECONNECTURLHOOK("hive.metastore.ds.connection.url.hook", ""),
@@ -157,6 +175,7 @@ public class HiveConf extends Configuration {
     METASTORE_KERBEROS_KEYTAB_FILE("hive.metastore.kerberos.keytab.file", ""),
     METASTORE_KERBEROS_PRINCIPAL("hive.metastore.kerberos.principal", ""),
     METASTORE_USE_THRIFT_SASL("hive.metastore.sasl.enabled", false),
+    METASTORE_CACHE_PINOBJTYPES("hive.metastore.cache.pinobjtypes", "Table,StorageDescriptor,SerDeInfo,Partition,Database,Type,FieldSchema,Order"),
 
     // Default parameters for creating tables
     NEWTABLEDEFAULTPARA("hive.table.parameters.default",""),
@@ -261,7 +280,7 @@ public class HiveConf extends Configuration {
     HIVESKEWJOINKEY("hive.skewjoin.key", 1000000),
     HIVESKEWJOINMAPJOINNUMMAPTASK("hive.skewjoin.mapjoin.map.tasks", 10000),
     HIVESKEWJOINMAPJOINMINSPLIT("hive.skewjoin.mapjoin.min.split", 33554432L), //32M
-    MAPREDMINSPLITSIZE("mapred.min.split.size", 1),
+    MAPREDMINSPLITSIZE("mapred.min.split.size", 1L),
     HIVEMERGEMAPONLY("hive.mergejob.maponly", true),
 
     HIVESENDHEARTBEAT("hive.heartbeat.interval", 1000),
@@ -305,6 +324,11 @@ public class HiveConf extends Configuration {
         "org.apache.derby.jdbc.EmbeddedDriver"), // JDBC driver specific to the dbclass
     HIVESTATSDBCONNECTIONSTRING("hive.stats.dbconnectionstring",
         "jdbc:derby:;databaseName=TempStatsStore;create=true"), // automatically create database
+    HIVE_STATS_DEFAULT_PUBLISHER("hive.stats.default.publisher",
+        ""), // default stats publisher if none of JDBC/HBase is specified
+    HIVE_STATS_DEFAULT_AGGREGATOR("hive.stats.default.aggregator",
+        ""), // default stats aggregator if none of JDBC/HBase is specified
+
 
     // Concurrency
     HIVE_SUPPORT_CONCURRENCY("hive.support.concurrency", false),
@@ -316,6 +340,7 @@ public class HiveConf extends Configuration {
     HIVE_ZOOKEEPER_CLIENT_PORT("hive.zookeeper.client.port", ""),
     HIVE_ZOOKEEPER_SESSION_TIMEOUT("hive.zookeeper.session.timeout", 600*1000),
     HIVE_ZOOKEEPER_NAMESPACE("hive.zookeeper.namespace", "hive_zookeeper_namespace"),
+    HIVE_ZOOKEEPER_CLEAN_EXTRA_NODES("hive.zookeeper.clean.extra.nodes", false),
 
     // For HBase storage handler
     HIVE_HBASE_WAL_ENABLED("hive.hbase.wal.enabled", true),
@@ -340,11 +365,20 @@ public class HiveConf extends Configuration {
 
     SEMANTIC_ANALYZER_HOOK("hive.semantic.analyzer.hook",null),
 
+    HIVE_AUTHORIZATION_ENABLED("hive.security.authorization.enabled", false),
+    HIVE_AUTHORIZATION_MANAGER("hive.security.authorization.manager", null),
+    HIVE_AUTHENTICATOR_MANAGER("hive.security.authenticator.manager", null),
+
+    HIVE_AUTHORIZATION_TABLE_USER_GRANTS("hive.security.authorization.createtable.user.grants", null),
+    HIVE_AUTHORIZATION_TABLE_GROUP_GRANTS("hive.security.authorization.createtable.group.grants", null),
+    HIVE_AUTHORIZATION_TABLE_ROLE_GRANTS("hive.security.authorization.createtable.role.grants", null),
+    HIVE_AUTHORIZATION_TABLE_OWNER_GRANTS("hive.security.authorization.createtable.owner.grants", null),
     // Print column names in output
     HIVE_CLI_PRINT_HEADER("hive.cli.print.header", false),
 
-    HIVE_ERROR_ON_EMPTY_PARTITION("hive.error.on.empty.partition", false);
+    HIVE_ERROR_ON_EMPTY_PARTITION("hive.error.on.empty.partition", false),
 
+    HIVE_INDEX_IGNORE_HDFS_LOC("hive.index.compact.file.ignore.hdfs", false), 
     ;
 
 

@@ -57,14 +57,23 @@ import org.apache.hadoop.hive.metastore.api.AlreadyExistsException;
 import org.apache.hadoop.hive.metastore.api.Constants;
 import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
+import org.apache.hadoop.hive.metastore.api.HiveObjectPrivilege;
+import org.apache.hadoop.hive.metastore.api.HiveObjectRef;
+import org.apache.hadoop.hive.metastore.api.HiveObjectType;
 import org.apache.hadoop.hive.metastore.api.Index;
 import org.apache.hadoop.hive.metastore.api.InvalidOperationException;
 import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.NoSuchObjectException;
 import org.apache.hadoop.hive.metastore.api.Order;
+import org.apache.hadoop.hive.metastore.api.PrincipalPrivilegeSet;
+import org.apache.hadoop.hive.metastore.api.PrincipalType;
+import org.apache.hadoop.hive.metastore.api.PrivilegeBag;
+import org.apache.hadoop.hive.metastore.api.Role;
 import org.apache.hadoop.hive.metastore.api.SerDeInfo;
 import org.apache.hadoop.hive.ql.exec.Utilities;
 import org.apache.hadoop.hive.ql.index.HiveIndexHandler;
+import org.apache.hadoop.hive.ql.session.CreateTableAutomaticGrant;
+import org.apache.hadoop.hive.ql.session.SessionState;
 import org.apache.hadoop.hive.serde2.Deserializer;
 import org.apache.hadoop.hive.serde2.SerDeException;
 import org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe;
@@ -444,7 +453,19 @@ public class Hive {
       if (tbl.getParameters() != null) {
         tbl.getParameters().remove(Constants.DDL_TIME);
       }
-      getMSC().createTable(tbl.getTTable());
+      org.apache.hadoop.hive.metastore.api.Table tTbl = tbl.getTTable();
+      PrincipalPrivilegeSet principalPrivs = new PrincipalPrivilegeSet();
+      SessionState ss = SessionState.get();
+      if (ss != null) {
+        CreateTableAutomaticGrant grants = ss.getCreateTableGrants();
+        if (grants != null) {
+          principalPrivs.setUserPrivileges(grants.getUserGrants());
+          principalPrivs.setGroupPrivileges(grants.getGroupGrants());
+          principalPrivs.setRolePrivileges(grants.getRoleGrants());
+          tTbl.setPrivileges(principalPrivs);
+        }
+      }
+      getMSC().createTable(tTbl);
     } catch (AlreadyExistsException e) {
       if (!ifNotExists) {
         throw new HiveException(e);
@@ -784,7 +805,7 @@ public class Hive {
     } catch (NoSuchObjectException e) {
       if (throwException) {
         LOG.error(StringUtils.stringifyException(e));
-        throw new InvalidTableException("Table not found ", tableName);
+        throw new InvalidTableException("Table " + tableName + " not found ", tableName);
       }
       return null;
     } catch (Exception e) {
@@ -919,6 +940,36 @@ public class Hive {
   public List<String> getDatabasesByPattern(String databasePattern) throws HiveException {
     try {
       return getMSC().getDatabases(databasePattern);
+    } catch (Exception e) {
+      throw new HiveException(e);
+    }
+  }
+
+  public boolean grantPrivileges(PrivilegeBag privileges)
+      throws HiveException {
+    try {
+      return getMSC().grant_privileges(privileges);
+    } catch (Exception e) {
+      throw new HiveException(e);
+    }
+  }
+
+  /**
+   * @param userName
+   *          principal name
+   * @param isRole
+   *          is the given principal name a role
+   * @param isGroup
+   *          is the given principal name a group
+   * @param privileges
+   *          a bag of privileges
+   * @return
+   * @throws HiveException
+   */
+  public boolean revokePrivileges(PrivilegeBag privileges)
+      throws HiveException {
+    try {
+      return getMSC().revoke_privileges(privileges);
     } catch (Exception e) {
       throw new HiveException(e);
     }
@@ -1200,7 +1251,8 @@ public class Hive {
     }
     org.apache.hadoop.hive.metastore.api.Partition tpart = null;
     try {
-      tpart = getMSC().getPartition(tbl.getDbName(), tbl.getTableName(), pvals);
+      tpart = getMSC().getPartitionWithAuthInfo(tbl.getDbName(),
+          tbl.getTableName(), pvals, getUserName(), getGroupNames());
     } catch (NoSuchObjectException nsoe) {
       // this means no partition exists for the given partition
       // key value pairs - thrift cannot handle null return values, hence
@@ -1292,8 +1344,8 @@ public class Hive {
     if (tbl.isPartitioned()) {
       List<org.apache.hadoop.hive.metastore.api.Partition> tParts;
       try {
-        tParts = getMSC().listPartitions(tbl.getDbName(), tbl.getTableName(),
-            (short) -1);
+        tParts = getMSC().listPartitionsWithAuthInfo(tbl.getDbName(), tbl.getTableName(),
+            (short) -1, getUserName(), getGroupNames());
       } catch (Exception e) {
         LOG.error(StringUtils.stringifyException(e));
         throw new HiveException(e);
@@ -1345,8 +1397,8 @@ public class Hive {
 
     List<org.apache.hadoop.hive.metastore.api.Partition> partitions = null;
     try {
-      partitions = getMSC().listPartitions(tbl.getDbName(), tbl.getTableName(),
-          partialPvals, (short) -1);
+      partitions = getMSC().listPartitionsWithAuthInfo(tbl.getDbName(), tbl.getTableName(),
+          partialPvals, (short) -1, getUserName(), getGroupNames());
     } catch (Exception e) {
       throw new HiveException(e);
     }
@@ -1415,6 +1467,130 @@ public class Hive {
    */
   public void setCurrentDatabase(String currentDatabase) {
     this.currentDatabase = currentDatabase;
+  }
+
+  public void createRole(String roleName, String ownerName)
+      throws HiveException {
+    try {
+      getMSC().create_role(new Role(roleName, -1, ownerName));
+    } catch (Exception e) {
+      throw new HiveException(e);
+    }
+  }
+
+  public void dropRole(String roleName) throws HiveException {
+    try {
+      getMSC().drop_role(roleName);
+    } catch (Exception e) {
+      throw new HiveException(e);
+    }
+  }
+  
+  /**
+   * Get all existing role names.
+   *
+   * @return List of role names.
+   * @throws HiveException
+   */
+  public List<String> getAllRoleNames() throws HiveException {
+    try {
+      return getMSC().listRoleNames();
+    } catch (Exception e) {
+      throw new HiveException(e);
+    }
+  }
+
+  public List<Role> showRoleGrant(String principalName, PrincipalType principalType) throws HiveException {
+    try {
+      return getMSC().list_roles(principalName, principalType);
+    } catch (Exception e) {
+      throw new HiveException(e);
+    }
+  }
+
+  public boolean grantRole(String roleName, String userName,
+      PrincipalType principalType, String grantor, PrincipalType grantorType,
+      boolean grantOption) throws HiveException {
+    try {
+      return getMSC().grant_role(roleName, userName, principalType, grantor,
+          grantorType, grantOption);
+    } catch (Exception e) {
+      throw new HiveException(e);
+    }
+  }
+
+  public boolean revokeRole(String roleName, String userName,
+      PrincipalType principalType)  throws HiveException {
+    try {
+      return getMSC().revoke_role(roleName, userName, principalType);
+    } catch (Exception e) {
+      throw new HiveException(e);
+    }
+  }
+
+  public List<Role> listRoles(String userName,  PrincipalType principalType)
+      throws HiveException {
+    try {
+      return getMSC().list_roles(userName, principalType);
+    } catch (Exception e) {
+      throw new HiveException(e);
+    }
+  }
+
+  /**
+   * @param objectType
+   *          hive object type
+   * @param db_name
+   *          database name
+   * @param table_name
+   *          table name
+   * @param part_values
+   *          partition values
+   * @param column_name
+   *          column name
+   * @param user_name
+   *          user name
+   * @param group_names
+   *          group names
+   * @return
+   * @throws HiveException
+   */
+  public PrincipalPrivilegeSet get_privilege_set(HiveObjectType objectType,
+      String db_name, String table_name, List<String> part_values,
+      String column_name, String user_name, List<String> group_names)
+      throws HiveException {
+    try {
+      HiveObjectRef hiveObj = new HiveObjectRef(objectType, db_name,
+          table_name, part_values, column_name);
+      return getMSC().get_privilege_set(hiveObj, user_name, group_names);
+    } catch (Exception e) {
+      throw new HiveException(e);
+    }
+  }
+
+  /**
+   * @param objectType
+   *          hive object type
+   * @param principalName
+   * @param principalType
+   * @param dbName
+   * @param tableName
+   * @param partValues
+   * @param columnName
+   * @return
+   * @throws HiveException
+   */
+  public List<HiveObjectPrivilege> showPrivilegeGrant(
+      HiveObjectType objectType, String principalName,
+      PrincipalType principalType, String dbName, String tableName,
+      List<String> partValues, String columnName) throws HiveException {
+    try {
+      HiveObjectRef hiveObj = new HiveObjectRef(objectType, dbName, tableName,
+          partValues, columnName);
+      return getMSC().list_privileges(principalName, principalType, hiveObj);
+    } catch (Exception e) {
+      throw new HiveException(e);
+    }
   }
 
   static private void checkPaths(FileSystem fs, FileStatus[] srcs, Path destf,
@@ -1564,7 +1740,7 @@ public class Hive {
             // use FsShell to move data to .Trash first rather than delete permanently
             FsShell fshell = new FsShell();
             fshell.setConf(conf);
-            fshell.run(new String[]{"-rmr", oldPath.toUri().toString()});
+            fshell.run(new String[]{"-rmr", oldPath.toString()});
           }
         } catch (Exception e) {
           //swallow the exception
@@ -1577,6 +1753,9 @@ public class Hive {
       	// rename can fail if the parent doesn't exist
       	if (!fs.exists(destf.getParent())) {
       	  fs.mkdirs(destf.getParent());
+      	}
+      	if (fs.exists(destf)) {
+      	  fs.delete(destf, true);
       	}
 
       	boolean b = fs.rename(srcs[0].getPath(), destf);
@@ -1649,6 +1828,22 @@ public class Hive {
       metaStoreClient = createMetaStoreClient();
     }
     return metaStoreClient;
+  }
+
+  private String getUserName() {
+    SessionState ss = SessionState.get();
+    if (ss != null && ss.getAuthenticator() != null) {
+      return ss.getAuthenticator().getUserName();
+    }
+    return null;
+  }
+
+  private List<String> getGroupNames() {
+    SessionState ss = SessionState.get();
+    if (ss != null && ss.getAuthenticator() != null) {
+      return ss.getAuthenticator().getGroupNames();
+    }
+    return null;
   }
 
   public static List<FieldSchema> getFieldsFromDeserializer(String name,
