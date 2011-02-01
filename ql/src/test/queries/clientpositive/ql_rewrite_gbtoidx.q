@@ -1,3 +1,4 @@
+
 DROP TABLE lineitem;
 CREATE TABLE lineitem (L_ORDERKEY      INT,
                                 L_PARTKEY       INT,

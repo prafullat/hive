@@ -77,6 +77,7 @@ public class Optimizer {
       transformations.add(new ReduceSinkDeDuplication());
     }
 
+
   }
 
   /**
