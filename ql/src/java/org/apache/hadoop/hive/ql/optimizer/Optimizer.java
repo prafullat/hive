@@ -47,11 +47,15 @@ public class Optimizer {
 
     // Add the transformation that computes the lineage information.
     transformations.add(new Generator());
-    transformations.add(new RewriteGBUsingIndex());
 
     if (HiveConf.getBoolVar(hiveConf, HiveConf.ConfVars.HIVEOPTCP)) {
       transformations.add(new ColumnPruner());
     }
+
+    if (HiveConf.getBoolVar(hiveConf, HiveConf.ConfVars.HIVEOPTGBYUSINGINDEX)) {
+      transformations.add(new RewriteGBUsingIndex());
+    }
+
     if (HiveConf.getBoolVar(hiveConf, HiveConf.ConfVars.HIVEOPTPPD)) {
       transformations.add(new PredicatePushDown());
       transformations.add(new PartitionPruner());

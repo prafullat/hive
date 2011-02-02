@@ -86,10 +86,6 @@ public class QBParseInfo {
   // used by GroupBy
   private final LinkedHashMap<String, LinkedHashMap<String, ASTNode>> destToAggregationExprs;
 
-  /**
-   * Insert clause to ASTNode mapping
-   */
-  private final HashMap<String, ASTNode> insClauseToAstNode;
   private final HashMap<String, List<ASTNode>> destToDistinctFuncExprs;
 
 
@@ -110,7 +106,6 @@ public class QBParseInfo {
     destToSortby = new HashMap<String, ASTNode>();
     destToOrderby = new HashMap<String, ASTNode>();
     destToLimit = new HashMap<String, Integer>();
-    insClauseToAstNode = new HashMap<String, ASTNode>();
 
 
     destToAggregationExprs = new LinkedHashMap<String, LinkedHashMap<String, ASTNode>>();
@@ -166,24 +161,6 @@ public class QBParseInfo {
 
   public void setGroupByExprForClause(String clause, ASTNode ast) {
     destToGroupby.put(clause, ast);
-  }
-
-  public void clearGroupBy(String sClauseName)  {
-    destToGroupby.clear();
-
-    ASTNode astInsertNode = getInsertNodeForClause(sClauseName);
-    List<Integer> gbNodeToBeDeleted = new ArrayList<Integer>();
-    for( int i = 0;i < astInsertNode.getChildCount(); i++) {
-      if( astInsertNode.getChild(i).getType() == HiveParser.TOK_GROUPBY) {
-        gbNodeToBeDeleted.add(i);
-      }
-    }
-
-    for( int i = gbNodeToBeDeleted.size() - 1 ; i >= 0; i--)  {
-      int iChildToBeDeleted = gbNodeToBeDeleted.get(i);
-      astInsertNode.deleteChild(iChildToBeDeleted);
-    }
-
   }
 
   public void setDestForClause(String clause, ASTNode ast) {
@@ -379,14 +356,6 @@ public class QBParseInfo {
     return destToLimit.get(dest);
   }
 
-  public void setInsertNode(String clauseName, ASTNode ast) {
-    insClauseToAstNode.put(clauseName, ast);
-  }
-
-  public ASTNode getInsertNodeForClause(String clauseName)  {
-    return insClauseToAstNode.get(clauseName);
-  }
-
   /**
    * @return the outerQueryLimit
    */
@@ -482,20 +451,6 @@ public class QBParseInfo {
       aliasToLateralViews.put(alias, lateralViews);
     }
     lateralViews.add(lateralView);
-  }
-
-  public void replaceTable(String sOrigBaseTableAliase, String sNewTableName, String sClauseName) {
-    ASTNode astNode = getSrcForAlias(sOrigBaseTableAliase);
-    if( astNode == null ) {
-      return;
-    }
-    astNode.getToken().setText(sNewTableName);
-  }
-
-  public void clearDistinctFlag(String sClauseName) {
-    ASTNode rootSelExpr = getSelForClause(sClauseName);
-    rootSelExpr.getToken().setType(HiveParser.TOK_SELECT);
-    rootSelExpr.getToken().setText("TOK_SELECT");
   }
 
   public void setIsAnalyzeCommand(boolean isAnalyzeCommand) {

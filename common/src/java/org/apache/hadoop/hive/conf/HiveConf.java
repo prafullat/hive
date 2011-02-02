@@ -349,11 +349,8 @@ public class HiveConf extends Configuration {
     HIVEARCHIVEENABLED("hive.archive.enabled", false),
     HIVEHARPARENTDIRSETTABLE("hive.archive.har.parentdir.settable", false),
 
-    //QL rewrites related flags.
-    //Enable/Disable rewrites
-    HIVE_QL_REWRITE("hive.ql.rewrites", false),
     //Enable/Disable gbToIdx rewrite rule
-    HIVE_QL_RW_GB_TO_IDX("hive.ql.rw.gb_to_idx", false),
+    HIVEOPTGBYUSINGINDEX("hive.optimize.gbyusingindex", true),
 
     HIVEOUTERJOINSUPPORTSFILTERS("hive.outerjoin.supports.filters", true),
 
@@ -378,7 +375,7 @@ public class HiveConf extends Configuration {
 
     HIVE_ERROR_ON_EMPTY_PARTITION("hive.error.on.empty.partition", false),
 
-    HIVE_INDEX_IGNORE_HDFS_LOC("hive.index.compact.file.ignore.hdfs", false), 
+    HIVE_INDEX_IGNORE_HDFS_LOC("hive.index.compact.file.ignore.hdfs", false),
     ;
 
 

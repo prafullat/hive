@@ -206,49 +206,6 @@ public class QB {
   public ASTNode getTableNodeForAlias(String tableAlias) {
     return qbp.getSrcForAlias(tableAlias);
   }
-  public void removeTable(String sAliasName)  {
-    aliasToTabs.remove(sAliasName);
-  }
-
-  public void replaceTableAlias(String sOrigBaseTableAlias, String sAlias,
-      String sTableName, String sClauseName) {
-    removeTable(sOrigBaseTableAlias);
-    setTabAlias(sAlias, sTableName);
-    qbp.replaceTable(sOrigBaseTableAlias, sAlias, sClauseName);
-  }
-
-  public void removeSubQuery(String sAliasName)  {
-    aliasToSubq.remove(sAliasName);
-  }
-
-  public void replaceSubQuery(String sOrigSubQAlias, String sNewAlias, QBExpr newQbExpr)  {
-    removeSubQuery(sOrigSubQAlias);
-    setSubqAlias(sNewAlias, newQbExpr);
-  }
-
-  public ASTNode newSelectListExpr(boolean bHasFunc, String sFuncName,
-        List<String> vInput)  {
-    ASTNode selListExpr = new ASTNode(new CommonToken(HiveParser.TOK_SELEXPR, "TOK_SELEXPR"));
-    if( bHasFunc == true )  {
-      ASTNode funcNode = new ASTNode(new CommonToken(HiveParser.TOK_FUNCTION, "TOK_FUNCTION"));
-      funcNode.addChild(new ASTNode(new CommonToken(HiveParser.Identifier, sFuncName)));
-
-      for( int i = 0 ; i < vInput.size(); i++ )  {
-        ASTNode colRefNode = new ASTNode(new CommonToken(HiveParser.TOK_TABLE_OR_COL,
-          "TOK_TABLE_OR_COL"));
-        colRefNode.addChild(new ASTNode(new CommonToken(HiveParser.Identifier, vInput.get(i))));
-        funcNode.addChild(colRefNode);
-      }
-      selListExpr.addChild(funcNode);
-    }
-    else  {
-      ASTNode colRefNode = new ASTNode(new CommonToken(HiveParser.TOK_TABLE_OR_COL,
-        "TOK_TABLE_OR_COL"));
-      colRefNode.addChild(new ASTNode(new CommonToken(HiveParser.Identifier, vInput.get(0))));
-      selListExpr.addChild(colRefNode);
-    }
-    return selListExpr;
-  }
 
   public ASTNode newFuncExpr(String sFuncName,    List<String> vInput)  {
     ASTNode funcNode = new ASTNode(new CommonToken(HiveParser.TOK_FUNCTION, "TOK_FUNCTION"));

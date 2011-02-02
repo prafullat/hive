@@ -591,12 +591,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     if (ast.getToken() != null) {
       skipRecursion = true;
       switch (ast.getToken().getType()) {
-      case HiveParser.TOK_INSERT:
-        ctx_1.dest = "insclause-" + ctx_1.nextNum;
-        ctx_1.nextNum++;
-        qbp.setInsertNode(ctx_1.dest, ast);
-        skipRecursion = false;
-        break;
       case HiveParser.TOK_SELECTDI:
         qb.countSelDi();
         // fall through
@@ -620,6 +614,9 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         break;
 
       case HiveParser.TOK_DESTINATION:
+        ctx_1.dest = "insclause-" + ctx_1.nextNum;
+        ctx_1.nextNum++;
+
         // is there a insert in the subquery
         if (qbp.getIsSubQ()) {
           ASTNode ch = (ASTNode) ast.getChild(0);
