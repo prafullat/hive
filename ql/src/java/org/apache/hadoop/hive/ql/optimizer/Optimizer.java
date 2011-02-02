@@ -39,23 +39,19 @@ public class Optimizer {
 
   /**
    * Create the list of transformations.
-   *l
+   *
    * @param hiveConf
    */
   public void initialize(HiveConf hiveConf) {
     transformations = new ArrayList<Transform>();
-
     // Add the transformation that computes the lineage information.
     transformations.add(new Generator());
-
     if (HiveConf.getBoolVar(hiveConf, HiveConf.ConfVars.HIVEOPTCP)) {
       transformations.add(new ColumnPruner());
     }
-
     if (HiveConf.getBoolVar(hiveConf, HiveConf.ConfVars.HIVEOPTGBYUSINGINDEX)) {
       transformations.add(new RewriteGBUsingIndex());
     }
-
     if (HiveConf.getBoolVar(hiveConf, HiveConf.ConfVars.HIVEOPTPPD)) {
       transformations.add(new PredicatePushDown());
       transformations.add(new PartitionPruner());
@@ -74,14 +70,11 @@ public class Optimizer {
         transformations.add(new SortedMergeBucketMapJoinOptimizer());
       }
     }
-
     transformations.add(new UnionProcessor());
     transformations.add(new JoinReorder());
     if(HiveConf.getBoolVar(hiveConf, HiveConf.ConfVars.HIVEOPTREDUCEDEDUPLICATION)) {
       transformations.add(new ReduceSinkDeDuplication());
     }
-
-
   }
 
   /**

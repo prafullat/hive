@@ -64,8 +64,6 @@ public class QBParseInfo {
    * reducer the rows will go to.
    */
   private final HashMap<String, ASTNode> destToDistributeby;
-
-
   /**
    * SortBy controls the reduce keys, which affects the order of rows that the
    * reducer receives.
@@ -85,9 +83,7 @@ public class QBParseInfo {
 
   // used by GroupBy
   private final LinkedHashMap<String, LinkedHashMap<String, ASTNode>> destToAggregationExprs;
-
   private final HashMap<String, List<ASTNode>> destToDistinctFuncExprs;
-
 
   @SuppressWarnings("unused")
   private static final Log LOG = LogFactory.getLog(QBParseInfo.class.getName());
@@ -107,10 +103,8 @@ public class QBParseInfo {
     destToOrderby = new HashMap<String, ASTNode>();
     destToLimit = new HashMap<String, Integer>();
 
-
     destToAggregationExprs = new LinkedHashMap<String, LinkedHashMap<String, ASTNode>>();
     destToDistinctFuncExprs = new HashMap<String, List<ASTNode>>();
-
 
     this.alias = alias;
     this.isSubQ = isSubQ;
@@ -138,13 +132,13 @@ public class QBParseInfo {
   public HashMap<String, ASTNode> getAggregationExprsForClause(String clause) {
     return destToAggregationExprs.get(clause);
   }
+
   public void setDistinctFuncExprsForClause(String clause, List<ASTNode> ast) {
     destToDistinctFuncExprs.put(clause, ast);
   }
 
   public List<ASTNode> getDistinctFuncExprsForClause(String clause) {
     return destToDistinctFuncExprs.get(clause);
-
   }
 
   public void setSelExprForClause(String clause, ASTNode ast) {

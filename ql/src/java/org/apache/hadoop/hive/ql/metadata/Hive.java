@@ -645,6 +645,7 @@ public class Hive {
       {
         indexDesc.getParameters().putAll(idxProps);
       }
+
       this.getMSC().createIndex(indexDesc, tt);
 
     } catch (Exception e) {
@@ -1485,7 +1486,7 @@ public class Hive {
       throw new HiveException(e);
     }
   }
-  
+
   /**
    * Get all existing role names.
    *
@@ -1869,5 +1870,4 @@ public class Hive {
     }
     return indexes;
   }
-
 };

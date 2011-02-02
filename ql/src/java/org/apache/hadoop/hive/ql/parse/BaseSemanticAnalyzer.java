@@ -71,7 +71,7 @@ public abstract class BaseSemanticAnalyzer {
 
   protected Context ctx;
   protected HashMap<String, String> idToTableNameMap;
-  
+
   public static int HIVE_COLUMN_ORDER_ASC = 1;
   public static int HIVE_COLUMN_ORDER_DESC = 0;
 
@@ -617,9 +617,11 @@ public abstract class BaseSemanticAnalyzer {
 
         tableHandle = db.getTable(tableName);
       } catch (InvalidTableException ite) {
-        throw new SemanticException(ErrorMsg.INVALID_TABLE.getMsg(ast.getChild(0)), ite);
+        throw new SemanticException(ErrorMsg.INVALID_TABLE.getMsg(ast
+            .getChild(0)), ite);
       } catch (HiveException e) {
-        throw new SemanticException(ErrorMsg.GENERIC_ERROR.getMsg(ast.getChild(childIndex), e.getMessage()), e);
+        throw new SemanticException(ErrorMsg.GENERIC_ERROR.getMsg(ast
+            .getChild(childIndex), e.getMessage()), e);
       }
 
       // get partition metadata if partition specified
@@ -733,7 +735,7 @@ public abstract class BaseSemanticAnalyzer {
     }
     return partSpec;
   }
-  
+
   public Hive getDb() {
     return db;
   }

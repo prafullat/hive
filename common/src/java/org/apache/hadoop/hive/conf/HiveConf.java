@@ -262,8 +262,7 @@ public class HiveConf extends Configuration {
 
     //small table file size
     HIVESMALLTABLESFILESIZE("hive.smalltable.filesize",25000000L), //25M
-
-      // test mode in hive mode
+    // test mode in hive mode
     HIVETESTMODE("hive.test.mode", false),
     HIVETESTMODEPREFIX("hive.test.mode.prefix", "test_"),
     HIVETESTMODESAMPLEFREQ("hive.test.mode.samplefreq", 32),
@@ -275,7 +274,6 @@ public class HiveConf extends Configuration {
     HIVEMERGEMAPFILESAVGSIZE("hive.merge.smallfiles.avgsize", (long) (16 * 1000 * 1000)),
 
     HIVESKEWJOIN("hive.optimize.skewjoin", false),
-
     HIVECONVERTJOIN("hive.auto.convert.join", false),
     HIVESKEWJOINKEY("hive.skewjoin.key", 1000000),
     HIVESKEWJOINMAPJOINNUMMAPTASK("hive.skewjoin.mapjoin.map.tasks", 10000),
@@ -285,7 +283,6 @@ public class HiveConf extends Configuration {
 
     HIVESENDHEARTBEAT("hive.heartbeat.interval", 1000),
     HIVEMAXMAPJOINSIZE("hive.mapjoin.maxsize", 100000),
-
     HIVEHASHTABLETHRESHOLD("hive.hashtable.initialCapacity", 100000),
     HIVEHASHTABLELOADFACTOR("hive.hashtable.loadfactor", (float) 0.75),
     HIVEHASHTABLEFOLLOWBYGBYMAXMEMORYUSAGE("hive.mapjoin.followby.gby.localtask.max.memory.usage", (float) 0.55),
@@ -350,7 +347,7 @@ public class HiveConf extends Configuration {
     HIVEHARPARENTDIRSETTABLE("hive.archive.har.parentdir.settable", false),
 
     //Enable/Disable gbToIdx rewrite rule
-    HIVEOPTGBYUSINGINDEX("hive.optimize.gbyusingindex", true),
+    HIVEOPTGBYUSINGINDEX("hive.optimize.gbyusingindex", false),
 
     HIVEOUTERJOINSUPPORTSFILTERS("hive.outerjoin.supports.filters", true),
 

@@ -22,6 +22,8 @@ FIELDS TERMINATED BY '|';
 CREATE INDEX lineitem_lshipdate_idx ON TABLE lineitem(l_shipdate) AS 'org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler' WITH DEFERRED REBUILD;
 ALTER INDEX lineitem_lshipdate_idx ON lineitem REBUILD;
 
+set hive.optimize.gbyusingindex=true;
+
 explain select l_shipdate,
        count(1)
 from 
@@ -126,7 +128,7 @@ DROP TABLE tbl;
 CREATE TABLE tbl(key int, value int);
 CREATE INDEX tbl_key_idx ON TABLE tbl(key) AS 'org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler' WITH DEFERRED REBUILD;
 ALTER INDEX tbl_key_idx ON tbl REBUILD;
-
+set hive.optimize.gbyusingindex=true;
 EXPLAIN select key, count(key) from tbl where key = 1 group by key;
 EXPLAIN SELECT DISTINCT key FROM tbl;
 EXPLAIN select count(1) from tbl;

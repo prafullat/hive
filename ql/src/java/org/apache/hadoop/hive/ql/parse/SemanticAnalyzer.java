@@ -200,7 +200,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
   public SemanticAnalyzer(HiveConf conf) throws SemanticException {
 
     super(conf);
-
     opToPartPruner = new HashMap<TableScanOperator, ExprNodeDesc>();
     opToPartList = new HashMap<TableScanOperator, PrunedPartitionList>();
     opToSamplePruner = new HashMap<TableScanOperator, sampleDesc>();
@@ -693,7 +692,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
               .getMsg(ast));
         }
         break;
-
 
       case HiveParser.TOK_GROUPBY:
         // Get the groupby aliases - these are aliased to the entries in the
@@ -1252,6 +1250,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         throw new SemanticException(ErrorMsg.INVALID_JOIN_CONDITION_1
             .getMsg(joinCond));
       }
+
       if (!leftAliasNull) {
         if (type.equals(JoinType.LEFTOUTER)
             || type.equals(JoinType.FULLOUTER)) {
@@ -1464,8 +1463,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       return finalCmd;
     }
 
-    // should never come here
-    return null;
+    return cmd;
   }
 
   private TableDesc getTableDescFromSerDe(ASTNode child, String cols,
@@ -1640,7 +1638,8 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
 
     StringBuilder inpColumns = new StringBuilder();
     StringBuilder inpColumnTypes = new StringBuilder();
-    ArrayList<ColumnInfo> inputSchema = opParseCtx.get(input).getRowResolver().getColumnInfos();
+    ArrayList<ColumnInfo> inputSchema = opParseCtx.get(input).getRowResolver()
+        .getColumnInfos();
     for (int i = 0; i < inputSchema.size(); ++i) {
       if (i != 0) {
         inpColumns.append(",");
@@ -2160,7 +2159,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
 
     GenericUDAFInfo r = new GenericUDAFInfo();
 
-
     // set r.genericUDAFEvaluator
     r.genericUDAFEvaluator = evaluator;
 
@@ -2224,7 +2222,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       throws SemanticException {
     RowResolver groupByInputRowResolver = opParseCtx
         .get(reduceSinkOperatorInfo).getRowResolver();
-
     RowResolver groupByOutputRowResolver = new RowResolver();
     groupByOutputRowResolver.setIsExprResolver(true);
     ArrayList<ExprNodeDesc> groupByKeys = new ArrayList<ExprNodeDesc>();
@@ -2351,7 +2348,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     ArrayList<String> outputColumnNames = new ArrayList<String>();
     RowResolver groupByInputRowResolver = opParseCtx
         .get(reduceSinkOperatorInfo).getRowResolver();
-   RowResolver groupByOutputRowResolver = new RowResolver();
+    RowResolver groupByOutputRowResolver = new RowResolver();
     groupByOutputRowResolver.setIsExprResolver(true);
     ArrayList<ExprNodeDesc> groupByKeys = new ArrayList<ExprNodeDesc>();
     ArrayList<AggregationDesc> aggregations = new ArrayList<AggregationDesc>();
@@ -2394,7 +2391,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       ArrayList<ExprNodeDesc> aggParameters = new ArrayList<ExprNodeDesc>();
       boolean isDistinct = (value.getType() == HiveParser.TOK_FUNCTIONDI);
 
-
       // If the function is distinct, partial aggregartion has not been done on
       // the client side.
       // If distPartAgg is set, the client is letting us know that partial
@@ -2406,7 +2402,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       // For distincts, partial aggregation is never performed on the client
       // side, so always look for the parameters: d+e
       boolean partialAggDone = !(distPartAgg || isDistinct);
-
       if (!partialAggDone) {
         // 0 is the function name
         for (int i = 1; i < value.getChildCount(); i++) {
@@ -2446,7 +2441,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       if (isDistinct) {
         numDistinctUDFs++;
       }
-
       boolean isAllColumns = value.getType() == HiveParser.TOK_FUNCTIONSTAR;
       Mode amode = groupByDescModeToUDAFMode(mode, isDistinct);
       GenericUDAFEvaluator genericUDAFEvaluator = null;
@@ -2631,7 +2625,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
 
     List<String> outputKeyColumnNames = new ArrayList<String>();
     List<String> outputValueColumnNames = new ArrayList<String>();
-
     List<ASTNode> grpByExprs = getGroupByForClause(parseInfo, dest);
     for (int i = 0; i < grpByExprs.size(); ++i) {
       ASTNode grpbyExpr = grpByExprs.get(i);
@@ -2640,7 +2633,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       reduceKeys.add(inputExpr);
       if (reduceSinkOutputRowResolver.getExpression(grpbyExpr) == null) {
         outputKeyColumnNames.add(getColumnInternalName(reduceKeys.size() - 1));
-
         String field = Utilities.ReduceField.KEY.toString() + "."
             + getColumnInternalName(reduceKeys.size() - 1);
         ColumnInfo colInfo = new ColumnInfo(field, reduceKeys.get(
@@ -2740,7 +2732,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         OperatorFactory.getAndMakeChild(PlanUtils.getReduceSinkDesc(reduceKeys,
         grpByExprs.size(), reduceValues, distinctColIndices,
         outputKeyColumnNames, outputValueColumnNames, true, -1, numPartitionFields,
-
         numReducers), new RowSchema(reduceSinkOutputRowResolver
         .getColumnInfos()), inputOperatorInfo), reduceSinkOutputRowResolver);
     rsOp.setColumnExprMap(colExprMap);
@@ -2769,7 +2760,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       int numReducers) throws SemanticException {
     RowResolver reduceSinkInputRowResolver2 = opParseCtx.get(
         groupByOperatorInfo).getRowResolver();
-
     RowResolver reduceSinkOutputRowResolver2 = new RowResolver();
     reduceSinkOutputRowResolver2.setIsExprResolver(true);
     Map<String, ExprNodeDesc> colExprMap = new HashMap<String, ExprNodeDesc>();
@@ -2841,7 +2831,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       throws SemanticException {
     RowResolver groupByInputRowResolver2 = opParseCtx.get(
         reduceSinkOperatorInfo2).getRowResolver();
-
     RowResolver groupByOutputRowResolver2 = new RowResolver();
     groupByOutputRowResolver2.setIsExprResolver(true);
     ArrayList<ExprNodeDesc> groupByKeys = new ArrayList<ExprNodeDesc>();
@@ -2940,7 +2929,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
    *           Reducer: iterate/merge (mode = COMPLETE)
    **/
   @SuppressWarnings({"nls"})
-
   private Operator genGroupByPlan1MR(String dest, QB qb, Operator input)
       throws SemanticException {
 
@@ -4155,7 +4143,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
   private ArrayList<ExprNodeDesc> getSortCols(String dest, QB qb, Table tab, TableDesc table_desc, Operator input, boolean convert)
     throws SemanticException {
     RowResolver inputRR = opParseCtx.get(input).getRowResolver();
-
     List<Order> tabSortCols = tab.getSortCols();
     List<FieldSchema> tabCols  = tab.getCols();
 
@@ -4972,6 +4959,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
             mapTable = true;
           }
         }
+
         if (mapTable) {
           if (mapAliases == null) {
             mapAliases = new ArrayList<String>();
@@ -5183,7 +5171,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       throws SemanticException {
     OpParseContext inputCtx = opParseCtx.get(input);
     RowResolver inputRR = inputCtx.getRowResolver();
-
     ArrayList<ColumnInfo> columns = inputRR.getColumnInfos();
     ArrayList<ExprNodeDesc> colList = new ArrayList<ExprNodeDesc>();
     ArrayList<String> columnNames = new ArrayList<String>();
@@ -5213,8 +5200,10 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     if (ks.size() <= 1) {
       return null;
     }
+
     List<ExprNodeDesc> oldList = null;
     List<ASTNode> oldASTList = null;
+
     for (String dest : ks) {
       // If a filter is present, common processing is not possible
       if (qbp.getWhrForClause(dest) != null) {
@@ -5297,6 +5286,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         colExprMap.put(colInfo.getInternalName(), distExpr);
       }
     }
+
     // Go over all the grouping keys and aggregations
     for (String dest : ks) {
 
@@ -6125,7 +6115,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         e.setValue(op);
       }
     }
- }
+  }
 
   /**
    * A helper function that gets all the columns and respective aliases in the
@@ -6197,7 +6187,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
                 partsList = PartitionPruner.prune(topToTable.get(ts),
                     opToPartPruner.get(ts), conf, (String) topOps.keySet()
                     .toArray()[0], prunedPartitions);
-
                 opToPartList.put(ts, partsList);
               }
             } catch (HiveException e) {
@@ -6557,6 +6546,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     this.qb = qb;
     this.ast = ast;
     ASTNode child = ast;
+
     LOG.info("Starting Semantic Analysis");
 
     // analyze create table command
@@ -6591,9 +6581,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     // such as JDBC would prefer instead of the c0, c1 we'll end
     // up with later.
     Operator sinkOp = genPlan(qb);
-    LOG.info("Processing for = " + sinkOp.getName() + "("
-        + ((Operator) sinkOp).getIdentifier() + ")");
-
     resultSchema =
         convertRowSchemaToViewSchema(opParseCtx.get(sinkOp).getRowResolver());
 
@@ -6613,15 +6600,18 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         loadTableWork, loadFileWork, ctx, idToTableNameMap, destTableId, uCtx,
         listMapJoinOpsNoReducer, groupOpToInputTables, prunedPartitions,
         opToSamplePruner);
+
     Optimizer optm = new Optimizer();
     optm.setPctx(pCtx);
     optm.initialize(conf);
     pCtx = optm.optimize();
     init(pCtx);
     qb = pCtx.getQB();
+
     // At this point we have the complete operator tree
     // from which we want to find the reduce operator
     genMapRedTasks(qb);
+
     LOG.info("Completed plan generation");
 
     return;
