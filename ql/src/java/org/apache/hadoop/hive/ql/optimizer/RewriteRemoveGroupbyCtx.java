@@ -52,9 +52,6 @@ public class RewriteRemoveGroupbyCtx implements NodeProcessorCtx {
   private final Hive hiveDb;
   private final ParseContext parseContext;
 
-  //We need the RewriteCanApplyCtx instance to retrieve the mapping from original table to index table in the
-  // getReplaceTableScanProc() method of the RewriteRemoveGroupbyProcFactory
-  //private RewriteCanApplyCtx canApplyCtx;
   private final String indexName;
 
   public List<Operator<? extends Serializable>> getNewParentList() {

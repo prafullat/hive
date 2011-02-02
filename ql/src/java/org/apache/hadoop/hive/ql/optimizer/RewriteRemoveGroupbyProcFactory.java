@@ -239,12 +239,6 @@ public final class RewriteRemoveGroupbyProcFactory {
       HashMap<TableScanOperator, Table>  topToTable =
         removeGbyCtx.getParseContext().getTopToTable();
 
-      //Check if we have a valid index on the original base table for the replacement
-/*      String baseTableName = topToTable.get(scanOperator).getTableName();
-      if( removeGbyCtx.getCanApplyCtx().findBaseTable(baseTableName) == null ) {
-        LOG.debug("No mapping found for original table and index table name");
-      }
-*/
       //construct a new descriptor for the index table scan
       TableScanDesc indexTableScanDesc = new TableScanDesc();
       indexTableScanDesc.setGatherStats(false);

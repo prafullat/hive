@@ -239,7 +239,7 @@ public class RewriteGBUsingIndex implements Transform {
    *
    * @throws SemanticException
    */
-  private void rewriteOriginalQuery() throws SemanticException{
+  private void rewriteOriginalQuery() {
     HashMap<String, Operator<? extends Serializable>> topOpMap = parseContext.getTopOps();
     Iterator<String> tsOpItr = tsOpToProcess.keySet().iterator();
     while(tsOpItr.hasNext()){
@@ -252,13 +252,19 @@ public class RewriteGBUsingIndex implements Transform {
        * method to apply rewrite by removing group by construct operators from the original operator tree.
        * */
       if(canApplyCtx.getBoolVar(hiveConf, RewriteVars.REMOVE_GROUP_BY)){
-        //Context for removing the group by construct operators from the operator tree
-        RewriteRemoveGroupbyCtx removeGbyCtx = RewriteRemoveGroupbyCtx.getInstance(parseContext, hiveDb, indexTableName);
-        removeGbyCtx.invokeRemoveGbyProc(topOp);
+        try {
+          //Context for removing the group by construct operators from the operator tree
+          RewriteRemoveGroupbyCtx removeGbyCtx = RewriteRemoveGroupbyCtx.getInstance(parseContext, hiveDb, indexTableName);
+          removeGbyCtx.invokeRemoveGbyProc(topOp);
+          parseContext = removeGbyCtx.getParseContext();
+          parseContext.setOpParseCtx(removeGbyCtx.getOpc());
+          LOG.info("Finished Group by Remove");
+        } catch (SemanticException e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
+          LOG.info("Exception in rewriting original query while using GB-to-IDX optimizer.");
+        }
         //Getting back new parseContext and new OpParseContext after GBY-RS-GBY is removed
-        parseContext = removeGbyCtx.getParseContext();
-        parseContext.setOpParseCtx(removeGbyCtx.getOpc());
-        LOG.info("Finished Group by Remove");
       }
 
       /* This part of the code checks if the 'SHOULD_APPEND_SUBQUERY' value in RewriteVars enum is set to true.
@@ -267,23 +273,29 @@ public class RewriteGBUsingIndex implements Transform {
        * We first create the subquery context, then copy the RowSchema/RowResolver from subquery to original operator tree.
        * */
       if(canApplyCtx.getBoolVar(hiveConf, RewriteVars.SHOULD_APPEND_SUBQUERY)){
-        //Context for appending a subquery to scan over the index table
-        RewriteIndexSubqueryCtx subqueryCtx = RewriteIndexSubqueryCtx.getInstance(parseContext, indexTableName, baseTableName,
-            canApplyCtx.getSelectColumnsList());
-        subqueryCtx.createSubqueryContext();
+        try {
+          //Context for appending a subquery to scan over the index table
+          RewriteIndexSubqueryCtx subqueryCtx = RewriteIndexSubqueryCtx.getInstance(parseContext, indexTableName, baseTableName,
+              canApplyCtx.getSelectColumnsList());
+          subqueryCtx.createSubqueryContext();
 
-        HashMap<TableScanOperator, Table> subqTopOpMap = subqueryCtx.getSubqueryPctx().getTopToTable();
-        Iterator<TableScanOperator> subqTopOpItr = subqTopOpMap.keySet().iterator();
-        TableScanOperator subqTopOp = null;
-        if(subqTopOpItr.hasNext()){
-          subqTopOp = subqTopOpItr.next();
+          HashMap<TableScanOperator, Table> subqTopOpMap = subqueryCtx.getSubqueryPctx().getTopToTable();
+          Iterator<TableScanOperator> subqTopOpItr = subqTopOpMap.keySet().iterator();
+          TableScanOperator subqTopOp = null;
+          if(subqTopOpItr.hasNext()){
+            subqTopOp = subqTopOpItr.next();
           subqueryCtx.invokeSubquerySelectSchemaProc(subqTopOp);
           LOG.info("Finished Fetching subquery select schema");
           subqueryCtx.invokeFixAllOperatorSchemasProc(topOp);
+          parseContext = subqueryCtx.getParseContext();
         }
 
-        parseContext = subqueryCtx.getParseContext();
         LOG.info("Finished appending subquery");
+        } catch (SemanticException e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
+          LOG.info("Exception in rewriting original query while using GB-to-IDX optimizer.");
+        }
       }
     }
 

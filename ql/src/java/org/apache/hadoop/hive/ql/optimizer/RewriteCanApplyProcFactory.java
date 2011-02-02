@@ -303,6 +303,4 @@ public final class RewriteCanApplyProcFactory {
      return new CheckSelectProc();
    }
 
-
-
 }
