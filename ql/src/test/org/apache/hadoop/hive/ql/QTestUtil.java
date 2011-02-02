@@ -47,7 +47,7 @@ import junit.framework.Test;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.MiniZooKeeperCluster;
+import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hive.cli.CliDriver;
 import org.apache.hadoop.hive.cli.CliSessionState;
 import org.apache.hadoop.hive.conf.HiveConf;
@@ -348,7 +348,7 @@ public class QTestUtil {
       }
     }
     db.setCurrentDatabase(DEFAULT_DATABASE_NAME);
-    
+
     List<String> roleNames = db.getAllRoleNames();
       for (String roleName : roleNames) {
         db.dropRole(roleName);
@@ -405,9 +405,9 @@ public class QTestUtil {
   }
 
   public void createSources() throws Exception {
-    
+
     startSessionState();
-    
+
     // Create a bunch of tables with columns key and value
     LinkedList<String> cols = new LinkedList<String>();
     cols.add("key");
@@ -509,7 +509,7 @@ public class QTestUtil {
     testWarehouse = conf.getVar(HiveConf.ConfVars.METASTOREWAREHOUSE);
     // conf.logVars(System.out);
     // System.out.flush();
-    
+
     SessionState.start(conf);
     db = Hive.get(conf);
     fs = FileSystem.get(conf);
@@ -590,7 +590,7 @@ public class QTestUtil {
 
   private CliSessionState startSessionState()
       throws FileNotFoundException, UnsupportedEncodingException {
-    
+
     HiveConf.setVar(conf, HiveConf.ConfVars.HIVE_AUTHENTICATOR_MANAGER,
         "org.apache.hadoop.hive.ql.security.DummyAuthenticator");
 
