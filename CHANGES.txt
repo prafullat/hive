@@ -166,8 +166,11 @@ Trunk -  Unreleased
     HIVE-1935 set hive.security.authorization.createtable.owner.grants to null
     by default (He Yongqiang via namit)
 
-   HIVE-1936 hive.semantic.analyzer.hook cannot have multiple values
-   (Siying Dong via namit)
+    HIVE-1936 hive.semantic.analyzer.hook cannot have multiple values
+    (Siying Dong via namit)
+
+    HIVE-1956 Provide DFS initialization script for Hive
+    (Bruno Mahe via namit)
 
   IMPROVEMENTS
 
@@ -745,6 +748,16 @@ Trunk -  Unreleased
 
     HIVE-1934 Alter table rename messes the location
     (Paul Yang via namit)
+
+    HIVE-1944 Dynamic partition insert creating different directories for the
+    same partition during merge (Ning Zhang via namit)
+
+    HIVE-1716 Make TestHBaseCliDriver use dynamic ports to avoid conflicts with
+    already-running services (John Sichi via namit)
+
+    HIVE-1951 input16_cc.q is failing in testminimrclidriver
+    (He Yongqiang via namit)
+
   TESTS
 
     HIVE-1464. improve  test query performance
@@ -769,6 +782,12 @@ Trunk -  Unreleased
 
     HIVE-1927. Fix TestHadoop20SAuthBridge failure on Hudson
     (Devaraj Das via jvs)
+
+    HIVE-1942. change the value of hive.input.format to CombineHiveInputFormat for tests
+    (namit via He Yongqiang)
+
+    HIVE-1952. fix some outputs and make some tests deterministic
+    (namit via He Yongqiang)
 
   TASKS
 
