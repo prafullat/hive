@@ -1,3 +1,20 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.hadoop.hive.ql.io;
 
 import java.io.BufferedReader;
@@ -9,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -32,7 +50,7 @@ import org.apache.hadoop.mapred.TextInputFormat;
  */
 @SuppressWarnings("deprecation")
 public class SymlinkTextInputFormat
-    implements InputFormat<LongWritable, Text>, JobConfigurable {
+    implements InputFormat<LongWritable, Text>, JobConfigurable, ContentSummaryInputFormat {
   /**
    * This input split wraps the FileSplit generated from
    * TextInputFormat.getSplits(), while setting the original link file path
@@ -180,5 +198,32 @@ public class SymlinkTextInputFormat
    */
   public void validateInput(JobConf job) throws IOException {
     // do nothing
+  }
+
+  @Override
+  public ContentSummary getContentSummary(Path p, JobConf job)
+      throws IOException {
+    //length, file count, directory count
+    long[] summary = {0, 0, 0};
+    List<Path> targetPaths = new ArrayList<Path>();
+    List<Path> symlinkPaths = new ArrayList<Path>();
+    try {
+      getTargetPathsFromSymlinksDirs(
+          job,
+          new Path[]{p},
+          targetPaths,
+          symlinkPaths);
+    } catch (Exception e) {
+      throw new IOException(
+          "Error parsing symlinks from specified job input path.", e);
+    }
+    for(Path path : targetPaths) {
+      FileSystem fs = path.getFileSystem(job);
+      ContentSummary cs = fs.getContentSummary(path);
+      summary[0] += cs.getLength();
+      summary[1] += cs.getFileCount();
+      summary[2] += cs.getDirectoryCount();
+    }
+    return new ContentSummary(summary[0], summary[1], summary[2]);
   }
 }
