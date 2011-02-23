@@ -1,5 +1,21 @@
 <?xml version="1.0"?>
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
 
 <configuration>
 
@@ -731,6 +747,30 @@
   <name>hive.stats.dbconnectionstring</name>
   <value>jdbc:derby:;databaseName=TempStatsStore;create=true</value>
   <description>The default connection string for the database that stores temporary hive statistics.</description>
+</property>
+
+<property>
+  <name>hive.stats.default.publisher</name>
+  <value></value>
+  <description>The Java class (implementing the StatsPublisher interface) that is used by default if hive.stats.dbclass is not JDBC or HBase.</description>
+</property>
+
+<property>
+  <name>hive.stats.default.aggregator</name>
+  <value></value>
+  <description>The Java class (implementing the StatsAggregator interface) that is used by default if hive.stats.dbclass is not JDBC or HBase.</description>
+</property>
+
+<property>
+  <name>hive.stats.jdbc.timeout</name>
+  <value>30</value>
+  <description>Timeout value (number of seconds) used by JDBC connection and statements.</description>
+</property>
+
+<property>
+  <name>hive.stats.jdbc.atomic</name>
+  <value>false</value>
+  <description>If this is set to true then the metastore stats will be updated only if all types of stats (# of rows, # of files, # of bytes etc.) are available. Otherwise metastore stats are updated in a best effort fashion with whatever are available.</description>
 </property>
 
 <property>
