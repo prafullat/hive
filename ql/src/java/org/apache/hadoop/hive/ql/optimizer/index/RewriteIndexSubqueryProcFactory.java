@@ -1,4 +1,22 @@
-package org.apache.hadoop.hive.ql.optimizer;
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.hadoop.hive.ql.optimizer.index;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -25,6 +43,7 @@ import org.apache.hadoop.hive.ql.lib.Node;
 import org.apache.hadoop.hive.ql.lib.NodeProcessor;
 import org.apache.hadoop.hive.ql.lib.NodeProcessorCtx;
 import org.apache.hadoop.hive.ql.metadata.Table;
+import org.apache.hadoop.hive.ql.optimizer.RewriteParseContextGenerator;
 import org.apache.hadoop.hive.ql.parse.ParseContext;
 import org.apache.hadoop.hive.ql.parse.RowResolver;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
@@ -102,51 +121,51 @@ public final class RewriteIndexSubqueryProcFactory {
 
         /**colExprMap**/
         if(oldColumnExprMap != null){
-          ExprNodeDesc end = oldColumnExprMap.get(internalName); //in case of simple column names
-          if(end instanceof ExprNodeColumnDesc){
-            ExprNodeColumnDesc oldDesc = (ExprNodeColumnDesc)end ;
-            ExprNodeColumnDesc newDesc = (ExprNodeColumnDesc) oldDesc.clone();
-            newDesc.setColumn(internalName);
+          ExprNodeDesc expr = oldColumnExprMap.get(internalName); //in case of simple column names
+          if(expr instanceof ExprNodeColumnDesc){
+            ExprNodeColumnDesc oldColExpr = (ExprNodeColumnDesc)expr ;
+            ExprNodeColumnDesc newColExpr = (ExprNodeColumnDesc) oldColExpr.clone();
+            newColExpr.setColumn(internalName);
             //Populate columnExprMap (required by SelectOperator and FilterOperator in original DAG) in RewriteIndexSubqueryCtx
-            subqueryCtx.getNewColExprMap().put(internalName, newDesc);
-          }else if(end instanceof ExprNodeGenericFuncDesc){ //in case of functions on columns
-            ExprNodeGenericFuncDesc oldDesc = (ExprNodeGenericFuncDesc)end ;
-            ExprNodeGenericFuncDesc newDesc = (ExprNodeGenericFuncDesc) oldDesc.clone();
-            List<ExprNodeDesc> childExprs = newDesc.getChildExprs();
-            List<ExprNodeDesc> newChildExprs = new ArrayList<ExprNodeDesc>();
-            for (ExprNodeDesc childEnd : childExprs) { //we have the list of columns here
-              if(childEnd instanceof ExprNodeColumnDesc){
-                ((ExprNodeColumnDesc) childEnd).setColumn(internalName);
-                newChildExprs.add(childEnd);
+            subqueryCtx.getNewColExprMap().put(internalName, newColExpr);
+          }else if(expr instanceof ExprNodeGenericFuncDesc){ //in case of functions on columns
+            ExprNodeGenericFuncDesc oldFuncExpr = (ExprNodeGenericFuncDesc)expr ;
+            ExprNodeGenericFuncDesc newFuncExpr = (ExprNodeGenericFuncDesc) oldFuncExpr.clone();
+            List<ExprNodeDesc> childExprList = newFuncExpr.getChildExprs();
+            List<ExprNodeDesc> newChildExprList = new ArrayList<ExprNodeDesc>();
+            for (ExprNodeDesc childExpr : childExprList) { //we have the list of columns here
+              if(childExpr instanceof ExprNodeColumnDesc){
+                ((ExprNodeColumnDesc) childExpr).setColumn(internalName);
+                newChildExprList.add(childExpr);
               }
-              newDesc.setChildExprs(newChildExprs);
+              newFuncExpr.setChildExprs(newChildExprList);
               //Populate columnExprMap (required by SelectOperator and FilterOperator in original DAG) in RewriteIndexSubqueryCtx
-              subqueryCtx.getNewColExprMap().put(internalName, newDesc);
+              subqueryCtx.getNewColExprMap().put(internalName, newFuncExpr);
             }
           }
         }
 
         /**colList**/
         if(oldColList != null){
-          ExprNodeDesc exprNodeDesc = oldColList.get(i);
-          if(exprNodeDesc instanceof ExprNodeColumnDesc){//in case of simple column names
-            ExprNodeColumnDesc newDesc = (ExprNodeColumnDesc) exprNodeDesc.clone();
-            newDesc.setColumn(internalName);
+          ExprNodeDesc expr = oldColList.get(i);
+          if(expr instanceof ExprNodeColumnDesc){//in case of simple column names
+            ExprNodeColumnDesc newColExpr = (ExprNodeColumnDesc) expr.clone();
+            newColExpr.setColumn(internalName);
             //Populate colList (required by SelectOperators in original DAG) in RewriteIndexSubqueryCtx
-            subqueryCtx.getNewColList().add(newDesc);
-          }else if(exprNodeDesc instanceof ExprNodeGenericFuncDesc){//in case of functions on columns
-            ExprNodeGenericFuncDesc oldDesc = (ExprNodeGenericFuncDesc)exprNodeDesc ;
-            ExprNodeGenericFuncDesc newDesc = (ExprNodeGenericFuncDesc) oldDesc.clone();
-            List<ExprNodeDesc> childExprs = newDesc.getChildExprs();
-            List<ExprNodeDesc> newChildExprs = new ArrayList<ExprNodeDesc>();
-            for (ExprNodeDesc childEnd : childExprs) {//we have the list of columns here
-              if(childEnd instanceof ExprNodeColumnDesc){
-                ((ExprNodeColumnDesc) childEnd).setColumn(internalName);
-                newChildExprs.add(childEnd);
+            subqueryCtx.getNewColList().add(newColExpr);
+          }else if(expr instanceof ExprNodeGenericFuncDesc){//in case of functions on columns
+            ExprNodeGenericFuncDesc oldFuncExpr = (ExprNodeGenericFuncDesc)expr ;
+            ExprNodeGenericFuncDesc newFuncExpr = (ExprNodeGenericFuncDesc) oldFuncExpr.clone();
+            List<ExprNodeDesc> childExprList = newFuncExpr.getChildExprs();
+            List<ExprNodeDesc> newChildExprList = new ArrayList<ExprNodeDesc>();
+            for (ExprNodeDesc childExpr : childExprList) {//we have the list of columns here
+              if(childExpr instanceof ExprNodeColumnDesc){
+                ((ExprNodeColumnDesc) childExpr).setColumn(internalName);
+                newChildExprList.add(childExpr);
               }
-              newDesc.setChildExprs(newChildExprs);
+              newFuncExpr.setChildExprs(newChildExprList);
               //Populate colList (required by SelectOperators in original DAG) in RewriteIndexSubqueryCtx
-              subqueryCtx.getNewColList().add(newDesc);
+              subqueryCtx.getNewColList().add(newFuncExpr);
             }
           }
         }
@@ -331,9 +350,9 @@ public final class RewriteIndexSubqueryProcFactory {
         /**colList**/
         Set<String> internalNamesList = operator.getColumnExprMap().keySet();
         for (String internal : internalNamesList) {
-          ExprNodeDesc end = operator.getColumnExprMap().get(internal).clone();
-          if(end instanceof ExprNodeGenericFuncDesc){
-            List<ExprNodeDesc> colExprs = ((ExprNodeGenericFuncDesc)end).getChildExprs();
+          ExprNodeDesc expr = operator.getColumnExprMap().get(internal).clone();
+          if(expr instanceof ExprNodeGenericFuncDesc){
+            List<ExprNodeDesc> colExprs = ((ExprNodeGenericFuncDesc)expr).getChildExprs();
             for (ExprNodeDesc colExpr : colExprs) {
               if(colExpr instanceof ExprNodeColumnDesc){
                 if(!subqueryCtx.getNewSelColList().contains(colExpr)){
@@ -348,9 +367,9 @@ public final class RewriteIndexSubqueryProcFactory {
               }
             }
 
-          }else if(end instanceof ExprNodeColumnDesc){
-            if(!subqueryCtx.getNewSelColList().contains(end)){
-              subqueryCtx.getNewSelColList().add(end);
+          }else if(expr instanceof ExprNodeColumnDesc){
+            if(!subqueryCtx.getNewSelColList().contains(expr)){
+              subqueryCtx.getNewSelColList().add(expr);
             }
           }
         }
@@ -431,17 +450,17 @@ public final class RewriteIndexSubqueryProcFactory {
             subqueryCtx.setEval(aggregationDesc.getGenericUDAFEvaluator());
             ArrayList<ExprNodeDesc> paraList = aggregationDesc.getParameters();
             for (int i=0; i< paraList.size(); i++) {
-              ExprNodeDesc exprNodeDesc = paraList.get(i);
-              if(exprNodeDesc instanceof ExprNodeColumnDesc){
-                ExprNodeColumnDesc encd = (ExprNodeColumnDesc)exprNodeDesc;
+              ExprNodeDesc expr = paraList.get(i);
+              if(expr instanceof ExprNodeColumnDesc){
+                ExprNodeColumnDesc colExpr = (ExprNodeColumnDesc)expr;
                 String col = "cnt";
                 if(subqueryCtx.getAliasToInternal().containsKey(col)){
-                  encd.setColumn(subqueryCtx.getAliasToInternal().get(col));
+                  colExpr.setColumn(subqueryCtx.getAliasToInternal().get(col));
                 }
-                encd.setTabAlias(null);
-                exprNodeDesc = encd;
+                colExpr.setTabAlias(null);
+                expr = colExpr;
               }
-              paraList.set(i, exprNodeDesc);
+              paraList.set(i, expr);
             }
             oldAggrList.add(aggregationDesc);
           }
@@ -453,27 +472,27 @@ public final class RewriteIndexSubqueryProcFactory {
         Map<String, ExprNodeDesc> oldGbyColExprMap = operator.getColumnExprMap();
         Set<String> internalNameSet = oldGbyColExprMap.keySet();
         for (String internal : internalNameSet) {
-          ExprNodeDesc exprNodeDesc  = oldGbyColExprMap.get(internal).clone();
-          if(exprNodeDesc instanceof ExprNodeColumnDesc){
-            ExprNodeColumnDesc encd = (ExprNodeColumnDesc)exprNodeDesc;
-            String col = encd.getColumn();
+          ExprNodeDesc expr  = oldGbyColExprMap.get(internal).clone();
+          if(expr instanceof ExprNodeColumnDesc){
+            ExprNodeColumnDesc colExpr = (ExprNodeColumnDesc)expr;
+            String col = colExpr.getColumn();
             if(subqueryCtx.getSelectColumnNames().contains(col)){
-              encd.setColumn(subqueryCtx.getAliasToInternal().get(col));
+              colExpr.setColumn(subqueryCtx.getAliasToInternal().get(col));
             }
-          }else if(exprNodeDesc instanceof ExprNodeGenericFuncDesc){
-            List<ExprNodeDesc> colExprs = ((ExprNodeGenericFuncDesc)exprNodeDesc).getChildExprs();
-            for (ExprNodeDesc colExpr : colExprs) {
-              if(colExpr instanceof ExprNodeColumnDesc){
-                ExprNodeColumnDesc encd = (ExprNodeColumnDesc)colExpr;
-                String col = encd.getColumn();
+          }else if(expr instanceof ExprNodeGenericFuncDesc){
+            List<ExprNodeDesc> childExprList = ((ExprNodeGenericFuncDesc)expr).getChildExprs();
+            for (ExprNodeDesc childExpr : childExprList) {
+              if(childExpr instanceof ExprNodeColumnDesc){
+                ExprNodeColumnDesc colExpr = (ExprNodeColumnDesc)childExpr;
+                String col = colExpr.getColumn();
                 if(subqueryCtx.getSelectColumnNames().contains(col)){
-                  encd.setColumn(subqueryCtx.getAliasToInternal().get(col));
+                  colExpr.setColumn(subqueryCtx.getAliasToInternal().get(col));
                 }
               }
             }
 
           }
-          newGbyColExprMap.put(internal, exprNodeDesc);
+          newGbyColExprMap.put(internal, expr);
         }
 
         //Construct the new group-by keys to get rid of the current internal names and replace them with new internal names
@@ -481,29 +500,29 @@ public final class RewriteIndexSubqueryProcFactory {
         ArrayList<ExprNodeDesc> newGbyKeys = new ArrayList<ExprNodeDesc>();
         ArrayList<ExprNodeDesc> oldGbyKeys = oldConf.getKeys();
         for (int i =0; i< oldGbyKeys.size(); i++) {
-          ExprNodeDesc exprNodeDesc = oldGbyKeys.get(i).clone();
-          if(exprNodeDesc instanceof ExprNodeColumnDesc){
-            ExprNodeColumnDesc encd = (ExprNodeColumnDesc)exprNodeDesc;
-            String col = encd.getColumn();
+          ExprNodeDesc expr = oldGbyKeys.get(i).clone();
+          if(expr instanceof ExprNodeColumnDesc){
+            ExprNodeColumnDesc colExpr = (ExprNodeColumnDesc)expr;
+            String col = colExpr.getColumn();
             if(subqueryCtx.getSelectColumnNames().contains(col)){
-              encd.setColumn(subqueryCtx.getAliasToInternal().get(col));
+              colExpr.setColumn(subqueryCtx.getAliasToInternal().get(col));
             }
-            exprNodeDesc = encd;
-          }else if(exprNodeDesc instanceof ExprNodeGenericFuncDesc){
-            ExprNodeGenericFuncDesc engfd = (ExprNodeGenericFuncDesc)exprNodeDesc;
-            List<ExprNodeDesc> colExprs = engfd.getChildExprs();
-            for (ExprNodeDesc colExpr : colExprs) {
-              if(colExpr instanceof ExprNodeColumnDesc){
-                ExprNodeColumnDesc encd = (ExprNodeColumnDesc)colExpr;
-                String col = encd.getColumn();
+            expr = colExpr;
+          }else if(expr instanceof ExprNodeGenericFuncDesc){
+            ExprNodeGenericFuncDesc funcExpr = (ExprNodeGenericFuncDesc)expr;
+            List<ExprNodeDesc> childExprList = funcExpr.getChildExprs();
+            for (ExprNodeDesc childExpr : childExprList) {
+              if(childExpr instanceof ExprNodeColumnDesc){
+                ExprNodeColumnDesc colExpr = (ExprNodeColumnDesc)childExpr;
+                String col = colExpr.getColumn();
                 if(subqueryCtx.getSelectColumnNames().contains(col)){
-                  encd.setColumn(subqueryCtx.getAliasToInternal().get(col));
+                  colExpr.setColumn(subqueryCtx.getAliasToInternal().get(col));
                 }
 
               }
             }
           }
-          newGbyKeys.add(exprNodeDesc);
+          newGbyKeys.add(expr);
         }
 
         //Construct the new RowSchema. We do not need a alias for the new internalNames
@@ -564,9 +583,9 @@ public final class RewriteIndexSubqueryProcFactory {
 
       //Set correct internalNames
       FilterDesc conf = operator.getConf();
-      ExprNodeDesc exprNodeDesc = conf.getPredicate();
-      setFilterPredicateCol(exprNodeDesc);
-      conf.setPredicate(exprNodeDesc);
+      ExprNodeDesc expr = conf.getPredicate();
+      setFilterPredicateCol(expr);
+      conf.setPredicate(expr);
       return null;
     }
   }
@@ -575,22 +594,22 @@ public final class RewriteIndexSubqueryProcFactory {
   /**
    * This method is recursively called whenever we have our expression node descriptor to be an instance of the ExprNodeGenericFuncDesc.
    * We exit the recursion when we find an instance of ExprNodeColumnDesc and set its column name to internal name
-   * @param exprNodeDesc
+   * @param expr
    */
-  private static void setFilterPredicateCol(ExprNodeDesc exprNodeDesc){
-    if(exprNodeDesc instanceof ExprNodeColumnDesc){
-      ExprNodeColumnDesc encd = (ExprNodeColumnDesc)exprNodeDesc;
-      String col = encd.getColumn();
+  private static void setFilterPredicateCol(ExprNodeDesc expr){
+    if(expr instanceof ExprNodeColumnDesc){
+      ExprNodeColumnDesc colExpr = (ExprNodeColumnDesc)expr;
+      String col = colExpr.getColumn();
       if(subqueryCtx.getSelectColumnNames().contains(col)){
-        encd.setColumn(subqueryCtx.getAliasToInternal().get(col));
+        colExpr.setColumn(subqueryCtx.getAliasToInternal().get(col));
       }
-      exprNodeDesc = encd;
-    }else if(exprNodeDesc instanceof ExprNodeGenericFuncDesc){
-      ExprNodeGenericFuncDesc engfd = (ExprNodeGenericFuncDesc)exprNodeDesc;
-      List<ExprNodeDesc> colExprs = engfd.getChildExprs();
-      for (ExprNodeDesc colExpr : colExprs) {
+      expr = colExpr;
+    }else if(expr instanceof ExprNodeGenericFuncDesc){
+      ExprNodeGenericFuncDesc funcExpr = (ExprNodeGenericFuncDesc)expr;
+      List<ExprNodeDesc> childExprList = funcExpr.getChildExprs();
+      for (ExprNodeDesc childExpr : childExprList) {
         //continue until you find an instance of the ExprNodeColumnDesc
-        setFilterPredicateCol(colExpr);
+        setFilterPredicateCol(childExpr);
       }
     }
 

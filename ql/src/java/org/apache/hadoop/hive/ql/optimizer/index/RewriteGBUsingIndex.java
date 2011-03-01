@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hive.ql.optimizer;
+package org.apache.hadoop.hive.ql.optimizer.index;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -40,7 +40,9 @@ import org.apache.hadoop.hive.ql.exec.TableScanOperator;
 import org.apache.hadoop.hive.ql.metadata.Hive;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.metadata.Table;
-import org.apache.hadoop.hive.ql.optimizer.RewriteCanApplyCtx.RewriteVars;
+import org.apache.hadoop.hive.ql.optimizer.RewriteParseContextGenerator;
+import org.apache.hadoop.hive.ql.optimizer.Transform;
+import org.apache.hadoop.hive.ql.optimizer.index.RewriteCanApplyCtx.RewriteVars;
 import org.apache.hadoop.hive.ql.parse.ParseContext;
 import org.apache.hadoop.hive.ql.parse.QBParseInfo;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
@@ -197,6 +199,8 @@ public class RewriteGBUsingIndex implements Transform {
             LOG.info("No Valid Index Found to apply Rewrite, " +
                 "skipping " + getName() + " optimization" );
           } else if(indexTableMap.size() > 1){
+            //TODO
+            // we need to implement a logic to choose a single index table amongst all valid indexes to apply rewrite
             LOG.info("Table has multiple valid index tables to apply rewrite.");
           }else{
             canApplyCtx.setBaseTableName(baseTableName);
@@ -251,7 +255,7 @@ public class RewriteGBUsingIndex implements Transform {
        * If yes, it sets the environment for the RewriteRemoveGroupbyCtx context and invokes
        * method to apply rewrite by removing group by construct operators from the original operator tree.
        * */
-      if(canApplyCtx.getBoolVar(hiveConf, RewriteVars.REMOVE_GROUP_BY)){
+      if(canApplyCtx.getBoolVar(RewriteVars.REMOVE_GROUP_BY)){
         try {
           //Context for removing the group by construct operators from the operator tree
           RewriteRemoveGroupbyCtx removeGbyCtx = RewriteRemoveGroupbyCtx.getInstance(parseContext, hiveDb, indexTableName);
@@ -272,7 +276,7 @@ public class RewriteGBUsingIndex implements Transform {
        * method to append a new subquery that scans over the index table rather than the original table.
        * We first create the subquery context, then copy the RowSchema/RowResolver from subquery to original operator tree.
        * */
-      if(canApplyCtx.getBoolVar(hiveConf, RewriteVars.SHOULD_APPEND_SUBQUERY)){
+      if(canApplyCtx.getBoolVar(RewriteVars.SHOULD_APPEND_SUBQUERY)){
         try {
           //Context for appending a subquery to scan over the index table
           RewriteIndexSubqueryCtx subqueryCtx = RewriteIndexSubqueryCtx.getInstance(parseContext, indexTableName, baseTableName,
@@ -292,9 +296,7 @@ public class RewriteGBUsingIndex implements Transform {
 
         LOG.info("Finished appending subquery");
         } catch (SemanticException e) {
-          // TODO Auto-generated catch block
-          e.printStackTrace();
-          LOG.info("Exception in rewriting original query while using GB-to-IDX optimizer.");
+          LOG.info("Exception in rewriting original query while using GB-to-IDX optimizer.", e);
         }
       }
     }
@@ -313,52 +315,52 @@ public class RewriteGBUsingIndex implements Transform {
    * @return
    */
   boolean checkIfAllRewriteCriteriaIsMet(RewriteCanApplyCtx canApplyCtx){
-    if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.QUERY_HAS_DISTRIBUTE_BY)){
+    if (canApplyCtx.getBoolVar(RewriteVars.QUERY_HAS_DISTRIBUTE_BY)){
       LOG.info("Query has distributeby clause, " +
           "that is not supported with " + getName() + " optimization" );
       return false;
     }
-    if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.QUERY_HAS_SORT_BY)){
+    if (canApplyCtx.getBoolVar(RewriteVars.QUERY_HAS_SORT_BY)){
       LOG.info("Query has sortby clause, " +
           "that is not supported with " + getName() + " optimization" );
       return false;
     }
-    if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.QUERY_HAS_ORDER_BY)){
+    if (canApplyCtx.getBoolVar(RewriteVars.QUERY_HAS_ORDER_BY)){
       LOG.info("Query has orderby clause, " +
           "that is not supported with " + getName() + " optimization" );
       return false;
     }
-    if (canApplyCtx.getIntVar(hiveConf, RewriteVars.AGG_FUNC_CNT) > 1 ){
+    if (canApplyCtx.getIntVar(RewriteVars.AGG_FUNC_CNT) > 1 ){
       LOG.info("More than 1 agg funcs: " +
           "Not supported by " + getName() + " optimization" );
       return false;
     }
-    if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.AGG_FUNC_IS_NOT_COUNT)){
+    if (canApplyCtx.getBoolVar(RewriteVars.AGG_FUNC_IS_NOT_COUNT)){
       LOG.info("Agg func other than count is " +
           "not supported by " + getName() + " optimization" );
       return false;
     }
-    if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.COUNT_ON_ALL_COLS)){
+    if (canApplyCtx.getBoolVar(RewriteVars.COUNT_ON_ALL_COLS)){
       LOG.info("Currently count function needs group by on key columns. This is a count(*) case., "
           + "Cannot apply this " + getName() + " optimization" );
       return false;
     }
-    if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.AGG_FUNC_COLS_FETCH_EXCEPTION)){
+    if (canApplyCtx.getBoolVar(RewriteVars.AGG_FUNC_COLS_FETCH_EXCEPTION)){
       LOG.info("Got exception while locating child col refs " +
           "of agg func, skipping " + getName() + " optimization" );
       return false;
     }
-    if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.WHR_CLAUSE_COLS_FETCH_EXCEPTION)){
+    if (canApplyCtx.getBoolVar(RewriteVars.WHR_CLAUSE_COLS_FETCH_EXCEPTION)){
       LOG.info("Got exception while locating child col refs for where clause, "
           + "skipping " + getName() + " optimization" );
       return false;
     }
-    if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.SEL_CLAUSE_COLS_FETCH_EXCEPTION)){
+    if (canApplyCtx.getBoolVar(RewriteVars.SEL_CLAUSE_COLS_FETCH_EXCEPTION)){
       LOG.info("Got exception while locating child col refs for select list, "
           + "skipping " + getName() + " optimization" );
       return false;
     }
-    if (canApplyCtx.getBoolVar(hiveConf, RewriteVars.GBY_KEYS_FETCH_EXCEPTION)){
+    if (canApplyCtx.getBoolVar(RewriteVars.GBY_KEYS_FETCH_EXCEPTION)){
       LOG.info("Got exception while locating child col refs for GroupBy key, "
           + "skipping " + getName() + " optimization" );
       return false;
@@ -402,19 +404,14 @@ public class RewriteGBUsingIndex implements Transform {
    List<Index> indexesOnTable = null;
 
    try {
-     short maxNumOfIndexes = 1024; // XTODO: Hardcoding. Need to know if
-     // there's a limit (and what is it) on
-     // # of indexes that can be created
-     // on a table. If not, why is this param
-     // required by metastore APIs?
+     //this limit parameter is required by metastore API's and acts as a check
+     // to avoid huge payloads coming back from thrift
+     short maxNumOfIndexes = 1024;
      indexesOnTable = baseTableMetaData.getAllIndexes(maxNumOfIndexes);
 
    } catch (HiveException e) {
-     return matchingIndexes; // Return empty list (trouble doing rewrite
-     // shouldn't stop regular query execution,
-     // if there's serious problem with metadata
-     // or anything else, it's assumed to be
-     // checked & handled in core hive code itself.
+     LOG.info("Could not retrieve indexes on the base table. Check logs for error.", e);
+     return null;
    }
 
    for (int i = 0; i < indexesOnTable.size(); i++) {

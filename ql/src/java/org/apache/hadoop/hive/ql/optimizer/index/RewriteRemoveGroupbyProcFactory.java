@@ -1,4 +1,22 @@
-package org.apache.hadoop.hive.ql.optimizer;
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.hadoop.hive.ql.optimizer.index;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -134,16 +152,16 @@ public final class RewriteRemoveGroupbyProcFactory {
           removeGbyCtx.getParseContext().getOpParseCtx();
         Operator<? extends Serializable> tsOp = removeGbyCtx.getTopOperator(operator);
         OpParseContext tsCtx = opCtxMap.get(tsOp);
-        ExprNodeDesc exprNode = ((SemanticAnalyzer) sem).genExprNodeDesc(funcNode, tsCtx.getRowResolver());
+        ExprNodeDesc expr1 = ((SemanticAnalyzer) sem).genExprNodeDesc(funcNode, tsCtx.getRowResolver());
 
         //We need the name of the GenericUDF function to correct the rowSchema
         String funcName = "";
 
-        if(exprNode instanceof ExprNodeGenericFuncDesc){
-          List<ExprNodeDesc> exprList = ((ExprNodeGenericFuncDesc) exprNode).getChildExprs();
-          for (ExprNodeDesc exprNodeDesc : exprList) {
-            if(exprNodeDesc instanceof ExprNodeColumnDesc){
-              funcName = ((ExprNodeColumnDesc) exprNodeDesc).getColumn();
+        if(expr1 instanceof ExprNodeGenericFuncDesc){
+          List<ExprNodeDesc> childExprList = ((ExprNodeGenericFuncDesc) expr1).getChildExprs();
+          for (ExprNodeDesc childExpr : childExprList) {
+            if(childExpr instanceof ExprNodeColumnDesc){
+              funcName = ((ExprNodeColumnDesc) childExpr).getColumn();
             }
           }
         }
@@ -175,18 +193,18 @@ public final class RewriteRemoveGroupbyProcFactory {
         ArrayList<ExprNodeDesc> colList = selDesc.getColList();
         int i = 0;
         for (; i< colList.size(); i++) {
-          ExprNodeDesc exprNodeDesc = colList.get(i);
-          if(exprNodeDesc instanceof ExprNodeColumnDesc){
-            String internal = ((ExprNodeColumnDesc)exprNodeDesc).getColumn();
+          ExprNodeDesc expr2 = colList.get(i);
+          if(expr2 instanceof ExprNodeColumnDesc){
+            String internal = ((ExprNodeColumnDesc)expr2).getColumn();
             //get rid of the internal column names like _col0, _col1 and replace them with their actual names i.e. alias
             if(internalToAlias.get(internal) != null){
-              ((ExprNodeColumnDesc) exprNodeDesc).setColumn(internalToAlias.get(internal));
+              ((ExprNodeColumnDesc) expr2).setColumn(internalToAlias.get(internal));
             }
             //however, if the alias itself is the internal name of the function argument, say _c1, we need to replace the
             //ExprNodeColumnDesc instance with the ExprNodeGenericFuncDesc (i.e. exprNode here)
             //this replaces the count(literal) or count(index_key) function with size(_offsets)
-            if(((ExprNodeColumnDesc) exprNodeDesc).getColumn().startsWith("_c")){
-              colList.set(i, exprNode);
+            if(((ExprNodeColumnDesc) expr2).getColumn().startsWith("_c")){
+              colList.set(i, expr1);
             }
           }
         }
@@ -198,20 +216,20 @@ public final class RewriteRemoveGroupbyProcFactory {
         Map<String, ExprNodeDesc> newColExprMap = new LinkedHashMap<String, ExprNodeDesc>();
         Set<String> internalNamesList = origColExprMap.keySet();
         for (String internal : internalNamesList) {
-          ExprNodeDesc end = origColExprMap.get(internal).clone();
-          if(end instanceof ExprNodeColumnDesc){
+          ExprNodeDesc internalExpr = origColExprMap.get(internal).clone();
+          if(internalExpr instanceof ExprNodeColumnDesc){
             //get rid of the internal column names like _col0, _col1 and replace them with their actual names i.e. alias
             if(internalToAlias.get(internal) != null){
-              ((ExprNodeColumnDesc) end).setColumn(internalToAlias.get(internal));
+              ((ExprNodeColumnDesc) internalExpr).setColumn(internalToAlias.get(internal));
             }
             //this replaces the count(literal) or count(index_key) function with size(_offsets)
-            if(((ExprNodeColumnDesc) end).getColumn().startsWith("_c")){
-              newColExprMap.put(internal, exprNode);
+            if(((ExprNodeColumnDesc) internalExpr).getColumn().startsWith("_c")){
+              newColExprMap.put(internal, expr1);
             }else{
-              newColExprMap.put(internal, end);
+              newColExprMap.put(internal, internalExpr);
             }
           }else{
-            newColExprMap.put(internal, end);
+            newColExprMap.put(internal, internalExpr);
           }
         }
         operator.setColumnExprMap(newColExprMap);

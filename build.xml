@@ -52,7 +52,7 @@
   <property name="checkstyle.conf.dir" location="${hive.root}/checkstyle"/>
   <property name="checkstyle.build.dir" location="${build.dir.hive}/checkstyle"/>
   <property name="md5sum.format" value="{0}  {1}"/>
-<!--  <property name="is-offline" value="true"/> -->
+  <property name="is-offline" value="true"/> 
 
   <condition property="is-offline" value="true" else="false">
     <isset property="offline"/>

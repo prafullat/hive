@@ -1,4 +1,22 @@
-package org.apache.hadoop.hive.ql.optimizer;
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.hadoop.hive.ql.optimizer.index;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -11,7 +29,6 @@ import java.util.Stack;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.api.Index;
 import org.apache.hadoop.hive.ql.exec.Operator;
@@ -67,23 +84,23 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
     ;
 
     public final String varname;
-    public final int defaultIntVal;
-    public final boolean defaultBoolVal;
+    public int intValue;
+    public boolean boolValue;
     public final Class<?> valClass;
 
     //Constructors for int and boolean values
     RewriteVars(String varname, int defaultIntVal) {
       this.varname = varname;
       this.valClass = Integer.class;
-      this.defaultIntVal = defaultIntVal;
-      this.defaultBoolVal = false;
+      this.intValue = defaultIntVal;
+      this.boolValue = false;
     }
 
     RewriteVars(String varname, boolean defaultBoolVal) {
       this.varname = varname;
       this.valClass = Boolean.class;
-      this.defaultIntVal = -1;
-      this.defaultBoolVal = defaultBoolVal;
+      this.intValue = -1;
+      this.boolValue = defaultBoolVal;
     }
 
     @Override
@@ -98,44 +115,44 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
   /*
    * Methods to set and retrieve the RewriteVars enum variables
    * */
-  public int getIntVar(Configuration conf, RewriteVars var) {
+  public int getIntVar(RewriteVars var) {
     assert (var.valClass == Integer.class);
-    return conf.getInt(var.varname, var.defaultIntVal);
+    return var.intValue;
   }
 
-  public void setIntVar(Configuration conf, RewriteVars var, int val) {
+  public void setIntVar(RewriteVars var, int val) {
     assert (var.valClass == Integer.class);
-    conf.setInt(var.varname, val);
+    var.intValue = val;
   }
 
-  public boolean getBoolVar(Configuration conf, RewriteVars var) {
+  public boolean getBoolVar(RewriteVars var) {
     assert (var.valClass == Boolean.class);
-    return conf.getBoolean(var.varname, var.defaultBoolVal);
+    return var.boolValue;
   }
 
-  public void setBoolVar(Configuration conf, RewriteVars var, boolean val) {
+  public void setBoolVar(RewriteVars var, boolean val) {
     assert (var.valClass == Boolean.class);
-    conf.setBoolean(var.varname, val);
+    var.boolValue = val;
   }
 
   public void initRewriteVars(){
-    setIntVar(hiveConf, RewriteVars.AGG_FUNC_CNT,0);
-    setIntVar(hiveConf, RewriteVars.GBY_KEY_CNT,0);
-    setBoolVar(hiveConf, RewriteVars.QUERY_HAS_SORT_BY, false);
-    setBoolVar(hiveConf, RewriteVars.QUERY_HAS_ORDER_BY, false);
-    setBoolVar(hiveConf, RewriteVars.QUERY_HAS_DISTRIBUTE_BY, false);
-    setBoolVar(hiveConf, RewriteVars.QUERY_HAS_GROUP_BY, false);
-    setBoolVar(hiveConf, RewriteVars.QUERY_HAS_DISTINCT, false);
-    setBoolVar(hiveConf, RewriteVars.AGG_FUNC_IS_NOT_COUNT, false);
-    setBoolVar(hiveConf, RewriteVars.AGG_FUNC_COLS_FETCH_EXCEPTION, false);
-    setBoolVar(hiveConf, RewriteVars.WHR_CLAUSE_COLS_FETCH_EXCEPTION, false);
-    setBoolVar(hiveConf, RewriteVars.SEL_CLAUSE_COLS_FETCH_EXCEPTION, false);
-    setBoolVar(hiveConf, RewriteVars.GBY_KEYS_FETCH_EXCEPTION, false);
-    setBoolVar(hiveConf, RewriteVars.COUNT_ON_ALL_COLS, false);
-    setBoolVar(hiveConf, RewriteVars.QUERY_HAS_GENERICUDF_ON_GROUPBY_KEY, false);
-    setBoolVar(hiveConf, RewriteVars.QUERY_HAS_MULTIPLE_TABLES, false);
-    setBoolVar(hiveConf, RewriteVars.SHOULD_APPEND_SUBQUERY, false);
-    setBoolVar(hiveConf, RewriteVars.REMOVE_GROUP_BY, false);
+    setIntVar(RewriteVars.AGG_FUNC_CNT,0);
+    setIntVar(RewriteVars.GBY_KEY_CNT,0);
+    setBoolVar(RewriteVars.QUERY_HAS_SORT_BY, false);
+    setBoolVar(RewriteVars.QUERY_HAS_ORDER_BY, false);
+    setBoolVar(RewriteVars.QUERY_HAS_DISTRIBUTE_BY, false);
+    setBoolVar(RewriteVars.QUERY_HAS_GROUP_BY, false);
+    setBoolVar(RewriteVars.QUERY_HAS_DISTINCT, false);
+    setBoolVar(RewriteVars.AGG_FUNC_IS_NOT_COUNT, false);
+    setBoolVar(RewriteVars.AGG_FUNC_COLS_FETCH_EXCEPTION, false);
+    setBoolVar(RewriteVars.WHR_CLAUSE_COLS_FETCH_EXCEPTION, false);
+    setBoolVar(RewriteVars.SEL_CLAUSE_COLS_FETCH_EXCEPTION, false);
+    setBoolVar(RewriteVars.GBY_KEYS_FETCH_EXCEPTION, false);
+    setBoolVar(RewriteVars.COUNT_ON_ALL_COLS, false);
+    setBoolVar(RewriteVars.QUERY_HAS_GENERICUDF_ON_GROUPBY_KEY, false);
+    setBoolVar(RewriteVars.QUERY_HAS_MULTIPLE_TABLES, false);
+    setBoolVar(RewriteVars.SHOULD_APPEND_SUBQUERY, false);
+    setBoolVar(RewriteVars.REMOVE_GROUP_BY, false);
   }
 
 
@@ -248,8 +265,7 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
     try {
       ogw.startWalking(topNodes, null);
     } catch (SemanticException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
+      LOG.info("Exception in walking operator tree. Rewrite variables not populated", e);
     }
 
   }
@@ -355,8 +371,8 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
       // 3. GROUP BY idxKey, idxKey
       //     FUTURE: GB Key has dup idxKeyCols. Develop a rewrite to eliminate the dup key cols
       //            from GB key.
-      if (getBoolVar(hiveConf, RewriteVars.QUERY_HAS_GROUP_BY) &&
-          indexKeyNames.size() < getIntVar(hiveConf, RewriteVars.GBY_KEY_CNT)) {
+      if (getBoolVar(RewriteVars.QUERY_HAS_GROUP_BY) &&
+          indexKeyNames.size() < getIntVar(RewriteVars.GBY_KEY_CNT)) {
         LOG.info("Group by key has some non-indexed columns, GroupBy will be"
             + " preserved by rewrite optimization" );
         removeGroupBy = false;
@@ -367,14 +383,14 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
     //which would be used by transformation procedure as inputs.
 
     //sub-query is needed only in case of optimizecount and complex gb keys?
-    if(getBoolVar(hiveConf, RewriteVars.QUERY_HAS_GENERICUDF_ON_GROUPBY_KEY) == false
+    if(getBoolVar(RewriteVars.QUERY_HAS_GENERICUDF_ON_GROUPBY_KEY) == false
         && !(optimizeCount == true && removeGroupBy == false) ) {
-      setBoolVar(hiveConf, RewriteVars.REMOVE_GROUP_BY, removeGroupBy);
+      setBoolVar(RewriteVars.REMOVE_GROUP_BY, removeGroupBy);
       addTable(baseTableName, index.getIndexTableName());
-    }else if(getBoolVar(hiveConf, RewriteVars.QUERY_HAS_GENERICUDF_ON_GROUPBY_KEY) == true &&
-        getIntVar(hiveConf, RewriteVars.AGG_FUNC_CNT) == 1 &&
-        getBoolVar(hiveConf, RewriteVars.AGG_FUNC_IS_NOT_COUNT) == false){
-      setBoolVar(hiveConf, RewriteVars.SHOULD_APPEND_SUBQUERY, true);
+    }else if(getBoolVar(RewriteVars.QUERY_HAS_GENERICUDF_ON_GROUPBY_KEY) == true &&
+        getIntVar(RewriteVars.AGG_FUNC_CNT) == 1 &&
+        getBoolVar(RewriteVars.AGG_FUNC_IS_NOT_COUNT) == false){
+      setBoolVar(RewriteVars.SHOULD_APPEND_SUBQUERY, true);
       addTable(baseTableName, index.getIndexTableName());
     }else{
       LOG.info("No valid criteria met to apply rewrite." );

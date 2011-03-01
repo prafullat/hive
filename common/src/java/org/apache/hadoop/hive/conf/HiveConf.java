@@ -351,7 +351,7 @@ public class HiveConf extends Configuration {
     HIVEHARPARENTDIRSETTABLE("hive.archive.har.parentdir.settable", false),
 
     //Enable/Disable gbToIdx rewrite rule
-    HIVEOPTGBYUSINGINDEX("hive.optimize.gbyusingindex", false),
+    HIVEOPTGBYUSINGINDEX("hive.optimize.index.groupby", false),
 
     HIVEOUTERJOINSUPPORTSFILTERS("hive.outerjoin.supports.filters", true),
 

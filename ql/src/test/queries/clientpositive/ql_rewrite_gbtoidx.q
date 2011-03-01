@@ -22,7 +22,7 @@ FIELDS TERMINATED BY '|';
 CREATE INDEX lineitem_lshipdate_idx ON TABLE lineitem(l_shipdate) AS 'org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler' WITH DEFERRED REBUILD;
 ALTER INDEX lineitem_lshipdate_idx ON lineitem REBUILD;
 
-set hive.optimize.gbyusingindex=true;
+set hive.optimize.index.groupby=true;
 
 explain select l_shipdate,
        count(1)

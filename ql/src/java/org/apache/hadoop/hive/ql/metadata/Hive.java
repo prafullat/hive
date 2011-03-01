@@ -672,7 +672,7 @@ public class Hive {
     } catch (NoSuchObjectException e) {
       throw new HiveException("Partition or table doesn't exist.", e);
     } catch (Exception e) {
-      throw new HiveException("Unknow error. Please check logs.", e);
+      throw new HiveException("Unknown error. Please check logs.", e);
     }
   }
 
@@ -682,7 +682,7 @@ public class Hive {
     } catch (NoSuchObjectException e) {
       throw new HiveException("Partition or table doesn't exist.", e);
     } catch (Exception e) {
-      throw new HiveException("Unknow error. Please check logs.", e);
+      throw new HiveException("Unknown error. Please check logs.", e);
     }
   }
 
@@ -1301,7 +1301,7 @@ public class Hive {
     } catch (NoSuchObjectException e) {
       throw new HiveException("Partition or table doesn't exist.", e);
     } catch (Exception e) {
-      throw new HiveException("Unknow error. Please check logs.", e);
+      throw new HiveException("Unknown error. Please check logs.", e);
     }
   }
 
