@@ -29,7 +29,6 @@ import java.util.Stack;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.api.Index;
 import org.apache.hadoop.hive.ql.exec.Operator;
 import org.apache.hadoop.hive.ql.lib.DefaultGraphWalker;
@@ -53,109 +52,32 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
 
   protected final  Log LOG = LogFactory.getLog(RewriteCanApplyCtx.class.getName());
 
-  private RewriteCanApplyCtx(ParseContext parseContext, HiveConf conf) {
+  private RewriteCanApplyCtx(ParseContext parseContext) {
     this.parseContext = parseContext;
-    this.hiveConf = conf;
-    initRewriteVars();
   }
 
-  public static RewriteCanApplyCtx getInstance(ParseContext parseContext, HiveConf conf){
-    return new RewriteCanApplyCtx(parseContext, conf);
+  public static RewriteCanApplyCtx getInstance(ParseContext parseContext){
+    return new RewriteCanApplyCtx(parseContext);
   }
 
-  public static enum RewriteVars {
-    AGG_FUNC_CNT("hive.ql.rewrites.agg.func.cnt", 0),
-    GBY_KEY_CNT("hive.ql.rewrites.gby.key.cnt", 0),
-    QUERY_HAS_SORT_BY("hive.ql.rewrites.query.has.sort.by", false),
-    QUERY_HAS_ORDER_BY("hive.ql.rewrites.query.has.order.by", false),
-    QUERY_HAS_DISTRIBUTE_BY("hive.ql.rewrites.query.has.distribute.by", false),
-    QUERY_HAS_GROUP_BY("hive.ql.rewrites.query.has.group.by", false),
-    QUERY_HAS_DISTINCT("hive.ql.rewrites.query.has.distinct", false), //This still uses QBParseInfo to make decision. Needs to be changed if QB dependency is not desired.
-    AGG_FUNC_IS_NOT_COUNT("hive.ql.rewrites.agg.func.is.not.count", false),
-    AGG_FUNC_COLS_FETCH_EXCEPTION("hive.ql.rewrites.agg.func.cols.fetch.exception", false),
-    WHR_CLAUSE_COLS_FETCH_EXCEPTION("hive.ql.rewrites.whr.clause.cols.fetch.exception", false),
-    SEL_CLAUSE_COLS_FETCH_EXCEPTION("hive.ql.rewrites.sel.clause.cols.fetch.exception", false),
-    GBY_KEYS_FETCH_EXCEPTION("hive.ql.rewrites.gby.keys.fetch.exception", false),
-    COUNT_ON_ALL_COLS("hive.ql.rewrites.count.on.all.cols", false),
-    QUERY_HAS_GENERICUDF_ON_GROUPBY_KEY("hive.ql.rewrites.query.has.genericudf.on.groupby.key", false),
-    QUERY_HAS_MULTIPLE_TABLES("hive.ql.rewrites.query.has.multiple.tables", false),
-    SHOULD_APPEND_SUBQUERY("hive.ql.rewrites.should.append.subquery", false),
-    REMOVE_GROUP_BY("hive.ql.rewrites.remove.group.by", false);
-    ;
-
-    public final String varname;
-    public int intValue;
-    public boolean boolValue;
-    public final Class<?> valClass;
-
-    //Constructors for int and boolean values
-    RewriteVars(String varname, int defaultIntVal) {
-      this.varname = varname;
-      this.valClass = Integer.class;
-      this.intValue = defaultIntVal;
-      this.boolValue = false;
-    }
-
-    RewriteVars(String varname, boolean defaultBoolVal) {
-      this.varname = varname;
-      this.valClass = Boolean.class;
-      this.intValue = -1;
-      this.boolValue = defaultBoolVal;
-    }
-
-    @Override
-    public String toString() {
-      return varname;
-    }
-
-
-
-  }
-
-  /*
-   * Methods to set and retrieve the RewriteVars enum variables
-   * */
-  public int getIntVar(RewriteVars var) {
-    assert (var.valClass == Integer.class);
-    return var.intValue;
-  }
-
-  public void setIntVar(RewriteVars var, int val) {
-    assert (var.valClass == Integer.class);
-    var.intValue = val;
-  }
-
-  public boolean getBoolVar(RewriteVars var) {
-    assert (var.valClass == Boolean.class);
-    return var.boolValue;
-  }
-
-  public void setBoolVar(RewriteVars var, boolean val) {
-    assert (var.valClass == Boolean.class);
-    var.boolValue = val;
-  }
-
-  public void initRewriteVars(){
-    setIntVar(RewriteVars.AGG_FUNC_CNT,0);
-    setIntVar(RewriteVars.GBY_KEY_CNT,0);
-    setBoolVar(RewriteVars.QUERY_HAS_SORT_BY, false);
-    setBoolVar(RewriteVars.QUERY_HAS_ORDER_BY, false);
-    setBoolVar(RewriteVars.QUERY_HAS_DISTRIBUTE_BY, false);
-    setBoolVar(RewriteVars.QUERY_HAS_GROUP_BY, false);
-    setBoolVar(RewriteVars.QUERY_HAS_DISTINCT, false);
-    setBoolVar(RewriteVars.AGG_FUNC_IS_NOT_COUNT, false);
-    setBoolVar(RewriteVars.AGG_FUNC_COLS_FETCH_EXCEPTION, false);
-    setBoolVar(RewriteVars.WHR_CLAUSE_COLS_FETCH_EXCEPTION, false);
-    setBoolVar(RewriteVars.SEL_CLAUSE_COLS_FETCH_EXCEPTION, false);
-    setBoolVar(RewriteVars.GBY_KEYS_FETCH_EXCEPTION, false);
-    setBoolVar(RewriteVars.COUNT_ON_ALL_COLS, false);
-    setBoolVar(RewriteVars.QUERY_HAS_GENERICUDF_ON_GROUPBY_KEY, false);
-    setBoolVar(RewriteVars.QUERY_HAS_MULTIPLE_TABLES, false);
-    setBoolVar(RewriteVars.SHOULD_APPEND_SUBQUERY, false);
-    setBoolVar(RewriteVars.REMOVE_GROUP_BY, false);
-  }
-
-
+  // Rewrite Variables
+  public int agg_func_cnt = 0;
+  public int gby_key_cnt = 0;
+  public boolean query_has_sort_by = false;
+  public boolean query_has_order_by = false;
+  public boolean query_has_distribute_by = false;
+  public boolean query_has_group_by = false;
+  public boolean query_has_distinct = false;
+  public boolean agg_func_is_not_count = false;
+  public boolean agg_func_cols_fetch_exception = false;
+  public boolean whr_clause_cols_fetch_exception = false;
+  public boolean sel_clause_cols_fetch_exception = false;
+  public boolean gby_keys_fetch_exception = false;
+  public boolean count_on_all_cols = false;
+  public boolean query_has_generic_udf_on_groupby_key = false;
+  public boolean query_has_multiple_tables = false;
+  public boolean should_append_subquery = false;
+  public boolean remove_group_by = false;
 
 
    //Data structures that are populated in the RewriteCanApplyProcFactory methods to check if the index key meets all criteria
@@ -164,12 +86,29 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
    Set<String> gbKeyNameList = new LinkedHashSet<String>();
    Set<String> aggFuncColList = new LinkedHashSet<String>();
 
-   private final HiveConf hiveConf;
    private int aggFuncCnt = 0;
    private final ParseContext parseContext;
    private String baseTableName = "";
 
    void resetCanApplyCtx(){
+     agg_func_cnt = 0;
+     gby_key_cnt = 0;
+     query_has_sort_by = false;
+     query_has_order_by = false;
+     query_has_distribute_by = false;
+     query_has_group_by = false;
+     query_has_distinct = false;
+     agg_func_is_not_count = false;
+     agg_func_cols_fetch_exception = false;
+     whr_clause_cols_fetch_exception = false;
+     sel_clause_cols_fetch_exception = false;
+     gby_keys_fetch_exception = false;
+     count_on_all_cols = false;
+     query_has_generic_udf_on_groupby_key = false;
+     query_has_multiple_tables = false;
+     should_append_subquery = false;
+     remove_group_by = false;
+
      aggFuncCnt = 0;
      selectColumnsList.clear();
      predicateColumnsList.clear();
@@ -208,10 +147,6 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
 
   public void setAggFuncColList(Set<String> aggFuncColList) {
     this.aggFuncColList = aggFuncColList;
-  }
-
-  public HiveConf getConf() {
-    return hiveConf;
   }
 
    public int getAggFuncCnt() {
@@ -371,8 +306,8 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
       // 3. GROUP BY idxKey, idxKey
       //     FUTURE: GB Key has dup idxKeyCols. Develop a rewrite to eliminate the dup key cols
       //            from GB key.
-      if (getBoolVar(RewriteVars.QUERY_HAS_GROUP_BY) &&
-          indexKeyNames.size() < getIntVar(RewriteVars.GBY_KEY_CNT)) {
+      if (query_has_group_by &&
+          indexKeyNames.size() < gby_key_cnt) {
         LOG.info("Group by key has some non-indexed columns, GroupBy will be"
             + " preserved by rewrite optimization" );
         removeGroupBy = false;
@@ -383,14 +318,14 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
     //which would be used by transformation procedure as inputs.
 
     //sub-query is needed only in case of optimizecount and complex gb keys?
-    if(getBoolVar(RewriteVars.QUERY_HAS_GENERICUDF_ON_GROUPBY_KEY) == false
+    if(query_has_generic_udf_on_groupby_key == false
         && !(optimizeCount == true && removeGroupBy == false) ) {
-      setBoolVar(RewriteVars.REMOVE_GROUP_BY, removeGroupBy);
+      remove_group_by  = removeGroupBy;
       addTable(baseTableName, index.getIndexTableName());
-    }else if(getBoolVar(RewriteVars.QUERY_HAS_GENERICUDF_ON_GROUPBY_KEY) == true &&
-        getIntVar(RewriteVars.AGG_FUNC_CNT) == 1 &&
-        getBoolVar(RewriteVars.AGG_FUNC_IS_NOT_COUNT) == false){
-      setBoolVar(RewriteVars.SHOULD_APPEND_SUBQUERY, true);
+    }else if(query_has_generic_udf_on_groupby_key == true &&
+        agg_func_cnt == 1 &&
+        agg_func_is_not_count == false){
+      should_append_subquery = true;
       addTable(baseTableName, index.getIndexTableName());
     }else{
       LOG.info("No valid criteria met to apply rewrite." );

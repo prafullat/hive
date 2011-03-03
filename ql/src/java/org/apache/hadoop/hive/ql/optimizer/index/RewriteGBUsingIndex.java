@@ -42,7 +42,6 @@ import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.metadata.Table;
 import org.apache.hadoop.hive.ql.optimizer.RewriteParseContextGenerator;
 import org.apache.hadoop.hive.ql.optimizer.Transform;
-import org.apache.hadoop.hive.ql.optimizer.index.RewriteCanApplyCtx.RewriteVars;
 import org.apache.hadoop.hive.ql.parse.ParseContext;
 import org.apache.hadoop.hive.ql.parse.QBParseInfo;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
@@ -126,7 +125,7 @@ public class RewriteGBUsingIndex implements Transform {
     try {
       hiveDb = Hive.get(hiveConf);
     } catch (HiveException e) {
-      LOG.info("Exception in getting hive conf");
+      LOG.debug("Exception in getting hive conf", e);
       e.printStackTrace();
     }
 
@@ -141,7 +140,7 @@ public class RewriteGBUsingIndex implements Transform {
        * If yes, rewrite original query; else, return the current parseContext
        * */
       if(shouldApplyOptimization()){
-        LOG.debug("Rewriting Original Query.");
+        LOG.info("Rewriting Original Query.");
         rewriteOriginalQuery();
       }
       return parseContext;
@@ -169,8 +168,9 @@ public class RewriteGBUsingIndex implements Transform {
    * did not meet the rewrite criterion.
    *
    * @return
+   * @throws SemanticException
    */
-  boolean shouldApplyOptimization(){
+  boolean shouldApplyOptimization() throws SemanticException{
     boolean canApply = false;
     if(ifQueryHasMultipleTables()){
       //We do not apply this optimization for this case as of now.
@@ -187,7 +187,7 @@ public class RewriteGBUsingIndex implements Transform {
       Iterator<TableScanOperator> topOpItr = topToTable.keySet().iterator();
       while(topOpItr.hasNext()){
         //Context for checking if this optimization can be applied to the input query
-        RewriteCanApplyCtx canApplyCtx = RewriteCanApplyCtx.getInstance(parseContext, hiveConf);
+        RewriteCanApplyCtx canApplyCtx = RewriteCanApplyCtx.getInstance(parseContext);
 
         TableScanOperator topOp = topOpItr.next();
         Table table = topToTable.get(topOp);
@@ -196,12 +196,14 @@ public class RewriteGBUsingIndex implements Transform {
 
         if(indexTableMap != null){
           if(indexTableMap.size() == 0){
-            LOG.info("No Valid Index Found to apply Rewrite, " +
+            LOG.debug("No Valid Index Found to apply Rewrite, " +
                 "skipping " + getName() + " optimization" );
+            return false;
           } else if(indexTableMap.size() > 1){
-            //TODO
-            // we need to implement a logic to choose a single index table amongst all valid indexes to apply rewrite
-            LOG.info("Table has multiple valid index tables to apply rewrite.");
+            // a cost-based analysis can be done here to choose a single index table amongst all valid indexes to apply rewrite
+            // we leave this decision-making
+            LOG.debug("Table has multiple valid index tables to apply rewrite, skipping " + getName() + " optimization" );
+            return false;
           }else{
             canApplyCtx.setBaseTableName(baseTableName);
             canApplyCtx.populateRewriteVars(topOp);
@@ -255,7 +257,7 @@ public class RewriteGBUsingIndex implements Transform {
        * If yes, it sets the environment for the RewriteRemoveGroupbyCtx context and invokes
        * method to apply rewrite by removing group by construct operators from the original operator tree.
        * */
-      if(canApplyCtx.getBoolVar(RewriteVars.REMOVE_GROUP_BY)){
+      if(canApplyCtx.remove_group_by){
         try {
           //Context for removing the group by construct operators from the operator tree
           RewriteRemoveGroupbyCtx removeGbyCtx = RewriteRemoveGroupbyCtx.getInstance(parseContext, hiveDb, indexTableName);
@@ -276,7 +278,7 @@ public class RewriteGBUsingIndex implements Transform {
        * method to append a new subquery that scans over the index table rather than the original table.
        * We first create the subquery context, then copy the RowSchema/RowResolver from subquery to original operator tree.
        * */
-      if(canApplyCtx.getBoolVar(RewriteVars.SHOULD_APPEND_SUBQUERY)){
+      if(canApplyCtx.should_append_subquery){
         try {
           //Context for appending a subquery to scan over the index table
           RewriteIndexSubqueryCtx subqueryCtx = RewriteIndexSubqueryCtx.getInstance(parseContext, indexTableName, baseTableName,
@@ -296,7 +298,7 @@ public class RewriteGBUsingIndex implements Transform {
 
         LOG.info("Finished appending subquery");
         } catch (SemanticException e) {
-          LOG.info("Exception in rewriting original query while using GB-to-IDX optimizer.", e);
+          LOG.debug("Exception in rewriting original query while using GB-to-IDX optimizer.", e);
         }
       }
     }
@@ -315,53 +317,53 @@ public class RewriteGBUsingIndex implements Transform {
    * @return
    */
   boolean checkIfAllRewriteCriteriaIsMet(RewriteCanApplyCtx canApplyCtx){
-    if (canApplyCtx.getBoolVar(RewriteVars.QUERY_HAS_DISTRIBUTE_BY)){
-      LOG.info("Query has distributeby clause, " +
+    if (canApplyCtx.query_has_distribute_by){
+      LOG.debug("Query has distributeby clause, " +
           "that is not supported with " + getName() + " optimization" );
       return false;
     }
-    if (canApplyCtx.getBoolVar(RewriteVars.QUERY_HAS_SORT_BY)){
-      LOG.info("Query has sortby clause, " +
+    if (canApplyCtx.query_has_sort_by){
+      LOG.debug("Query has sortby clause, " +
           "that is not supported with " + getName() + " optimization" );
       return false;
     }
-    if (canApplyCtx.getBoolVar(RewriteVars.QUERY_HAS_ORDER_BY)){
-      LOG.info("Query has orderby clause, " +
+    if (canApplyCtx.query_has_order_by){
+      LOG.debug("Query has orderby clause, " +
           "that is not supported with " + getName() + " optimization" );
       return false;
     }
-    if (canApplyCtx.getIntVar(RewriteVars.AGG_FUNC_CNT) > 1 ){
-      LOG.info("More than 1 agg funcs: " +
+    if (canApplyCtx.agg_func_cnt > 1 ){
+      LOG.debug("More than 1 agg funcs: " +
           "Not supported by " + getName() + " optimization" );
       return false;
     }
-    if (canApplyCtx.getBoolVar(RewriteVars.AGG_FUNC_IS_NOT_COUNT)){
-      LOG.info("Agg func other than count is " +
+    if (canApplyCtx.agg_func_is_not_count){
+      LOG.debug("Agg func other than count is " +
           "not supported by " + getName() + " optimization" );
       return false;
     }
-    if (canApplyCtx.getBoolVar(RewriteVars.COUNT_ON_ALL_COLS)){
-      LOG.info("Currently count function needs group by on key columns. This is a count(*) case., "
+    if (canApplyCtx.count_on_all_cols){
+      LOG.debug("Currently count function needs group by on key columns. This is a count(*) case., "
           + "Cannot apply this " + getName() + " optimization" );
       return false;
     }
-    if (canApplyCtx.getBoolVar(RewriteVars.AGG_FUNC_COLS_FETCH_EXCEPTION)){
-      LOG.info("Got exception while locating child col refs " +
+    if (canApplyCtx.agg_func_cols_fetch_exception){
+      LOG.debug("Got exception while locating child col refs " +
           "of agg func, skipping " + getName() + " optimization" );
       return false;
     }
-    if (canApplyCtx.getBoolVar(RewriteVars.WHR_CLAUSE_COLS_FETCH_EXCEPTION)){
-      LOG.info("Got exception while locating child col refs for where clause, "
+    if (canApplyCtx.whr_clause_cols_fetch_exception){
+      LOG.debug("Got exception while locating child col refs for where clause, "
           + "skipping " + getName() + " optimization" );
       return false;
     }
-    if (canApplyCtx.getBoolVar(RewriteVars.SEL_CLAUSE_COLS_FETCH_EXCEPTION)){
-      LOG.info("Got exception while locating child col refs for select list, "
+    if (canApplyCtx.sel_clause_cols_fetch_exception){
+      LOG.debug("Got exception while locating child col refs for select list, "
           + "skipping " + getName() + " optimization" );
       return false;
     }
-    if (canApplyCtx.getBoolVar(RewriteVars.GBY_KEYS_FETCH_EXCEPTION)){
-      LOG.info("Got exception while locating child col refs for GroupBy key, "
+    if (canApplyCtx.gby_keys_fetch_exception){
+      LOG.debug("Got exception while locating child col refs for GroupBy key, "
           + "skipping " + getName() + " optimization" );
       return false;
     }
@@ -384,7 +386,7 @@ public class RewriteGBUsingIndex implements Transform {
       tableNameSet.add(table.getTableName());
     }
     if(tableNameSet.size() > 1){
-      LOG.info("Query has more than one table " +
+      LOG.debug("Query has more than one table " +
           "that is not supported with " + getName() + " optimization" );
       return true;
     }
@@ -398,8 +400,9 @@ public class RewriteGBUsingIndex implements Transform {
   * @param baseTableMetaData
   * @param matchIndexTypes
   * @return
+   * @throws SemanticException
   */
- List<Index> getIndexes(Table baseTableMetaData, List<String> matchIndexTypes) {
+ List<Index> getIndexes(Table baseTableMetaData, List<String> matchIndexTypes) throws SemanticException {
    List<Index> matchingIndexes = new ArrayList<Index>();
    List<Index> indexesOnTable = null;
 
@@ -410,8 +413,8 @@ public class RewriteGBUsingIndex implements Transform {
      indexesOnTable = baseTableMetaData.getAllIndexes(maxNumOfIndexes);
 
    } catch (HiveException e) {
-     LOG.info("Could not retrieve indexes on the base table. Check logs for error.", e);
-     return null;
+     LOG.error("Could not retrieve indexes on the base table. Check logs for error.");
+     throw new SemanticException(e.getMessage(), e);
    }
 
    for (int i = 0; i < indexesOnTable.size(); i++) {
@@ -439,8 +442,9 @@ public class RewriteGBUsingIndex implements Transform {
   *
   * @param topOp
   * @return
+ * @throws SemanticException
   */
- HashMap<Index, Set<String>> getIndexTableInfoForRewrite(TableScanOperator topOp) {
+ HashMap<Index, Set<String>> getIndexTableInfoForRewrite(TableScanOperator topOp) throws SemanticException {
    HashMap<Index, Set<String>> indexTableMap = null;
    TableScanOperator ts = (TableScanOperator) topOp;
    Table tsTable = parseContext.getTopToTable().get(ts);
@@ -448,8 +452,8 @@ public class RewriteGBUsingIndex implements Transform {
      List<String> idxType = new ArrayList<String>();
      idxType.add(SUPPORTED_INDEX_TYPE);
      List<Index> indexTables = getIndexes(tsTable, idxType);
-     if (indexTables.size() == 0) {
-       LOG.info("Table " + baseTableName + " does not have compact index. " +
+     if (indexTables == null || indexTables.size() == 0) {
+       LOG.debug("Table " + baseTableName + " does not have compact index. " +
            "Cannot apply " + getName() + " optimization" );
      }else{
        indexTableMap = populateIndexToKeysMap(indexTables);
@@ -495,7 +499,7 @@ public class RewriteGBUsingIndex implements Transform {
          idxTblColNames.add(idxTblCol.getName());
        }
      } catch (HiveException e) {
-       LOG.info("Got exception while locating index table, " +
+       LOG.debug("Got exception while locating index table, " +
            "skipping " + getName() + " optimization" );
        return indexToKeysMap;
      }
