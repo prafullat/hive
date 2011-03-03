@@ -52,6 +52,7 @@ import org.apache.hadoop.hive.cli.CliDriver;
 import org.apache.hadoop.hive.cli.CliSessionState;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.MetaStoreUtils;
+import org.apache.hadoop.hive.metastore.api.Index;
 import org.apache.hadoop.hive.ql.exec.FunctionRegistry;
 import org.apache.hadoop.hive.ql.exec.Task;
 import org.apache.hadoop.hive.ql.exec.Utilities;
@@ -330,17 +331,21 @@ public class QTestUtil {
       db.setCurrentDatabase(dbName);
       for (String tblName : db.getAllTables()) {
         if (!DEFAULT_DATABASE_NAME.equals(dbName) || !srcTables.contains(tblName)) {
-	  Table table = db.getTable(dbName, tblName, false);
-	  if (MetaStoreUtils.isIndexTable(table.getTTable())) {
-	    // Skip the index type table here.
-	    // XTODO: Assuming (but verify)
-	    // - Drop table automatically drops indexes on that table too.
-	    // - No other case results into dangling indexes i.e. where indexes are
-	    //   left behind but orig (base) table no longer exists.
-	  }
-	  else {
-	    db.dropTable(dbName, tblName);
-	  }
+          Table tblObj = db.getTable(tblName);
+          // dropping index table can not be dropped directly. Dropping the base
+          // table will automatically drop all its index table  
+          if(tblObj.isIndexTable()) {
+            continue;
+          }
+          db.dropTable(dbName, tblName);
+        } else {
+          // this table is defined in srcTables, drop all indexes on it
+         List<Index> indexes = db.getIndexes(dbName, tblName, (short)-1);
+          if (indexes != null && indexes.size() > 0) {
+            for (Index index : indexes) {
+              db.dropIndex(dbName, tblName, index.getIndexName(), true);              
+            }
+          }
         }
       }
       if (!DEFAULT_DATABASE_NAME.equals(dbName)) {

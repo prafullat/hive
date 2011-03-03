@@ -340,8 +340,9 @@ public class Table implements Serializable {
 
     if ((spec == null) || (spec.size() != partCols.size())) {
       throw new HiveException(
-          "table is partitioned but partition spec is not specified or tab: "
-              + spec);
+          "table is partitioned but partition spec is not specified or"
+          + " does not fully match table partitioning: "
+          + spec);
     }
 
     for (FieldSchema field : partCols) {
@@ -707,6 +708,13 @@ public class Table implements Serializable {
    */
   public boolean isView() {
     return TableType.VIRTUAL_VIEW.equals(getTableType());
+  }
+  
+  /**
+   * @return whether this table is actually an index table
+   */
+  public boolean isIndexTable() {
+    return TableType.INDEX_TABLE.equals(getTableType());
   }
 
   /**
