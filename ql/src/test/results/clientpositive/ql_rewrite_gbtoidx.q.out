@@ -72,7 +72,7 @@ POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF lineitem)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL l_shipdate)) (TOK_SELEXPR (TOK_FUNCTION count 1))) (TOK_GROUPBY (TOK_TABLE_OR_COL l_shipdate))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME lineitem))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL l_shipdate)) (TOK_SELEXPR (TOK_FUNCTION count 1))) (TOK_GROUPBY (TOK_TABLE_OR_COL l_shipdate))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -147,7 +147,7 @@ POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_JOIN (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF lineitem)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) year) (TOK_SELEXPR (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate)) month) (TOK_SELEXPR (TOK_FUNCTION count 1) monthly_shipments)) (TOK_WHERE (= (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) 1997)) (TOK_GROUPBY (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate))))) lastyear) (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF lineitem)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) year) (TOK_SELEXPR (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate)) month) (TOK_SELEXPR (TOK_FUNCTION count 1) monthly_shipments)) (TOK_WHERE (= (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) 1998)) (TOK_GROUPBY (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate))))) thisyear) (= (. (TOK_TABLE_OR_COL lastyear) month) (. (TOK_TABLE_OR_COL thisyear) month)))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (. (TOK_TABLE_OR_COL lastyear) month)) (TOK_SELEXPR (. (TOK_TABLE_OR_COL thisyear) month)) (TOK_SELEXPR (/ (- (. (TOK_TABLE_OR_COL thisyear) monthly_shipments) (. (TOK_TABLE_OR_COL lastyear) monthly_shipments)) (. (TOK_TABLE_OR_COL lastyear) monthly_shipments)) monthly_shipments_delta))))
+  (TOK_QUERY (TOK_FROM (TOK_JOIN (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME lineitem))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) year) (TOK_SELEXPR (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate)) month) (TOK_SELEXPR (TOK_FUNCTION count 1) monthly_shipments)) (TOK_WHERE (= (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) 1997)) (TOK_GROUPBY (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate))))) lastyear) (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME lineitem))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) year) (TOK_SELEXPR (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate)) month) (TOK_SELEXPR (TOK_FUNCTION count 1) monthly_shipments)) (TOK_WHERE (= (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) 1998)) (TOK_GROUPBY (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate))))) thisyear) (= (. (TOK_TABLE_OR_COL lastyear) month) (. (TOK_TABLE_OR_COL thisyear) month)))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (. (TOK_TABLE_OR_COL lastyear) month)) (TOK_SELEXPR (. (TOK_TABLE_OR_COL thisyear) month)) (TOK_SELEXPR (/ (- (. (TOK_TABLE_OR_COL thisyear) monthly_shipments) (. (TOK_TABLE_OR_COL lastyear) monthly_shipments)) (. (TOK_TABLE_OR_COL lastyear) monthly_shipments)) monthly_shipments_delta))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -397,7 +397,7 @@ POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF lineitem)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) year) (TOK_SELEXPR (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate)) month) (TOK_SELEXPR (TOK_FUNCTION count 1) monthly_shipments)) (TOK_GROUPBY (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate)))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME lineitem))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) year) (TOK_SELEXPR (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate)) month) (TOK_SELEXPR (TOK_FUNCTION count 1) monthly_shipments)) (TOK_GROUPBY (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate)))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -506,7 +506,7 @@ POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF default__lineitem_lineitem_lshipdate_idx__)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL l_shipdate)) (TOK_SELEXPR (TOK_FUNCTION size (TOK_TABLE_OR_COL `_offsets`)) sz)))) t)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) year) (TOK_SELEXPR (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate)) month) (TOK_SELEXPR (TOK_FUNCTION sum (TOK_TABLE_OR_COL sz)))) (TOK_GROUPBY (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate)))))
+  (TOK_QUERY (TOK_FROM (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME default__lineitem_lineitem_lshipdate_idx__))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL l_shipdate)) (TOK_SELEXPR (TOK_FUNCTION size (TOK_TABLE_OR_COL `_offsets`)) sz)))) t)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) year) (TOK_SELEXPR (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate)) month) (TOK_SELEXPR (TOK_FUNCTION sum (TOK_TABLE_OR_COL sz)))) (TOK_GROUPBY (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate)))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -609,7 +609,7 @@ POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF lineitem)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) year) (TOK_SELEXPR (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate)) month) (TOK_SELEXPR (TOK_FUNCTION count 1) monthly_shipments)) (TOK_GROUPBY (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate)))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME lineitem))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) year) (TOK_SELEXPR (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate)) month) (TOK_SELEXPR (TOK_FUNCTION count 1) monthly_shipments)) (TOK_GROUPBY (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate)))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -718,7 +718,7 @@ POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF default__lineitem_lineitem_lshipdate_idx__)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL l_shipdate)) (TOK_SELEXPR (TOK_FUNCTION size (TOK_TABLE_OR_COL `_offsets`)) sz)))) t)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) year) (TOK_SELEXPR (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate)) month) (TOK_SELEXPR (TOK_FUNCTION sum (TOK_TABLE_OR_COL sz)))) (TOK_GROUPBY (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate)))))
+  (TOK_QUERY (TOK_FROM (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME default__lineitem_lineitem_lshipdate_idx__))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL l_shipdate)) (TOK_SELEXPR (TOK_FUNCTION size (TOK_TABLE_OR_COL `_offsets`)) sz)))) t)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) year) (TOK_SELEXPR (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate)) month) (TOK_SELEXPR (TOK_FUNCTION sum (TOK_TABLE_OR_COL sz)))) (TOK_GROUPBY (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate)))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -817,7 +817,7 @@ POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF lineitem)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_FUNCTION year (TOK_TABLE_OR_COL L_SHIPDATE))) (TOK_SELEXPR (TOK_FUNCTION month (TOK_TABLE_OR_COL L_SHIPDATE)) month_bkt) (TOK_SELEXPR (TOK_FUNCTION COUNT 1))) (TOK_GROUPBY (TOK_FUNCTION year (TOK_TABLE_OR_COL L_SHIPDATE)) (TOK_FUNCTION month (TOK_TABLE_OR_COL L_SHIPDATE)))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME lineitem))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_FUNCTION year (TOK_TABLE_OR_COL L_SHIPDATE))) (TOK_SELEXPR (TOK_FUNCTION month (TOK_TABLE_OR_COL L_SHIPDATE)) month_bkt) (TOK_SELEXPR (TOK_FUNCTION COUNT 1))) (TOK_GROUPBY (TOK_FUNCTION year (TOK_TABLE_OR_COL L_SHIPDATE)) (TOK_FUNCTION month (TOK_TABLE_OR_COL L_SHIPDATE)))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -950,7 +950,7 @@ POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_JOIN (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF lineitem)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) year) (TOK_SELEXPR (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate)) month) (TOK_SELEXPR (TOK_FUNCTION count 1) monthly_shipments)) (TOK_WHERE (= (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) 1997)) (TOK_GROUPBY (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate))))) lastyear) (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF lineitem)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) year) (TOK_SELEXPR (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate)) month) (TOK_SELEXPR (TOK_FUNCTION count 1) monthly_shipments)) (TOK_WHERE (= (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) 1998)) (TOK_GROUPBY (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate))))) thisyear) (and (= (. (TOK_TABLE_OR_COL lastyear) month) (. (TOK_TABLE_OR_COL thisyear) month)) (= (. (TOK_TABLE_OR_COL lastyear) year) (. (TOK_TABLE_OR_COL thisyear) year))))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (. (TOK_TABLE_OR_COL lastyear) month)) (TOK_SELEXPR (. (TOK_TABLE_OR_COL thisyear) month)) (TOK_SELEXPR (/ (- (. (TOK_TABLE_OR_COL thisyear) monthly_shipments) (. (TOK_TABLE_OR_COL lastyear) monthly_shipments)) (. (TOK_TABLE_OR_COL lastyear) monthly_shipments)) monthly_shipments_delta))))
+  (TOK_QUERY (TOK_FROM (TOK_JOIN (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME lineitem))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) year) (TOK_SELEXPR (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate)) month) (TOK_SELEXPR (TOK_FUNCTION count 1) monthly_shipments)) (TOK_WHERE (= (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) 1997)) (TOK_GROUPBY (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate))))) lastyear) (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME lineitem))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) year) (TOK_SELEXPR (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate)) month) (TOK_SELEXPR (TOK_FUNCTION count 1) monthly_shipments)) (TOK_WHERE (= (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) 1998)) (TOK_GROUPBY (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate))))) thisyear) (and (= (. (TOK_TABLE_OR_COL lastyear) month) (. (TOK_TABLE_OR_COL thisyear) month)) (= (. (TOK_TABLE_OR_COL lastyear) year) (. (TOK_TABLE_OR_COL thisyear) year))))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (. (TOK_TABLE_OR_COL lastyear) month)) (TOK_SELEXPR (. (TOK_TABLE_OR_COL thisyear) month)) (TOK_SELEXPR (/ (- (. (TOK_TABLE_OR_COL thisyear) monthly_shipments) (. (TOK_TABLE_OR_COL lastyear) monthly_shipments)) (. (TOK_TABLE_OR_COL lastyear) monthly_shipments)) monthly_shipments_delta))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -1243,7 +1243,7 @@ POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.Field
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF tbl)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_FUNCTION count (TOK_TABLE_OR_COL key)))) (TOK_WHERE (= (TOK_TABLE_OR_COL key) 1)) (TOK_GROUPBY (TOK_TABLE_OR_COL key))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME tbl))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_FUNCTION count (TOK_TABLE_OR_COL key)))) (TOK_WHERE (= (TOK_TABLE_OR_COL key) 1)) (TOK_GROUPBY (TOK_TABLE_OR_COL key))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -1293,7 +1293,7 @@ POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.Field
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF tbl)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECTDI (TOK_SELEXPR (TOK_TABLE_OR_COL key)))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME tbl))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECTDI (TOK_SELEXPR (TOK_TABLE_OR_COL key)))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -1333,7 +1333,7 @@ POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.Field
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF tbl)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_FUNCTION count 1)))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME tbl))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_FUNCTION count 1)))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -1394,7 +1394,7 @@ POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.Field
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF tbl)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_FUNCTION count (TOK_TABLE_OR_COL key)))) (TOK_GROUPBY (TOK_TABLE_OR_COL key))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME tbl))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_FUNCTION count (TOK_TABLE_OR_COL key)))) (TOK_GROUPBY (TOK_TABLE_OR_COL key))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -1436,7 +1436,7 @@ POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.Field
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF tbl)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_FUNCTION count (TOK_TABLE_OR_COL key))))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME tbl))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_FUNCTION count (TOK_TABLE_OR_COL key))))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -1501,7 +1501,7 @@ POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.Field
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF tbl)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECTDI (TOK_SELEXPR (TOK_TABLE_OR_COL key)))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME tbl))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECTDI (TOK_SELEXPR (TOK_TABLE_OR_COL key)))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -1541,7 +1541,7 @@ POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.Field
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF tbl)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key))) (TOK_GROUPBY (TOK_TABLE_OR_COL key))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME tbl))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key))) (TOK_GROUPBY (TOK_TABLE_OR_COL key))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -1581,7 +1581,7 @@ POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.Field
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF tbl)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECTDI (TOK_SELEXPR (TOK_TABLE_OR_COL key)))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME tbl))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECTDI (TOK_SELEXPR (TOK_TABLE_OR_COL key)))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -1621,7 +1621,7 @@ POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.Field
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF tbl)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECTDI (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_TABLE_OR_COL value)))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME tbl))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECTDI (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_TABLE_OR_COL value)))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -1703,7 +1703,7 @@ POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.Field
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF tbl)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key))) (TOK_GROUPBY (TOK_TABLE_OR_COL key))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME tbl))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key))) (TOK_GROUPBY (TOK_TABLE_OR_COL key))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -1743,7 +1743,7 @@ POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.Field
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF tbl)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key))) (TOK_GROUPBY (TOK_TABLE_OR_COL value) (TOK_TABLE_OR_COL key))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME tbl))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key))) (TOK_GROUPBY (TOK_TABLE_OR_COL value) (TOK_TABLE_OR_COL key))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -1823,7 +1823,7 @@ POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.Field
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF tbl)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_TABLE_OR_COL value))) (TOK_GROUPBY (TOK_TABLE_OR_COL value) (TOK_TABLE_OR_COL key))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME tbl))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_TABLE_OR_COL value))) (TOK_GROUPBY (TOK_TABLE_OR_COL value) (TOK_TABLE_OR_COL key))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -1905,7 +1905,7 @@ POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.Field
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF tbl)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECTDI (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_TABLE_OR_COL value))) (TOK_WHERE (= (TOK_TABLE_OR_COL value) 2))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME tbl))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECTDI (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_TABLE_OR_COL value))) (TOK_WHERE (= (TOK_TABLE_OR_COL value) 2))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -1995,7 +1995,7 @@ POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.Field
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF tbl)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECTDI (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_TABLE_OR_COL value))) (TOK_WHERE (AND (= (TOK_TABLE_OR_COL value) 2) (= (TOK_TABLE_OR_COL key) 3)))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME tbl))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECTDI (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_TABLE_OR_COL value))) (TOK_WHERE (AND (= (TOK_TABLE_OR_COL value) 2) (= (TOK_TABLE_OR_COL key) 3)))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -2085,7 +2085,7 @@ POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.Field
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF tbl)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECTDI (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_TABLE_OR_COL value))) (TOK_WHERE (= (TOK_TABLE_OR_COL value) (TOK_TABLE_OR_COL key)))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME tbl))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECTDI (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_TABLE_OR_COL value))) (TOK_WHERE (= (TOK_TABLE_OR_COL value) (TOK_TABLE_OR_COL key)))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -2175,7 +2175,7 @@ POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.Field
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF tbl)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key))) (TOK_WHERE (= (TOK_TABLE_OR_COL key) 3)) (TOK_GROUPBY (TOK_TABLE_OR_COL key))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME tbl))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key))) (TOK_WHERE (= (TOK_TABLE_OR_COL key) 3)) (TOK_GROUPBY (TOK_TABLE_OR_COL key))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -2223,7 +2223,7 @@ POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.Field
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF tbl)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_TABLE_OR_COL value))) (TOK_WHERE (= (TOK_TABLE_OR_COL value) 1)) (TOK_GROUPBY (TOK_TABLE_OR_COL key) (TOK_TABLE_OR_COL value))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME tbl))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_TABLE_OR_COL value))) (TOK_WHERE (= (TOK_TABLE_OR_COL value) 1)) (TOK_GROUPBY (TOK_TABLE_OR_COL key) (TOK_TABLE_OR_COL value))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -2313,7 +2313,7 @@ POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.Field
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF tbl)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECTDI (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_TABLE_OR_COL value))))) v1)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR TOK_ALLCOLREF)) (TOK_WHERE (= (. (TOK_TABLE_OR_COL v1) value) 2))))
+  (TOK_QUERY (TOK_FROM (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME tbl))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECTDI (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_TABLE_OR_COL value))))) v1)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR TOK_ALLCOLREF)) (TOK_WHERE (= (. (TOK_TABLE_OR_COL v1) value) 2))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -2410,7 +2410,7 @@ POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.Field
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF tbl)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key))) (TOK_WHERE (= (TOK_TABLE_OR_COL value) 2)) (TOK_GROUPBY (TOK_TABLE_OR_COL key))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME tbl))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key))) (TOK_WHERE (= (TOK_TABLE_OR_COL value) 2)) (TOK_GROUPBY (TOK_TABLE_OR_COL key))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -2488,7 +2488,7 @@ POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.Field
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF tbl)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECTDI (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_FUNCTION substr (TOK_TABLE_OR_COL value) 2 3))) (TOK_WHERE (= (TOK_TABLE_OR_COL value) (TOK_TABLE_OR_COL key)))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME tbl))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECTDI (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_FUNCTION substr (TOK_TABLE_OR_COL value) 2 3))) (TOK_WHERE (= (TOK_TABLE_OR_COL value) (TOK_TABLE_OR_COL key)))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -2578,7 +2578,7 @@ POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.Field
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF tbl)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECTDI (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_FUNCTION substr (TOK_TABLE_OR_COL value) 2 3)))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME tbl))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECTDI (TOK_SELEXPR (TOK_TABLE_OR_COL key)) (TOK_SELEXPR (TOK_FUNCTION substr (TOK_TABLE_OR_COL value) 2 3)))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -2660,7 +2660,7 @@ POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.Field
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF tbl)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key))) (TOK_GROUPBY (TOK_TABLE_OR_COL key) (TOK_FUNCTION substr (TOK_TABLE_OR_COL key) 2 3))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME tbl))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL key))) (TOK_GROUPBY (TOK_TABLE_OR_COL key) (TOK_FUNCTION substr (TOK_TABLE_OR_COL key) 2 3))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
