@@ -19,7 +19,7 @@ CREATE TABLE lineitem (L_ORDERKEY      INT,
 ROW FORMAT DELIMITED
 FIELDS TERMINATED BY '|';
 
-CREATE INDEX lineitem_lshipdate_idx ON TABLE lineitem(l_shipdate) AS 'org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler' WITH DEFERRED REBUILD;
+CREATE INDEX lineitem_lshipdate_idx ON TABLE lineitem(l_shipdate) AS 'org.apache.hadoop.hive.ql.index.AggregateIndexHandler' WITH DEFERRED REBUILD;
 ALTER INDEX lineitem_lshipdate_idx ON lineitem REBUILD;
 
 set hive.optimize.index.groupby=true;
@@ -126,7 +126,7 @@ lastyear.monthly_shipments as monthly_shipments_delta
 
 DROP TABLE tbl;
 CREATE TABLE tbl(key int, value int);
-CREATE INDEX tbl_key_idx ON TABLE tbl(key) AS 'org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler' WITH DEFERRED REBUILD;
+CREATE INDEX tbl_key_idx ON TABLE tbl(key) AS 'org.apache.hadoop.hive.ql.index.AggregateIndexHandler' WITH DEFERRED REBUILD;
 ALTER INDEX tbl_key_idx ON tbl REBUILD;
 set hive.optimize.gbyusingindex=true;
 EXPLAIN select key, count(key) from tbl where key = 1 group by key;

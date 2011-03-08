@@ -114,7 +114,7 @@ public class RewriteGBUsingIndex implements Transform {
   //The SUPPORTED_INDEX_TYPE value will change when we implement a new index handler to retrieve correct result
   // for count if the same key appears more than once within the same block
    final String SUPPORTED_INDEX_TYPE =
-    "org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler";
+    "org.apache.hadoop.hive.ql.index.AggregateIndexHandler";
    final String COMPACT_IDX_BUCKET_COL = "_bucketname";
    final String COMPACT_IDX_OFFSETS_ARRAY_COL = "_offsets";
 
@@ -505,7 +505,7 @@ public class RewriteGBUsingIndex implements Transform {
      }
      assert(idxTblColNames.contains(COMPACT_IDX_BUCKET_COL));
      assert(idxTblColNames.contains(COMPACT_IDX_OFFSETS_ARRAY_COL));
-     assert(idxTblColNames.size() == indexKeyNames.size() + 2);
+     //assert(idxTblColNames.size() == indexKeyNames.size() + 2);
 
      //we add all index tables which can be used for rewrite and defer the decision of using a particular index for later
      //this is to allow choosing a index if a better mechanism is designed later to chose a better rewrite

@@ -41,9 +41,9 @@ ROW FORMAT DELIMITED
 FIELDS TERMINATED BY '|'
 POSTHOOK: type: CREATETABLE
 POSTHOOK: Output: default@lineitem
-PREHOOK: query: CREATE INDEX lineitem_lshipdate_idx ON TABLE lineitem(l_shipdate) AS 'org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler' WITH DEFERRED REBUILD
+PREHOOK: query: CREATE INDEX lineitem_lshipdate_idx ON TABLE lineitem(l_shipdate) AS 'org.apache.hadoop.hive.ql.index.AggregateIndexHandler' WITH DEFERRED REBUILD
 PREHOOK: type: CREATEINDEX
-POSTHOOK: query: CREATE INDEX lineitem_lshipdate_idx ON TABLE lineitem(l_shipdate) AS 'org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler' WITH DEFERRED REBUILD
+POSTHOOK: query: CREATE INDEX lineitem_lshipdate_idx ON TABLE lineitem(l_shipdate) AS 'org.apache.hadoop.hive.ql.index.AggregateIndexHandler' WITH DEFERRED REBUILD
 POSTHOOK: type: CREATEINDEX
 PREHOOK: query: ALTER INDEX lineitem_lshipdate_idx ON lineitem REBUILD
 PREHOOK: type: QUERY
@@ -54,6 +54,8 @@ POSTHOOK: type: QUERY
 POSTHOOK: Input: default@lineitem
 POSTHOOK: Output: default@default__lineitem_lineitem_lshipdate_idx__
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 PREHOOK: query: explain select l_shipdate,
@@ -69,6 +71,8 @@ lineitem
 group by l_shipdate
 POSTHOOK: type: QUERY
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 ABSTRACT SYNTAX TREE:
@@ -144,6 +148,8 @@ lastyear.monthly_shipments as monthly_shipments_delta
   on lastyear.month = thisyear.month
 POSTHOOK: type: QUERY
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 ABSTRACT SYNTAX TREE:
@@ -394,6 +400,8 @@ from lineitem
 group by year(l_shipdate), month(l_shipdate)
 POSTHOOK: type: QUERY
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 ABSTRACT SYNTAX TREE:
@@ -503,6 +511,8 @@ from default__lineitem_lineitem_lshipdate_idx__
 group by year(l_shipdate), month(l_shipdate)
 POSTHOOK: type: QUERY
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 ABSTRACT SYNTAX TREE:
@@ -606,6 +616,8 @@ from lineitem
 group by year(l_shipdate), month(l_shipdate)
 POSTHOOK: type: QUERY
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 ABSTRACT SYNTAX TREE:
@@ -715,6 +727,8 @@ from default__lineitem_lineitem_lshipdate_idx__
 group by year(l_shipdate), month(l_shipdate)
 POSTHOOK: type: QUERY
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 ABSTRACT SYNTAX TREE:
@@ -814,6 +828,8 @@ POSTHOOK: query: explain select year(L_SHIPDATE), month(L_SHIPDATE) as month_bkt
 group by year(L_SHIPDATE), month(L_SHIPDATE)
 POSTHOOK: type: QUERY
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 ABSTRACT SYNTAX TREE:
@@ -947,6 +963,8 @@ lastyear.monthly_shipments as monthly_shipments_delta
     and lastyear.year = thisyear.year
 POSTHOOK: type: QUERY
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 ABSTRACT SYNTAX TREE:
@@ -1201,6 +1219,8 @@ PREHOOK: type: DROPTABLE
 POSTHOOK: query: DROP TABLE tbl
 POSTHOOK: type: DROPTABLE
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 PREHOOK: query: CREATE TABLE tbl(key int, value int)
@@ -1209,13 +1229,17 @@ POSTHOOK: query: CREATE TABLE tbl(key int, value int)
 POSTHOOK: type: CREATETABLE
 POSTHOOK: Output: default@tbl
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
-PREHOOK: query: CREATE INDEX tbl_key_idx ON TABLE tbl(key) AS 'org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler' WITH DEFERRED REBUILD
+PREHOOK: query: CREATE INDEX tbl_key_idx ON TABLE tbl(key) AS 'org.apache.hadoop.hive.ql.index.AggregateIndexHandler' WITH DEFERRED REBUILD
 PREHOOK: type: CREATEINDEX
-POSTHOOK: query: CREATE INDEX tbl_key_idx ON TABLE tbl(key) AS 'org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler' WITH DEFERRED REBUILD
+POSTHOOK: query: CREATE INDEX tbl_key_idx ON TABLE tbl(key) AS 'org.apache.hadoop.hive.ql.index.AggregateIndexHandler' WITH DEFERRED REBUILD
 POSTHOOK: type: CREATEINDEX
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 PREHOOK: query: ALTER INDEX tbl_key_idx ON tbl REBUILD
@@ -1227,9 +1251,13 @@ POSTHOOK: type: QUERY
 POSTHOOK: Input: default@tbl
 POSTHOOK: Output: default@default__tbl_tbl_key_idx__
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countall EXPRESSION [(tbl)tbl.null, ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countkey EXPRESSION [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 PREHOOK: query: EXPLAIN select key, count(key) from tbl where key = 1 group by key
@@ -1237,9 +1265,13 @@ PREHOOK: type: QUERY
 POSTHOOK: query: EXPLAIN select key, count(key) from tbl where key = 1 group by key
 POSTHOOK: type: QUERY
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countall EXPRESSION [(tbl)tbl.null, ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countkey EXPRESSION [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
@@ -1287,9 +1319,13 @@ PREHOOK: type: QUERY
 POSTHOOK: query: EXPLAIN SELECT DISTINCT key FROM tbl
 POSTHOOK: type: QUERY
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countall EXPRESSION [(tbl)tbl.null, ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countkey EXPRESSION [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
@@ -1327,9 +1363,13 @@ PREHOOK: type: QUERY
 POSTHOOK: query: EXPLAIN select count(1) from tbl
 POSTHOOK: type: QUERY
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countall EXPRESSION [(tbl)tbl.null, ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countkey EXPRESSION [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
@@ -1388,9 +1428,13 @@ PREHOOK: type: QUERY
 POSTHOOK: query: EXPLAIN select key, count(key) from tbl group by key
 POSTHOOK: type: QUERY
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countall EXPRESSION [(tbl)tbl.null, ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countkey EXPRESSION [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
@@ -1430,9 +1474,13 @@ PREHOOK: type: QUERY
 POSTHOOK: query: EXPLAIN select count(key) from tbl
 POSTHOOK: type: QUERY
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countall EXPRESSION [(tbl)tbl.null, ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countkey EXPRESSION [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
@@ -1495,9 +1543,13 @@ PREHOOK: type: QUERY
 POSTHOOK: query: EXPLAIN SELECT DISTINCT key FROM tbl
 POSTHOOK: type: QUERY
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countall EXPRESSION [(tbl)tbl.null, ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countkey EXPRESSION [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
@@ -1535,9 +1587,13 @@ PREHOOK: type: QUERY
 POSTHOOK: query: EXPLAIN SELECT key FROM tbl GROUP BY key
 POSTHOOK: type: QUERY
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countall EXPRESSION [(tbl)tbl.null, ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countkey EXPRESSION [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
@@ -1575,9 +1631,13 @@ PREHOOK: type: QUERY
 POSTHOOK: query: EXPLAIN SELECT DISTINCT key FROM tbl
 POSTHOOK: type: QUERY
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countall EXPRESSION [(tbl)tbl.null, ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countkey EXPRESSION [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
@@ -1615,9 +1675,13 @@ PREHOOK: type: QUERY
 POSTHOOK: query: EXPLAIN SELECT DISTINCT key, value FROM tbl
 POSTHOOK: type: QUERY
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countall EXPRESSION [(tbl)tbl.null, ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countkey EXPRESSION [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
@@ -1697,9 +1761,13 @@ PREHOOK: type: QUERY
 POSTHOOK: query: EXPLAIN SELECT key FROM tbl GROUP BY key
 POSTHOOK: type: QUERY
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countall EXPRESSION [(tbl)tbl.null, ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countkey EXPRESSION [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
@@ -1737,9 +1805,13 @@ PREHOOK: type: QUERY
 POSTHOOK: query: EXPLAIN SELECT key FROM tbl GROUP BY value, key
 POSTHOOK: type: QUERY
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countall EXPRESSION [(tbl)tbl.null, ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countkey EXPRESSION [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
@@ -1817,9 +1889,13 @@ PREHOOK: type: QUERY
 POSTHOOK: query: EXPLAIN SELECT key, value FROM tbl GROUP BY value, key
 POSTHOOK: type: QUERY
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countall EXPRESSION [(tbl)tbl.null, ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countkey EXPRESSION [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
@@ -1899,9 +1975,13 @@ PREHOOK: type: QUERY
 POSTHOOK: query: EXPLAIN SELECT DISTINCT key, value FROM tbl WHERE value = 2
 POSTHOOK: type: QUERY
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countall EXPRESSION [(tbl)tbl.null, ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countkey EXPRESSION [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
@@ -1989,9 +2069,13 @@ PREHOOK: type: QUERY
 POSTHOOK: query: EXPLAIN SELECT DISTINCT key, value FROM tbl WHERE value = 2 AND key = 3
 POSTHOOK: type: QUERY
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countall EXPRESSION [(tbl)tbl.null, ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countkey EXPRESSION [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
@@ -2079,9 +2163,13 @@ PREHOOK: type: QUERY
 POSTHOOK: query: EXPLAIN SELECT DISTINCT key, value FROM tbl WHERE value = key
 POSTHOOK: type: QUERY
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countall EXPRESSION [(tbl)tbl.null, ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countkey EXPRESSION [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
@@ -2169,9 +2257,13 @@ PREHOOK: type: QUERY
 POSTHOOK: query: EXPLAIN SELECT key FROM tbl WHERE key = 3 GROUP BY key
 POSTHOOK: type: QUERY
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countall EXPRESSION [(tbl)tbl.null, ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countkey EXPRESSION [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
@@ -2217,9 +2309,13 @@ PREHOOK: type: QUERY
 POSTHOOK: query: EXPLAIN SELECT key, value FROM tbl WHERE value = 1 GROUP BY key, value
 POSTHOOK: type: QUERY
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countall EXPRESSION [(tbl)tbl.null, ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countkey EXPRESSION [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
@@ -2307,9 +2403,13 @@ PREHOOK: type: QUERY
 POSTHOOK: query: EXPLAIN SELECT * FROM (SELECT DISTINCT key, value FROM tbl) v1 WHERE v1.value = 2
 POSTHOOK: type: QUERY
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countall EXPRESSION [(tbl)tbl.null, ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countkey EXPRESSION [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
@@ -2404,9 +2504,13 @@ PREHOOK: type: QUERY
 POSTHOOK: query: EXPLAIN SELECT key FROM tbl WHERE value = 2 GROUP BY key
 POSTHOOK: type: QUERY
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countall EXPRESSION [(tbl)tbl.null, ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countkey EXPRESSION [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
@@ -2482,9 +2586,13 @@ PREHOOK: type: QUERY
 POSTHOOK: query: EXPLAIN SELECT DISTINCT key, substr(value,2,3) FROM tbl WHERE value = key
 POSTHOOK: type: QUERY
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countall EXPRESSION [(tbl)tbl.null, ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countkey EXPRESSION [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
@@ -2572,9 +2680,13 @@ PREHOOK: type: QUERY
 POSTHOOK: query: EXPLAIN SELECT DISTINCT key, substr(value,2,3) FROM tbl
 POSTHOOK: type: QUERY
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countall EXPRESSION [(tbl)tbl.null, ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countkey EXPRESSION [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
@@ -2654,9 +2766,13 @@ PREHOOK: type: QUERY
 POSTHOOK: query: EXPLAIN SELECT key FROM tbl GROUP BY key, substr(key,2,3)
 POSTHOOK: type: QUERY
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countall EXPRESSION [(tbl)tbl.null, ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countkey EXPRESSION [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 ABSTRACT SYNTAX TREE:
@@ -2736,8 +2852,12 @@ POSTHOOK: type: DROPTABLE
 POSTHOOK: Input: default@tbl
 POSTHOOK: Output: default@tbl
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE [(lineitem)lineitem.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countall EXPRESSION [(lineitem)lineitem.null, ]
+POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._countkey EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._bucketname SIMPLE [(tbl)tbl.FieldSchema(name:INPUT__FILE__NAME, type:string, comment:), ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countall EXPRESSION [(tbl)tbl.null, ]
+POSTHOOK: Lineage: default__tbl_tbl_key_idx__._countkey EXPRESSION [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__._offsets EXPRESSION [(tbl)tbl.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__tbl_tbl_key_idx__.key SIMPLE [(tbl)tbl.FieldSchema(name:key, type:int, comment:null), ]
