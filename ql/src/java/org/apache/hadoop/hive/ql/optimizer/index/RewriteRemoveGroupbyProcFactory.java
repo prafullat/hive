@@ -57,7 +57,6 @@ import org.apache.hadoop.hive.ql.parse.SemanticException;
 import org.apache.hadoop.hive.ql.parse.BaseSemanticAnalyzer.tableSpec;
 import org.apache.hadoop.hive.ql.plan.ExprNodeColumnDesc;
 import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
-import org.apache.hadoop.hive.ql.plan.ExprNodeGenericFuncDesc;
 import org.apache.hadoop.hive.ql.plan.SelectDesc;
 import org.apache.hadoop.hive.ql.plan.TableScanDesc;
 import org.apache.hadoop.hive.serde2.SerDeException;
@@ -124,7 +123,7 @@ public final class RewriteRemoveGroupbyProcFactory {
         Context context = null;
         ASTNode tree = null;
         BaseSemanticAnalyzer sem = null;
-        String newSelCommand = "select size(`_offsets`) from " + removeGbyCtx.getIndexName();
+        String newSelCommand = "select `_countkey` from " + removeGbyCtx.getIndexName();
         try {
           context = new Context(conf);
         ParseDriver pd = new ParseDriver();
@@ -144,7 +143,7 @@ public final class RewriteRemoveGroupbyProcFactory {
         }
 
         //We retrieve the ASTNode function token from the root tree
-        ASTNode funcNode = removeGbyCtx.getFuncNode(tree, "size");
+        ASTNode funcNode = removeGbyCtx.getFuncNode(tree, "`_countkey`");
 
         //We need the rowResolver of the parent TableScanOperator to fix the rowSchema, colList, colExprMap of the SelectOperator
         //and also to construct the  ExprNodeDesc to replace the index key columns with size(_offsets) GenericUDF
@@ -153,9 +152,14 @@ public final class RewriteRemoveGroupbyProcFactory {
         Operator<? extends Serializable> tsOp = removeGbyCtx.getTopOperator(operator);
         OpParseContext tsCtx = opCtxMap.get(tsOp);
         ExprNodeDesc expr1 = ((SemanticAnalyzer) sem).genExprNodeDesc(funcNode, tsCtx.getRowResolver());
+        String countCol = "";
 
-        //We need the name of the GenericUDF function to correct the rowSchema
-        String funcName = "";
+        if(expr1 instanceof ExprNodeColumnDesc){
+          countCol = ((ExprNodeColumnDesc) expr1).getColumn();
+        }
+
+/*        //We need the name of the GenericUDF function to correct the rowSchema
+
 
         if(expr1 instanceof ExprNodeGenericFuncDesc){
           List<ExprNodeDesc> childExprList = ((ExprNodeGenericFuncDesc) expr1).getChildExprs();
@@ -165,7 +169,7 @@ public final class RewriteRemoveGroupbyProcFactory {
             }
           }
         }
-
+*/
         SelectDesc selDesc = (SelectDesc) operator.getConf();
         //Since we have removed the interim SEL operator when we removed the group-by construct, we need to get rid
         //of the internal names in the colList and colExprMap of this SelectOperator
@@ -183,7 +187,7 @@ public final class RewriteRemoveGroupbyProcFactory {
           //the function name always has alias starting with _c (for eg. _c1 etc)
           //We need to set the new alias (_offsets) for the initial "_c1" in rowSchema
           if(alias != null && alias.startsWith("_c")){
-            columnInfo.setAlias(funcName);
+            columnInfo.setAlias(countCol);
           }
           newRS.add(columnInfo);
         }

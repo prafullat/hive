@@ -65,7 +65,7 @@ explain select year(l_shipdate) as year,
         month(l_shipdate) as month,
         sum(sz)
 from (
-select l_shipdate, size(`_offsets`) as sz
+select l_shipdate, `_countkey` as sz
 from default__lineitem_lineitem_lshipdate_idx__
 ) t
 group by year(l_shipdate), month(l_shipdate);
@@ -91,7 +91,7 @@ explain select year(l_shipdate) as year,
         month(l_shipdate) as month,
         sum(sz)
 from (
-select l_shipdate, size(`_offsets`) as sz
+select l_shipdate, `_countkey` as sz
 from default__lineitem_lineitem_lshipdate_idx__
 ) t
 group by year(l_shipdate), month(l_shipdate);

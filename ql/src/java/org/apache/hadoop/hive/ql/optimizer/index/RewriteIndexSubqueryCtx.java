@@ -226,7 +226,7 @@ public class RewriteIndexSubqueryCtx implements NodeProcessorCtx {
     for (String key : selectColumnNames) {
       selKeys += key + ",";
     }
-    String subqueryCommand = "select " + selKeys + " size(`_offsets`) as CNT from " + indexName;
+    String subqueryCommand = "select " + selKeys + " `_countkey` as CNT from " + indexName;
     subqueryPctx = RewriteParseContextGenerator.generateOperatorTree(parseContext.getConf(), subqueryCommand);
 
   }

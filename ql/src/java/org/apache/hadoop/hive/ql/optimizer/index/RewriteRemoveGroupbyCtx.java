@@ -110,7 +110,7 @@ public class RewriteRemoveGroupbyCtx implements NodeProcessorCtx {
       for (Node node : cList) {
         if(null != node){
           ASTNode curr = (ASTNode)node;
-          if(curr.getType() == HiveParser.TOK_FUNCTION){
+          if(curr.getType() == HiveParser.TOK_TABLE_OR_COL){
             ArrayList<Node> funcChildren = curr.getChildren();
             for (Node child : funcChildren) {
               ASTNode funcChild = (ASTNode)child;

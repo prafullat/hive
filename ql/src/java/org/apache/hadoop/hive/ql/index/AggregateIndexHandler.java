@@ -62,9 +62,9 @@ public class AggregateIndexHandler extends AbstractIndexHandler {
         indexTblCols.add(bucketFileName);
         FieldSchema offSets = new FieldSchema("_offsets", "array<bigint>", "");
         indexTblCols.add(offSets);
-        FieldSchema countkey = new FieldSchema("_countkey", "bigint", "");
+        FieldSchema countkey = new FieldSchema("_countkey", "int", "");
         indexTblCols.add(countkey);
-        FieldSchema countall = new FieldSchema("_countall", "bigint", "");
+        FieldSchema countall = new FieldSchema("_countall", "int", "");
         indexTblCols.add(countall);
         indexTable.setSd(indexTableSd);
       }

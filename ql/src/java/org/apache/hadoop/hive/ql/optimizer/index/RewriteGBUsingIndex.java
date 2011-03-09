@@ -505,7 +505,7 @@ public class RewriteGBUsingIndex implements Transform {
      }
      assert(idxTblColNames.contains(COMPACT_IDX_BUCKET_COL));
      assert(idxTblColNames.contains(COMPACT_IDX_OFFSETS_ARRAY_COL));
-     //assert(idxTblColNames.size() == indexKeyNames.size() + 2);
+     assert(idxTblColNames.size() == indexKeyNames.size() + 4);
 
      //we add all index tables which can be used for rewrite and defer the decision of using a particular index for later
      //this is to allow choosing a index if a better mechanism is designed later to chose a better rewrite
