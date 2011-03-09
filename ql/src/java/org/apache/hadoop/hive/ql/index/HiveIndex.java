@@ -30,7 +30,8 @@ public class HiveIndex {
   public static String INDEX_TABLE_CREATETIME = "hive.index.basetbl.dfs.lastModifiedTime";
 
   public static enum IndexType {
-    COMPACT_SUMMARY_TABLE("compact", "org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler");
+    COMPACT_SUMMARY_TABLE("compact", "org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler"),
+    AGGREGATE_TABLE("aggregate", "org.apache.hadoop.hive.ql.AggregateIndexHandler");
 
     private IndexType(String indexType, String className) {
       indexTypeName = indexType;
