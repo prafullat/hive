@@ -1937,7 +1937,4 @@ public class Hive {
   private static String[] getQualifiedNames(String qualifiedName) {
     return qualifiedName.split("\\.");
   }
-
-
-
 };
