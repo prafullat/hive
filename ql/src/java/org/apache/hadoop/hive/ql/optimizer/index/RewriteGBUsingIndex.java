@@ -49,7 +49,7 @@ import org.apache.hadoop.hive.ql.parse.SemanticException;
 
 /**
  * RewriteGBUsingIndex is implemented as one of the Rule-based Optimizations.
- * Implements optimizations for GroupBy clause rewrite using compact index.
+ * Implements optimizations for GroupBy clause rewrite using aggregate index.
  * This optimization rewrites GroupBy query over base table to the query over simple table-scan over
  * index table, if there is index on the group by key(s) or the distinct column(s).
  * E.g.
@@ -81,10 +81,6 @@ import org.apache.hadoop.hive.ql.parse.SemanticException;
  *    but such framework/mechanism of expression equivalence isn't present currently or developed yet.
  *    This needs to be supported in order for better robust checks. This is critically important for
  *    correctness of a query rewrite system.
- *  - This code currently uses index types with org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler.
- *    However, the  CompactIndexHandler currently stores the distinct block offsets and not the row offsets.
- *    Use of this index type will give erroneous results to compute COUNT if the same key appears more
- *    than once within the same block. To address this issue, we plan to create a new index type in future.
  *
  *
  *  @see RewriteCanApplyCtx
@@ -111,12 +107,12 @@ public class RewriteGBUsingIndex implements Transform {
   private String indexTableName = null;
 
   /***************************************Index Validation Variables***************************************/
-  //The SUPPORTED_INDEX_TYPE value will change when we implement a new index handler to retrieve correct result
-  // for count if the same key appears more than once within the same block
    final String SUPPORTED_INDEX_TYPE =
     "org.apache.hadoop.hive.ql.index.AggregateIndexHandler";
-   final String COMPACT_IDX_BUCKET_COL = "_bucketname";
-   final String COMPACT_IDX_OFFSETS_ARRAY_COL = "_offsets";
+   final String IDX_BUCKET_COL = "_bucketname";
+   final String IDX_OFFSETS_ARRAY_COL = "_offsets";
+   final String IDX_COUNT_KEY_COL = "_countkey";
+   final String IDX_COUNT_ALL_COL = "_countall";
 
   @Override
   public ParseContext transform(ParseContext pctx) throws SemanticException {
@@ -453,7 +449,7 @@ public class RewriteGBUsingIndex implements Transform {
      idxType.add(SUPPORTED_INDEX_TYPE);
      List<Index> indexTables = getIndexes(tsTable, idxType);
      if (indexTables == null || indexTables.size() == 0) {
-       LOG.debug("Table " + baseTableName + " does not have compact index. " +
+       LOG.debug("Table " + baseTableName + " does not have aggregate index. " +
            "Cannot apply " + getName() + " optimization" );
      }else{
        indexTableMap = populateIndexToKeysMap(indexTables);
@@ -487,7 +483,7 @@ public class RewriteGBUsingIndex implements Transform {
 
 
      // Check that the index schema is as expected. This code block should
-     // catch problems of this rewrite breaking when the CompactIndexHandler
+     // catch problems of this rewrite breaking when the AggregateIndexHandler
      // index is changed.
      // This dependency could be better handled by doing init-time check for
      // compatibility instead of this overhead for every rewrite invocation.
@@ -503,8 +499,10 @@ public class RewriteGBUsingIndex implements Transform {
            "skipping " + getName() + " optimization" );
        return indexToKeysMap;
      }
-     assert(idxTblColNames.contains(COMPACT_IDX_BUCKET_COL));
-     assert(idxTblColNames.contains(COMPACT_IDX_OFFSETS_ARRAY_COL));
+     assert(idxTblColNames.contains(IDX_BUCKET_COL));
+     assert(idxTblColNames.contains(IDX_OFFSETS_ARRAY_COL));
+     assert(idxTblColNames.contains(IDX_COUNT_KEY_COL));
+     assert(idxTblColNames.contains(IDX_COUNT_ALL_COL));
      assert(idxTblColNames.size() == indexKeyNames.size() + 4);
 
      //we add all index tables which can be used for rewrite and defer the decision of using a particular index for later

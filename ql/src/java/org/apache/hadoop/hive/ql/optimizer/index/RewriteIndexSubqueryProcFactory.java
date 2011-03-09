@@ -64,7 +64,7 @@ import org.apache.hadoop.hive.serde2.typeinfo.TypeInfo;
  *
  * This subquery scans over the index table rather than the original table.
  * IT replaces the count(literal)/count(index_key) function in the original select operator
- * with sum(cnt) where cnt is size(_offsets) from subquery select operator.
+ * with sum(cnt) where cnt is _countkey from subquery select operator.
  *
  * This change necessitates change in the rowSchema, colList, colExprMap, rowResolver of all the SelectOperator's in original
  * operator tree. It also requires to set appropriate predicate parameters and group-by aggregation parameters in original

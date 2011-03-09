@@ -87,7 +87,7 @@ public final class RewriteRemoveGroupbyProcFactory {
    * Since we need to remove the group-by construct (comprising of GBY-RS-GBY operators and interim SEL operator), the processor sets the
    * appropriate parent-child links.
    *
-   * The processor also constructs a ExprNodeDesc instance for the size(_offsets) function and replaces the index key columns
+   * The processor also constructs a ExprNodeDesc instance for the _countkey and replaces the index key columns
    * with this function descriptor. It also sets the rowSchema, colList and colExprMap data structures correctly for this SelectOperator
    * to accommodate the new replacement and removal of group-by construct
    *
@@ -118,7 +118,7 @@ public final class RewriteRemoveGroupbyProcFactory {
         removeGbyCtx.getNewChildrenList().get(0).setParentOperators(removeGbyCtx.getNewParentList());
 
         //This code parses the string command and constructs a  ASTNode parse tree
-        //we need this to construct the ExprNodeDesc for the size(_offsets) function
+        //we need this to construct the ExprNodeDesc for the _countkey column
         HiveConf conf = removeGbyCtx.getParseContext().getConf();
         Context context = null;
         ASTNode tree = null;
@@ -146,7 +146,7 @@ public final class RewriteRemoveGroupbyProcFactory {
         ASTNode funcNode = removeGbyCtx.getFuncNode(tree, "`_countkey`");
 
         //We need the rowResolver of the parent TableScanOperator to fix the rowSchema, colList, colExprMap of the SelectOperator
-        //and also to construct the  ExprNodeDesc to replace the index key columns with size(_offsets) GenericUDF
+        //and also to construct the  ExprNodeDesc to replace the index key columns with _countkey
         LinkedHashMap<Operator<? extends Serializable>, OpParseContext> opCtxMap =
           removeGbyCtx.getParseContext().getOpParseCtx();
         Operator<? extends Serializable> tsOp = removeGbyCtx.getTopOperator(operator);
@@ -158,18 +158,6 @@ public final class RewriteRemoveGroupbyProcFactory {
           countCol = ((ExprNodeColumnDesc) expr1).getColumn();
         }
 
-/*        //We need the name of the GenericUDF function to correct the rowSchema
-
-
-        if(expr1 instanceof ExprNodeGenericFuncDesc){
-          List<ExprNodeDesc> childExprList = ((ExprNodeGenericFuncDesc) expr1).getChildExprs();
-          for (ExprNodeDesc childExpr : childExprList) {
-            if(childExpr instanceof ExprNodeColumnDesc){
-              funcName = ((ExprNodeColumnDesc) childExpr).getColumn();
-            }
-          }
-        }
-*/
         SelectDesc selDesc = (SelectDesc) operator.getConf();
         //Since we have removed the interim SEL operator when we removed the group-by construct, we need to get rid
         //of the internal names in the colList and colExprMap of this SelectOperator
@@ -206,7 +194,7 @@ public final class RewriteRemoveGroupbyProcFactory {
             }
             //however, if the alias itself is the internal name of the function argument, say _c1, we need to replace the
             //ExprNodeColumnDesc instance with the ExprNodeGenericFuncDesc (i.e. exprNode here)
-            //this replaces the count(literal) or count(index_key) function with size(_offsets)
+            //this replaces the count(literal) or count(index_key) function with _countkey
             if(((ExprNodeColumnDesc) expr2).getColumn().startsWith("_c")){
               colList.set(i, expr1);
             }
@@ -226,7 +214,7 @@ public final class RewriteRemoveGroupbyProcFactory {
             if(internalToAlias.get(internal) != null){
               ((ExprNodeColumnDesc) internalExpr).setColumn(internalToAlias.get(internal));
             }
-            //this replaces the count(literal) or count(index_key) function with size(_offsets)
+            //this replaces the count(literal) or count(index_key) function with _countkey
             if(((ExprNodeColumnDesc) internalExpr).getColumn().startsWith("_c")){
               newColExprMap.put(internal, expr1);
             }else{
