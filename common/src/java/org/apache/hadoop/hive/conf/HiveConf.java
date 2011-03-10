@@ -150,6 +150,7 @@ public class HiveConf extends Configuration {
     METASTOREPWD("javax.jdo.option.ConnectionPassword", ""),
     // Class name of JDO connection url hook
     METASTORECONNECTURLHOOK("hive.metastore.ds.connection.url.hook", ""),
+    METASTOREMULTITHREADED("javax.jdo.option.Multithreaded", "true"),
     // Name of the connection url in the configuration
     METASTORECONNECTURLKEY("javax.jdo.option.ConnectionURL", ""),
     // Number of attempts to retry connecting after there is a JDO datastore err
@@ -278,7 +279,10 @@ public class HiveConf extends Configuration {
     HIVESKEWJOINKEY("hive.skewjoin.key", 1000000),
     HIVESKEWJOINMAPJOINNUMMAPTASK("hive.skewjoin.mapjoin.map.tasks", 10000),
     HIVESKEWJOINMAPJOINMINSPLIT("hive.skewjoin.mapjoin.min.split", 33554432L), //32M
+    MAPREDMAXSPLITSIZE("mapred.max.split.size", 256000000L),
     MAPREDMINSPLITSIZE("mapred.min.split.size", 1L),
+    MAPREDMINSPLITSIZEPERNODE("mapred.min.split.size.per.rack", 1L),
+    MAPREDMINSPLITSIZEPERRACK("mapred.min.split.size.per.node", 1L),
     HIVEMERGEMAPONLY("hive.mergejob.maponly", true),
 
     HIVESENDHEARTBEAT("hive.heartbeat.interval", 1000),
