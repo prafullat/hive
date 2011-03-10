@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hive.ql.index;
 
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
@@ -97,20 +98,17 @@ public class AggregateIndexHandler extends TableBasedIndexHandler {
       command.append(VirtualColumn.BLOCKOFFSET.getName());
       command.append(") ");
       command.append(",");
-      if(!indexCols.contains(",")){
+
+      Iterator<FieldSchema> fsItr = indexField.iterator();
+      while(fsItr.hasNext()){
+        FieldSchema indexColFs = fsItr.next();
+        String indexCol = indexColFs.getName();
         command.append(" count(");
-        command.append(indexCols);
+        command.append(indexCol);
         command.append(") ");
         command.append(",");
-      }else{
-        String[] colList = indexCols.split(",");
-        for (int i = 0; i < colList.length; i++) {
-          command.append(" count(");
-          command.append(colList[i]);
-          command.append(") ");
-          command.append(",");
-        }
       }
+
       command.append(" count(*) ");
       command.append(" FROM " + HiveUtils.unparseIdentifier(baseTableName) );
       LinkedHashMap<String, String> basePartSpec = baseTablePartDesc.getPartSpec();
