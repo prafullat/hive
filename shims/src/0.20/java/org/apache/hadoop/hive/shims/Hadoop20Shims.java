@@ -148,35 +148,6 @@ public class Hadoop20Shims implements HadoopShims {
     }
   }
 
-  public static class CombineHiveKey implements WritableComparable {
-    Object key;
-
-    public CombineHiveKey(Object key) {
-      this.key = key;
-    }
-
-    public Object getKey() {
-      return key;
-    }
-
-    public void setKey(Object key) {
-      this.key = key;
-    }
-
-    public void write(DataOutput out) throws IOException {
-      throw new IOException("Method not supported");
-    }
-
-    public void readFields(DataInput in) throws IOException {
-      throw new IOException("Method not supported");
-    }
-
-    public int compareTo(Object w) {
-      assert false;
-      return 0;
-    }
-  }
-
   /* This class should be replaced with org.apache.hadoop.mapred.lib.CombineFileRecordReader class, once
    * https://issues.apache.org/jira/browse/MAPREDUCE-955 is fixed. This code should be removed - it is a copy
    * of org.apache.hadoop.mapred.lib.CombineFileRecordReader
@@ -438,6 +409,10 @@ public class Hadoop20Shims implements HadoopShims {
     // option to bypass job setup and cleanup was introduced in hadoop-21 (MAPREDUCE-463)
     // but can be backported. So we disable setup/cleanup in all versions >= 0.19
     conf.setBoolean("mapred.committer.job.setup.cleanup.needed", false);
+
+    // option to bypass task cleanup task was introduced in hadoop-23 (MAPREDUCE-2206)
+    // but can be backported. So we disable setup/cleanup in all versions >= 0.19
+    conf.setBoolean("mapreduce.job.committer.task.cleanup.needed", false);
   }
 
   @Override
@@ -448,6 +423,11 @@ public class Hadoop20Shims implements HadoopShims {
       ugi = UserGroupInformation.login(conf);
     }
     return ugi;
+  }
+  
+  @Override
+  public boolean isSecureShimImpl() {
+    return false;
   }
 
   @Override

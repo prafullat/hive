@@ -60,7 +60,10 @@ public class MapredWork implements Serializable {
 
   private Integer numReduceTasks;
   private Integer numMapTasks;
+  private Long maxSplitSize;
   private Long minSplitSize;
+  private Long minSplitSizePerNode;
+  private Long minSplitSizePerRack;
 
   private boolean needsTagging;
   private boolean hadoopSupportsSplittable;
@@ -74,6 +77,8 @@ public class MapredWork implements Serializable {
   private LinkedHashMap<Operator<? extends Serializable>, OpParseContext> opParseCtxMap;
 
   private QBJoinTree joinTree;
+
+  private boolean mapperCannotSpanPartns;
 
   public MapredWork() {
     aliasToPartnInfo = new LinkedHashMap<String, PartitionDesc>();
@@ -99,6 +104,10 @@ public class MapredWork implements Serializable {
     this.mapLocalWork = mapLocalWork;
     aliasToPartnInfo = new LinkedHashMap<String, PartitionDesc>();
     this.hadoopSupportsSplittable = hadoopSupportsSplittable;
+    maxSplitSize = null;
+    minSplitSize = null;
+    minSplitSizePerNode = null;
+    minSplitSizePerRack = null;
   }
 
   public String getCommand() {
@@ -274,6 +283,9 @@ public class MapredWork implements Serializable {
    * operator - but could be useful for debugging as well.
    */
   private void setAliases() {
+    if(aliasToWork == null) {
+      return;
+    }
     for (String oneAlias : aliasToWork.keySet()) {
       aliasToWork.get(oneAlias).setAlias(oneAlias);
     }
@@ -315,12 +327,36 @@ public class MapredWork implements Serializable {
     this.hadoopSupportsSplittable = hadoopSupportsSplittable;
   }
 
+  public Long getMaxSplitSize() {
+    return maxSplitSize;
+  }
+
+  public void setMaxSplitSize(Long maxSplitSize) {
+    this.maxSplitSize = maxSplitSize;
+  }
+
   public Long getMinSplitSize() {
     return minSplitSize;
   }
 
   public void setMinSplitSize(Long minSplitSize) {
     this.minSplitSize = minSplitSize;
+  }
+
+  public Long getMinSplitSizePerNode() {
+    return minSplitSizePerNode;
+  }
+
+  public void setMinSplitSizePerNode(Long minSplitSizePerNode) {
+    this.minSplitSizePerNode = minSplitSizePerNode;
+  }
+
+  public Long getMinSplitSizePerRack() {
+    return minSplitSizePerRack;
+  }
+
+  public void setMinSplitSizePerRack(Long minSplitSizePerRack) {
+    this.minSplitSizePerRack = minSplitSizePerRack;
   }
 
   public String getInputformat() {
@@ -337,6 +373,14 @@ public class MapredWork implements Serializable {
 
   public boolean isGatheringStats() {
     return this.gatheringStats;
+  }
+
+  public void setMapperCannotSpanPartns(boolean mapperCannotSpanPartns) {
+    this.mapperCannotSpanPartns = mapperCannotSpanPartns;
+  }
+
+  public boolean isMapperCannotSpanPartns() {
+    return this.mapperCannotSpanPartns;
   }
 
   public String getTmpHDFSFileURI() {

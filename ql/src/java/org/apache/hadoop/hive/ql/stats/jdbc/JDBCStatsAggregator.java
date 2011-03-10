@@ -37,14 +37,18 @@ public class JDBCStatsAggregator implements StatsAggregator {
   private String connectionString;
   private Configuration hiveconf;
   private final Log LOG = LogFactory.getLog(this.getClass().getName());
+  private int timeout = 30;
+  private final String comment = "Hive stats aggregation: " + this.getClass().getName();
 
   public boolean connect(Configuration hiveconf) {
     try {
       this.hiveconf = hiveconf;
+      timeout = HiveConf.getIntVar(hiveconf, HiveConf.ConfVars.HIVE_STATS_JDBC_TIMEOUT);
       connectionString = HiveConf.getVar(hiveconf, HiveConf.ConfVars.HIVESTATSDBCONNECTIONSTRING);
       String driver = HiveConf.getVar(hiveconf, HiveConf.ConfVars.HIVESTATSJDBCDRIVER);
       Class.forName(driver).newInstance();
-      DriverManager.setLoginTimeout(3); // stats should not block
+      // stats is non-blocking -- throw an exception when timeout
+      DriverManager.setLoginTimeout(timeout);
       conn = DriverManager.getConnection(connectionString);
       return true;
     } catch (Exception e) {
@@ -67,8 +71,10 @@ public class JDBCStatsAggregator implements StatsAggregator {
     try {
       long retval = 0;
       Statement stmt = conn.createStatement();
+      stmt.setQueryTimeout(timeout);
       String select =
-        "SELECT SUM" + "(" + JDBCStatsSetupConstants.PART_STAT_ROW_COUNT_COLUMN_NAME + ")" +
+        "SELECT /* " + comment + " */ " +
+        " SUM(" + JDBCStatsSetupConstants.PART_STAT_ROW_COUNT_COLUMN_NAME + ")" +
         " FROM " + JDBCStatsSetupConstants.PART_STAT_TABLE_NAME +
         " WHERE " + JDBCStatsSetupConstants.PART_STAT_ID_COLUMN_NAME + " LIKE '" + fileID + "%'";
 
@@ -90,7 +96,8 @@ public class JDBCStatsAggregator implements StatsAggregator {
           through a separate method which the developer has to call it manually in the code.
        */
       String delete =
-        "DELETE FROM " + JDBCStatsSetupConstants.PART_STAT_TABLE_NAME +
+        "DELETE /* " + comment + " */ " +
+        " FROM " + JDBCStatsSetupConstants.PART_STAT_TABLE_NAME +
         " WHERE " + JDBCStatsSetupConstants.PART_STAT_ID_COLUMN_NAME + " LIKE '" + fileID + "%'";
       stmt.executeUpdate(delete);
       stmt.close();
@@ -134,7 +141,8 @@ public class JDBCStatsAggregator implements StatsAggregator {
       Statement stmt = conn.createStatement();
 
       String delete =
-        "DELETE FROM " + JDBCStatsSetupConstants.PART_STAT_TABLE_NAME +
+        "DELETE /* " + comment + " */ " +
+        " FROM " + JDBCStatsSetupConstants.PART_STAT_TABLE_NAME +
         " WHERE " + JDBCStatsSetupConstants.PART_STAT_ID_COLUMN_NAME + " LIKE '" + rowID + "%'";
       stmt.executeUpdate(delete);
       stmt.close();

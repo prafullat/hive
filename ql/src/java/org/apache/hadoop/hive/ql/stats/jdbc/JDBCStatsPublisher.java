@@ -40,6 +40,10 @@ public class JDBCStatsPublisher implements StatsPublisher {
   private Configuration hiveconf;
   private final Log LOG = LogFactory.getLog(this.getClass().getName());
   private PreparedStatement selStmt, updStmt, insStmt;
+  private int timeout = 30; // default timeout in sec. for JDBC connection and statements
+  // SQL comment that identifies where the SQL statement comes from
+  private final String comment = "Hive stats publishing: " + this.getClass().getName();
+
 
   public JDBCStatsPublisher() {
     selStmt = updStmt = insStmt = null;
@@ -49,24 +53,25 @@ public class JDBCStatsPublisher implements StatsPublisher {
     try {
       this.hiveconf = hiveconf;
       connectionString = HiveConf.getVar(hiveconf, HiveConf.ConfVars.HIVESTATSDBCONNECTIONSTRING);
+      timeout = HiveConf.getIntVar(hiveconf, HiveConf.ConfVars.HIVE_STATS_JDBC_TIMEOUT);
       String driver = HiveConf.getVar(hiveconf, HiveConf.ConfVars.HIVESTATSJDBCDRIVER);
       Class.forName(driver).newInstance();
-      DriverManager.setLoginTimeout(3); // stats should not block
+      DriverManager.setLoginTimeout(timeout); // stats is non-blocking
       conn = DriverManager.getConnection(connectionString);
 
       // prepare the SELECT/UPDATE/INSERT statements
       String select =
-        "SELECT " + JDBCStatsSetupConstants.PART_STAT_ROW_COUNT_COLUMN_NAME +
+        "SELECT /* " + comment + " */ " + JDBCStatsSetupConstants.PART_STAT_ROW_COUNT_COLUMN_NAME +
         " FROM " + JDBCStatsSetupConstants.PART_STAT_TABLE_NAME +
         " WHERE " + JDBCStatsSetupConstants.PART_STAT_ID_COLUMN_NAME + " = ?";
 
       String update =
-        "UPDATE " + JDBCStatsSetupConstants.PART_STAT_TABLE_NAME +
+        "UPDATE /* " + comment + " */ "+ JDBCStatsSetupConstants.PART_STAT_TABLE_NAME +
         " SET " +  JDBCStatsSetupConstants.PART_STAT_ROW_COUNT_COLUMN_NAME + "= ? " +
         " WHERE " + JDBCStatsSetupConstants.PART_STAT_ID_COLUMN_NAME + " = ?";
 
       String insert =
-        "INSERT INTO " + JDBCStatsSetupConstants.PART_STAT_TABLE_NAME +
+        "INSERT INTO /* " + comment + " */ " + JDBCStatsSetupConstants.PART_STAT_TABLE_NAME +
         " VALUES (?, ?)";
 
       selStmt = conn.prepareStatement(select);
@@ -74,9 +79,9 @@ public class JDBCStatsPublisher implements StatsPublisher {
       insStmt = conn.prepareStatement(insert);
 
       // make the statements non-blocking
-      selStmt.setQueryTimeout(5);
-      updStmt.setQueryTimeout(5);
-      insStmt.setQueryTimeout(5);
+      selStmt.setQueryTimeout(timeout);
+      updStmt.setQueryTimeout(timeout);
+      insStmt.setQueryTimeout(timeout);
 
       return true;
     } catch (Exception e) {
@@ -168,9 +173,11 @@ public class JDBCStatsPublisher implements StatsPublisher {
       connectionString = HiveConf.getVar(hconf, HiveConf.ConfVars.HIVESTATSDBCONNECTIONSTRING);
       String driver = HiveConf.getVar(hconf, HiveConf.ConfVars.HIVESTATSJDBCDRIVER);
       Class.forName(driver).newInstance();
+      DriverManager.setLoginTimeout(timeout);
       conn = DriverManager.getConnection(connectionString);
 
       Statement stmt = conn.createStatement();
+      stmt.setQueryTimeout(timeout);
 
       // Check if the table exists
       DatabaseMetaData dbm = conn.getMetaData();

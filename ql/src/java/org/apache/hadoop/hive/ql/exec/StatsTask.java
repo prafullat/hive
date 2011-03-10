@@ -207,6 +207,7 @@ public class StatsTask extends Task<StatsWork> implements Serializable {
        LOG.error("Cannot get table " + tableName, e);
        console.printError("Cannot get table " + tableName, e.toString());
     }
+    
     return aggregateStats();
   }
 
@@ -226,53 +227,53 @@ public class StatsTask extends Task<StatsWork> implements Serializable {
   }
 
   private int aggregateStats() {
+
+    StatsAggregator statsAggregator = null;
+
     try {
       // Stats setup:
       Warehouse wh = new Warehouse(conf);
       FileSystem fileSys;
       FileStatus[] fileStatus;
 
-      // manufacture a StatsAggregator
-      StatsAggregator statsAggregator;
-      String statsImplementationClass = HiveConf.getVar(conf, HiveConf.ConfVars.HIVESTATSDBCLASS);
-      StatsFactory.setImplementation(statsImplementationClass, conf);
-      statsAggregator = StatsFactory.getStatsAggregator();
-      if (!statsAggregator.connect(conf)) {
-        // this should not fail the whole job, return 0 so that the job won't fail.
-        console.printInfo("[WARNING] Could not update table/partition level stats.",
-            "StatsAggregator.connect() failed: stats class = " +
-            statsImplementationClass);
-        return 0;
+      if(!this.getWork().getNoStatsAggregator()) {
+        String statsImplementationClass = HiveConf.getVar(conf, HiveConf.ConfVars.HIVESTATSDBCLASS);
+        StatsFactory.setImplementation(statsImplementationClass, conf);
+        statsAggregator = StatsFactory.getStatsAggregator();
+        // manufacture a StatsAggregator
+        if (!statsAggregator.connect(conf)) {
+          throw new HiveException("StatsAggregator connect failed " + statsImplementationClass);
+        }
       }
-
 
       TableStatistics tblStats = new TableStatistics();
 
-      //
-      // For partitioned table get the old table statistics for incremental update
-      //
-      if (table.isPartitioned()) {
-        org.apache.hadoop.hive.metastore.api.Table tTable = table.getTTable();
-        Map<String, String> parameters = tTable.getParameters();
-        if (parameters.containsKey(StatsSetupConst.ROW_COUNT)) {
-          tblStats.setNumRows(Long.parseLong(parameters.get(StatsSetupConst.ROW_COUNT)));
-        }
-        if (parameters.containsKey(StatsSetupConst.NUM_PARTITIONS)) {
-          tblStats.setNumPartitions(Integer.parseInt(parameters.get(StatsSetupConst.NUM_PARTITIONS)));
-        }
-        if (parameters.containsKey(StatsSetupConst.NUM_FILES)) {
-          tblStats.setNumFiles(Integer.parseInt(parameters.get(StatsSetupConst.NUM_FILES)));
-        }
-        if (parameters.containsKey(StatsSetupConst.TOTAL_SIZE)) {
-          tblStats.setSize(Long.parseLong(parameters.get(StatsSetupConst.TOTAL_SIZE)));
-        }
+      org.apache.hadoop.hive.metastore.api.Table tTable = table.getTTable();
+      Map<String, String> parameters = tTable.getParameters();
+      
+      boolean tableStatsExist = this.existStats(parameters);
+      
+      if (parameters.containsKey(StatsSetupConst.ROW_COUNT)) {
+        tblStats.setNumRows(Long.parseLong(parameters.get(StatsSetupConst.ROW_COUNT)));
+      }
+      if (parameters.containsKey(StatsSetupConst.NUM_PARTITIONS)) {
+        tblStats.setNumPartitions(Integer.parseInt(parameters.get(StatsSetupConst.NUM_PARTITIONS)));
+      }
+      if (parameters.containsKey(StatsSetupConst.NUM_FILES)) {
+        tblStats.setNumFiles(Integer.parseInt(parameters.get(StatsSetupConst.NUM_FILES)));
+      }
+      if (parameters.containsKey(StatsSetupConst.TOTAL_SIZE)) {
+        tblStats.setSize(Long.parseLong(parameters.get(StatsSetupConst.TOTAL_SIZE)));
       }
 
       List<Partition> partitions = getPartitionsList();
-
+      boolean atomic = HiveConf.getBoolVar(conf, HiveConf.ConfVars.HIVE_STATS_ATOMIC);
+      
       if (partitions == null) {
         // non-partitioned tables:
-
+        if (!tableStatsExist && atomic) {
+          return 0;
+        }
         Path tablePath = wh.getDefaultTablePath(table.getDbName(), table.getTableName());
         fileSys = tablePath.getFileSystem(conf);
         fileStatus = Utilities.getFileStatusRecurse(tablePath, 1, fileSys);
@@ -284,9 +285,15 @@ public class StatsTask extends Task<StatsWork> implements Serializable {
         tblStats.setSize(tableSize);
 
         // In case of a non-partitioned table, the key for stats temporary store is "rootDir"
-        String rows = statsAggregator.aggregateStats(work.getAggKey(), StatsSetupConst.ROW_COUNT);
-        if (rows != null) {
-          tblStats.setNumRows(Long.parseLong(rows));
+        if(statsAggregator != null) {
+          String rows = statsAggregator.aggregateStats(work.getAggKey(), StatsSetupConst.ROW_COUNT);
+          if (rows != null) {
+            tblStats.setNumRows(Long.parseLong(rows));
+          } else {
+            if (atomic) {
+              throw new HiveException("StatsAggregator failed to get numRows.");
+            }
+          }
         }
       } else {
         // Partitioned table:
@@ -294,16 +301,45 @@ public class StatsTask extends Task<StatsWork> implements Serializable {
         // and update the table stats based on the old and new stats.
         for (Partition partn : partitions) {
           //
+          // get the old partition stats
+          //
+          org.apache.hadoop.hive.metastore.api.Partition tPart = partn.getTPartition();
+          parameters = tPart.getParameters();
+
+          boolean hasStats = this.existStats(parameters);
+          if(!hasStats && atomic) {
+            continue;
+          }
+
+          int  nf = parameters.containsKey(StatsSetupConst.NUM_FILES) ?
+                    Integer.parseInt(parameters.get(StatsSetupConst.NUM_FILES)) :
+                    0;
+          long nr = parameters.containsKey(StatsSetupConst.ROW_COUNT) ?
+                    Long.parseLong(parameters.get(StatsSetupConst.ROW_COUNT)) :
+                    0L;
+          long sz = parameters.containsKey(StatsSetupConst.TOTAL_SIZE) ?
+                    Long.parseLong(parameters.get(StatsSetupConst.TOTAL_SIZE)) :
+                    0L;
+          
+          //
           // get the new partition stats
           //
           PartitionStatistics newPartStats = new PartitionStatistics();
 
           // In that case of a partition, the key for stats temporary store is "rootDir/[dynamic_partition_specs/]%"
           String partitionID = work.getAggKey() + Warehouse.makePartPath(partn.getSpec());
-
-          String rows = statsAggregator.aggregateStats(partitionID, StatsSetupConst.ROW_COUNT);
-          if (rows != null) {
-            newPartStats.setNumRows(Long.parseLong(rows));
+          
+          if (statsAggregator != null) {
+            String rows = statsAggregator.aggregateStats(partitionID, StatsSetupConst.ROW_COUNT);
+            if (rows != null) {
+              newPartStats.setNumRows(Long.parseLong(rows));
+            } else {
+              if (atomic) {
+                throw new HiveException("StatsAggregator failed to get numRows.");
+              }
+            }
+          } else {
+            newPartStats.setNumRows(nr);
           }
 
           fileSys = partn.getPartitionPath().getFileSystem(conf);
@@ -316,26 +352,6 @@ public class StatsTask extends Task<StatsWork> implements Serializable {
           }
           newPartStats.setSize(partitionSize);
 
-          //
-          // get the old partition stats
-          //
-          org.apache.hadoop.hive.metastore.api.Partition tPart = partn.getTPartition();
-          Map<String, String> parameters = tPart.getParameters();
-
-          boolean hasStats =
-            parameters.containsKey(StatsSetupConst.NUM_FILES) ||
-            parameters.containsKey(StatsSetupConst.ROW_COUNT) ||
-            parameters.containsKey(StatsSetupConst.TOTAL_SIZE);
-
-          int  nf = parameters.containsKey(StatsSetupConst.NUM_FILES) ?
-                    Integer.parseInt(parameters.get(StatsSetupConst.NUM_FILES)) :
-                    0;
-          long nr = parameters.containsKey(StatsSetupConst.ROW_COUNT) ?
-                    Long.parseLong(parameters.get(StatsSetupConst.ROW_COUNT)) :
-                    0L;
-          long sz = parameters.containsKey(StatsSetupConst.TOTAL_SIZE) ?
-                    Long.parseLong(parameters.get(StatsSetupConst.TOTAL_SIZE)) :
-                    0L;
           if (hasStats) {
             PartitionStatistics oldPartStats = new PartitionStatistics(nf, nr, sz);
             tblStats.updateStats(oldPartStats, newPartStats);
@@ -351,39 +367,49 @@ public class StatsTask extends Task<StatsWork> implements Serializable {
           parameters.put(StatsSetupConst.TOTAL_SIZE, Long.toString(newPartStats.getSize()));
 
           tPart.setParameters(parameters);
-          db.alterPartition(table.getTableName(), new Partition(table, tPart));
+          String tableFullName = table.getDbName() + "." + table.getTableName();
+          db.alterPartition(tableFullName, new Partition(table, tPart));
 
-          console.printInfo("Partition " + table.getTableName() + partn.getSpec() +
+          console.printInfo("Partition " + tableFullName + partn.getSpec() +
               " stats: [" + newPartStats.toString() + ']');
         }
       }
 
-      statsAggregator.closeConnection();
-
       //
       // write table stats to metastore
       //
-      org.apache.hadoop.hive.metastore.api.Table tTable = table.getTTable();
-      Map<String, String> parameters = tTable.getParameters();
+      parameters = tTable.getParameters();
       parameters.put(StatsSetupConst.ROW_COUNT, Long.toString(tblStats.getNumRows()));
       parameters.put(StatsSetupConst.NUM_PARTITIONS, Integer.toString(tblStats.getNumPartitions()));
       parameters.put(StatsSetupConst.NUM_FILES, Integer.toString(tblStats.getNumFiles()));
       parameters.put(StatsSetupConst.TOTAL_SIZE, Long.toString(tblStats.getSize()));
       tTable.setParameters(parameters);
 
-      db.alterTable(table.getTableName(), new Table(tTable));
+      String tableFullName = table.getDbName() + "." + table.getTableName();
 
-      console.printInfo("Table " + table.getTableName() + " stats: [" + tblStats.toString() + ']');
+      db.alterTable(tableFullName, new Table(tTable));
 
-      return 0;
-    }
-    catch (Exception e) {
+      console.printInfo("Table " + tableFullName + " stats: [" + tblStats.toString() + ']');
+
+    } catch (Exception e) {
       // return 0 since StatsTask should not fail the whole job
       console.printInfo("[Warning] could not update stats.",
           "Failed with exception " + e.getMessage() + "\n"
           + StringUtils.stringifyException(e));
-      return 0;
+    } finally {
+      if(statsAggregator != null) {
+        statsAggregator.closeConnection();        
+      }
     }
+    // StatsTask always return 0 so that the whole job won't fail
+    return 0;
+  }
+  
+  private boolean existStats(Map<String, String> parameters) {
+    return parameters.containsKey(StatsSetupConst.ROW_COUNT)
+        || parameters.containsKey(StatsSetupConst.NUM_FILES)
+        || parameters.containsKey(StatsSetupConst.TOTAL_SIZE)
+        || parameters.containsKey(StatsSetupConst.NUM_PARTITIONS);
   }
 
   /**

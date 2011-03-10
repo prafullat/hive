@@ -131,6 +131,7 @@ public enum ErrorMsg {
   UDTF_LATERAL_VIEW("UDTF's cannot be in a select expression when there is a lateral view"),
   UDTF_ALIAS_MISMATCH("The number of aliases supplied in the AS clause does not match the "
       + "number of columns output by the UDTF"),
+  UDF_STATEFUL_INVALID_LOCATION("Stateful UDF's can only be invoked in the SELECT list"),
   LATERAL_VIEW_WITH_JOIN("Join with a lateral view is not supported"),
   LATERAL_VIEW_INVALID_CHILD("Lateral view AST with invalid child"),
   OUTPUT_SPECIFIED_MULTIPLE_TIMES("The same output cannot be present multiple times: "),
@@ -138,14 +139,17 @@ public enum ErrorMsg {
   VIEW_COL_MISMATCH("The number of columns produced by the SELECT clause does not match the "
       + "number of column names specified by CREATE VIEW"),
   DML_AGAINST_VIEW("A view cannot be used as target table for LOAD or INSERT"),
+  ANALYZE_VIEW("ANALYZE is not supported for views"),
+  VIEW_PARTITION_TOTAL("At least one non-partitioning column must be present in view"),
+  VIEW_PARTITION_MISMATCH("Rightmost columns in view output do not match PARTITIONED ON clause"),
   PARTITION_DYN_STA_ORDER("Dynamic partition cannot be the parent of a static partition"),
   DYNAMIC_PARTITION_DISABLED("Dynamic partition is disabled. Either enable it by setting "
       + "hive.exec.dynamic.partition=true or specify partition column values"),
   DYNAMIC_PARTITION_STRICT_MODE("Dynamic partition strict mode requires at least one "
       + "static partition column. To turn this off set hive.exec.dynamic.partition.mode=nonstrict"),
-  DYNAMIC_PARTITION_MERGE("Dynamic partition does not support merging mapfiles/mapredfiles yet."
-      + "Please set hive.merge.mapfiles and hive.merge.mapredfiles to false or use static "
-      +	"partitions"),
+  DYNAMIC_PARTITION_MERGE("Dynamic partition does not support merging using non-CombineHiveInputFormat."
+      + "Please check your hive.input.format setting and make sure your Hadoop version support "
+      + "CombineFileInputFormat."),
   NONEXISTPARTCOL("Non-Partition column appears in the partition specification: "),
   UNSUPPORTED_TYPE("DATE, DATETIME, and TIMESTAMP types aren't supported yet. Please use "
       + "STRING instead."),

@@ -150,6 +150,7 @@ public class HiveConf extends Configuration {
     METASTOREPWD("javax.jdo.option.ConnectionPassword", ""),
     // Class name of JDO connection url hook
     METASTORECONNECTURLHOOK("hive.metastore.ds.connection.url.hook", ""),
+    METASTOREMULTITHREADED("javax.jdo.option.Multithreaded", "true"),
     // Name of the connection url in the configuration
     METASTORECONNECTURLKEY("javax.jdo.option.ConnectionURL", ""),
     // Number of attempts to retry connecting after there is a JDO datastore err
@@ -280,7 +281,10 @@ public class HiveConf extends Configuration {
     HIVESKEWJOINKEY("hive.skewjoin.key", 1000000),
     HIVESKEWJOINMAPJOINNUMMAPTASK("hive.skewjoin.mapjoin.map.tasks", 10000),
     HIVESKEWJOINMAPJOINMINSPLIT("hive.skewjoin.mapjoin.min.split", 33554432L), //32M
+    MAPREDMAXSPLITSIZE("mapred.max.split.size", 256000000L),
     MAPREDMINSPLITSIZE("mapred.min.split.size", 1L),
+    MAPREDMINSPLITSIZEPERNODE("mapred.min.split.size.per.rack", 1L),
+    MAPREDMINSPLITSIZEPERRACK("mapred.min.split.size.per.node", 1L),
     HIVEMERGEMAPONLY("hive.mergejob.maponly", true),
 
     HIVESENDHEARTBEAT("hive.heartbeat.interval", 1000),
@@ -328,6 +332,10 @@ public class HiveConf extends Configuration {
         ""), // default stats publisher if none of JDBC/HBase is specified
     HIVE_STATS_DEFAULT_AGGREGATOR("hive.stats.default.aggregator",
         ""), // default stats aggregator if none of JDBC/HBase is specified
+    HIVE_STATS_JDBC_TIMEOUT("hive.stats.jdbc.timeout",
+        30), // default timeout in sec for JDBC connection & SQL statements
+    HIVE_STATS_ATOMIC("hive.stats.atomic",
+        false), // whether to update metastore stats only if all stats are available
 
 
     // Concurrency
@@ -378,7 +386,12 @@ public class HiveConf extends Configuration {
 
     HIVE_ERROR_ON_EMPTY_PARTITION("hive.error.on.empty.partition", false),
 
-    HIVE_INDEX_IGNORE_HDFS_LOC("hive.index.compact.file.ignore.hdfs", false), 
+    HIVE_INDEX_IGNORE_HDFS_LOC("hive.index.compact.file.ignore.hdfs", false),
+
+    // temporary variable for testing. This is added just to turn off this feature in case of a bug in
+    // deployment. It has not been documented in hive-default.xml intentionally, this should be removed
+    // once the feature is stable
+    HIVE_MAPPER_CANNOT_SPAN_MULTIPLE_PARTITIONS("hive.mapper.cannot.span.multiple.partitions", false),
     ;
 
 

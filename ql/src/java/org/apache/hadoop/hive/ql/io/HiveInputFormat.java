@@ -288,6 +288,9 @@ public class HiveInputFormat<K extends WritableComparable, V extends Writable>
         result.add(new HiveInputSplit(is, inputFormatClass.getName()));
       }
     }
+
+    LOG.info("number of splits " + result.size());
+
     return result.toArray(new HiveInputSplit[result.size()]);
   }
 
@@ -365,13 +368,17 @@ public class HiveInputFormat<K extends WritableComparable, V extends Writable>
     pushProjectionsAndFilters(jobConf, inputFormatClass, splitPath,
       splitPathWithNoSchema, false);
   }
-  
+
   protected void pushProjectionsAndFilters(JobConf jobConf, Class inputFormatClass,
       String splitPath, String splitPathWithNoSchema, boolean nonNative) {
     if (this.mrwork == null) {
       init(job);
     }
-
+    
+    if(this.mrwork.getPathToAliases() == null) {
+      return;
+    }
+    
     ArrayList<String> aliases = new ArrayList<String>();
     Iterator<Entry<String, ArrayList<String>>> iterator = this.mrwork
         .getPathToAliases().entrySet().iterator();

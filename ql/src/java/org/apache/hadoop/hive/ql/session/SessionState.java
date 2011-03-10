@@ -68,28 +68,48 @@ public class SessionState {
    */
   protected boolean isSilent;
 
+  /**
+   * verbose mode
+   */
+  protected boolean isVerbose;
+
   /*
    * HiveHistory Object
    */
   protected HiveHistory hiveHist;
+
   /**
    * Streams to read/write from.
    */
-  public PrintStream out;
   public InputStream in;
+  public PrintStream out;
   public PrintStream err;
+  /**
+   * Standard output from any child process(es).
+   */
+  public PrintStream childOut;
+  /**
+   * Error output from any child process(es).
+   */
+  public PrintStream childErr;
+
+  /**
+   * Temporary file name used to store results of non-Hive commands (e.g., set, dfs)
+   * and HiveServer.fetch*() function will read results from this file
+   */
+  protected File tmpOutputFile;
 
   /**
    * type of the command.
    */
   private HiveOperation commandType;
-  
+
   private HiveAuthorizationProvider authorizer;
-  
+
   private HiveAuthenticationProvider authenticator;
-  
+
   private CreateTableAutomaticGrant createTableGrants;
-  
+
   /**
    * Lineage state.
    */
@@ -112,6 +132,14 @@ public class SessionState {
     this.conf = conf;
   }
 
+  public File getTmpOutputFile() {
+    return tmpOutputFile;
+  }
+
+  public void setTmpOutputFile(File f) {
+    tmpOutputFile = f;
+  }
+
   public boolean getIsSilent() {
     if(conf != null) {
       return conf.getBoolVar(HiveConf.ConfVars.HIVESESSIONSILENT);
@@ -125,6 +153,14 @@ public class SessionState {
       conf.setBoolVar(HiveConf.ConfVars.HIVESESSIONSILENT, isSilent);
     }
     this.isSilent = isSilent;
+  }
+
+  public boolean getIsVerbose() {
+    return isVerbose;
+  }
+
+  public void setIsVerbose(boolean isVerbose) {
+    this.isVerbose = isVerbose;
   }
 
   public SessionState() {
@@ -161,29 +197,22 @@ public class SessionState {
 
   /**
    * start a new session and set it to current session.
-   * @throws HiveException 
    */
-  public static SessionState start(HiveConf conf) throws HiveException {
+  public static SessionState start(HiveConf conf) {
     SessionState ss = new SessionState(conf);
-    ss.getConf().setVar(HiveConf.ConfVars.HIVESESSIONID, makeSessionId());
-    ss.hiveHist = new HiveHistory(ss);
-    ss.authenticator = HiveUtils.getAuthenticator(conf);
-    ss.authorizer = HiveUtils.getAuthorizeProviderManager(
-        conf, ss.authenticator);
-    ss.createTableGrants = CreateTableAutomaticGrant.create(conf);
-    tss.set(ss);
-    return (ss);
+    return start(ss);
   }
 
   /**
    * set current session to existing session object if a thread is running
    * multiple sessions - it must call this method with the new session object
    * when switching from one session to another.
-   * @throws HiveException 
+   * @throws HiveException
    */
   public static SessionState start(SessionState startSs) {
 
     tss.set(startSs);
+
     if (StringUtils.isEmpty(startSs.getConf().getVar(
         HiveConf.ConfVars.HIVESESSIONID))) {
       startSs.getConf()
@@ -193,7 +222,21 @@ public class SessionState {
     if (startSs.hiveHist == null) {
       startSs.hiveHist = new HiveHistory(startSs);
     }
-    
+
+    if (startSs.getTmpOutputFile() == null) {
+      // per-session temp file containing results to be sent from HiveServer to HiveClient
+      File tmpDir = new File(
+          HiveConf.getVar(startSs.getConf(), HiveConf.ConfVars.HIVEHISTORYFILELOC));
+      String sessionID = startSs.getConf().getVar(HiveConf.ConfVars.HIVESESSIONID);
+      try {
+        File tmpFile = File.createTempFile(sessionID, ".pipeout", tmpDir);
+        tmpFile.deleteOnExit();
+        startSs.setTmpOutputFile(tmpFile);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
+
     try {
       startSs.authenticator = HiveUtils.getAuthenticator(startSs
           .getConf());
@@ -204,7 +247,7 @@ public class SessionState {
     } catch (HiveException e) {
       throw new RuntimeException(e);
     }
-    
+
     return startSs;
   }
 
@@ -284,6 +327,16 @@ public class SessionState {
     public PrintStream getErrStream() {
       SessionState ss = SessionState.get();
       return ((ss != null) && (ss.err != null)) ? ss.err : System.err;
+    }
+
+    public PrintStream getChildOutStream() {
+      SessionState ss = SessionState.get();
+      return ((ss != null) && (ss.childOut != null)) ? ss.childOut : System.out;
+    }
+
+    public PrintStream getChildErrStream() {
+      SessionState ss = SessionState.get();
+      return ((ss != null) && (ss.childErr != null)) ? ss.childErr : System.err;
     }
 
     public boolean getIsSilent() {
@@ -573,7 +626,7 @@ public class SessionState {
     }
     return commandType.getOperationName();
   }
-  
+
   public HiveOperation getHiveOperation() {
     return commandType;
   }
@@ -581,7 +634,7 @@ public class SessionState {
   public void setCommandType(HiveOperation commandType) {
     this.commandType = commandType;
   }
-  
+
   public HiveAuthorizationProvider getAuthorizer() {
     return authorizer;
   }
@@ -597,7 +650,7 @@ public class SessionState {
   public void setAuthenticator(HiveAuthenticationProvider authenticator) {
     this.authenticator = authenticator;
   }
-  
+
   public CreateTableAutomaticGrant getCreateTableGrants() {
     return createTableGrants;
   }
