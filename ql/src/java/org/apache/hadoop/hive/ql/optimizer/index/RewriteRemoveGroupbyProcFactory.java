@@ -123,7 +123,7 @@ public final class RewriteRemoveGroupbyProcFactory {
         Context context = null;
         ASTNode tree = null;
         BaseSemanticAnalyzer sem = null;
-        String newSelCommand = "select `_countkey` from " + removeGbyCtx.getIndexName();
+        String newSelCommand = "select `_aggregateValue` from " + removeGbyCtx.getIndexName();
         try {
           context = new Context(conf);
         ParseDriver pd = new ParseDriver();
@@ -143,7 +143,7 @@ public final class RewriteRemoveGroupbyProcFactory {
         }
 
         //We retrieve the ASTNode function token from the root tree
-        ASTNode funcNode = removeGbyCtx.getFuncNode(tree, "`_countkey`");
+        ASTNode funcNode = removeGbyCtx.getFuncNode(tree, "`_aggregateValue`");
 
         //We need the rowResolver of the parent TableScanOperator to fix the rowSchema, colList, colExprMap of the SelectOperator
         //and also to construct the  ExprNodeDesc to replace the index key columns with _countkey
