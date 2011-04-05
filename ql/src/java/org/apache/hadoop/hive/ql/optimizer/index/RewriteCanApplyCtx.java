@@ -61,23 +61,22 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
   }
 
   // Rewrite Variables
-  public int agg_func_cnt = 0;
-  public int gby_key_cnt = 0;
-  public boolean query_has_sort_by = false;
-  public boolean query_has_order_by = false;
-  public boolean query_has_distribute_by = false;
-  public boolean query_has_group_by = false;
-  public boolean query_has_distinct = false;
-  public boolean agg_func_is_not_count = false;
-  public boolean agg_func_cols_fetch_exception = false;
-  public boolean whr_clause_cols_fetch_exception = false;
-  public boolean sel_clause_cols_fetch_exception = false;
-  public boolean gby_keys_fetch_exception = false;
-  public boolean count_on_all_cols = false;
-  public boolean query_has_generic_udf_on_groupby_key = false;
-  public boolean query_has_multiple_tables = false;
-  public boolean should_append_subquery = false;
-  public boolean remove_group_by = false;
+  public int aggFuncCnt = 0;
+  public int gbyKeyCnt = 0;
+  public boolean queryHasSortBy = false;
+  public boolean queryHasOrderBy = false;
+  public boolean queryHasDistributeBy = false;
+  public boolean queryHasGroupBy = false;
+  public boolean aggFuncIsNotCount = false;
+  public boolean aggFuncColsFetchException = false;
+  public boolean whrClauseColsFetchException = false;
+  public boolean selClauseColsFetchException = false;
+  public boolean gbyKeysFetchException = false;
+  public boolean countOnAllCols = false;
+  public boolean queryHasGenericUdfOnGroupbyKey = false;
+  public boolean queryHasMultipleTables = false;
+  public boolean shouldAppendSubquery = false;
+  public boolean removeGroupBy = false;
 
 
    //Data structures that are populated in the RewriteCanApplyProcFactory methods to check if the index key meets all criteria
@@ -86,28 +85,27 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
    Set<String> gbKeyNameList = new LinkedHashSet<String>();
    Set<String> aggFuncColList = new LinkedHashSet<String>();
 
-   private int aggFuncCnt = 0;
+
    private final ParseContext parseContext;
    private String baseTableName = "";
 
    void resetCanApplyCtx(){
-     agg_func_cnt = 0;
-     gby_key_cnt = 0;
-     query_has_sort_by = false;
-     query_has_order_by = false;
-     query_has_distribute_by = false;
-     query_has_group_by = false;
-     query_has_distinct = false;
-     agg_func_is_not_count = false;
-     agg_func_cols_fetch_exception = false;
-     whr_clause_cols_fetch_exception = false;
-     sel_clause_cols_fetch_exception = false;
-     gby_keys_fetch_exception = false;
-     count_on_all_cols = false;
-     query_has_generic_udf_on_groupby_key = false;
-     query_has_multiple_tables = false;
-     should_append_subquery = false;
-     remove_group_by = false;
+     aggFuncCnt = 0;
+     gbyKeyCnt = 0;
+     queryHasSortBy = false;
+     queryHasOrderBy = false;
+     queryHasDistributeBy = false;
+     queryHasGroupBy = false;
+     aggFuncIsNotCount = false;
+     aggFuncColsFetchException = false;
+     whrClauseColsFetchException = false;
+     selClauseColsFetchException = false;
+     gbyKeysFetchException = false;
+     countOnAllCols = false;
+     queryHasGenericUdfOnGroupbyKey = false;
+     queryHasMultipleTables = false;
+     shouldAppendSubquery = false;
+     removeGroupBy = false;
 
      aggFuncCnt = 0;
      selectColumnsList.clear();
@@ -200,7 +198,8 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
     try {
       ogw.startWalking(topNodes, null);
     } catch (SemanticException e) {
-      LOG.info("Exception in walking operator tree. Rewrite variables not populated", e);
+      LOG.warn("Exception in walking operator tree. Rewrite variables not populated", e);
+
     }
 
   }
@@ -236,9 +235,8 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
 
 
   boolean isIndexUsableForQueryBranchRewrite(Index index, Set<String> indexKeyNames){
-    boolean removeGroupBy = true;
     boolean optimizeCount = false;
-
+    removeGroupBy = true;
     //--------------------------------------------
     //Check if all columns in select list are part of index key columns
     if (!indexKeyNames.containsAll(selectColumnsList)) {
@@ -306,8 +304,8 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
       // 3. GROUP BY idxKey, idxKey
       //     FUTURE: GB Key has dup idxKeyCols. Develop a rewrite to eliminate the dup key cols
       //            from GB key.
-      if (query_has_group_by &&
-          indexKeyNames.size() < gby_key_cnt) {
+      if (queryHasGroupBy &&
+          indexKeyNames.size() < gbyKeyCnt) {
         LOG.info("Group by key has some non-indexed columns, GroupBy will be"
             + " preserved by rewrite optimization" );
         removeGroupBy = false;
@@ -318,14 +316,13 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
     //which would be used by transformation procedure as inputs.
 
     //sub-query is needed only in case of optimizecount and complex gb keys?
-    if(query_has_generic_udf_on_groupby_key == false
+    if(queryHasGenericUdfOnGroupbyKey == false
         && !(optimizeCount == true && removeGroupBy == false) ) {
-      remove_group_by  = removeGroupBy;
       addTable(baseTableName, index.getIndexTableName());
-    }else if(query_has_generic_udf_on_groupby_key == true &&
-        agg_func_cnt == 1 &&
-        agg_func_is_not_count == false){
-      should_append_subquery = true;
+    }else if(queryHasGenericUdfOnGroupbyKey == true &&
+        aggFuncCnt == 1 &&
+        aggFuncIsNotCount == false){
+      shouldAppendSubquery = true;
       addTable(baseTableName, index.getIndexTableName());
     }else{
       LOG.info("No valid criteria met to apply rewrite." );

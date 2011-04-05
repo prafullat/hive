@@ -21,6 +21,7 @@ package org.apache.hadoop.hive.ql.index;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.hive.conf.HiveConf;
@@ -42,9 +43,12 @@ import org.apache.hadoop.hive.ql.plan.PartitionDesc;
 
 public class AggregateIndexHandler extends TableBasedIndexHandler {
 
+  private static Index index = null;
+
     @Override
     public void analyzeIndexDefinition(Table baseTable, Index index,
         Table indexTable) throws HiveException {
+      this.index = index;
       StorageDescriptor storageDesc = index.getSd();
       if (this.usesIndexTable() && indexTable != null) {
         StorageDescriptor indexTableSd = storageDesc.deepCopy();
@@ -53,10 +57,8 @@ public class AggregateIndexHandler extends TableBasedIndexHandler {
         indexTblCols.add(bucketFileName);
         FieldSchema offSets = new FieldSchema("_offsets", "array<bigint>", "");
         indexTblCols.add(offSets);
-        FieldSchema countkey = new FieldSchema("_countkey", "int", "");
+        FieldSchema countkey = new FieldSchema("_aggregateValue", "int", "");
         indexTblCols.add(countkey);
-        FieldSchema countall = new FieldSchema("_countall", "int", "");
-        indexTblCols.add(countall);
         indexTable.setSd(indexTableSd);
       }
     }
@@ -99,17 +101,39 @@ public class AggregateIndexHandler extends TableBasedIndexHandler {
       command.append(") ");
       command.append(",");
 
+      assert indexField.size()==1;
+
       Iterator<FieldSchema> fsItr = indexField.iterator();
+      String indexCol = null;
       while(fsItr.hasNext()){
         FieldSchema indexColFs = fsItr.next();
-        String indexCol = indexColFs.getName();
-        command.append(" count(");
-        command.append(indexCol);
-        command.append(") ");
-        command.append(",");
+        indexCol = indexColFs.getName();
       }
 
-      command.append(" count(*) ");
+      String aggFunc = null;
+      String funcOn = null;
+      Map<String, String> propMap = index.getParameters();
+      Iterator<String> propMapItr = propMap.keySet().iterator();
+      while(propMapItr.hasNext()){
+        String propKey = propMapItr.next();
+        if(propKey.equals("aggFunc")){
+          aggFunc = propMap.get(propKey);
+        }
+        if(propKey.equals("aggFuncKey")){
+          funcOn = propMap.get(propKey);
+        }
+        if(aggFunc != null && funcOn != null){
+          break;
+        }
+      }
+
+      if(indexCol.equals(funcOn)){
+        command.append(aggFunc + "(");
+        command.append(indexCols);
+        command.append(") ");
+      }
+
+
       command.append(" FROM " + HiveUtils.unparseIdentifier(baseTableName) );
       LinkedHashMap<String, String> basePartSpec = baseTablePartDesc.getPartSpec();
       if(basePartSpec != null) {

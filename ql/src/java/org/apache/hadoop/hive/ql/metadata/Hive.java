@@ -641,12 +641,13 @@ public class Hive {
       Index indexDesc = new Index(indexName, indexHandlerClass, dbName, tableName, time, time, indexTblName,
           storageDescriptor, params, deferredRebuild);
       indexDesc.getParameters().put("comment", indexComment);
-      indexHandler.analyzeIndexDefinition(baseTbl, indexDesc, tt);
 
       if (idxProps != null)
       {
         indexDesc.getParameters().putAll(idxProps);
       }
+
+      indexHandler.analyzeIndexDefinition(baseTbl, indexDesc, tt);
 
       this.getMSC().createIndex(indexDesc, tt);
 

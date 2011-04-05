@@ -19,7 +19,7 @@ CREATE TABLE lineitem (L_ORDERKEY      INT,
 ROW FORMAT DELIMITED
 FIELDS TERMINATED BY '|';
 
-CREATE INDEX lineitem_lshipdate_idx ON TABLE lineitem(l_shipdate) AS 'org.apache.hadoop.hive.ql.index.AggregateIndexHandler' WITH DEFERRED REBUILD;
+CREATE INDEX lineitem_lshipdate_idx ON TABLE lineitem(l_shipdate) AS 'org.apache.hadoop.hive.ql.index.AggregateIndexHandler' WITH DEFERRED REBUILD IDXPROPERTIES("aggFunc"="count", "aggFuncKey"="l_shipdate");
 ALTER INDEX lineitem_lshipdate_idx ON lineitem REBUILD;
 
 set hive.optimize.index.groupby=true;
@@ -65,7 +65,7 @@ explain select year(l_shipdate) as year,
         month(l_shipdate) as month,
         sum(sz)
 from (
-select l_shipdate, `_countkey` as sz
+select l_shipdate, `_aggregateValue` as sz
 from default__lineitem_lineitem_lshipdate_idx__
 ) t
 group by year(l_shipdate), month(l_shipdate);
@@ -91,7 +91,7 @@ explain select year(l_shipdate) as year,
         month(l_shipdate) as month,
         sum(sz)
 from (
-select l_shipdate, `_countkey` as sz
+select l_shipdate, `_aggregateValue` as sz
 from default__lineitem_lineitem_lshipdate_idx__
 ) t
 group by year(l_shipdate), month(l_shipdate);
@@ -126,7 +126,8 @@ lastyear.monthly_shipments as monthly_shipments_delta
 
 DROP TABLE tbl;
 CREATE TABLE tbl(key int, value int);
-CREATE INDEX tbl_key_idx ON TABLE tbl(key) AS 'org.apache.hadoop.hive.ql.index.AggregateIndexHandler' WITH DEFERRED REBUILD;
+CREATE INDEX tbl_key_idx ON TABLE tbl(key) AS 'org.apache.hadoop.hive.ql.index.AggregateIndexHandler' WITH DEFERRED REBUILD IDXPROPERTIES("aggFunc"="count", "aggFuncKey"="key");
+
 ALTER INDEX tbl_key_idx ON tbl REBUILD;
 set hive.optimize.gbyusingindex=true;
 EXPLAIN select key, count(key) from tbl where key = 1 group by key;

@@ -111,8 +111,8 @@ public class RewriteGBUsingIndex implements Transform {
     "org.apache.hadoop.hive.ql.index.AggregateIndexHandler";
    final String IDX_BUCKET_COL = "_bucketname";
    final String IDX_OFFSETS_ARRAY_COL = "_offsets";
-   final String IDX_COUNT_KEY_COL = "_countkey";
-   final String IDX_COUNT_ALL_COL = "_countall";
+   final String IDX_AGGREGATE_FUNC_COL = "_aggregateValue";
+
 
   @Override
   public ParseContext transform(ParseContext pctx) throws SemanticException {
@@ -253,7 +253,7 @@ public class RewriteGBUsingIndex implements Transform {
        * If yes, it sets the environment for the RewriteRemoveGroupbyCtx context and invokes
        * method to apply rewrite by removing group by construct operators from the original operator tree.
        * */
-      if(canApplyCtx.remove_group_by){
+      if(canApplyCtx.removeGroupBy){
         try {
           //Context for removing the group by construct operators from the operator tree
           RewriteRemoveGroupbyCtx removeGbyCtx = RewriteRemoveGroupbyCtx.getInstance(parseContext, hiveDb, indexTableName);
@@ -262,8 +262,6 @@ public class RewriteGBUsingIndex implements Transform {
           parseContext.setOpParseCtx(removeGbyCtx.getOpc());
           LOG.info("Finished Group by Remove");
         } catch (SemanticException e) {
-          // TODO Auto-generated catch block
-          e.printStackTrace();
           LOG.info("Exception in rewriting original query while using GB-to-IDX optimizer.");
         }
         //Getting back new parseContext and new OpParseContext after GBY-RS-GBY is removed
@@ -274,7 +272,7 @@ public class RewriteGBUsingIndex implements Transform {
        * method to append a new subquery that scans over the index table rather than the original table.
        * We first create the subquery context, then copy the RowSchema/RowResolver from subquery to original operator tree.
        * */
-      if(canApplyCtx.should_append_subquery){
+      if(canApplyCtx.shouldAppendSubquery){
         try {
           //Context for appending a subquery to scan over the index table
           RewriteIndexSubqueryCtx subqueryCtx = RewriteIndexSubqueryCtx.getInstance(parseContext, indexTableName, baseTableName,
@@ -313,52 +311,52 @@ public class RewriteGBUsingIndex implements Transform {
    * @return
    */
   boolean checkIfAllRewriteCriteriaIsMet(RewriteCanApplyCtx canApplyCtx){
-    if (canApplyCtx.query_has_distribute_by){
+    if (canApplyCtx.queryHasDistributeBy){
       LOG.debug("Query has distributeby clause, " +
           "that is not supported with " + getName() + " optimization" );
       return false;
     }
-    if (canApplyCtx.query_has_sort_by){
+    if (canApplyCtx.queryHasSortBy){
       LOG.debug("Query has sortby clause, " +
           "that is not supported with " + getName() + " optimization" );
       return false;
     }
-    if (canApplyCtx.query_has_order_by){
+    if (canApplyCtx.queryHasOrderBy){
       LOG.debug("Query has orderby clause, " +
           "that is not supported with " + getName() + " optimization" );
       return false;
     }
-    if (canApplyCtx.agg_func_cnt > 1 ){
+    if (canApplyCtx.aggFuncCnt > 1 ){
       LOG.debug("More than 1 agg funcs: " +
           "Not supported by " + getName() + " optimization" );
       return false;
     }
-    if (canApplyCtx.agg_func_is_not_count){
+    if (canApplyCtx.aggFuncIsNotCount){
       LOG.debug("Agg func other than count is " +
           "not supported by " + getName() + " optimization" );
       return false;
     }
-    if (canApplyCtx.count_on_all_cols){
+    if (canApplyCtx.countOnAllCols){
       LOG.debug("Currently count function needs group by on key columns. This is a count(*) case., "
           + "Cannot apply this " + getName() + " optimization" );
       return false;
     }
-    if (canApplyCtx.agg_func_cols_fetch_exception){
+    if (canApplyCtx.aggFuncColsFetchException){
       LOG.debug("Got exception while locating child col refs " +
           "of agg func, skipping " + getName() + " optimization" );
       return false;
     }
-    if (canApplyCtx.whr_clause_cols_fetch_exception){
+    if (canApplyCtx.whrClauseColsFetchException){
       LOG.debug("Got exception while locating child col refs for where clause, "
           + "skipping " + getName() + " optimization" );
       return false;
     }
-    if (canApplyCtx.sel_clause_cols_fetch_exception){
+    if (canApplyCtx.selClauseColsFetchException){
       LOG.debug("Got exception while locating child col refs for select list, "
           + "skipping " + getName() + " optimization" );
       return false;
     }
-    if (canApplyCtx.gby_keys_fetch_exception){
+    if (canApplyCtx.gbyKeysFetchException){
       LOG.debug("Got exception while locating child col refs for GroupBy key, "
           + "skipping " + getName() + " optimization" );
       return false;
@@ -501,9 +499,8 @@ public class RewriteGBUsingIndex implements Transform {
      }
      assert(idxTblColNames.contains(IDX_BUCKET_COL));
      assert(idxTblColNames.contains(IDX_OFFSETS_ARRAY_COL));
-     assert(idxTblColNames.contains(IDX_COUNT_KEY_COL));
-     assert(idxTblColNames.contains(IDX_COUNT_ALL_COL));
-     assert(idxTblColNames.size() == indexKeyNames.size() + 4);
+     assert(idxTblColNames.contains(IDX_AGGREGATE_FUNC_COL));
+     assert(idxTblColNames.size() == indexKeyNames.size() + 3);
 
      //we add all index tables which can be used for rewrite and defer the decision of using a particular index for later
      //this is to allow choosing a index if a better mechanism is designed later to chose a better rewrite

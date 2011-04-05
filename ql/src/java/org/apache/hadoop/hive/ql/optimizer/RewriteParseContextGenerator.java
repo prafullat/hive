@@ -61,24 +61,22 @@ public final class RewriteParseContextGenerator {
     ParseContext subPCtx = null;
     try {
       ctx = new Context(conf);
-    ParseDriver pd = new ParseDriver();
-    ASTNode tree = pd.parse(command, ctx);
-    tree = ParseUtils.findRootNonNullToken(tree);
+      ParseDriver pd = new ParseDriver();
+      ASTNode tree = pd.parse(command, ctx);
+      tree = ParseUtils.findRootNonNullToken(tree);
 
-    BaseSemanticAnalyzer sem = SemanticAnalyzerFactory.get(conf, tree);
-    doSemanticAnalysis(sem, tree, ctx);
+      BaseSemanticAnalyzer sem = SemanticAnalyzerFactory.get(conf, tree);
+      assert(sem instanceof SemanticAnalyzer);
+      doSemanticAnalysis((SemanticAnalyzer) sem, tree, ctx);
 
-    subPCtx = ((SemanticAnalyzer) sem).getParseContext();
-    LOG.info("Sub-query Semantic Analysis Completed");
+      subPCtx = ((SemanticAnalyzer) sem).getParseContext();
+      LOG.info("Sub-query Semantic Analysis Completed");
     } catch (IOException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
+      LOG.debug("IOException in generating the operator tree for input command - " + command + " " , e);
     } catch (ParseException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
+      LOG.debug("ParseException in generating the operator tree for input command - " + command + " " , e);
     } catch (SemanticException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
+      LOG.debug("SemanticException in generating the operator tree for input command - " + command + " " , e);
     }
     return subPCtx;
 
@@ -94,27 +92,24 @@ public final class RewriteParseContextGenerator {
    * @return
    * @throws SemanticException
    */
-  private static void doSemanticAnalysis(BaseSemanticAnalyzer sem, ASTNode ast, Context ctx) throws SemanticException {
+  private static void doSemanticAnalysis(SemanticAnalyzer sem, ASTNode ast, Context ctx) throws SemanticException {
+    QB qb = new QB(null, null, false);
+    ASTNode child = ast;
+    ParseContext subPCtx = ((SemanticAnalyzer) sem).getParseContext();
+    subPCtx.setContext(ctx);
+    ((SemanticAnalyzer) sem).init(subPCtx);
 
-    if(sem instanceof SemanticAnalyzer){
-      QB qb = new QB(null, null, false);
-      ASTNode child = ast;
-      ParseContext subPCtx = ((SemanticAnalyzer) sem).getParseContext();
-      subPCtx.setContext(ctx);
-      ((SemanticAnalyzer) sem).init(subPCtx);
+    LOG.info("Starting Sub-query Semantic Analysis");
+    sem.doPhase1(child, qb, sem.initPhase1Ctx());
+    LOG.info("Completed phase 1 of Sub-query Semantic Analysis");
 
-      LOG.info("Starting Sub-query Semantic Analysis");
-      ((SemanticAnalyzer) sem).doPhase1(child, qb, ((SemanticAnalyzer) sem).initPhase1Ctx());
-      LOG.info("Completed phase 1 of Sub-query Semantic Analysis");
+    sem.getMetaData(qb);
+    LOG.info("Completed getting MetaData in Sub-query Semantic Analysis");
 
-      ((SemanticAnalyzer) sem).getMetaData(qb);
-      LOG.info("Completed getting MetaData in Sub-query Semantic Analysis");
+    LOG.info("Sub-query Abstract syntax tree: " + ast.toStringTree());
+    sem.genPlan(qb);
 
-      LOG.info("Sub-query Abstract syntax tree: " + ast.toStringTree());
-      ((SemanticAnalyzer) sem).genPlan(qb);
-
-      LOG.info("Sub-query Completed plan generation");
-    }
+    LOG.info("Sub-query Completed plan generation");
   }
 
 }
