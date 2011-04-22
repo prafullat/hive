@@ -121,6 +121,7 @@ public class RewriteGBUsingIndex implements Transform {
     try {
       hiveDb = Hive.get(hiveConf);
     } catch (HiveException e) {
+      //log and throw
       LOG.debug("Exception in getting hive conf", e);
       e.printStackTrace();
     }
@@ -263,6 +264,7 @@ public class RewriteGBUsingIndex implements Transform {
           LOG.info("Finished Group by Remove");
         } catch (SemanticException e) {
           LOG.info("Exception in rewriting original query while using GB-to-IDX optimizer.");
+          //log base table and idx info and throw new
         }
         //Getting back new parseContext and new OpParseContext after GBY-RS-GBY is removed
       }
@@ -293,6 +295,7 @@ public class RewriteGBUsingIndex implements Transform {
         LOG.info("Finished appending subquery");
         } catch (SemanticException e) {
           LOG.debug("Exception in rewriting original query while using GB-to-IDX optimizer.", e);
+        //log base table and idx info and throw new
         }
       }
     }
@@ -407,6 +410,7 @@ public class RewriteGBUsingIndex implements Transform {
      indexesOnTable = baseTableMetaData.getAllIndexes(maxNumOfIndexes);
 
    } catch (HiveException e) {
+     //stringify first
      LOG.error("Could not retrieve indexes on the base table. Check logs for error.");
      throw new SemanticException(e.getMessage(), e);
    }
@@ -493,9 +497,10 @@ public class RewriteGBUsingIndex implements Transform {
          idxTblColNames.add(idxTblCol.getName());
        }
      } catch (HiveException e) {
+     //log and throw new
        LOG.debug("Got exception while locating index table, " +
            "skipping " + getName() + " optimization" );
-       return indexToKeysMap;
+       //return indexToKeysMap;
      }
      assert(idxTblColNames.contains(IDX_BUCKET_COL));
      assert(idxTblColNames.contains(IDX_OFFSETS_ARRAY_COL));

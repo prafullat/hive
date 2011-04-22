@@ -72,6 +72,7 @@ public final class RewriteParseContextGenerator {
       subPCtx = ((SemanticAnalyzer) sem).getParseContext();
       LOG.info("Sub-query Semantic Analysis Completed");
     } catch (IOException e) {
+      //same pinch
       LOG.debug("IOException in generating the operator tree for input command - " + command + " " , e);
     } catch (ParseException e) {
       LOG.debug("ParseException in generating the operator tree for input command - " + command + " " , e);

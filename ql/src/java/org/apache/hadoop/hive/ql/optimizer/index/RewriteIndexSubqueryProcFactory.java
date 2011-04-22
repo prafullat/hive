@@ -186,6 +186,7 @@ public final class RewriteIndexSubqueryProcFactory {
           subqueryCtx.getNewRR().put(nm[0], nm[1], col);
           subqueryCtx.getNewRS().add(col);
         } catch (SemanticException e) {
+          //let it go
           // TODO Auto-generated catch block
           e.printStackTrace();
         }

@@ -132,14 +132,14 @@ public final class RewriteRemoveGroupbyProcFactory {
         sem = SemanticAnalyzerFactory.get(conf, tree);
 
         } catch (ParseException e) {
+          //log error and throw
           LOG.info("ParseException in ReplaceIdxKeyWithSizeFunc");
-          e.printStackTrace();
         } catch (SemanticException e) {
+          //let it go
           LOG.info("SemanticException in ReplaceIdxKeyWithSizeFunc");
-          e.printStackTrace();
         } catch (IOException e) {
+          //log error and throw new Semantic
           LOG.info("IOException in ReplaceIdxKeyWithSizeFunc");
-          e.printStackTrace();
         }
 
         //We retrieve the ASTNode function token from the root tree
@@ -291,7 +291,8 @@ public final class RewriteRemoveGroupbyProcFactory {
                   .getFieldObjectInspector()), tableName, false));
         }
       } catch (SerDeException e) {
-        throw new RuntimeException(e);
+        //log error and throw
+        throw new SemanticException(e);
       }
       //Set row resolver for new table
       operatorContext.setRowResolver(rr);

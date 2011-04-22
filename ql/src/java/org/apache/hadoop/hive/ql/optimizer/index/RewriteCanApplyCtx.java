@@ -198,8 +198,8 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
     try {
       ogw.startWalking(topNodes, null);
     } catch (SemanticException e) {
+      //let it go
       LOG.warn("Exception in walking operator tree. Rewrite variables not populated", e);
-
     }
 
   }
