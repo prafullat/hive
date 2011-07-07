@@ -227,6 +227,24 @@
 </property>
 
 <property>
+  <name>hive.metastore.event.listeners</name>
+  <value></value>
+  <description>list of comma seperated listeners for metastore events.</description>
+</property>
+
+<property>
+  <name>hive.metastore.event.expiry.duration</name>
+  <value>0L</value>
+  <description>Duration after which events expire from events table (in seconds)</description>
+</property>
+
+<property>
+  <name>hive.metastore.event.clean.freq</name>
+  <value>0L</value>
+  <description>Frequency at which timer task runs to purge expired events in metastore(in seconds).</description>
+</property>
+
+<property>
   <name>hive.metastore.connect.retries</name>
   <value>5</value>
   <description>Number of retries while opening a connection to metastore</description>
@@ -248,6 +266,12 @@
   <name>hive.metastore.rawstore.impl</name>
   <value>org.apache.hadoop.hive.metastore.ObjectStore</value>
   <description>Name of the class that implements org.apache.hadoop.hive.metastore.rawstore interface. This class is used to store and retrieval of raw metadata objects such as table, database</description>
+</property>
+
+<property>
+  <name>hive.metastore.batch.retrieve.max</name>
+  <value>300</value>
+  <description>Maximum number of objects (tables/partitions) can be retrieved from metastore in one batch. The higher the number, the less the number of round trips is needed to the Hive metastore server, but it may also cause higher memory requirement at the client side.</description>
 </property>
 
 <property>
@@ -319,6 +343,12 @@
 </property>
 
 <property>
+  <name>hive.optimize.index.filter</name>
+  <value>false</value>
+  <description>Whether to enable automatic use of indexes</description>
+</property>
+
+<property>
   <name>hive.optimize.ppd</name>
   <value>true</value>
   <description>Whether to enable predicate pushdown</description>
@@ -343,6 +373,13 @@
   <description>Whether to enable the bucketed group by from bucketed partitions/tables.</description>
 </property>
 
+<property>
+  <name>hive.multigroupby.singlemr</name>
+  <value>false</value>
+  <description>Whether to optimize multi group by query to generate single M/R
+  job plan. If the multi group by query has common group by keys, it will be
+  optimized to generate single M/R job.</description>
+</property>
 <property>
   <name>hive.join.emit.interval</name>
   <value>1000</value>
@@ -451,6 +488,12 @@
   <name>hive.exec.parallel.thread.number</name>
   <value>8</value>
   <description>How many jobs at most can be executed in parallel</description>
+</property>
+
+<property>
+  <name>hive.exec.rowoffset</name>
+  <value>false</value>
+  <description>Whether to provide the row offset virtual column</description>
 </property>
 
 <property>
@@ -780,6 +823,18 @@
 </property>
 
 <property>
+  <name>hive.stats.retries.max</name>
+  <value>0</value>
+  <description>Maximum number of retries when stats publisher/aggregator got an exception updating intermediate database. Default is no tries on failures.</description>
+</property>
+
+<property>
+  <name>hive.stats.retries.wait</name>
+  <value>3000</value>
+  <description>The base waiting window (in milliseconds) before the next retry. The actual wait time is calculated by baseWindow * failues + baseWindow * (failure + 1) * (random number between [0.0,1.0]).</description>
+</property>
+
+<property>
   <name>hive.support.concurrency</name>
   <value>false</value>
   <description>Whether hive supports concurrency or not. A zookeeper instance must be up and running for the default hive lock manager to support read-write locks.</description>
@@ -965,6 +1020,15 @@
 </property>
 
 <property>
+  <name>hive.metastore.authorization.storage.checks</name>
+  <value>false</value>
+  <description>Should the metastore do authorization checks against the underlying storage
+  for operations like drop-partition (disallow the drop-partition if the user in 
+  question doesn't have permissions to delete the corresponding directory
+  on the storage).</description>
+</property>
+
+<property>
   <name>hive.error.on.empty.partition</name>
   <value>false</value>
   <description>Whether to throw an excpetion if dynamic partition insert generates empty results.</description>
@@ -975,6 +1039,103 @@
   <value>false</value>
   <description>True the hdfs location stored in the index file will be igbored at runtime. 
   If the data got moved or the name of the cluster got changed, the index data should still be usable.</description>
+</property>
+
+<property>
+  <name>hive.optimize.index.filter.compact.minsize</name>
+  <value>5368709120</value>
+  <description>Minimum size (in bytes) of the inputs on which a compact index is automatically used.</description>
+</property>
+
+<property>
+  <name>hive.optimize.index.filter.compact.maxsize</name>
+  <value>-1</value>
+  <description>Maximum size (in bytes) of the inputs on which a compact index is automatically used.
+  A negative number is equivalent to infinity.</description>
+</property>
+
+<property>
+  <name>hive.index.compact.query.max.size</name>
+  <value>10737418240</value>
+  <description>The maximum number of bytes that a query using the compact index can read. Negative value is equivalent to infinity.</description>
+</property>
+
+<property>
+  <name>hive.index.compact.query.max.entries</name>
+  <value>10000000</value>
+  <description>The maximum number of index entries to read during a query that uses the compact index. Negative value is equivalent to infinity.</description>
+</property>
+
+<property>
+  <name>hive.exim.uri.scheme.whitelist</name>
+  <value>hdfs,pfile</value>
+  <description>A comma separated list of acceptable URI schemes for import and export.</description>
+</property>
+
+<property>
+  <name>hive.lock.mapred.only.operation</name>
+  <value>false</value>
+  <description>This param is to control whether or not only do lock on queries 
+  that need to execute at least one mapred job.</description>
+</property>
+
+<property>
+  <name>hive.limit.row.max.size</name>
+  <value>100000</value>
+  <description>When trying a smaller subset of data for simple LIMIT, how much size we need to guarantee
+   each row to have at least.</description>
+</property>
+
+<property>
+  <name>hive.limit.optimize.limit.file</name>
+  <value>10</value>
+  <description>When trying a smaller subset of data for simple LIMIT, maximum number of files we can
+   sample.</description>
+</property>
+
+<property>
+  <name>hive.limit.optimize.enable</name>
+  <value>false</value>
+  <description>Whether to enable to optimization to trying a smaller subset of data for simple LIMIT first.</description>
+</property>
+
+<property>
+  <name>hive.limit.optimize.fetch.max</name>
+  <value>50000</value>
+  <description>Maximum number of rows allowed for a smaller subset of data for simple LIMIT, if it is a fetch query.
+   Insert queries are not restricted by this limit.</description>
+</property>
+
+<property>
+  <name>hive.rework.mapredwork</name>
+  <value>false</value>
+  <description>should rework the mapred work or not. 
+  This is first introduced by SymlinkTextInputFormat to replace symlink files with real paths at compile time.</description>
+</property>
+
+<property>
+  <name>hive.exec.concatenate.check.index</name>
+  <value>true</value>
+  <description>If this sets to true, hive will throw error when doing
+   'alter table tbl_name [partSpec] concatenate' on a table/partition 
+    that has indexes on it. The reason the user want to set this to true 
+    is because it can help user to avoid handling all index drop, recreation, 
+    rebuild work. This is very helpful for tables with thousands of partitions.</description>
+</property>
+
+<property>
+  <name>hive.sample.seednumber</name>
+  <value>0</value>
+  <description>A number used to percentage sampling. By changing this number, user will change the subsets
+   of data sampled.</description>
+</property>
+
+<property>
+	<name>hive.io.exception.handlers</name>
+	<value></value>
+	<description>A list of io exception handler class names. This is used
+		to construct a list exception handlers to handle exceptions thrown 
+		by record readers</description>
 </property>
 
 </configuration>

@@ -85,6 +85,8 @@ TOK_RIGHTOUTERJOIN;
 TOK_FULLOUTERJOIN;
 TOK_UNIQUEJOIN;
 TOK_LOAD;
+TOK_EXPORT;
+TOK_IMPORT;
 TOK_NULL;
 TOK_ISNULL;
 TOK_ISNOTNULL;
@@ -171,7 +173,8 @@ TOK_ALTERTABLE_CLUSTER_SORT;
 TOK_TABCOLNAME;
 TOK_TABLELOCATION;
 TOK_PARTITIONLOCATION;
-TOK_TABLESAMPLE;
+TOK_TABLEBUCKETSAMPLE;
+TOK_TABLESPLITSAMPLE;
 TOK_TMP_FILE;
 TOK_TABSORTCOLNAMEASC;
 TOK_TABSORTCOLNAMEDESC;
@@ -244,6 +247,8 @@ TOK_ALTERDATABASE_PROPERTIES;
 TOK_ALTERTABLE_ALTERPARTS_MERGEFILES;
 TOK_TABNAME;
 TOK_TABSRC;
+TOK_RESTRICT;
+TOK_CASCADE;
 }
 
 
@@ -282,6 +287,8 @@ execStatement
 @after { msgs.pop(); }
     : queryStatementExpression
     | loadStatement
+    | exportStatement
+    | importStatement
     | ddlStatement
     ;
 
@@ -290,6 +297,20 @@ loadStatement
 @after { msgs.pop(); }
     : KW_LOAD KW_DATA (islocal=KW_LOCAL)? KW_INPATH (path=StringLiteral) (isoverwrite=KW_OVERWRITE)? KW_INTO KW_TABLE (tab=tableOrPartition)
     -> ^(TOK_LOAD $path $tab $islocal? $isoverwrite?)
+    ;
+
+exportStatement
+@init { msgs.push("export statement"); }
+@after { msgs.pop(); }
+    : KW_EXPORT KW_TABLE (tab=tableOrPartition) KW_TO (path=StringLiteral)
+    -> ^(TOK_EXPORT $tab $path)
+    ;
+
+importStatement
+@init { msgs.push("import statement"); }
+@after { msgs.pop(); }
+	: KW_IMPORT ((ext=KW_EXTERNAL)? KW_TABLE (tab=tableOrPartition))? KW_FROM (path=StringLiteral) tableLocation?
+    -> ^(TOK_IMPORT $path $tab? $ext? tableLocation?)
     ;
 
 ddlStatement
@@ -328,6 +349,15 @@ ifExists
 @after { msgs.pop(); }
     : KW_IF KW_EXISTS
     -> ^(TOK_IFEXISTS)
+    ;
+
+restrictOrCascade
+@init { msgs.push("restrict or cascade clause"); }
+@after { msgs.pop(); }
+    : KW_RESTRICT
+    -> ^(TOK_RESTRICT)
+    | KW_CASCADE
+    -> ^(TOK_CASCADE)
     ;
 
 ifNotExists
@@ -374,8 +404,8 @@ switchDatabaseStatement
 dropDatabaseStatement
 @init { msgs.push("drop database statement"); }
 @after { msgs.pop(); }
-    : KW_DROP (KW_DATABASE|KW_SCHEMA) ifExists? Identifier
-    -> ^(TOK_DROPDATABASE Identifier ifExists?)
+    : KW_DROP (KW_DATABASE|KW_SCHEMA) ifExists? Identifier restrictOrCascade?
+    -> ^(TOK_DROPDATABASE Identifier ifExists? restrictOrCascade?)
     ;
 
 databaseComment
@@ -1564,6 +1594,7 @@ joinToken
 @after { msgs.pop(); }
     :
       KW_JOIN                     -> TOK_JOIN
+    | KW_INNER KW_JOIN            -> TOK_JOIN
     | KW_LEFT  KW_OUTER KW_JOIN   -> TOK_LEFTOUTERJOIN
     | KW_RIGHT KW_OUTER KW_JOIN   -> TOK_RIGHTOUTERJOIN
     | KW_FULL  KW_OUTER KW_JOIN   -> TOK_FULLOUTERJOIN
@@ -1591,12 +1622,27 @@ fromSource
     (tableSource | subQuerySource) (lateralView^)*
     ;
 
+tableBucketSample
+@init { msgs.push("table bucket sample specification"); }
+@after { msgs.pop(); }
+    :
+    KW_TABLESAMPLE LPAREN KW_BUCKET (numerator=Number) KW_OUT KW_OF (denominator=Number) (KW_ON expr+=expression (COMMA expr+=expression)*)? RPAREN -> ^(TOK_TABLEBUCKETSAMPLE $numerator $denominator $expr*)
+    ;
+
+splitSample
+@init { msgs.push("table split sample specification"); }
+@after { msgs.pop(); }
+    :
+    KW_TABLESAMPLE LPAREN  (numerator=Number) KW_PERCENT RPAREN -> ^(TOK_TABLESPLITSAMPLE $numerator)
+    ;
+    
 tableSample
 @init { msgs.push("table sample specification"); }
 @after { msgs.pop(); }
     :
-    KW_TABLESAMPLE LPAREN KW_BUCKET (numerator=Number) KW_OUT KW_OF (denominator=Number) (KW_ON expr+=expression (COMMA expr+=expression)*)? RPAREN -> ^(TOK_TABLESAMPLE $numerator $denominator $expr*)
-    ;
+    tableBucketSample |
+    splitSample
+    ;    
 
 tableSource
 @init { msgs.push("table source"); }
@@ -1888,20 +1934,30 @@ precedenceBitwiseOrExpression
     ;
 
 
+// Equal operators supporting NOT prefix
+precedenceEqualNegatableOperator
+    :
+    KW_LIKE | KW_RLIKE | KW_REGEXP
+    ;
+
 precedenceEqualOperator
     :
-    EQUAL | NOTEQUAL | LESSTHANOREQUALTO | LESSTHAN | GREATERTHANOREQUALTO | GREATERTHAN
-    | KW_LIKE | KW_RLIKE | KW_REGEXP
+    precedenceEqualNegatableOperator | EQUAL | NOTEQUAL | LESSTHANOREQUALTO | LESSTHAN | GREATERTHANOREQUALTO | GREATERTHAN
     ;
 
 precedenceEqualExpression
     :
-    precedenceBitwiseOrExpression ( (precedenceEqualOperator^ precedenceBitwiseOrExpression) | (inOperator^ expressions) )*
-    ;
-
-inOperator
-    :
-    KW_IN -> ^(TOK_FUNCTION KW_IN)
+    (left=precedenceBitwiseOrExpression -> $left)
+    (
+       (KW_NOT precedenceEqualNegatableOperator notExpr=precedenceBitwiseOrExpression)
+       -> ^(KW_NOT ^(precedenceEqualNegatableOperator $precedenceEqualExpression $notExpr))
+    | (precedenceEqualOperator equalExpr=precedenceBitwiseOrExpression)
+       -> ^(precedenceEqualOperator $precedenceEqualExpression $equalExpr)
+    | (KW_NOT KW_IN expressions)
+       -> ^(KW_NOT ^(TOK_FUNCTION KW_IN $precedenceEqualExpression expressions))
+    | (KW_IN expressions)
+       -> ^(TOK_FUNCTION KW_IN $precedenceEqualExpression expressions)
+    )*
     ;
 
 expressions
@@ -2050,6 +2106,7 @@ KW_OUTER : 'OUTER';
 KW_UNIQUEJOIN : 'UNIQUEJOIN';
 KW_PRESERVE : 'PRESERVE';
 KW_JOIN : 'JOIN';
+KW_INNER : 'INNER';
 KW_LEFT : 'LEFT';
 KW_RIGHT : 'RIGHT';
 KW_FULL : 'FULL';
@@ -2074,6 +2131,8 @@ KW_DISTRIBUTE: 'DISTRIBUTE';
 KW_SORT: 'SORT';
 KW_UNION: 'UNION';
 KW_LOAD: 'LOAD';
+KW_EXPORT: 'EXPORT';
+KW_IMPORT: 'IMPORT';
 KW_DATA: 'DATA';
 KW_INPATH: 'INPATH';
 KW_IS: 'IS';
@@ -2141,6 +2200,7 @@ KW_TABLESAMPLE: 'TABLESAMPLE';
 KW_BUCKET: 'BUCKET';
 KW_OUT: 'OUT';
 KW_OF: 'OF';
+KW_PERCENT: 'PERCENT';
 KW_CAST: 'CAST';
 KW_ADD: 'ADD';
 KW_REPLACE: 'REPLACE';
@@ -2226,6 +2286,8 @@ KW_OPTION: 'OPTION';
 KW_CONCATENATE: 'CONCATENATE';
 KW_SHOW_DATABASE: 'SHOW_DATABASE';
 KW_UPDATE: 'UPDATE';
+KW_RESTRICT: 'RESTRICT';
+KW_CASCADE: 'CASCADE';
 
 
 // Operators

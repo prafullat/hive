@@ -45,6 +45,7 @@ import org.apache.hadoop.hive.metastore.api.SerDeInfo;
 import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
 import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.hadoop.hive.metastore.api.Type;
+import org.apache.hadoop.hive.metastore.api.UnknownDBException;
 import org.apache.hadoop.hive.serde.Constants;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.thrift.TException;
@@ -250,6 +251,7 @@ public abstract class TestHiveMetaStore extends TestCase {
       String partName = "ds=2008-07-01 14%3A13%3A12/hr=14";
       String part2Name = "ds=2008-07-01 14%3A13%3A12/hr=15";
       String part3Name ="ds=2008-07-02 14%3A13%3A12/hr=15";
+      String part4Name ="ds=2008-07-03 14%3A13%3A12/hr=151";
 
       part_get = client.getPartition(dbName, tblName, partName);
       assertTrue("Partitions are not the same", part.equals(part_get));
@@ -272,6 +274,14 @@ public abstract class TestHiveMetaStore extends TestCase {
       List<String> partialNames = client.listPartitionNames(dbName, tblName, partialVals,
           (short) -1);
       assertTrue("Should have returned 2 partition names", partialNames.size() == 2);
+      assertTrue("Not all part names returned", partialNames.containsAll(partNames));
+
+      partNames.add(part3Name);
+      partNames.add(part4Name);
+      partialVals.clear();
+      partialVals.add("");
+      partialNames = client.listPartitionNames(dbName, tblName, partialVals, (short) -1);
+      assertTrue("Should have returned 4 partition names", partialNames.size() == 4);
       assertTrue("Not all part names returned", partialNames.containsAll(partNames));
 
       // Test partition listing with a partial spec - hr is specified but ds is not
@@ -715,6 +725,59 @@ public abstract class TestHiveMetaStore extends TestCase {
       assertTrue("Partition key list is not empty",
           (tbl2.getPartitionKeys() == null)
               || (tbl2.getPartitionKeys().size() == 0));
+
+      //test get_table_objects_by_name functionality
+      ArrayList<String> tableNames = new ArrayList<String>();
+      tableNames.add(tblName2);
+      tableNames.add(tblName);
+      tableNames.add(tblName2);
+      List<Table> foundTables = client.getTableObjectsByName(dbName, tableNames);
+
+      assertEquals(foundTables.size(), 2);
+      for (Table t: foundTables) {
+        if (t.getTableName().equals(tblName2)) {
+          assertEquals(t.getSd().getLocation(), tbl2.getSd().getLocation());
+        } else {
+          assertEquals(t.getTableName(), tblName);
+          assertEquals(t.getSd().getLocation(), tbl.getSd().getLocation());
+        }
+        assertEquals(t.getSd().getCols().size(), typ1.getFields().size());
+        assertEquals(t.getSd().isCompressed(), false);
+        assertEquals(foundTables.get(0).getSd().getNumBuckets(), 1);
+        assertNotNull(t.getSd().getSerdeInfo());
+        assertEquals(t.getDbName(), dbName);
+      }
+
+      tableNames.add(1, "table_that_doesnt_exist");
+      foundTables = client.getTableObjectsByName(dbName, tableNames);
+      assertEquals(foundTables.size(), 2);
+
+      InvalidOperationException ioe = null;
+      try {
+        foundTables = client.getTableObjectsByName(dbName, null);
+      } catch (InvalidOperationException e) {
+        ioe = e;
+      }
+      assertNotNull(ioe);
+      assertTrue("Table not found", ioe.getMessage().contains("null tables"));
+
+      UnknownDBException udbe = null;
+      try {
+        foundTables = client.getTableObjectsByName("db_that_doesnt_exist", tableNames);
+      } catch (UnknownDBException e) {
+        udbe = e;
+      }
+      assertNotNull(udbe);
+      assertTrue("DB not found", udbe.getMessage().contains("not find database db_that_doesnt_exist"));
+
+      udbe = null;
+      try {
+        foundTables = client.getTableObjectsByName("", tableNames);
+      } catch (UnknownDBException e) {
+        udbe = e;
+      }
+      assertNotNull(udbe);
+      assertTrue("DB not found", udbe.getMessage().contains("is null or empty"));
 
       FileSystem fs = FileSystem.get((new Path(tbl.getSd().getLocation())).toUri(), hiveConf);
       client.dropTable(dbName, tblName);

@@ -30,15 +30,18 @@ import org.apache.hadoop.hive.metastore.api.HiveObjectRef;
 import org.apache.hadoop.hive.metastore.api.Index;
 import org.apache.hadoop.hive.metastore.api.InvalidObjectException;
 import org.apache.hadoop.hive.metastore.api.InvalidOperationException;
+import org.apache.hadoop.hive.metastore.api.InvalidPartitionException;
 import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.NoSuchObjectException;
 import org.apache.hadoop.hive.metastore.api.Partition;
+import org.apache.hadoop.hive.metastore.api.PartitionEventType;
 import org.apache.hadoop.hive.metastore.api.PrincipalPrivilegeSet;
 import org.apache.hadoop.hive.metastore.api.PrincipalType;
 import org.apache.hadoop.hive.metastore.api.PrivilegeBag;
 import org.apache.hadoop.hive.metastore.api.Role;
 import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.hadoop.hive.metastore.api.UnknownDBException;
+import org.apache.hadoop.hive.metastore.api.UnknownPartitionException;
 import org.apache.hadoop.hive.metastore.api.UnknownTableException;
 import org.apache.thrift.TException;
 
@@ -207,6 +210,28 @@ public interface IMetaStoreClient {
       TException, NoSuchObjectException;
 
   /**
+   *
+   * @param dbName
+   *          The database the tables are located in.
+   * @param tableNames
+   *          The names of the tables to fetch
+   * @return A list of objects representing the tables.
+   *          Only the tables that can be retrieved from the database are returned.  For example,
+   *          if none of the requested tables could be retrieved, an empty list is returned.
+   *          There is no guarantee of ordering of the returned tables.
+   * @throws InvalidOperationException
+   *          The input to this operation is invalid (e.g., the list of tables names is null)
+   * @throws UnknownDBException
+   *          The requested database could not be fetched.
+   * @throws TException
+   *          A thrift communication error occurred
+   * @throws MetaException
+   *          Any other errors
+   */
+  public List<Table> getTableObjectsByName(String dbName, List<String> tableNames)
+      throws MetaException, InvalidOperationException, UnknownDBException, TException;
+
+  /**
    * @param tableName
    * @param dbName
    * @param partVals
@@ -269,7 +294,7 @@ public interface IMetaStoreClient {
   public Partition getPartition(String dbName, String tblName,
       String name) throws MetaException, UnknownTableException, NoSuchObjectException, TException;
 
-  
+
   /**
    * @param dbName
    * @param tableName
@@ -285,7 +310,7 @@ public interface IMetaStoreClient {
   public Partition getPartitionWithAuthInfo(String dbName, String tableName,
       List<String> pvals, String userName, List<String> groupNames)
       throws MetaException, UnknownTableException, NoSuchObjectException, TException;
-  
+
   /**
    * @param tbl_name
    * @param db_name
@@ -308,17 +333,48 @@ public interface IMetaStoreClient {
       List<String> part_vals, short max_parts) throws MetaException, TException;
 
   /**
+   * Get list of partitions matching specified filter
+   * @param db_name the database name
+   * @param tbl_name the table name
+   * @param filter the filter string,
+   *    for example "part1 = \"p1_abc\" and part2 <= "\p2_test\"". Filtering can
+   *    be done only on string partition keys.
+   * @param max_parts the maximum number of partitions to return,
+   *    all partitions are returned if -1 is passed
+   * @return list of partitions
+   * @throws MetaException
+   * @throws NoSuchObjectException
+   * @throws TException
+   */
+  public List<Partition> listPartitionsByFilter(String db_name, String tbl_name,
+      String filter, short max_parts) throws MetaException,
+         NoSuchObjectException, TException;
+
+  /**
    * @param dbName
    * @param tableName
    * @param s
    * @param userName
    * @param groupNames
    * @return
-   * @throws NoSuchObjectException 
+   * @throws NoSuchObjectException
    */
   public List<Partition> listPartitionsWithAuthInfo(String dbName,
       String tableName, short s, String userName, List<String> groupNames)
       throws MetaException, TException, NoSuchObjectException;
+
+  /**
+   * Get partitions by a list of partition names.
+   * @param db_name database name
+   * @param tbl_name table name
+   * @param part_names list of partition names
+   * @return list of Partition objects
+   * @throws NoSuchObjectException
+   * @throws MetaException
+   * @throws TException
+   */
+  public List<Partition> getPartitionsByNames(String db_name, String tbl_name,
+      List<String> part_names) throws NoSuchObjectException, MetaException, TException;
 
   /**
    * @param dbName
@@ -328,11 +384,45 @@ public interface IMetaStoreClient {
    * @param userName
    * @param groupNames
    * @return
-   * @throws NoSuchObjectException 
+   * @throws NoSuchObjectException
    */
   public List<Partition> listPartitionsWithAuthInfo(String dbName,
       String tableName, List<String> partialPvals, short s, String userName,
       List<String> groupNames) throws MetaException, TException, NoSuchObjectException;
+
+  /**
+   * @param db_name
+   * @param tbl_name
+   * @param partKVs
+   * @param eventType
+   * @throws MetaException
+   * @throws NoSuchObjectException
+   * @throws TException
+   * @throws UnknownTableException
+   * @throws UnknownDBException
+   * @throws UnknownPartitionException
+   * @throws InvalidPartitionException
+   */
+  public void markPartitionForEvent(String db_name, String tbl_name, Map<String,String> partKVs,
+      PartitionEventType eventType) throws MetaException, NoSuchObjectException, TException,
+      UnknownTableException, UnknownDBException, UnknownPartitionException, InvalidPartitionException;
+
+  /**
+   * @param db_name
+   * @param tbl_name
+   * @param partKVs
+   * @param eventType
+   * @throws MetaException
+   * @throws NoSuchObjectException
+   * @throws TException
+   * @throws UnknownTableException
+   * @throws UnknownDBException
+   * @throws UnknownPartitionException
+   * @throws InvalidPartitionException
+   */
+  public boolean isPartitionMarkedForEvent(String db_name, String tbl_name, Map<String,String> partKVs,
+      PartitionEventType eventType) throws MetaException, NoSuchObjectException, TException,
+      UnknownTableException, UnknownDBException, UnknownPartitionException, InvalidPartitionException;
 
   /**
    * @param tbl
@@ -343,6 +433,7 @@ public interface IMetaStoreClient {
    * @throws TException
    * @see org.apache.hadoop.hive.metastore.api.ThriftHiveMetastore.Iface#create_table(org.apache.hadoop.hive.metastore.api.Table)
    */
+
   public void createTable(Table tbl) throws AlreadyExistsException,
       InvalidObjectException, MetaException, NoSuchObjectException, TException;
 
@@ -356,6 +447,9 @@ public interface IMetaStoreClient {
       throws NoSuchObjectException, InvalidOperationException, MetaException, TException;
 
   public void dropDatabase(String name, boolean deleteData, boolean ignoreUnknownDb)
+      throws NoSuchObjectException, InvalidOperationException, MetaException, TException;
+
+  public void dropDatabase(String name, boolean deleteData, boolean ignoreUnknownDb, boolean cascade)
       throws NoSuchObjectException, InvalidOperationException, MetaException, TException;
 
   public void alterDatabase(String name, Database db)
@@ -531,7 +625,7 @@ public interface IMetaStoreClient {
   public boolean dropIndex(String db_name, String tbl_name,
       String name, boolean deleteData) throws NoSuchObjectException,
       MetaException, TException;
-  
+
   /**
    * @param Role
    *          role object
@@ -545,8 +639,8 @@ public interface IMetaStoreClient {
   /**
    * @param role_name
    *          role name
-   * @param db_name 
-   * 
+   * @param db_name
+   *
    * @return
    * @throws MetaException
    * @throws TException
@@ -556,13 +650,13 @@ public interface IMetaStoreClient {
   /**
    * list all role names
    * @return
-   * @throws TException 
-   * @throws MetaException 
+   * @throws TException
+   * @throws MetaException
    */
   public List<String> listRoleNames() throws MetaException, TException;
 
   /**
-   * 
+   *
    * @param role_name
    * @param user_name
    * @param principalType
@@ -584,7 +678,7 @@ public interface IMetaStoreClient {
    *          user name
    * @param principalType
    * @param db_name
-   * 
+   *
    * @return
    * @throws MetaException
    * @throws TException
@@ -593,7 +687,7 @@ public interface IMetaStoreClient {
       PrincipalType principalType) throws MetaException, TException;
 
   /**
-   * 
+   *
    * @param principalName
    * @param principalType
    * @return
@@ -614,7 +708,7 @@ public interface IMetaStoreClient {
   public PrincipalPrivilegeSet get_privilege_set(HiveObjectRef hiveObject,
       String user_name, List<String> group_names) throws MetaException,
       TException;
-  
+
   /**
    * @param principal_name
    * @param principal_type
@@ -646,22 +740,13 @@ public interface IMetaStoreClient {
       throws MetaException, TException;
 
   /**
-   * @param renewerKerberosPrincipalName
-   * @param tokenSignature
-   * @return
-   * @throws MetaException
-   * @throws TException
-   */
-  public String getDelegationTokenWithSignature(String renewerKerberosPrincipalName, String tokenSignature)
-      throws MetaException, TException;
-
-  /**
+   * @param owner the intended owner for the token
    * @param renewerKerberosPrincipalName
    * @return
    * @throws MetaException
    * @throws TException
    */
-  public String getDelegationToken(String renewerKerberosPrincipalName)
+  public String getDelegationToken(String owner, String renewerKerberosPrincipalName)
       throws MetaException, TException;
 
   /**

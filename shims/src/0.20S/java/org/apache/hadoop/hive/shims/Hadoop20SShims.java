@@ -30,6 +30,11 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hive.io.HiveIOExceptionHandlerChain;
+import org.apache.hadoop.hive.io.HiveIOExceptionHandlerUtil;
+import org.apache.hadoop.hive.shims.Hadoop20Shims;
+import org.apache.hadoop.hive.shims.HadoopShims;
+import org.apache.hadoop.hive.shims.Hadoop20Shims.InputSplitShim;
 import org.apache.hadoop.hive.thrift.DelegationTokenSelector;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
@@ -141,12 +146,48 @@ public class Hadoop20SShims implements HadoopShims {
   }
 
   public static class InputSplitShim extends CombineFileSplit implements HadoopShims.InputSplitShim {
+    long shrinkedLength;
+    boolean _isShrinked;
     public InputSplitShim() {
       super();
+      _isShrinked = false;
     }
 
     public InputSplitShim(CombineFileSplit old) throws IOException {
       super(old);
+      _isShrinked = false;
+    }
+
+    @Override
+    public void shrinkSplit(long length) {
+      _isShrinked = true;
+      shrinkedLength = length;
+    }
+
+    public boolean isShrinked() {
+      return _isShrinked;
+    }
+
+    public long getShrinkedLength() {
+      return shrinkedLength;
+    }
+
+    @Override
+    public void readFields(DataInput in) throws IOException {
+      super.readFields(in);
+      _isShrinked = in.readBoolean();
+      if (_isShrinked) {
+        shrinkedLength = in.readLong();
+      }
+    }
+
+    @Override
+    public void write(DataOutput out) throws IOException {
+      super.write(out);
+      out.writeBoolean(_isShrinked);
+      if (_isShrinked) {
+        out.writeLong(shrinkedLength);
+      }
     }
   }
 
@@ -173,10 +214,14 @@ public class Hadoop20SShims implements HadoopShims {
     protected int idx;
     protected long progress;
     protected RecordReader<K, V> curReader;
+    protected boolean isShrinked;
+    protected long shrinkedLength;
 
     public boolean next(K key, V value) throws IOException {
 
-      while ((curReader == null) || !curReader.next((K)((CombineHiveKey)key).getKey(), value)) {
+      while ((curReader == null)
+          || !doNextWithExceptionHandler((K) ((CombineHiveKey) key).getKey(),
+              value)) {
         if (!initNextRecordReader(key)) {
           return false;
         }
@@ -230,6 +275,14 @@ public class Hadoop20SShims implements HadoopShims {
       this.curReader = null;
       this.progress = 0;
 
+      isShrinked = false;
+
+      assert (split instanceof Hadoop20Shims.InputSplitShim);
+      if (((InputSplitShim) split).isShrinked()) {
+        isShrinked = true;
+        shrinkedLength = ((InputSplitShim) split).getShrinkedLength();
+      }      
+      
       try {
         rrConstructor = rrClass.getDeclaredConstructor(constructorSignature);
         rrConstructor.setAccessible(true);
@@ -238,6 +291,22 @@ public class Hadoop20SShims implements HadoopShims {
             " does not have valid constructor", e);
       }
       initNextRecordReader(null);
+    }
+    
+    /**
+     * do next and handle exception inside it. 
+     * @param key
+     * @param value
+     * @return
+     * @throws IOException
+     */
+    private boolean doNextWithExceptionHandler(K key, V value) throws IOException {
+      try {
+        return curReader.next(key, value);
+      } catch (Exception e) {
+        return HiveIOExceptionHandlerUtil
+            .handleRecordReaderNextException(e, jc);
+      }
     }
 
     /**
@@ -254,7 +323,7 @@ public class Hadoop20SShims implements HadoopShims {
       }
 
       // if all chunks have been processed, nothing more to do.
-      if (idx == split.getNumPaths()) {
+      if (idx == split.getNumPaths() || (isShrinked && progress > shrinkedLength)) {
         return false;
       }
 
@@ -274,7 +343,8 @@ public class Hadoop20SShims implements HadoopShims {
         jc.setLong("map.input.start", split.getOffset(idx));
         jc.setLong("map.input.length", split.getLength(idx));
       } catch (Exception e) {
-        throw new RuntimeException(e);
+        curReader = HiveIOExceptionHandlerUtil.handleRecordReaderCreationException(
+            e, jc);
       }
       idx++;
       return true;
@@ -425,6 +495,11 @@ public class Hadoop20SShims implements HadoopShims {
   @Override
   public boolean isSecureShimImpl() {
     return true;
+  }
+  
+  @Override
+  public String getShortUserName(UserGroupInformation ugi) {
+    return ugi.getShortUserName();
   }
 
   @Override

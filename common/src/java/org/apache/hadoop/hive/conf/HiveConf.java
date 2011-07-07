@@ -55,12 +55,37 @@ public class HiveConf extends Configuration {
       HiveConf.ConfVars.METASTOREWAREHOUSE,
       HiveConf.ConfVars.METASTOREURIS,
       HiveConf.ConfVars.METASTORETHRIFTRETRIES,
+      HiveConf.ConfVars.METASTORE_CLIENT_CONNECT_RETRY_DELAY,
+      HiveConf.ConfVars.METASTORE_CLIENT_SOCKET_TIMEOUT,
       HiveConf.ConfVars.METASTOREPWD,
       HiveConf.ConfVars.METASTORECONNECTURLHOOK,
       HiveConf.ConfVars.METASTORECONNECTURLKEY,
       HiveConf.ConfVars.METASTOREATTEMPTS,
       HiveConf.ConfVars.METASTOREINTERVAL,
-      HiveConf.ConfVars.METASTOREFORCERELOADCONF
+      HiveConf.ConfVars.METASTOREFORCERELOADCONF,
+      HiveConf.ConfVars.METASTORESERVERMINTHREADS,
+      HiveConf.ConfVars.METASTORESERVERMAXTHREADS,
+      HiveConf.ConfVars.METASTORE_TCP_KEEP_ALIVE,
+      HiveConf.ConfVars.METASTORE_INT_ORIGINAL,
+      HiveConf.ConfVars.METASTORE_INT_ARCHIVED,
+      HiveConf.ConfVars.METASTORE_INT_EXTRACTED,
+      HiveConf.ConfVars.METASTORE_KERBEROS_KEYTAB_FILE,
+      HiveConf.ConfVars.METASTORE_KERBEROS_PRINCIPAL,
+      HiveConf.ConfVars.METASTORE_USE_THRIFT_SASL,
+      HiveConf.ConfVars.METASTORE_CACHE_PINOBJTYPES,
+      HiveConf.ConfVars.METASTORE_CONNECTION_POOLING_TYPE,
+      HiveConf.ConfVars.METASTORE_VALIDATE_TABLES,
+      HiveConf.ConfVars.METASTORE_VALIDATE_COLUMNS,
+      HiveConf.ConfVars.METASTORE_VALIDATE_CONSTRAINTS,
+      HiveConf.ConfVars.METASTORE_STORE_MANAGER_TYPE,
+      HiveConf.ConfVars.METASTORE_AUTO_CREATE_SCHEMA,
+      HiveConf.ConfVars.METASTORE_AUTO_START_MECHANISM_MODE,
+      HiveConf.ConfVars.METASTORE_TRANSACTION_ISOLATION,
+      HiveConf.ConfVars.METASTORE_CACHE_LEVEL2,
+      HiveConf.ConfVars.METASTORE_CACHE_LEVEL2_TYPE,
+      HiveConf.ConfVars.METASTORE_IDENTIFIER_FACTORY,
+      HiveConf.ConfVars.METASTORE_PLUGIN_REGISTRY_BUNDLE_CHECK,
+      HiveConf.ConfVars.METASTORE_AUTHORIZATION_STORAGE_AUTH_CHECKS,
       };
 
   /**
@@ -177,7 +202,24 @@ public class HiveConf extends Configuration {
     METASTORE_KERBEROS_PRINCIPAL("hive.metastore.kerberos.principal", ""),
     METASTORE_USE_THRIFT_SASL("hive.metastore.sasl.enabled", false),
     METASTORE_CACHE_PINOBJTYPES("hive.metastore.cache.pinobjtypes", "Table,StorageDescriptor,SerDeInfo,Partition,Database,Type,FieldSchema,Order"),
-
+    METASTORE_CONNECTION_POOLING_TYPE("datanucleus.connectionPoolingType", "DBCP"),
+    METASTORE_VALIDATE_TABLES("datanucleus.validateTables", false),
+    METASTORE_VALIDATE_COLUMNS("datanucleus.validateColumns", false),
+    METASTORE_VALIDATE_CONSTRAINTS("datanucleus.validateConstraints", false),
+    METASTORE_STORE_MANAGER_TYPE("datanucleus.storeManagerType", "rdbms"),
+    METASTORE_AUTO_CREATE_SCHEMA("datanucleus.autoCreateSchema", true),
+    METASTORE_AUTO_START_MECHANISM_MODE("datanucleus.autoStartMechanismMode", "checked"),
+    METASTORE_TRANSACTION_ISOLATION("datanucleus.transactionIsolation", "read-committed"),
+    METASTORE_CACHE_LEVEL2("datanucleus.cache.level2", false),
+    METASTORE_CACHE_LEVEL2_TYPE("datanucleus.cache.level2.type", "SOFT"),
+    METASTORE_IDENTIFIER_FACTORY("datanucleus.identifierFactory", "datanucleus"),
+    METASTORE_PLUGIN_REGISTRY_BUNDLE_CHECK("datanucleus.plugin.pluginRegistryBundleCheck", "LOG"),
+    METASTORE_BATCH_RETRIEVE_MAX("hive.metastore.batch.retrieve.max", 300),
+    METASTORE_EVENT_LISTENERS("hive.metastore.event.listeners", ""),
+    // should we do checks against the storage (usually hdfs) for operations like drop_partition
+    METASTORE_AUTHORIZATION_STORAGE_AUTH_CHECKS("hive.metastore.authorization.storage.checks", false),
+    METASTORE_EVENT_CLEAN_FREQ("hive.metastore.event.clean.freq",0L),
+    METASTORE_EVENT_EXPIRY_DURATION("hive.metastore.event.expiry.duration",0L),
     // Default parameters for creating tables
     NEWTABLEDEFAULTPARA("hive.table.parameters.default",""),
 
@@ -233,6 +275,7 @@ public class HiveConf extends Configuration {
     HIVEMAPJOINFOLLOWEDBYMAPAGGRHASHMEMORY("hive.mapjoin.followby.map.aggr.hash.percentmemory", (float) 0.3),
     HIVEMAPAGGRMEMORYTHRESHOLD("hive.map.aggr.hash.force.flush.memory.threshold", (float) 0.9),
     HIVEMAPAGGRHASHMINREDUCTION("hive.map.aggr.hash.min.reduction", (float) 0.5),
+    HIVEMULTIGROUPBYSINGLEMR("hive.multigroupby.singlemr", false),
 
     // for hive udtf operator
     HIVEUDTFAUTOPROGRESS("hive.udtf.auto.progress", false),
@@ -264,7 +307,10 @@ public class HiveConf extends Configuration {
     //small table file size
     HIVESMALLTABLESFILESIZE("hive.smalltable.filesize",25000000L), //25M
 
-      // test mode in hive mode
+    // random number for split sampling
+    HIVESAMPLERANDOMNUM("hive.sample.seednumber", 0),
+
+    // test mode in hive mode
     HIVETESTMODE("hive.test.mode", false),
     HIVETESTMODEPREFIX("hive.test.mode.prefix", "test_"),
     HIVETESTMODESAMPLEFREQ("hive.test.mode.samplefreq", 32),
@@ -274,6 +320,11 @@ public class HiveConf extends Configuration {
     HIVEMERGEMAPREDFILES("hive.merge.mapredfiles", false),
     HIVEMERGEMAPFILESSIZE("hive.merge.size.per.task", (long) (256 * 1000 * 1000)),
     HIVEMERGEMAPFILESAVGSIZE("hive.merge.smallfiles.avgsize", (long) (16 * 1000 * 1000)),
+    HIVEMERGERCFILEBLOCKLEVEL("hive.merge.rcfile.block.level", true),
+    HIVEMERGEINPUTFORMATBLOCKLEVEL("hive.merge.input.format.block.level",
+        "org.apache.hadoop.hive.ql.io.rcfile.merge.RCFileBlockMergeInputFormat"),
+    HIVEMERGECURRENTJOBHASDYNAMICPARTITIONS(
+        "hive.merge.current.job.has.dynamic.partitions", false),
 
     HIVESKEWJOIN("hive.optimize.skewjoin", false),
 
@@ -289,7 +340,14 @@ public class HiveConf extends Configuration {
 
     HIVESENDHEARTBEAT("hive.heartbeat.interval", 1000),
     HIVEMAXMAPJOINSIZE("hive.mapjoin.maxsize", 100000),
+<<<<<<< HEAD
 
+=======
+    HIVELIMITMAXROWSIZE("hive.limit.row.max.size", 100000L),
+    HIVELIMITOPTLIMITFILE("hive.limit.optimize.limit.file", 10),
+    HIVELIMITOPTENABLE("hive.limit.optimize.enable", false),
+    HIVELIMITOPTMAXFETCH("hive.limit.optimize.fetch.max", 50000),
+>>>>>>> remotes/apache_hive/trunk
     HIVEHASHTABLETHRESHOLD("hive.hashtable.initialCapacity", 100000),
     HIVEHASHTABLELOADFACTOR("hive.hashtable.loadfactor", (float) 0.75),
     HIVEHASHTABLEFOLLOWBYGBYMAXMEMORYUSAGE("hive.mapjoin.followby.gby.localtask.max.memory.usage", (float) 0.55),
@@ -307,11 +365,13 @@ public class HiveConf extends Configuration {
     HIVEPARTITIONER("hive.mapred.partitioner", "org.apache.hadoop.hive.ql.io.DefaultHivePartitioner"),
 
     HIVESCRIPTOPERATORTRUST("hive.exec.script.trust", false),
+    HIVEROWOFFSET("hive.exec.rowoffset", false),
 
     HIVE_COMBINE_INPUT_FORMAT_SUPPORTS_SPLITTABLE("hive.hadoop.supports.splittable.combineinputformat", false),
 
     // Optimizer
     HIVEOPTCP("hive.optimize.cp", true), // column pruner
+    HIVEOPTINDEXFILTER("hive.optimize.index.filter", false), // automatically use indexes
     HIVEOPTPPD("hive.optimize.ppd", true), // predicate pushdown
     // push predicates down to storage handlers
     HIVEOPTPPD_STORAGE("hive.optimize.ppd.storage", true),
@@ -319,6 +379,12 @@ public class HiveConf extends Configuration {
     HIVEOPTBUCKETMAPJOIN("hive.optimize.bucketmapjoin", false), // optimize bucket map join
     HIVEOPTSORTMERGEBUCKETMAPJOIN("hive.optimize.bucketmapjoin.sortedmerge", false), // try to use sorted merge bucket map join
     HIVEOPTREDUCEDEDUPLICATION("hive.optimize.reducededuplication", true),
+
+    // Indexes
+    HIVEOPTINDEXFILTER_COMPACT_MINSIZE("hive.optimize.index.filter.compact.minsize", (long) 5 * 1024 * 1024 * 1024), // 5G
+    HIVEOPTINDEXFILTER_COMPACT_MAXSIZE("hive.optimize.index.filter.compact.maxsize", (long) -1), // infinity
+    HIVE_INDEX_COMPACT_QUERY_MAX_ENTRIES("hive.index.compact.query.max.entries", (long) 10000000), // 10M
+    HIVE_INDEX_COMPACT_QUERY_MAX_SIZE("hive.index.compact.query.max.size", (long) 10 * 1024 * 1024 * 1024), // 10G
 
     // Statistics
     HIVESTATSAUTOGATHER("hive.stats.autogather", true),
@@ -336,6 +402,12 @@ public class HiveConf extends Configuration {
         30), // default timeout in sec for JDBC connection & SQL statements
     HIVE_STATS_ATOMIC("hive.stats.atomic",
         false), // whether to update metastore stats only if all stats are available
+    HIVE_STATS_RETRIES_MAX("hive.stats.retries.max",
+        0),     // maximum # of retries to insert/select/delete the stats DB
+    HIVE_STATS_RETRIES_WAIT("hive.stats.retries.wait",
+        3000),  // # milliseconds to wait before the next retry
+    HIVE_STATS_COLLECT_RAWDATASIZE("hive.stats.collect.rawdatasize", true),
+    // should the raw data size be collected when analayzing tables
 
 
     // Concurrency
@@ -343,6 +415,7 @@ public class HiveConf extends Configuration {
     HIVE_LOCK_MANAGER("hive.lock.manager", "org.apache.hadoop.hive.ql.lockmgr.zookeeper.ZooKeeperHiveLockManager"),
     HIVE_LOCK_NUMRETRIES("hive.lock.numretries", 100),
     HIVE_LOCK_SLEEP_BETWEEN_RETRIES("hive.lock.sleep.between.retries", 60),
+    HIVE_LOCK_MAPRED_ONLY("hive.lock.mapred.only.operation", false),
 
     HIVE_ZOOKEEPER_QUORUM("hive.zookeeper.quorum", ""),
     HIVE_ZOOKEEPER_CLIENT_PORT("hive.zookeeper.client.port", ""),
@@ -388,12 +461,14 @@ public class HiveConf extends Configuration {
 
     HIVE_INDEX_IGNORE_HDFS_LOC("hive.index.compact.file.ignore.hdfs", false),
 
+    HIVE_EXIM_URI_SCHEME_WL("hive.exim.uri.scheme.whitelist", "hdfs,pfile"),
     // temporary variable for testing. This is added just to turn off this feature in case of a bug in
     // deployment. It has not been documented in hive-default.xml intentionally, this should be removed
     // once the feature is stable
     HIVE_MAPPER_CANNOT_SPAN_MULTIPLE_PARTITIONS("hive.mapper.cannot.span.multiple.partitions", false),
+    HIVE_REWORK_MAPREDWORK("hive.rework.mapredwork", false),
+    HIVE_CONCATENATE_CHECK_INDEX ("hive.exec.concatenate.check.index", true),
     ;
-
 
     public final String varname;
     public final String defaultVal;
@@ -697,6 +772,15 @@ public class HiveConf extends Configuration {
 
   public static String getColumnInternalName(int pos) {
     return "_col" + pos;
+  }
+
+  public static int getPositionFromInternalName(String internalName) {
+    char pos = internalName.charAt(internalName.length()-1);
+    if (Character.isDigit(pos)) {
+      return Character.digit(pos, 10);
+    } else{
+      return -1;
+    }
   }
 
 }

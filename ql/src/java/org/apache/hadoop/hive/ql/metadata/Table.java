@@ -816,13 +816,11 @@ public class Table implements Serializable {
   }
 
   /**
-   * @return List containing Index Table names if there is exists indexes
-   * on this table
+   * @return List containing Indexes names if there are indexes on this table
    * @throws HiveException
    **/
   public List<Index> getAllIndexes(short max) throws HiveException {
     Hive hive = Hive.get();
-    return hive.getIndexesOnTable(getTTable().getDbName(), getTTable().getTableName(), max);
+    return hive.getIndexes(getTTable().getDbName(), getTTable().getTableName(), max);
   }
-
 };

@@ -22,6 +22,7 @@ import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
 import java.sql.DriverPropertyInfo;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -191,20 +192,133 @@ public class TestJdbcDriver extends TestCase {
         expectedException);
   }
 
+  public void testPrepareStatement() {
+
+    String sql = "from (select count(1) from "
+        + tableName
+        + " where   'not?param?not?param' <> 'not_param??not_param' and ?=? "
+        + " and 1=? and 2=? and 3.0=? and 4.0=? and 'test\\'string\"'=? and 5=? and ?=? "
+        + " ) t  select '2011-03-25' ddate,'China',true bv, 10 num limit 10";
+
+     ///////////////////////////////////////////////
+    //////////////////// correct testcase
+    //////////////////////////////////////////////
+    try {
+      PreparedStatement ps = con.prepareStatement(sql);
+
+      ps.setBoolean(1, true);
+      ps.setBoolean(2, true);
+
+      ps.setShort(3, Short.valueOf("1"));
+      ps.setInt(4, 2);
+      ps.setFloat(5, 3f);
+      ps.setDouble(6, Double.valueOf(4));
+      ps.setString(7, "test'string\"");
+      ps.setLong(8, 5L);
+      ps.setByte(9, (byte) 1);
+      ps.setByte(10, (byte) 1);
+
+      ps.setMaxRows(2);
+
+      assertTrue(true);
+
+      ResultSet res = ps.executeQuery();
+      assertNotNull(res);
+
+      while (res.next()) {
+        assertEquals("2011-03-25", res.getString("ddate"));
+        assertEquals("10", res.getString("num"));
+        assertEquals((byte) 10, res.getByte("num"));
+        assertEquals("2011-03-25", res.getDate("ddate").toString());
+        assertEquals(Double.valueOf(10).doubleValue(), res.getDouble("num"), 0.1);
+        assertEquals(10, res.getInt("num"));
+        assertEquals(Short.valueOf("10").shortValue(), res.getShort("num"));
+        assertEquals(10L, res.getLong("num"));
+        assertEquals(true, res.getBoolean("bv"));
+        Object o = res.getObject("ddate");
+        assertNotNull(o);
+        o = res.getObject("num");
+        assertNotNull(o);
+      }
+      res.close();
+      assertTrue(true);
+
+      ps.close();
+      assertTrue(true);
+
+    } catch (Exception e) {
+      e.printStackTrace();
+      fail(e.toString());
+    }
+
+     ///////////////////////////////////////////////
+    //////////////////// other failure testcases
+    //////////////////////////////////////////////
+    // set nothing for prepared sql
+    Exception expectedException = null;
+    try {
+      PreparedStatement ps = con.prepareStatement(sql);
+      ps.executeQuery();
+    } catch (Exception e) {
+      expectedException = e;
+    }
+    assertNotNull(
+        "Execute the un-setted sql statement should throw exception",
+        expectedException);
+
+    // set some of parameters for prepared sql, not all of them.
+    expectedException = null;
+    try {
+      PreparedStatement ps = con.prepareStatement(sql);
+      ps.setBoolean(1, true);
+      ps.setBoolean(2, true);
+      ps.executeQuery();
+    } catch (Exception e) {
+      expectedException = e;
+    }
+    assertNotNull(
+        "Execute the invalid setted sql statement should throw exception",
+        expectedException);
+
+    // set the wrong type parameters for prepared sql.
+    expectedException = null;
+    try {
+      PreparedStatement ps = con.prepareStatement(sql);
+
+      // wrong type here
+      ps.setString(1, "wrong");
+
+      assertTrue(true);
+      ResultSet res = ps.executeQuery();
+      if (!res.next()) {
+        throw new Exception("there must be a empty result set");
+      }
+    } catch (Exception e) {
+      expectedException = e;
+    }
+    assertNotNull(
+        "Execute the invalid setted sql statement should throw exception",
+        expectedException);
+  }
+
   public final void testSelectAll() throws Exception {
-    doTestSelectAll(tableName, -1); // tests not setting maxRows (return all)
-    doTestSelectAll(tableName, 0); // tests setting maxRows to 0 (return all)
+    doTestSelectAll(tableName, -1, -1); // tests not setting maxRows (return all)
+    doTestSelectAll(tableName, 0, -1); // tests setting maxRows to 0 (return all)
   }
 
   public final void testSelectAllPartioned() throws Exception {
-    doTestSelectAll(partitionedTableName, -1); // tests not setting maxRows
+    doTestSelectAll(partitionedTableName, -1, -1); // tests not setting maxRows
     // (return all)
-    doTestSelectAll(partitionedTableName, 0); // tests setting maxRows to 0
+    doTestSelectAll(partitionedTableName, 0, -1); // tests setting maxRows to 0
     // (return all)
   }
 
   public final void testSelectAllMaxRows() throws Exception {
-    doTestSelectAll(tableName, 100);
+    doTestSelectAll(tableName, 100, -1);
+  }
+
+  public final void testSelectAllFetchSize() throws Exception {
+    doTestSelectAll(tableName, 100, 20);
   }
 
   public void testDataTypes() throws Exception {
@@ -267,10 +381,14 @@ public class TestJdbcDriver extends TestCase {
     assertFalse(res.next());
   }
 
-  private void doTestSelectAll(String tableName, int maxRows) throws Exception {
+  private void doTestSelectAll(String tableName, int maxRows, int fetchSize) throws Exception {
     Statement stmt = con.createStatement();
     if (maxRows >= 0) {
       stmt.setMaxRows(maxRows);
+    }
+    if (fetchSize > 0) {
+      stmt.setFetchSize(fetchSize);
+      assertEquals(fetchSize, stmt.getFetchSize());
     }
 
     // JDBC says that 0 means return all, which is the default
@@ -352,16 +470,16 @@ public class TestJdbcDriver extends TestCase {
     // sure
     // how to get around that.
     doTestErrorCase("SELECTT * FROM " + tableName,
-        "cannot recognize input 'SELECTT'", invalidSyntaxSQLState, 11);
+        "cannot recognize input near 'SELECTT' '*' 'FROM'", invalidSyntaxSQLState, 11);
     doTestErrorCase("SELECT * FROM some_table_that_does_not_exist",
-        "Table not found", "42S02", parseErrorCode);
+        "Table not found", "42000", parseErrorCode);
     doTestErrorCase("drop table some_table_that_does_not_exist",
-        "Table not found", "42S02", parseErrorCode);
+        "Table not found", "42000", parseErrorCode);
     doTestErrorCase("SELECT invalid_column FROM " + tableName,
-        "Invalid Table Alias or Column Reference", invalidSyntaxSQLState,
+        "Invalid table alias or column reference", invalidSyntaxSQLState,
         parseErrorCode);
     doTestErrorCase("SELECT invalid_function(key) FROM " + tableName,
-        "Invalid Function", invalidSyntaxSQLState, parseErrorCode);
+        "Invalid function", invalidSyntaxSQLState, parseErrorCode);
 
     // TODO: execute errors like this currently don't return good messages (i.e.
     // 'Table already exists'). This is because the Driver class calls
@@ -473,7 +591,17 @@ public class TestJdbcDriver extends TestCase {
       cnt++;
     }
     rs.close();
-    assertEquals("Incorrect schema count", 1, cnt);
+    assertEquals("Incorrect catalog count", 1, cnt);
+  }
+
+  public void testMetaDataGetSchemas() throws SQLException {
+    ResultSet rs = (ResultSet)con.getMetaData().getSchemas();
+    int cnt = 0;
+    while (rs.next()) {
+      cnt++;
+    }
+    rs.close();
+    assertEquals("Incorrect schema count", 0, cnt);
   }
 
   public void testMetaDataGetTableTypes() throws SQLException {
