@@ -46,13 +46,13 @@ module ThriftHiveMetastore
       raise ::Thrift::ApplicationException.new(::Thrift::ApplicationException::MISSING_RESULT, 'get_database failed: unknown result')
     end
 
-    def drop_database(name, deleteData)
-      send_drop_database(name, deleteData)
+    def drop_database(name, deleteData, cascade)
+      send_drop_database(name, deleteData, cascade)
       recv_drop_database()
     end
 
-    def send_drop_database(name, deleteData)
-      send_message('drop_database', Drop_database_args, :name => name, :deleteData => deleteData)
+    def send_drop_database(name, deleteData, cascade)
+      send_message('drop_database', Drop_database_args, :name => name, :deleteData => deleteData, :cascade => cascade)
     end
 
     def recv_drop_database()
@@ -296,6 +296,24 @@ module ThriftHiveMetastore
       raise result.o1 unless result.o1.nil?
       raise result.o2 unless result.o2.nil?
       raise ::Thrift::ApplicationException.new(::Thrift::ApplicationException::MISSING_RESULT, 'get_table failed: unknown result')
+    end
+
+    def get_table_objects_by_name(dbname, tbl_names)
+      send_get_table_objects_by_name(dbname, tbl_names)
+      return recv_get_table_objects_by_name()
+    end
+
+    def send_get_table_objects_by_name(dbname, tbl_names)
+      send_message('get_table_objects_by_name', Get_table_objects_by_name_args, :dbname => dbname, :tbl_names => tbl_names)
+    end
+
+    def recv_get_table_objects_by_name()
+      result = receive_message(Get_table_objects_by_name_result)
+      return result.success unless result.success.nil?
+      raise result.o1 unless result.o1.nil?
+      raise result.o2 unless result.o2.nil?
+      raise result.o3 unless result.o3.nil?
+      raise ::Thrift::ApplicationException.new(::Thrift::ApplicationException::MISSING_RESULT, 'get_table_objects_by_name failed: unknown result')
     end
 
     def alter_table(dbname, tbl_name, new_tbl)
@@ -569,6 +587,23 @@ module ThriftHiveMetastore
       raise ::Thrift::ApplicationException.new(::Thrift::ApplicationException::MISSING_RESULT, 'get_partitions_by_filter failed: unknown result')
     end
 
+    def get_partitions_by_names(db_name, tbl_name, names)
+      send_get_partitions_by_names(db_name, tbl_name, names)
+      return recv_get_partitions_by_names()
+    end
+
+    def send_get_partitions_by_names(db_name, tbl_name, names)
+      send_message('get_partitions_by_names', Get_partitions_by_names_args, :db_name => db_name, :tbl_name => tbl_name, :names => names)
+    end
+
+    def recv_get_partitions_by_names()
+      result = receive_message(Get_partitions_by_names_result)
+      return result.success unless result.success.nil?
+      raise result.o1 unless result.o1.nil?
+      raise result.o2 unless result.o2.nil?
+      raise ::Thrift::ApplicationException.new(::Thrift::ApplicationException::MISSING_RESULT, 'get_partitions_by_names failed: unknown result')
+    end
+
     def alter_partition(db_name, tbl_name, new_part)
       send_alter_partition(db_name, tbl_name, new_part)
       recv_alter_partition()
@@ -631,6 +666,47 @@ module ThriftHiveMetastore
       return result.success unless result.success.nil?
       raise result.o1 unless result.o1.nil?
       raise ::Thrift::ApplicationException.new(::Thrift::ApplicationException::MISSING_RESULT, 'partition_name_to_spec failed: unknown result')
+    end
+
+    def markPartitionForEvent(db_name, tbl_name, part_vals, eventType)
+      send_markPartitionForEvent(db_name, tbl_name, part_vals, eventType)
+      recv_markPartitionForEvent()
+    end
+
+    def send_markPartitionForEvent(db_name, tbl_name, part_vals, eventType)
+      send_message('markPartitionForEvent', MarkPartitionForEvent_args, :db_name => db_name, :tbl_name => tbl_name, :part_vals => part_vals, :eventType => eventType)
+    end
+
+    def recv_markPartitionForEvent()
+      result = receive_message(MarkPartitionForEvent_result)
+      raise result.o1 unless result.o1.nil?
+      raise result.o2 unless result.o2.nil?
+      raise result.o3 unless result.o3.nil?
+      raise result.o4 unless result.o4.nil?
+      raise result.o5 unless result.o5.nil?
+      raise result.o6 unless result.o6.nil?
+      return
+    end
+
+    def isPartitionMarkedForEvent(db_name, tbl_name, part_vals, eventType)
+      send_isPartitionMarkedForEvent(db_name, tbl_name, part_vals, eventType)
+      return recv_isPartitionMarkedForEvent()
+    end
+
+    def send_isPartitionMarkedForEvent(db_name, tbl_name, part_vals, eventType)
+      send_message('isPartitionMarkedForEvent', IsPartitionMarkedForEvent_args, :db_name => db_name, :tbl_name => tbl_name, :part_vals => part_vals, :eventType => eventType)
+    end
+
+    def recv_isPartitionMarkedForEvent()
+      result = receive_message(IsPartitionMarkedForEvent_result)
+      return result.success unless result.success.nil?
+      raise result.o1 unless result.o1.nil?
+      raise result.o2 unless result.o2.nil?
+      raise result.o3 unless result.o3.nil?
+      raise result.o4 unless result.o4.nil?
+      raise result.o5 unless result.o5.nil?
+      raise result.o6 unless result.o6.nil?
+      raise ::Thrift::ApplicationException.new(::Thrift::ApplicationException::MISSING_RESULT, 'isPartitionMarkedForEvent failed: unknown result')
     end
 
     def add_index(new_index, index_table)
@@ -894,13 +970,13 @@ module ThriftHiveMetastore
       raise ::Thrift::ApplicationException.new(::Thrift::ApplicationException::MISSING_RESULT, 'revoke_privileges failed: unknown result')
     end
 
-    def get_delegation_token(renewer_kerberos_principal_name)
-      send_get_delegation_token(renewer_kerberos_principal_name)
+    def get_delegation_token(token_owner, renewer_kerberos_principal_name)
+      send_get_delegation_token(token_owner, renewer_kerberos_principal_name)
       return recv_get_delegation_token()
     end
 
-    def send_get_delegation_token(renewer_kerberos_principal_name)
-      send_message('get_delegation_token', Get_delegation_token_args, :renewer_kerberos_principal_name => renewer_kerberos_principal_name)
+    def send_get_delegation_token(token_owner, renewer_kerberos_principal_name)
+      send_message('get_delegation_token', Get_delegation_token_args, :token_owner => token_owner, :renewer_kerberos_principal_name => renewer_kerberos_principal_name)
     end
 
     def recv_get_delegation_token()
@@ -908,22 +984,6 @@ module ThriftHiveMetastore
       return result.success unless result.success.nil?
       raise result.o1 unless result.o1.nil?
       raise ::Thrift::ApplicationException.new(::Thrift::ApplicationException::MISSING_RESULT, 'get_delegation_token failed: unknown result')
-    end
-
-    def get_delegation_token_with_signature(renewer_kerberos_principal_name, token_signature)
-      send_get_delegation_token_with_signature(renewer_kerberos_principal_name, token_signature)
-      return recv_get_delegation_token_with_signature()
-    end
-
-    def send_get_delegation_token_with_signature(renewer_kerberos_principal_name, token_signature)
-      send_message('get_delegation_token_with_signature', Get_delegation_token_with_signature_args, :renewer_kerberos_principal_name => renewer_kerberos_principal_name, :token_signature => token_signature)
-    end
-
-    def recv_get_delegation_token_with_signature()
-      result = receive_message(Get_delegation_token_with_signature_result)
-      return result.success unless result.success.nil?
-      raise result.o1 unless result.o1.nil?
-      raise ::Thrift::ApplicationException.new(::Thrift::ApplicationException::MISSING_RESULT, 'get_delegation_token_with_signature failed: unknown result')
     end
 
     def renew_delegation_token(token_str_form)
@@ -994,7 +1054,7 @@ module ThriftHiveMetastore
       args = read_args(iprot, Drop_database_args)
       result = Drop_database_result.new()
       begin
-        @handler.drop_database(args.name, args.deleteData)
+        @handler.drop_database(args.name, args.deleteData, args.cascade)
       rescue NoSuchObjectException => o1
         result.o1 = o1
       rescue InvalidOperationException => o2
@@ -1185,6 +1245,21 @@ module ThriftHiveMetastore
         result.o2 = o2
       end
       write_result(result, oprot, 'get_table', seqid)
+    end
+
+    def process_get_table_objects_by_name(seqid, iprot, oprot)
+      args = read_args(iprot, Get_table_objects_by_name_args)
+      result = Get_table_objects_by_name_result.new()
+      begin
+        result.success = @handler.get_table_objects_by_name(args.dbname, args.tbl_names)
+      rescue MetaException => o1
+        result.o1 = o1
+      rescue InvalidOperationException => o2
+        result.o2 = o2
+      rescue UnknownDBException => o3
+        result.o3 = o3
+      end
+      write_result(result, oprot, 'get_table_objects_by_name', seqid)
     end
 
     def process_alter_table(seqid, iprot, oprot)
@@ -1395,6 +1470,19 @@ module ThriftHiveMetastore
       write_result(result, oprot, 'get_partitions_by_filter', seqid)
     end
 
+    def process_get_partitions_by_names(seqid, iprot, oprot)
+      args = read_args(iprot, Get_partitions_by_names_args)
+      result = Get_partitions_by_names_result.new()
+      begin
+        result.success = @handler.get_partitions_by_names(args.db_name, args.tbl_name, args.names)
+      rescue MetaException => o1
+        result.o1 = o1
+      rescue NoSuchObjectException => o2
+        result.o2 = o2
+      end
+      write_result(result, oprot, 'get_partitions_by_names', seqid)
+    end
+
     def process_alter_partition(seqid, iprot, oprot)
       args = read_args(iprot, Alter_partition_args)
       result = Alter_partition_result.new()
@@ -1439,6 +1527,48 @@ module ThriftHiveMetastore
         result.o1 = o1
       end
       write_result(result, oprot, 'partition_name_to_spec', seqid)
+    end
+
+    def process_markPartitionForEvent(seqid, iprot, oprot)
+      args = read_args(iprot, MarkPartitionForEvent_args)
+      result = MarkPartitionForEvent_result.new()
+      begin
+        @handler.markPartitionForEvent(args.db_name, args.tbl_name, args.part_vals, args.eventType)
+      rescue MetaException => o1
+        result.o1 = o1
+      rescue NoSuchObjectException => o2
+        result.o2 = o2
+      rescue UnknownDBException => o3
+        result.o3 = o3
+      rescue UnknownTableException => o4
+        result.o4 = o4
+      rescue UnknownPartitionException => o5
+        result.o5 = o5
+      rescue InvalidPartitionException => o6
+        result.o6 = o6
+      end
+      write_result(result, oprot, 'markPartitionForEvent', seqid)
+    end
+
+    def process_isPartitionMarkedForEvent(seqid, iprot, oprot)
+      args = read_args(iprot, IsPartitionMarkedForEvent_args)
+      result = IsPartitionMarkedForEvent_result.new()
+      begin
+        result.success = @handler.isPartitionMarkedForEvent(args.db_name, args.tbl_name, args.part_vals, args.eventType)
+      rescue MetaException => o1
+        result.o1 = o1
+      rescue NoSuchObjectException => o2
+        result.o2 = o2
+      rescue UnknownDBException => o3
+        result.o3 = o3
+      rescue UnknownTableException => o4
+        result.o4 = o4
+      rescue UnknownPartitionException => o5
+        result.o5 = o5
+      rescue InvalidPartitionException => o6
+        result.o6 = o6
+      end
+      write_result(result, oprot, 'isPartitionMarkedForEvent', seqid)
     end
 
     def process_add_index(seqid, iprot, oprot)
@@ -1633,22 +1763,11 @@ module ThriftHiveMetastore
       args = read_args(iprot, Get_delegation_token_args)
       result = Get_delegation_token_result.new()
       begin
-        result.success = @handler.get_delegation_token(args.renewer_kerberos_principal_name)
+        result.success = @handler.get_delegation_token(args.token_owner, args.renewer_kerberos_principal_name)
       rescue MetaException => o1
         result.o1 = o1
       end
       write_result(result, oprot, 'get_delegation_token', seqid)
-    end
-
-    def process_get_delegation_token_with_signature(seqid, iprot, oprot)
-      args = read_args(iprot, Get_delegation_token_with_signature_args)
-      result = Get_delegation_token_with_signature_result.new()
-      begin
-        result.success = @handler.get_delegation_token_with_signature(args.renewer_kerberos_principal_name, args.token_signature)
-      rescue MetaException => o1
-        result.o1 = o1
-      end
-      write_result(result, oprot, 'get_delegation_token_with_signature', seqid)
     end
 
     def process_renew_delegation_token(seqid, iprot, oprot)
@@ -1753,10 +1872,12 @@ module ThriftHiveMetastore
     include ::Thrift::Struct, ::Thrift::Struct_Union
     NAME = 1
     DELETEDATA = 2
+    CASCADE = 3
 
     FIELDS = {
       NAME => {:type => ::Thrift::Types::STRING, :name => 'name'},
-      DELETEDATA => {:type => ::Thrift::Types::BOOL, :name => 'deleteData'}
+      DELETEDATA => {:type => ::Thrift::Types::BOOL, :name => 'deleteData'},
+      CASCADE => {:type => ::Thrift::Types::BOOL, :name => 'cascade'}
     }
 
     def struct_fields; FIELDS; end
@@ -2288,6 +2409,46 @@ module ThriftHiveMetastore
       SUCCESS => {:type => ::Thrift::Types::STRUCT, :name => 'success', :class => Table},
       O1 => {:type => ::Thrift::Types::STRUCT, :name => 'o1', :class => MetaException},
       O2 => {:type => ::Thrift::Types::STRUCT, :name => 'o2', :class => NoSuchObjectException}
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class Get_table_objects_by_name_args
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+    DBNAME = 1
+    TBL_NAMES = 2
+
+    FIELDS = {
+      DBNAME => {:type => ::Thrift::Types::STRING, :name => 'dbname'},
+      TBL_NAMES => {:type => ::Thrift::Types::LIST, :name => 'tbl_names', :element => {:type => ::Thrift::Types::STRING}}
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class Get_table_objects_by_name_result
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+    SUCCESS = 0
+    O1 = 1
+    O2 = 2
+    O3 = 3
+
+    FIELDS = {
+      SUCCESS => {:type => ::Thrift::Types::LIST, :name => 'success', :element => {:type => ::Thrift::Types::STRUCT, :class => Table}},
+      O1 => {:type => ::Thrift::Types::STRUCT, :name => 'o1', :class => MetaException},
+      O2 => {:type => ::Thrift::Types::STRUCT, :name => 'o2', :class => InvalidOperationException},
+      O3 => {:type => ::Thrift::Types::STRUCT, :name => 'o3', :class => UnknownDBException}
     }
 
     def struct_fields; FIELDS; end
@@ -2956,6 +3117,46 @@ module ThriftHiveMetastore
     ::Thrift::Struct.generate_accessors self
   end
 
+  class Get_partitions_by_names_args
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+    DB_NAME = 1
+    TBL_NAME = 2
+    NAMES = 3
+
+    FIELDS = {
+      DB_NAME => {:type => ::Thrift::Types::STRING, :name => 'db_name'},
+      TBL_NAME => {:type => ::Thrift::Types::STRING, :name => 'tbl_name'},
+      NAMES => {:type => ::Thrift::Types::LIST, :name => 'names', :element => {:type => ::Thrift::Types::STRING}}
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class Get_partitions_by_names_result
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+    SUCCESS = 0
+    O1 = 1
+    O2 = 2
+
+    FIELDS = {
+      SUCCESS => {:type => ::Thrift::Types::LIST, :name => 'success', :element => {:type => ::Thrift::Types::STRUCT, :class => Partition}},
+      O1 => {:type => ::Thrift::Types::STRUCT, :name => 'o1', :class => MetaException},
+      O2 => {:type => ::Thrift::Types::STRUCT, :name => 'o2', :class => NoSuchObjectException}
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
   class Alter_partition_args
     include ::Thrift::Struct, ::Thrift::Struct_Union
     DB_NAME = 1
@@ -3088,6 +3289,110 @@ module ThriftHiveMetastore
     FIELDS = {
       SUCCESS => {:type => ::Thrift::Types::MAP, :name => 'success', :key => {:type => ::Thrift::Types::STRING}, :value => {:type => ::Thrift::Types::STRING}},
       O1 => {:type => ::Thrift::Types::STRUCT, :name => 'o1', :class => MetaException}
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class MarkPartitionForEvent_args
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+    DB_NAME = 1
+    TBL_NAME = 2
+    PART_VALS = 3
+    EVENTTYPE = 4
+
+    FIELDS = {
+      DB_NAME => {:type => ::Thrift::Types::STRING, :name => 'db_name'},
+      TBL_NAME => {:type => ::Thrift::Types::STRING, :name => 'tbl_name'},
+      PART_VALS => {:type => ::Thrift::Types::MAP, :name => 'part_vals', :key => {:type => ::Thrift::Types::STRING}, :value => {:type => ::Thrift::Types::STRING}},
+      EVENTTYPE => {:type => ::Thrift::Types::I32, :name => 'eventType', :enum_class => PartitionEventType}
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+      unless @eventType.nil? || PartitionEventType::VALID_VALUES.include?(@eventType)
+        raise ::Thrift::ProtocolException.new(::Thrift::ProtocolException::UNKNOWN, 'Invalid value of field eventType!')
+      end
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class MarkPartitionForEvent_result
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+    O1 = 1
+    O2 = 2
+    O3 = 3
+    O4 = 4
+    O5 = 5
+    O6 = 6
+
+    FIELDS = {
+      O1 => {:type => ::Thrift::Types::STRUCT, :name => 'o1', :class => MetaException},
+      O2 => {:type => ::Thrift::Types::STRUCT, :name => 'o2', :class => NoSuchObjectException},
+      O3 => {:type => ::Thrift::Types::STRUCT, :name => 'o3', :class => UnknownDBException},
+      O4 => {:type => ::Thrift::Types::STRUCT, :name => 'o4', :class => UnknownTableException},
+      O5 => {:type => ::Thrift::Types::STRUCT, :name => 'o5', :class => UnknownPartitionException},
+      O6 => {:type => ::Thrift::Types::STRUCT, :name => 'o6', :class => InvalidPartitionException}
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class IsPartitionMarkedForEvent_args
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+    DB_NAME = 1
+    TBL_NAME = 2
+    PART_VALS = 3
+    EVENTTYPE = 4
+
+    FIELDS = {
+      DB_NAME => {:type => ::Thrift::Types::STRING, :name => 'db_name'},
+      TBL_NAME => {:type => ::Thrift::Types::STRING, :name => 'tbl_name'},
+      PART_VALS => {:type => ::Thrift::Types::MAP, :name => 'part_vals', :key => {:type => ::Thrift::Types::STRING}, :value => {:type => ::Thrift::Types::STRING}},
+      EVENTTYPE => {:type => ::Thrift::Types::I32, :name => 'eventType', :enum_class => PartitionEventType}
+    }
+
+    def struct_fields; FIELDS; end
+
+    def validate
+      unless @eventType.nil? || PartitionEventType::VALID_VALUES.include?(@eventType)
+        raise ::Thrift::ProtocolException.new(::Thrift::ProtocolException::UNKNOWN, 'Invalid value of field eventType!')
+      end
+    end
+
+    ::Thrift::Struct.generate_accessors self
+  end
+
+  class IsPartitionMarkedForEvent_result
+    include ::Thrift::Struct, ::Thrift::Struct_Union
+    SUCCESS = 0
+    O1 = 1
+    O2 = 2
+    O3 = 3
+    O4 = 4
+    O5 = 5
+    O6 = 6
+
+    FIELDS = {
+      SUCCESS => {:type => ::Thrift::Types::BOOL, :name => 'success'},
+      O1 => {:type => ::Thrift::Types::STRUCT, :name => 'o1', :class => MetaException},
+      O2 => {:type => ::Thrift::Types::STRUCT, :name => 'o2', :class => NoSuchObjectException},
+      O3 => {:type => ::Thrift::Types::STRUCT, :name => 'o3', :class => UnknownDBException},
+      O4 => {:type => ::Thrift::Types::STRUCT, :name => 'o4', :class => UnknownTableException},
+      O5 => {:type => ::Thrift::Types::STRUCT, :name => 'o5', :class => UnknownPartitionException},
+      O6 => {:type => ::Thrift::Types::STRUCT, :name => 'o6', :class => InvalidPartitionException}
     }
 
     def struct_fields; FIELDS; end
@@ -3718,9 +4023,11 @@ module ThriftHiveMetastore
 
   class Get_delegation_token_args
     include ::Thrift::Struct, ::Thrift::Struct_Union
-    RENEWER_KERBEROS_PRINCIPAL_NAME = 1
+    TOKEN_OWNER = 1
+    RENEWER_KERBEROS_PRINCIPAL_NAME = 2
 
     FIELDS = {
+      TOKEN_OWNER => {:type => ::Thrift::Types::STRING, :name => 'token_owner'},
       RENEWER_KERBEROS_PRINCIPAL_NAME => {:type => ::Thrift::Types::STRING, :name => 'renewer_kerberos_principal_name'}
     }
 
@@ -3733,42 +4040,6 @@ module ThriftHiveMetastore
   end
 
   class Get_delegation_token_result
-    include ::Thrift::Struct, ::Thrift::Struct_Union
-    SUCCESS = 0
-    O1 = 1
-
-    FIELDS = {
-      SUCCESS => {:type => ::Thrift::Types::STRING, :name => 'success'},
-      O1 => {:type => ::Thrift::Types::STRUCT, :name => 'o1', :class => MetaException}
-    }
-
-    def struct_fields; FIELDS; end
-
-    def validate
-    end
-
-    ::Thrift::Struct.generate_accessors self
-  end
-
-  class Get_delegation_token_with_signature_args
-    include ::Thrift::Struct, ::Thrift::Struct_Union
-    RENEWER_KERBEROS_PRINCIPAL_NAME = 1
-    TOKEN_SIGNATURE = 2
-
-    FIELDS = {
-      RENEWER_KERBEROS_PRINCIPAL_NAME => {:type => ::Thrift::Types::STRING, :name => 'renewer_kerberos_principal_name'},
-      TOKEN_SIGNATURE => {:type => ::Thrift::Types::STRING, :name => 'token_signature'}
-    }
-
-    def struct_fields; FIELDS; end
-
-    def validate
-    end
-
-    ::Thrift::Struct.generate_accessors self
-  end
-
-  class Get_delegation_token_with_signature_result
     include ::Thrift::Struct, ::Thrift::Struct_Union
     SUCCESS = 0
     O1 = 1

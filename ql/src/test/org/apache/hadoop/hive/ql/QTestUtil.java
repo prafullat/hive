@@ -42,8 +42,8 @@ import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import junit.framework.Test;
-
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -85,14 +85,16 @@ import org.apache.zookeeper.ZooKeeper;
  */
 public class QTestUtil {
 
+  private static final Log LOG = LogFactory.getLog("QTestUtil");
+
   private String testWarehouse;
   private final String tmpdir= System.getProperty("test.tmp.dir") ;
   private final Path tmppath = new Path(tmpdir);
 
 
   private final String testFiles;
-  private final String outDir;
-  private final String logDir;
+  protected final String outDir;
+  protected final String logDir;
   private final TreeMap<String, String> qMap;
   private final Set<String> qSkipSet;
   public static final HashSet<String> srcTables = new HashSet<String>
@@ -107,7 +109,7 @@ public class QTestUtil {
   private Driver drv;
   private SemanticAnalyzer sem;
   private FileSystem fs;
-  private boolean overWrite;
+  protected final boolean overWrite;
   private CliDriver cliDriver;
   private MiniMRCluster mr = null;
   private HadoopShims.MiniDFSShim dfs = null;
@@ -236,9 +238,10 @@ public class QTestUtil {
         .replace("c:", "");
 
     String ow = System.getProperty("test.output.overwrite");
-    overWrite = false;
     if ((ow != null) && ow.equalsIgnoreCase("true")) {
       overWrite = true;
+    } else {
+      overWrite = false;
     }
 
     setup = new QTestSetup();
@@ -248,7 +251,7 @@ public class QTestUtil {
 
   public void shutdown() throws Exception {
     cleanUp();
-
+    setup.tearDown();
     if (dfs != null) {
       dfs.shutdown();
       dfs = null;
@@ -333,7 +336,7 @@ public class QTestUtil {
         if (!DEFAULT_DATABASE_NAME.equals(dbName) || !srcTables.contains(tblName)) {
           Table tblObj = db.getTable(tblName);
           // dropping index table can not be dropped directly. Dropping the base
-          // table will automatically drop all its index table  
+          // table will automatically drop all its index table
           if(tblObj.isIndexTable()) {
             continue;
           }
@@ -343,7 +346,7 @@ public class QTestUtil {
          List<Index> indexes = db.getIndexes(dbName, tblName, (short)-1);
           if (indexes != null && indexes.size() > 0) {
             for (Index index : indexes) {
-              db.dropIndex(dbName, tblName, index.getIndexName(), true);              
+              db.dropIndex(dbName, tblName, index.getIndexName(), true);
             }
           }
         }
@@ -384,7 +387,6 @@ public class QTestUtil {
 
     FunctionRegistry.unregisterTemporaryUDF("test_udaf");
     FunctionRegistry.unregisterTemporaryUDF("test_error");
-    setup.tearDown();
   }
 
   private void runLoadCmd(String loadCmd) throws Exception {
@@ -412,6 +414,7 @@ public class QTestUtil {
   public void createSources() throws Exception {
 
     startSessionState();
+    conf.setBoolean("hive.test.init.phase", true);
 
     // Create a bunch of tables with columns key and value
     LinkedList<String> cols = new LinkedList<String>();
@@ -506,7 +509,7 @@ public class QTestUtil {
     fpath = new Path(testFiles, "json.txt");
     runLoadCmd("LOAD DATA LOCAL INPATH '" + fpath.toString()
         + "' INTO TABLE src_json");
-
+    conf.setBoolean("hive.test.init.phase", false);
   }
 
   public void init() throws Exception {
@@ -622,7 +625,13 @@ public class QTestUtil {
   }
 
   public int execute(String tname) {
-    return drv.run(qMap.get(tname)).getResponseCode();
+    try {
+      return drv.run(qMap.get(tname)).getResponseCode();
+    } catch (CommandNeedRetryException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+      return -1;
+    }
   }
 
   public int executeClient(String tname) {
@@ -989,7 +998,8 @@ public class QTestUtil {
     while ((ast.getToken() == null) && (ast.getChildCount() > 0)) {
       ast = (ASTNode) ast.getChild(0);
     }
-
+    sem.getOutputs().clear();
+    sem.getInputs().clear();
     sem.analyze(ast, ctx);
     ctx.clear();
     return sem.getRootTasks();
@@ -1081,85 +1091,108 @@ public class QTestUtil {
   }
 
   /**
-   * executes a set of query files either in sequence or in parallel. Uses
-   * QTestUtil to do so
+   * Setup to execute a set of query files. Uses QTestUtil to do so.
    *
    * @param qfiles
    *          array of input query files containing arbitrary number of hive
    *          queries
-   * @param resDirs
-   *          array of output directories one corresponding to each input query
-   *          file
-   * @param mt
-   *          whether to run in multithreaded mode or not
-   * @return true if all the query files were executed successfully, else false
-   *
-   *         In multithreaded mode each query file is run in a separate thread.
-   *         the caller has to arrange that different query files do not collide
-   *         (in terms of destination tables)
+   * @param resDir
+   *          output directory
+   * @param logDir
+   *          log directory
+   * @return one QTestUtil for each query file
    */
-  public static boolean queryListRunner(File[] qfiles, String[] resDirs,
-                                        String[] logDirs, boolean mt, Test test) {
+  public static QTestUtil[] queryListRunnerSetup(File[] qfiles, String resDir,
+      String logDir) throws Exception
+  {
+    QTestUtil[] qt = new QTestUtil[qfiles.length];
+    for (int i = 0; i < qfiles.length; i++) {
+      qt[i] = new QTestUtil(resDir, logDir, false, "0.20");
+      qt[i].addFile(qfiles[i]);
+      qt[i].clearTestSideEffects();
+    }
 
-    assert (qfiles.length == resDirs.length);
-    assert (qfiles.length == logDirs.length);
+    return qt;
+  }
+
+  /**
+   * Executes a set of query files in sequence.
+   *
+   * @param qfiles
+   *          array of input query files containing arbitrary number of hive
+   *          queries
+   * @param qt
+   *          array of QTestUtils, one per qfile
+   * @return true if all queries passed, false otw
+   */
+  public static boolean queryListRunnerSingleThreaded(File[] qfiles, QTestUtil[] qt)
+    throws Exception
+  {
     boolean failed = false;
-    try {
-      QTestUtil[] qt = new QTestUtil[qfiles.length];
-      QTestSetup[] qsetup = new QTestSetup[qfiles.length];
-      for (int i = 0; i < qfiles.length; i++) {
-        qt[i] = new QTestUtil(resDirs[i], logDirs[i], false, "0.20");
-        qt[i].addFile(qfiles[i]);
-        qt[i].clearTestSideEffects();
+    qt[0].cleanUp();
+    qt[0].createSources();
+    for (int i = 0; i < qfiles.length && !failed; i++) {
+      qt[i].clearTestSideEffects();
+      qt[i].cliInit(qfiles[i].getName(), false);
+      qt[i].executeClient(qfiles[i].getName());
+      int ecode = qt[i].checkCliDriverResults(qfiles[i].getName());
+      if (ecode != 0) {
+        failed = true;
+        System.err.println("Test " + qfiles[i].getName()
+            + " results check failed with error code " + ecode);
+        outputTestFailureHelpMessage();
       }
+      qt[i].clearPostTestEffects();
+    }
+    return (!failed);
+  }
 
-      if (mt) {
-        // in multithreaded mode - do cleanup/initialization just once
+  /**
+   * Executes a set of query files parallel.
+   *
+   * Each query file is run in a separate thread. The caller has to arrange
+   * that different query files do not collide (in terms of destination tables)
+   *
+   * @param qfiles
+   *          array of input query files containing arbitrary number of hive
+   *          queries
+   * @param qt
+   *          array of QTestUtils, one per qfile
+   * @return true if all queries passed, false otw
+   *
+   */
+  public static boolean queryListRunnerMultiThreaded(File[] qfiles, QTestUtil[] qt)
+    throws Exception
+  {
+    boolean failed = false;
 
-        qt[0].cleanUp();
-        qt[0].createSources();
-        qt[0].clearTestSideEffects();
+    // in multithreaded mode - do cleanup/initialization just once
 
-        QTRunner[] qtRunners = new QTestUtil.QTRunner[qfiles.length];
-        Thread[] qtThread = new Thread[qfiles.length];
+    qt[0].cleanUp();
+    qt[0].createSources();
+    qt[0].clearTestSideEffects();
 
-        for (int i = 0; i < qfiles.length; i++) {
-          qtRunners[i] = new QTestUtil.QTRunner(qt[i], qfiles[i].getName());
-          qtThread[i] = new Thread(qtRunners[i]);
-        }
+    QTRunner[] qtRunners = new QTestUtil.QTRunner[qfiles.length];
+    Thread[] qtThread = new Thread[qfiles.length];
 
-        for (int i = 0; i < qfiles.length; i++) {
-          qtThread[i].start();
-        }
+    for (int i = 0; i < qfiles.length; i++) {
+      qtRunners[i] = new QTestUtil.QTRunner(qt[i], qfiles[i].getName());
+      qtThread[i] = new Thread(qtRunners[i]);
+    }
 
-        for (int i = 0; i < qfiles.length; i++) {
-          qtThread[i].join();
-          int ecode = qt[i].checkCliDriverResults(qfiles[i].getName());
-          if (ecode != 0) {
-            failed = true;
-            System.err.println("Test " + qfiles[i].getName()
-                + " results check failed with error code " + ecode);
-            outputTestFailureHelpMessage();
-          }
-        }
+    for (int i = 0; i < qfiles.length; i++) {
+      qtThread[i].start();
+    }
 
-      } else {
-
-        for (int i = 0; i < qfiles.length && !failed; i++) {
-          qt[i].cliInit(qfiles[i].getName());
-          qt[i].executeClient(qfiles[i].getName());
-          int ecode = qt[i].checkCliDriverResults(qfiles[i].getName());
-          if (ecode != 0) {
-            failed = true;
-            System.err.println("Test " + qfiles[i].getName()
-                + " results check failed with error code " + ecode);
-            outputTestFailureHelpMessage();
-          }
-        }
+    for (int i = 0; i < qfiles.length; i++) {
+      qtThread[i].join();
+      int ecode = qt[i].checkCliDriverResults(qfiles[i].getName());
+      if (ecode != 0) {
+        failed = true;
+        System.err.println("Test " + qfiles[i].getName()
+            + " results check failed with error code " + ecode);
+        outputTestFailureHelpMessage();
       }
-    } catch (Exception e) {
-      e.printStackTrace();
-      return false;
     }
     return (!failed);
   }

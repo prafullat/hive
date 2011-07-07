@@ -159,6 +159,15 @@ public interface HadoopShims {
   public UserGroupInformation getUGIForConf(Configuration conf) throws LoginException, IOException;
 
   /**
+   * Get the short name corresponding to the subject in the passed UGI
+   *
+   * In secure versions of Hadoop, this returns the short name (after
+   * undergoing the translation in the kerberos name rule mapping).
+   * In unsecure versions of Hadoop, this returns the name of the subject
+   */
+  public String getShortUserName(UserGroupInformation ugi);
+
+  /**
    * Return true if the Shim is based on Hadoop Security APIs.
    */
   public boolean isSecureShimImpl();
@@ -212,6 +221,8 @@ public interface HadoopShims {
 
     /** Returns all the Paths where this input-split resides. */
     String[] getLocations() throws IOException;
+
+    void shrinkSplit(long length);
 
     String toString();
 

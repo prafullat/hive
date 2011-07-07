@@ -38,9 +38,9 @@ import org.apache.hadoop.hive.ql.parse.SemanticException;
 import org.apache.hadoop.hive.ql.plan.PartitionDesc;
 import org.apache.hadoop.hive.ql.plan.TableDesc;
 
-/*
- * Borrowed this code from HIVE-1803.6.patch
- * */
+/**
+ * Index handler for indexes that use tables to store indexes.
+ */
 public abstract class TableBasedIndexHandler extends AbstractIndexHandler {
   protected Configuration configuration;
 
@@ -85,7 +85,7 @@ public abstract class TableBasedIndexHandler extends AbstractIndexHandler {
             throw new RuntimeException(
                 "Partitions of base table and index table are inconsistent.");
           }
-         // for each partition, spawn a map reduce task.
+          // for each partition, spawn a map reduce task.
           Task<?> indexBuilder = getIndexBuilderMapRedTask(inputs, outputs, index.getSd().getCols(), true,
               new PartitionDesc(indexPart), indexTbl.getTableName(),
               new PartitionDesc(basePart), baseTbl.getTableName(), indexTbl.getDbName());

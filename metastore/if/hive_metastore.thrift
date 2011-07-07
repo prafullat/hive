@@ -43,6 +43,10 @@ enum PrincipalType {
   GROUP = 3,
 }
 
+enum PartitionEventType {
+  LOAD_DONE = 1,  
+}
+
 struct HiveObjectRef{
   1: HiveObjectType objectType,
   2: string dbName,
@@ -182,6 +186,14 @@ exception AlreadyExistsException {
   1: string message
 }
 
+exception InvalidPartitionException {
+  1: string message
+}
+
+exception UnknownPartitionException {
+  1: string message
+}
+
 exception InvalidObjectException {
   1: string message
 }
@@ -209,7 +221,7 @@ service ThriftHiveMetastore extends fb303.FacebookService
 {
   void create_database(1:Database database) throws(1:AlreadyExistsException o1, 2:InvalidObjectException o2, 3:MetaException o3)
   Database get_database(1:string name) throws(1:NoSuchObjectException o1, 2:MetaException o2)
-  void drop_database(1:string name, 2:bool deleteData) throws(1:NoSuchObjectException o1, 2:InvalidOperationException o2, 3:MetaException o3)
+  void drop_database(1:string name, 2:bool deleteData, 3:bool cascade) throws(1:NoSuchObjectException o1, 2:InvalidOperationException o2, 3:MetaException o3)
   list<string> get_databases(1:string pattern) throws(1:MetaException o1)
   list<string> get_all_databases() throws(1:MetaException o1)
   void alter_database(1:string dbname, 2:Database db) throws(1:MetaException o1, 2:NoSuchObjectException o2)
@@ -246,6 +258,9 @@ service ThriftHiveMetastore extends fb303.FacebookService
 
   Table get_table(1:string dbname, 2:string tbl_name)
                        throws (1:MetaException o1, 2:NoSuchObjectException o2)
+  list<Table> get_table_objects_by_name(1:string dbname, 2:list<string> tbl_names) 
+      				   throws (1:MetaException o1, 2:InvalidOperationException o2, 3:UnknownDBException o3)
+                       
   // alter table applies to only future partitions not for existing partitions
   // * See notes on DDL_TIME
   void alter_table(1:string dbname, 2:string tbl_name, 3:Table new_tbl)
@@ -303,6 +318,10 @@ service ThriftHiveMetastore extends fb303.FacebookService
     3:string filter, 4:i16 max_parts=-1)
                        throws(1:MetaException o1, 2:NoSuchObjectException o2)
 
+  // get partitions give a list of partition names
+  list<Partition> get_partitions_by_names(1:string db_name 2:string tbl_name 3:list<string> names)
+                       throws(1:MetaException o1, 2:NoSuchObjectException o2)
+
   // changes the partition to the new partition object. partition is identified from the part values
   // in the new_part
   // * See notes on DDL_TIME
@@ -324,6 +343,15 @@ service ThriftHiveMetastore extends fb303.FacebookService
   map<string, string> partition_name_to_spec(1: string part_name)
                           throws(1: MetaException o1)
   
+  void markPartitionForEvent(1:string db_name, 2:string tbl_name, 3:map<string,string> part_vals,
+                  4:PartitionEventType eventType) throws (1: MetaException o1, 2: NoSuchObjectException o2, 
+                  3: UnknownDBException o3, 4: UnknownTableException o4, 5: UnknownPartitionException o5,
+                  6: InvalidPartitionException o6) 
+  bool isPartitionMarkedForEvent(1:string db_name, 2:string tbl_name, 3:map<string,string> part_vals, 
+                  4: PartitionEventType eventType) throws (1: MetaException o1, 2:NoSuchObjectException o2,
+                  3: UnknownDBException o3, 4: UnknownTableException o4, 5: UnknownPartitionException o5,
+                  6: InvalidPartitionException o6) 
+                         
   //index
   Index add_index(1:Index new_index, 2: Table index_table)
                        throws(1:InvalidObjectException o1, 2:AlreadyExistsException o2, 3:MetaException o3)
@@ -362,14 +390,8 @@ service ThriftHiveMetastore extends fb303.FacebookService
   
   // get metastore server delegation token for use from the map/reduce tasks to authenticate
   // to metastore server
-  string get_delegation_token(1:string renewer_kerberos_principal_name) throws (1:MetaException o1)
-
-  // get metastore server delegation token for use from the map/reduce tasks to authenticate
-  // to metastore server - this method takes an extra token signature string which is just
-  // an identifier to associate with the token - this will be used by the token selector code
-  // to pick the right token given the associated identifier.
-  string get_delegation_token_with_signature(1:string renewer_kerberos_principal_name, 
-    2:string token_signature) throws (1:MetaException o1)
+  string get_delegation_token(1:string token_owner, 2:string renewer_kerberos_principal_name)
+    throws (1:MetaException o1)
 
   // method to renew delegation token obtained from metastore server
   i64 renew_delegation_token(1:string token_str_form) throws (1:MetaException o1)

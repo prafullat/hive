@@ -32,22 +32,25 @@ import java.util.Map;
 import java.util.Set;
 
 import jline.ArgumentCompletor;
-import jline.ArgumentCompletor.AbstractArgumentDelimiter;
-import jline.ArgumentCompletor.ArgumentDelimiter;
 import jline.Completor;
 import jline.ConsoleReader;
 import jline.History;
 import jline.SimpleCompletor;
+import jline.ArgumentCompletor.AbstractArgumentDelimiter;
+import jline.ArgumentCompletor.ArgumentDelimiter;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hive.common.HiveInterruptUtils;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.Schema;
+import org.apache.hadoop.hive.ql.CommandNeedRetryException;
 import org.apache.hadoop.hive.ql.Driver;
 import org.apache.hadoop.hive.ql.exec.FunctionRegistry;
+import org.apache.hadoop.hive.ql.exec.HadoopJobExecHelper;
 import org.apache.hadoop.hive.ql.exec.Utilities;
 import org.apache.hadoop.hive.ql.exec.Utilities.StreamPrinter;
 import org.apache.hadoop.hive.ql.parse.ParseDriver;
@@ -59,6 +62,10 @@ import org.apache.hadoop.hive.service.HiveClient;
 import org.apache.hadoop.hive.service.HiveServerException;
 import org.apache.hadoop.hive.shims.ShimLoader;
 import org.apache.thrift.TException;
+
+import sun.misc.Signal;
+import sun.misc.SignalHandler;
+
 
 /**
  * CliDriver.
@@ -95,6 +102,7 @@ public class CliDriver {
       // if we have come this far - either the previous commands
       // are all successful or this is command line. in either case
       // this counts as a successful run
+      ss.close();
       System.exit(0);
 
     } else if (tokens[0].equalsIgnoreCase("source")) {
@@ -153,147 +161,217 @@ public class CliDriver {
         }
       }
     } else if (ss.isRemoteMode()) { // remote mode -- connecting to remote hive server
-        HiveClient client = ss.getClient();
-        PrintStream out = ss.out;
-        PrintStream err = ss.err;
+      HiveClient client = ss.getClient();
+      PrintStream out = ss.out;
+      PrintStream err = ss.err;
 
-        try {
-          client.execute(cmd_trimmed);
-          List<String> results;
-          do {
-            results = client.fetchN(LINES_TO_FETCH);
-            for (String line: results) {
-              out.println(line);
-            }
-          } while (results.size() == LINES_TO_FETCH);
-        } catch (HiveServerException e) {
-          ret = e.getErrorCode();
-          if (ret != 0) { // OK if ret == 0 -- reached the EOF
-            String errMsg = e.getMessage();
-            if (errMsg == null) {
-              errMsg = e.toString();
-            }
-            ret = e.getErrorCode();
-            err.println("[Hive Error]: " + errMsg);
+      try {
+        client.execute(cmd_trimmed);
+        List<String> results;
+        do {
+          results = client.fetchN(LINES_TO_FETCH);
+          for (String line : results) {
+            out.println(line);
           }
+        } while (results.size() == LINES_TO_FETCH);
+      } catch (HiveServerException e) {
+        ret = e.getErrorCode();
+        if (ret != 0) { // OK if ret == 0 -- reached the EOF
+          String errMsg = e.getMessage();
+          if (errMsg == null) {
+            errMsg = e.toString();
+          }
+          ret = e.getErrorCode();
+          err.println("[Hive Error]: " + errMsg);
+        }
+      } catch (TException e) {
+        String errMsg = e.getMessage();
+        if (errMsg == null) {
+          errMsg = e.toString();
+        }
+        ret = -10002;
+        err.println("[Thrift Error]: " + errMsg);
+      } finally {
+        try {
+          client.clean();
         } catch (TException e) {
           String errMsg = e.getMessage();
           if (errMsg == null) {
             errMsg = e.toString();
           }
-          ret = -10002;
-          err.println("[Thrift Error]: " + errMsg);
-        } finally {
-          try {
-            client.clean();
-          } catch (TException e) {
-            String errMsg = e.getMessage();
-            if (errMsg == null) {
-              errMsg = e.toString();
-            }
-            err.println("[Thrift Error]: Hive server is not cleaned due to thrift exception: "
-                + errMsg);
-          }
-        }
-    } else { // local mode
-      CommandProcessor proc = CommandProcessorFactory.get(tokens[0], (HiveConf)conf);
-      if (proc != null) {
-        if (proc instanceof Driver) {
-          Driver qp = (Driver) proc;
-          PrintStream out = ss.out;
-          long start = System.currentTimeMillis();
-          if (ss.getIsVerbose()) {
-            out.println(cmd);
-          }
-
-          ret = qp.run(cmd).getResponseCode();
-          if (ret != 0) {
-            qp.close();
-            return ret;
-          }
-
-          ArrayList<String> res = new ArrayList<String>();
-
-          if (HiveConf.getBoolVar(conf, HiveConf.ConfVars.HIVE_CLI_PRINT_HEADER)) {
-            // Print the column names
-            boolean first_col = true;
-            Schema sc = qp.getSchema();
-            for (FieldSchema fs : sc.getFieldSchemas()) {
-              if (!first_col) {
-                out.print('\t');
-              }
-              out.print(fs.getName());
-              first_col = false;
-            }
-            out.println();
-          }
-
-          try {
-            while (qp.getResults(res)) {
-              for (String r : res) {
-                out.println(r);
-              }
-              res.clear();
-              if (out.checkError()) {
-                break;
-              }
-            }
-          } catch (IOException e) {
-            console.printError("Failed with exception " + e.getClass().getName() + ":"
-                + e.getMessage(), "\n" + org.apache.hadoop.util.StringUtils.stringifyException(e));
-            ret = 1;
-          }
-
-          int cret = qp.close();
-          if (ret == 0) {
-            ret = cret;
-          }
-
-          long end = System.currentTimeMillis();
-          if (end > start) {
-            double timeTaken = (end - start) / 1000.0;
-            console.printInfo("Time taken: " + timeTaken + " seconds", null);
-          }
-
-        } else {
-          if (ss.getIsVerbose()) {
-            ss.out.println(tokens[0] + " " + cmd_1);
-          }
-          ret = proc.run(cmd_1).getResponseCode();
+          err.println("[Thrift Error]: Hive server is not cleaned due to thrift exception: "
+              + errMsg);
         }
       }
+    } else { // local mode
+      CommandProcessor proc = CommandProcessorFactory.get(tokens[0], (HiveConf)conf);
+      int tryCount = 0;
+      boolean needRetry;
+
+      do {
+        try {
+          needRetry = false;
+          if (proc != null) {
+            if (proc instanceof Driver) {
+              Driver qp = (Driver) proc;
+              PrintStream out = ss.out;
+              long start = System.currentTimeMillis();
+              if (ss.getIsVerbose()) {
+                out.println(cmd);
+              }
+
+              qp.setTryCount(tryCount);
+              ret = qp.run(cmd).getResponseCode();
+              if (ret != 0) {
+                qp.close();
+                return ret;
+              }
+
+              ArrayList<String> res = new ArrayList<String>();
+
+              if (HiveConf.getBoolVar(conf, HiveConf.ConfVars.HIVE_CLI_PRINT_HEADER)) {
+                // Print the column names
+                boolean first_col = true;
+                Schema sc = qp.getSchema();
+                for (FieldSchema fs : sc.getFieldSchemas()) {
+                  if (!first_col) {
+                    out.print('\t');
+                  }
+                  out.print(fs.getName());
+                  first_col = false;
+                }
+                out.println();
+              }
+
+              try {
+                while (qp.getResults(res)) {
+                  for (String r : res) {
+                    out.println(r);
+                  }
+                  res.clear();
+                  if (out.checkError()) {
+                    break;
+                  }
+                }
+              } catch (IOException e) {
+                console.printError("Failed with exception " + e.getClass().getName() + ":"
+                    + e.getMessage(), "\n"
+                    + org.apache.hadoop.util.StringUtils.stringifyException(e));
+                ret = 1;
+              }
+
+              int cret = qp.close();
+              if (ret == 0) {
+                ret = cret;
+              }
+
+              long end = System.currentTimeMillis();
+              if (end > start) {
+                double timeTaken = (end - start) / 1000.0;
+                console.printInfo("Time taken: " + timeTaken + " seconds", null);
+              }
+
+            } else {
+              if (ss.getIsVerbose()) {
+                ss.out.println(tokens[0] + " " + cmd_1);
+              }
+              ret = proc.run(cmd_1).getResponseCode();
+            }
+          }
+        } catch (CommandNeedRetryException e) {
+          console.printInfo("Retry query with a different approach...");
+          tryCount++;
+          needRetry = true;
+        }
+      } while (needRetry);
     }
 
     return ret;
   }
 
   public int processLine(String line) {
-    int lastRet = 0, ret = 0;
+    return processLine(line, false);
+  }
 
-    String command = "";
-    for (String oneCmd : line.split(";")) {
+  /**
+   * Processes a line of semicolon separated commands
+   *
+   * @param line
+   *          The commands to process
+   * @param allowInterupting
+   *          When true the function will handle SIG_INT (Ctrl+C) by interrupting the processing and
+   *          returning -1
+   * @return
+   */
+  public int processLine(String line, boolean allowInterupting) {
+    SignalHandler oldSignal = null;
+    Signal interupSignal = null;
 
-      if (StringUtils.endsWith(oneCmd, "\\")) {
-        command += StringUtils.chop(oneCmd) + ";";
-        continue;
-      } else {
-        command += oneCmd;
+    if (allowInterupting) {
+      // Remember all threads that were running at the time we started line processing.
+      // Hook up the custom Ctrl+C handler while processing this line
+      interupSignal = new Signal("INT");
+      oldSignal = Signal.handle(interupSignal, new SignalHandler() {
+        private final Thread cliThread = Thread.currentThread();
+        private boolean interruptRequested;
+
+        @Override
+        public void handle(Signal signal) {
+          boolean initialRequest = !interruptRequested;
+          interruptRequested = true;
+
+          // Kill the VM on second ctrl+c
+          if (!initialRequest) {
+            console.printInfo("Exiting the JVM");
+            System.exit(127);
+          }
+
+          // Interrupt the CLI thread to stop the current statement and return
+          // to prompt
+          console.printInfo("Interrupting... Be patient, this might take some time.");
+          console.printInfo("Press Ctrl+C again to kill JVM");
+
+          // First, kill any running MR jobs
+          HadoopJobExecHelper.killRunningJobs();
+          HiveInterruptUtils.interrupt();
+          this.cliThread.interrupt();
+        }
+      });
+    }
+
+    try {
+      int lastRet = 0, ret = 0;
+
+      String command = "";
+      for (String oneCmd : line.split(";")) {
+
+        if (StringUtils.endsWith(oneCmd, "\\")) {
+          command += StringUtils.chop(oneCmd) + ";";
+          continue;
+        } else {
+          command += oneCmd;
+        }
+        if (StringUtils.isBlank(command)) {
+          continue;
+        }
+
+        ret = processCmd(command);
+        command = "";
+        lastRet = ret;
+        boolean ignoreErrors = HiveConf.getBoolVar(conf, HiveConf.ConfVars.CLIIGNOREERRORS);
+        if (ret != 0 && !ignoreErrors) {
+          CommandProcessorFactory.clean((HiveConf) conf);
+          return ret;
+        }
       }
-      if (StringUtils.isBlank(command)) {
-        continue;
-      }
-
-      ret = processCmd(command);
-      command = "";
-      lastRet = ret;
-      boolean ignoreErrors = HiveConf.getBoolVar(conf, HiveConf.ConfVars.CLIIGNOREERRORS);
-      if (ret != 0 && !ignoreErrors) {
-        CommandProcessorFactory.clean((HiveConf)conf);
-        return ret;
+      CommandProcessorFactory.clean((HiveConf) conf);
+      return lastRet;
+    } finally {
+      // Once we are done processing the line, restore the old handler
+      if (oldSignal != null && interupSignal != null) {
+        Signal.handle(interupSignal, oldSignal);
       }
     }
-    CommandProcessorFactory.clean((HiveConf)conf);
-    return lastRet;
   }
 
   public int processReader(BufferedReader r) throws IOException {
@@ -440,6 +518,7 @@ public class CliDriver {
     if (!oproc.process_stage2(ss)) {
       System.exit(2);
     }
+    ss.printInitInfo();
 
     // set all properties specified via command line
     HiveConf conf = ss.getConf();
@@ -511,7 +590,7 @@ public class CliDriver {
       }
       if (line.trim().endsWith(";") && !line.trim().endsWith("\\;")) {
         line = prefix + line;
-        ret = cli.processLine(line);
+        ret = cli.processLine(line, true);
         prefix = "";
         curPrompt = prompt;
       } else {

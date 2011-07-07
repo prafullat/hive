@@ -158,29 +158,33 @@ public class HadoopJobExecHelper {
       Runtime.getRuntime().addShutdownHook(new Thread() {
         @Override
         public void run() {
-          synchronized (runningJobKillURIs) {
-            for (String uri : runningJobKillURIs.values()) {
-              try {
-                System.err.println("killing job with: " + uri);
-                java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(uri)
-                    .openConnection();
-                conn.setRequestMethod("POST");
-                int retCode = conn.getResponseCode();
-                if (retCode != 200) {
-                  System.err.println("Got an error trying to kill job with URI: " + uri + " = "
-                      + retCode);
-                }
-              } catch (Exception e) {
-                System.err.println("trying to kill job, caught: " + e);
-                // do nothing
-              }
-            }
-          }
+          killRunningJobs();
         }
       });
     }
   }
-  
+
+  public static void killRunningJobs() {
+    synchronized (runningJobKillURIs) {
+      for (String uri : runningJobKillURIs.values()) {
+        try {
+          System.err.println("killing job with: " + uri);
+          java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(uri)
+               .openConnection();
+          conn.setRequestMethod("POST");
+          int retCode = conn.getResponseCode();
+          if (retCode != 200) {
+            System.err.println("Got an error trying to kill job with URI: " + uri + " = "
+                + retCode);
+          }
+        } catch (Exception e) {
+          System.err.println("trying to kill job, caught: " + e);
+          // do nothing
+        }
+      }
+    }
+  }
+
   public boolean checkFatalErrors(Counters ctrs, StringBuilder errMsg) {
     if (ctrs == null) {
       // hadoop might return null if it cannot locate the job.
@@ -191,7 +195,7 @@ public class HadoopJobExecHelper {
     long numFiles = ctrs.getCounter(ProgressCounter.CREATED_FILES);
     long upperLimit = HiveConf.getLongVar(job, HiveConf.ConfVars.MAXCREATEDFILES);
     if (numFiles > upperLimit) {
-      errMsg.append("total number of created files exceeds ").append(upperLimit);
+      errMsg.append("total number of created files now is " + numFiles + ", which exceeds ").append(upperLimit);
       return true;
     }
     return this.callBackObj.checkFatalErrors(ctrs, errMsg);
@@ -279,7 +283,7 @@ public class HadoopJobExecHelper {
 
       Counters ctrs = th.getCounters();
 
-      if (fatal = this.callBackObj.checkFatalErrors(ctrs, errMsg)) {
+      if (fatal = checkFatalErrors(ctrs, errMsg)) {
         console.printError("[Fatal Error] " + errMsg.toString() + ". Killing the job.");
         rj.killJob();
         continue;

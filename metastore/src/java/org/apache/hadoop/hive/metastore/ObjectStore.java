@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hive.metastore;
 
+import static org.apache.commons.lang.StringUtils.join;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -48,7 +50,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.common.FileUtils;
+import org.apache.hadoop.hive.common.classification.InterfaceAudience;
+import org.apache.hadoop.hive.common.classification.InterfaceStability;
 import org.apache.hadoop.hive.conf.HiveConf;
+import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
 import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.HiveObjectPrivilege;
@@ -56,10 +61,12 @@ import org.apache.hadoop.hive.metastore.api.HiveObjectRef;
 import org.apache.hadoop.hive.metastore.api.HiveObjectType;
 import org.apache.hadoop.hive.metastore.api.Index;
 import org.apache.hadoop.hive.metastore.api.InvalidObjectException;
+import org.apache.hadoop.hive.metastore.api.InvalidPartitionException;
 import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.NoSuchObjectException;
 import org.apache.hadoop.hive.metastore.api.Order;
 import org.apache.hadoop.hive.metastore.api.Partition;
+import org.apache.hadoop.hive.metastore.api.PartitionEventType;
 import org.apache.hadoop.hive.metastore.api.PrincipalPrivilegeSet;
 import org.apache.hadoop.hive.metastore.api.PrincipalType;
 import org.apache.hadoop.hive.metastore.api.PrivilegeBag;
@@ -69,6 +76,9 @@ import org.apache.hadoop.hive.metastore.api.SerDeInfo;
 import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
 import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.hadoop.hive.metastore.api.Type;
+import org.apache.hadoop.hive.metastore.api.UnknownDBException;
+import org.apache.hadoop.hive.metastore.api.UnknownPartitionException;
+import org.apache.hadoop.hive.metastore.api.UnknownTableException;
 import org.apache.hadoop.hive.metastore.model.MDBPrivilege;
 import org.apache.hadoop.hive.metastore.model.MDatabase;
 import org.apache.hadoop.hive.metastore.model.MFieldSchema;
@@ -77,6 +87,7 @@ import org.apache.hadoop.hive.metastore.model.MIndex;
 import org.apache.hadoop.hive.metastore.model.MOrder;
 import org.apache.hadoop.hive.metastore.model.MPartition;
 import org.apache.hadoop.hive.metastore.model.MPartitionColumnPrivilege;
+import org.apache.hadoop.hive.metastore.model.MPartitionEvent;
 import org.apache.hadoop.hive.metastore.model.MPartitionPrivilege;
 import org.apache.hadoop.hive.metastore.model.MRole;
 import org.apache.hadoop.hive.metastore.model.MRoleMap;
@@ -257,7 +268,9 @@ public class ObjectStore implements RawStore, Configurable {
     return pmf;
   }
 
-  private PersistenceManager getPersistenceManager() {
+  @InterfaceAudience.LimitedPrivate({"HCATALOG"})
+  @InterfaceStability.Evolving
+  public PersistenceManager getPersistenceManager() {
     return getPMF().getPersistenceManager();
   }
 
@@ -783,6 +796,43 @@ public class ObjectStore implements RawStore, Configurable {
     return mtbl;
   }
 
+  public List<Table> getTableObjectsByName(String db, List<String> tbl_names)
+      throws MetaException, UnknownDBException {
+    List<Table> tables = new ArrayList<Table>();
+    boolean committed = false;
+    try {
+      openTransaction();
+
+      db = db.toLowerCase().trim();
+      Query dbExistsQuery = pm.newQuery(MDatabase.class, "name == db");
+      dbExistsQuery.declareParameters("java.lang.String db");
+      dbExistsQuery.setUnique(true);
+      dbExistsQuery.setResult("name");
+      String dbNameIfExists = (String) dbExistsQuery.execute(db);
+      if (dbNameIfExists == null || dbNameIfExists.isEmpty()) {
+        throw new UnknownDBException("Could not find database " + db);
+      }
+
+      List<String> lowered_tbl_names = new ArrayList<String>();
+      for (String t : tbl_names) {
+        lowered_tbl_names.add(t.toLowerCase().trim());
+      }
+      Query query = pm.newQuery(MTable.class);
+      query.setFilter("database.name == db && tbl_names.contains(tableName)");
+      query.declareParameters("java.lang.String db, java.util.Collection tbl_names");
+      Collection mtables = (Collection) query.execute(db, lowered_tbl_names);
+      for (Iterator iter = mtables.iterator(); iter.hasNext();) {
+        tables.add(convertToTable((MTable) iter.next()));
+      }
+      committed = commitTransaction();
+    } finally {
+      if (!committed) {
+        rollbackTransaction();
+      }
+    }
+    return tables;
+  }
+
   private Table convertToTable(MTable mtbl) throws MetaException {
     if (mtbl == null) {
       return null;
@@ -881,7 +931,7 @@ public class ObjectStore implements RawStore, Configurable {
   private List<Order> convertToOrders(List<MOrder> mkeys) {
     List<Order> keys = null;
     if (mkeys != null) {
-      keys = new ArrayList<Order>();
+      keys = new ArrayList<Order>(mkeys.size());
       for (MOrder part : mkeys) {
         keys.add(new Order(part.getCol(), part.getOrder()));
       }
@@ -907,16 +957,22 @@ public class ObjectStore implements RawStore, Configurable {
 
   // MSD and SD should be same objects. Not sure how to make then same right now
   // MSerdeInfo *& SerdeInfo should be same as well
-  private StorageDescriptor convertToStorageDescriptor(MStorageDescriptor msd)
+  private StorageDescriptor convertToStorageDescriptor(MStorageDescriptor msd,
+      boolean noFS)
       throws MetaException {
     if (msd == null) {
       return null;
     }
-    return new StorageDescriptor(convertToFieldSchemas(msd.getCols()), msd
-        .getLocation(), msd.getInputFormat(), msd.getOutputFormat(), msd
+    return new StorageDescriptor(noFS ? null: convertToFieldSchemas(msd.getCols()),
+        msd.getLocation(), msd.getInputFormat(), msd.getOutputFormat(), msd
         .isCompressed(), msd.getNumBuckets(), converToSerDeInfo(msd
         .getSerDeInfo()), msd.getBucketCols(), convertToOrders(msd
         .getSortCols()), msd.getParameters());
+  }
+
+  private StorageDescriptor convertToStorageDescriptor(MStorageDescriptor msd)
+      throws MetaException {
+    return convertToStorageDescriptor(msd, false);
   }
 
   private MStorageDescriptor convertToMStorageDescriptor(StorageDescriptor sd)
@@ -994,6 +1050,7 @@ public class ObjectStore implements RawStore, Configurable {
       throw new NoSuchObjectException("partition values="
           + part_vals.toString());
     }
+    part.setValues(part_vals);
     return part;
   }
 
@@ -1052,6 +1109,16 @@ public class ObjectStore implements RawStore, Configurable {
     return new Partition(mpart.getValues(), mpart.getTable().getDatabase()
         .getName(), mpart.getTable().getTableName(), mpart.getCreateTime(),
         mpart.getLastAccessTime(), convertToStorageDescriptor(mpart.getSd()),
+        mpart.getParameters());
+  }
+
+  private Partition convertToPart(String dbName, String tblName, MPartition mpart)
+      throws MetaException {
+    if (mpart == null) {
+      return null;
+    }
+    return new Partition(mpart.getValues(), dbName, tblName, mpart.getCreateTime(),
+        mpart.getLastAccessTime(), convertToStorageDescriptor(mpart.getSd(), true),
         mpart.getParameters());
   }
 
@@ -1178,6 +1245,15 @@ public class ObjectStore implements RawStore, Configurable {
     return parts;
   }
 
+  private List<Partition> convertToParts(String dbName, String tblName, List<MPartition> mparts)
+      throws MetaException {
+    List<Partition> parts = new ArrayList<Partition>(mparts.size());
+    for (MPartition mp : mparts) {
+      parts.add(convertToPart(dbName, tblName, mp));
+    }
+    return parts;
+  }
+
   // TODO:pc implement max
   public List<String> listPartitionNames(String dbName, String tableName,
       short max) throws MetaException {
@@ -1195,7 +1271,6 @@ public class ObjectStore implements RawStore, Configurable {
       q.declareParameters("java.lang.String t1, java.lang.String t2");
       q.setResult("partitionName");
       Collection names = (Collection) q.execute(dbName, tableName);
-      pns = new ArrayList<String>();
       for (Iterator i = names.iterator(); i.hasNext();) {
         pns.add((String) i.next());
       }
@@ -1206,6 +1281,120 @@ public class ObjectStore implements RawStore, Configurable {
       }
     }
     return pns;
+  }
+
+  /**
+   * Retrieves a Collection of partition-related results from the database that match
+   *  the partial specification given for a specific table.
+   * @param dbName the name of the database
+   * @param tableName the name of the table
+   * @param part_vals the partial specification values
+   * @param max_parts the maximum number of partitions to return
+   * @param resultsCol the metadata column of the data to return, e.g. partitionName, etc.
+   *        if resultsCol is empty or null, a collection of MPartition objects is returned
+   * @results A Collection of partition-related items from the db that match the partial spec
+   *          for a table.  The type of each item in the collection corresponds to the column
+   *          you want results for.  E.g., if resultsCol is partitionName, the Collection
+   *          has types of String, and if resultsCol is null, the types are MPartition.
+   */
+  private Collection getPartitionPsQueryResults(String dbName, String tableName,
+      List<String> part_vals, short max_parts, String resultsCol)
+      throws MetaException {
+    dbName = dbName.toLowerCase().trim();
+    tableName = tableName.toLowerCase().trim();
+    Table table = getTable(dbName, tableName);
+
+    List<FieldSchema> partCols = table.getPartitionKeys();
+    int numPartKeys = partCols.size();
+    if (part_vals.size() > numPartKeys) {
+      throw new MetaException("Incorrect number of partition values");
+    }
+
+    partCols = partCols.subList(0, part_vals.size());
+    //Construct a pattern of the form: partKey=partVal/partKey2=partVal2/...
+    // where partVal is either the escaped partition value given as input,
+    // or a regex of the form ".*"
+    //This works because the "=" and "/" separating key names and partition key/values
+    // are not escaped.
+    String partNameMatcher = Warehouse.makePartName(partCols, part_vals, ".*");
+    //add ".*" to the regex to match anything else afterwards the partial spec.
+    if (part_vals.size() < numPartKeys) {
+      partNameMatcher += ".*";
+    }
+
+    Query q = pm.newQuery(MPartition.class);
+    StringBuilder queryFilter = new StringBuilder("table.database.name == dbName");
+    queryFilter.append(" && table.tableName == tableName");
+    queryFilter.append(" && partitionName.matches(partialRegex)");
+    q.setFilter(queryFilter.toString());
+    q.declareParameters("java.lang.String dbName, " +
+        "java.lang.String tableName, java.lang.String partialRegex");
+
+    if( max_parts >= 0 ) {
+      //User specified a row limit, set it on the Query
+      q.setRange(0, max_parts);
+    }
+    if (resultsCol != null && !resultsCol.isEmpty()) {
+      q.setResult(resultsCol);
+    }
+
+    return (Collection) q.execute(dbName, tableName, partNameMatcher);
+  }
+
+  @Override
+  public List<Partition> listPartitionsPsWithAuth(String db_name, String tbl_name,
+      List<String> part_vals, short max_parts, String userName, List<String> groupNames)
+      throws MetaException, InvalidObjectException {
+    List<Partition> partitions = new ArrayList<Partition>();
+    boolean success = false;
+    try {
+      openTransaction();
+      LOG.debug("executing listPartitionNamesPsWithAuth");
+      Collection parts = getPartitionPsQueryResults(db_name, tbl_name,
+          part_vals, max_parts, null);
+      MTable mtbl = getMTable(db_name, tbl_name);
+      for (Object o : parts) {
+        Partition part = convertToPart((MPartition) o);
+        //set auth privileges
+        if (null != userName && null != groupNames &&
+            "TRUE".equalsIgnoreCase(mtbl.getParameters().get("PARTITION_LEVEL_PRIVILEGE"))) {
+          String partName = Warehouse.makePartName(this.convertToFieldSchemas(mtbl
+              .getPartitionKeys()), part.getValues());
+          PrincipalPrivilegeSet partAuth = getPartitionPrivilegeSet(db_name,
+              tbl_name, partName, userName, groupNames);
+          part.setPrivileges(partAuth);
+        }
+        partitions.add(part);
+      }
+      success = commitTransaction();
+    } finally {
+      if (!success) {
+        rollbackTransaction();
+      }
+    }
+    return partitions;
+  }
+
+  @Override
+  public List<String> listPartitionNamesPs(String dbName, String tableName,
+      List<String> part_vals, short max_parts) throws MetaException {
+    List<String> partitionNames = new ArrayList<String>();
+    boolean success = false;
+    try {
+      openTransaction();
+      LOG.debug("Executing listPartitionNamesPs");
+      Collection names = getPartitionPsQueryResults(dbName, tableName,
+          part_vals, max_parts, "partitionName");
+      for (Object o : names) {
+        partitionNames.add((String) o);
+      }
+      success = commitTransaction();
+    } finally {
+      if (!success) {
+        rollbackTransaction();
+      }
+    }
+    return partitionNames;
   }
 
   // TODO:pc implement max
@@ -1221,6 +1410,7 @@ public class ObjectStore implements RawStore, Configurable {
       Query query = pm.newQuery(MPartition.class,
           "table.tableName == t1 && table.database.name == t2");
       query.declareParameters("java.lang.String t1, java.lang.String t2");
+      query.setOrdering("partitionName ascending");
       mparts = (List<MPartition>) query.execute(tableName, dbName);
       LOG.debug("Done executing query for listMPartitions");
       pm.retrieveAll(mparts);
@@ -1235,11 +1425,60 @@ public class ObjectStore implements RawStore, Configurable {
   }
 
   @Override
+  public List<Partition> getPartitionsByNames(String dbName, String tblName,
+      List<String> partNames) throws MetaException, NoSuchObjectException {
+
+    boolean success = false;
+    try {
+      openTransaction();
+
+      StringBuilder sb = new StringBuilder(
+          "table.tableName == t1 && table.database.name == t2 && (");
+      int n = 0;
+      Map<String, String> params = new HashMap<String, String>();
+      for (Iterator<String> itr = partNames.iterator(); itr.hasNext();) {
+        String pn = "p" + n;
+        n++;
+        String part = itr.next();
+        params.put(pn, part);
+        sb.append("partitionName == ").append(pn);
+        sb.append(" || ");
+      }
+      sb.setLength(sb.length() - 4); // remove the last " || "
+      sb.append(')');
+
+      Query query = pm.newQuery(MPartition.class, sb.toString());
+
+      LOG.debug(" JDOQL filter is " + sb.toString());
+
+      params.put("t1", tblName.trim());
+      params.put("t2", dbName.trim());
+
+      String parameterDeclaration = makeParameterDeclarationString(params);
+      query.declareParameters(parameterDeclaration);
+      query.setOrdering("partitionName ascending");
+
+      List<MPartition> mparts = (List<MPartition>) query.executeWithMap(params);
+      // pm.retrieveAll(mparts); // retrieveAll is pessimistic. some fields may not be needed
+      List<Partition> results = convertToParts(dbName, tblName, mparts);
+      // pm.makeTransientAll(mparts); // makeTransient will prohibit future access of unfetched fields
+      query.closeAll();
+      success = commitTransaction();
+      return results;
+    } finally {
+      if (!success) {
+        rollbackTransaction();
+      }
+    }
+  }
+
+  @Override
   public List<Partition> getPartitionsByFilter(String dbName, String tblName,
       String filter, short maxParts) throws MetaException, NoSuchObjectException {
     openTransaction();
     List<Partition> parts = convertToParts(listMPartitionsByFilter(dbName,
         tblName, filter, maxParts));
+    LOG.info("# parts after pruning = " + parts.size());
     commitTransaction();
     return parts;
   }
@@ -1269,6 +1508,7 @@ public class ObjectStore implements RawStore, Configurable {
       }
 
       String jdoFilter = parser.tree.generateJDOFilter(table, params);
+      LOG.debug("jdoFilter = " + jdoFilter);
 
       if( jdoFilter.trim().length() > 0 ) {
         queryBuilder.append(" && ( ");
@@ -1276,7 +1516,6 @@ public class ObjectStore implements RawStore, Configurable {
         queryBuilder.append(" )");
       }
     }
-
     return queryBuilder.toString();
   }
 
@@ -1347,7 +1586,7 @@ public class ObjectStore implements RawStore, Configurable {
     List<String> partNames = new ArrayList<String>();
     try {
       openTransaction();
-      LOG.debug("Executing listMPartitionsByFilter");
+      LOG.debug("Executing listMPartitionNamesByFilter");
       dbName = dbName.toLowerCase();
       tableName = tableName.toLowerCase();
 
@@ -1360,7 +1599,6 @@ public class ObjectStore implements RawStore, Configurable {
       Map<String, String> params = new HashMap<String, String>();
       String queryFilterString =
         makeQueryFilterString(mtable, filter, params);
-
       Query query = pm.newQuery(
           "select partitionName from org.apache.hadoop.hive.metastore.model.MPartition "
           + "where " + queryFilterString);
@@ -1691,7 +1929,6 @@ public class ObjectStore implements RawStore, Configurable {
       q.declareParameters("java.lang.String t1, java.lang.String t2");
       q.setResult("indexName");
       Collection names = (Collection) q.execute(dbName, origTableName);
-      pns = new ArrayList<String>();
       for (Iterator i = names.iterator(); i.hasNext();) {
         pns.add((String) i.next());
       }
@@ -3282,4 +3519,95 @@ public class ObjectStore implements RawStore, Configurable {
     return mSecurityColumnList;
   }
 
+  @Override
+  public boolean isPartitionMarkedForEvent(String dbName, String tblName,
+      Map<String, String> partName, PartitionEventType evtType) throws UnknownTableException,
+      MetaException, InvalidPartitionException, UnknownPartitionException {
+
+    Collection<MPartitionEvent> partEvents;
+    boolean success = false;
+    LOG.debug("Begin Executing isPartitionMarkedForEvent");
+    try{
+    openTransaction();
+    Query query = pm.newQuery(MPartitionEvent.class, "dbName == t1 && tblName == t2 && partName == t3 && eventType == t4");
+    query.declareParameters("java.lang.String t1, java.lang.String t2, java.lang.String t3, int t4");
+    Table tbl = getTable(dbName, tblName); // Make sure dbName and tblName are valid.
+    if(null == tbl) {
+      throw new UnknownTableException("Table: "+ tblName + " is not found.");
+    }
+    partEvents = (Collection<MPartitionEvent>) query.executeWithArray(dbName, tblName, getPartitionStr(tbl, partName), evtType.getValue());
+    pm.retrieveAll(partEvents);
+    success = commitTransaction();
+    LOG.debug("Done executing isPartitionMarkedForEvent");
+    } finally{
+      if (!success) {
+        rollbackTransaction();
+      }
+    }
+    return (partEvents != null  && !partEvents.isEmpty()) ? true : false;
+
+  }
+
+  @Override
+  public Table markPartitionForEvent(String dbName, String tblName, Map<String,String> partName,
+      PartitionEventType evtType) throws MetaException, UnknownTableException, InvalidPartitionException, UnknownPartitionException {
+
+    LOG.debug("Begin executing markPartitionForEvent");
+    boolean success = false;
+    Table tbl = null;
+    try{
+    openTransaction();
+    tbl = getTable(dbName, tblName); // Make sure dbName and tblName are valid.
+    if(null == tbl) {
+      throw new UnknownTableException("Table: "+ tblName + " is not found.");
+    }
+    pm.makePersistent(new MPartitionEvent(dbName,tblName,getPartitionStr(tbl, partName), evtType.getValue()));
+    success = commitTransaction();
+    LOG.debug("Done executing markPartitionForEvent");
+    } finally {
+      if(!success) {
+        rollbackTransaction();
+      }
+    }
+    return tbl;
+  }
+
+  private String getPartitionStr(Table tbl, Map<String,String> partName) throws InvalidPartitionException{
+    if(tbl.getPartitionKeysSize() != partName.size()){
+      throw new InvalidPartitionException("Number of partition columns in table: "+ tbl.getPartitionKeysSize() +
+          " doesn't match with number of supplied partition values: "+partName.size());
+    }
+    final List<String> storedVals = new ArrayList<String>(tbl.getPartitionKeysSize());
+    for(FieldSchema partKey : tbl.getPartitionKeys()){
+      String partVal = partName.get(partKey.getName());
+      if(null == partVal) {
+        throw new InvalidPartitionException("No value found for partition column: "+partKey.getName());
+      }
+      storedVals.add(partVal);
+    }
+    return join(storedVals,',');
+  }
+
+  @Override
+  public long cleanupEvents() {
+    boolean commited = false;
+    long delCnt;
+    LOG.debug("Begin executing cleanupEvents");
+    Long expiryTime = HiveConf.getLongVar(getConf(), ConfVars.METASTORE_EVENT_EXPIRY_DURATION) * 1000L;
+    Long curTime = System.currentTimeMillis();
+    try {
+      openTransaction();
+      Query query = pm.newQuery(MPartitionEvent.class,"curTime - eventTime > expiryTime");
+      query.declareParameters("java.lang.Long curTime, java.lang.Long expiryTime");
+      delCnt = query.deletePersistentAll(curTime, expiryTime);
+      commited = commitTransaction();
+    }
+    finally {
+      if (!commited) {
+        rollbackTransaction();
+      }
+      LOG.debug("Done executing cleanupEvents");
+    }
+    return delCnt;
+  }
 }

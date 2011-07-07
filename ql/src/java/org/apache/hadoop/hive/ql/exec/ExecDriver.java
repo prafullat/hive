@@ -31,7 +31,9 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -104,6 +106,10 @@ public class ExecDriver extends Task<MapredWork> implements Serializable, Hadoop
     LOG = LogFactory.getLog(this.getClass().getName());
     console = new LogHelper(LOG);
     this.jobExecHelper = new HadoopJobExecHelper(job, console, this, this);
+  }
+
+  public boolean requireLock() {
+    return true;
   }
 
   protected static String getResourceFiles(Configuration conf, SessionState.ResourceType t) {
@@ -273,9 +279,8 @@ public class ExecDriver extends Task<MapredWork> implements Serializable, Hadoop
     job.setNumReduceTasks(work.getNumReduceTasks().intValue());
     job.setReducerClass(ExecReducer.class);
 
-    if (work.getInputformat() != null) {
-      HiveConf.setVar(job, HiveConf.ConfVars.HIVEINPUTFORMAT, work.getInputformat());
-    }
+    // set input format information if necessary
+    setInputAttributes(job);
 
     // Turn on speculative execution for reducers
     boolean useSpeculativeExecReducers = HiveConf.getBoolVar(job,
@@ -377,7 +382,7 @@ public class ExecDriver extends Task<MapredWork> implements Serializable, Hadoop
         }
       }
 
-      addInputPaths(job, work, emptyScratchDirStr);
+      addInputPaths(job, work, emptyScratchDirStr, ctx);
 
       Utilities.setMapRedWork(job, work, ctx.getMRTmpFileURI());
       // remove the pwd from conf file so that job tracker doesn't show this
@@ -465,6 +470,19 @@ public class ExecDriver extends Task<MapredWork> implements Serializable, Hadoop
     }
 
     return (returnVal);
+  }
+
+  /**
+   * Set hive input format, and input format file if necessary.
+   */
+  protected void setInputAttributes(Configuration conf) {
+    if (work.getInputformat() != null) {
+      HiveConf.setVar(conf, HiveConf.ConfVars.HIVEINPUTFORMAT, work.getInputformat());
+    }
+    if (work.getIndexIntermediateFile() != null) {
+      conf.set("hive.index.compact.file", work.getIndexIntermediateFile());
+      conf.set("hive.index.blockfilter.file", work.getIndexIntermediateFile());
+    }
   }
 
   public boolean mapStarted() {
@@ -717,7 +735,7 @@ public class ExecDriver extends Task<MapredWork> implements Serializable, Hadoop
   /**
    * Handle a empty/null path for a given alias.
    */
-  private int addInputPath(String path, JobConf job, MapredWork work, String hiveScratchDir,
+  private static int addInputPath(String path, JobConf job, MapredWork work, String hiveScratchDir,
       int numEmptyPaths, boolean isEmptyPath, String alias) throws Exception {
     // either the directory does not exist or it is empty
     assert path == null || isEmptyPath;
@@ -790,11 +808,12 @@ public class ExecDriver extends Task<MapredWork> implements Serializable, Hadoop
     return numEmptyPaths;
   }
 
-  private void addInputPaths(JobConf job, MapredWork work, String hiveScratchDir) throws Exception {
+  public static void addInputPaths(JobConf job, MapredWork work, String hiveScratchDir, Context ctx)
+      throws Exception {
     int numEmptyPaths = 0;
 
-    List<String> pathsProcessed = new ArrayList<String>();
-
+    Set<String> pathsProcessed = new HashSet<String>();
+    List<String> pathsToAdd = new LinkedList<String>();
     // AliasToWork contains all the aliases
     for (String oneAlias : work.getAliasToWork().keySet()) {
       LOG.info("Processing alias " + oneAlias);
@@ -812,15 +831,14 @@ public class ExecDriver extends Task<MapredWork> implements Serializable, Hadoop
           if (pathsProcessed.contains(path)) {
             continue;
           }
+
           pathsProcessed.add(path);
 
           LOG.info("Adding input file " + path);
-
-          Path dirPath = new Path(path);
-          if (!Utilities.isEmptyPath(job, dirPath)) {
-            FileInputFormat.addInputPath(job, dirPath);
-          } else {
+          if (Utilities.isEmptyPath(job, path, ctx)) {
             emptyPaths.add(path);
+          } else {
+            pathsToAdd.add(path);
           }
         }
       }
@@ -844,6 +862,21 @@ public class ExecDriver extends Task<MapredWork> implements Serializable, Hadoop
             oneAlias);
       }
     }
+    setInputPaths(job, pathsToAdd);
+  }
+
+  private static void setInputPaths(JobConf job, List<String> pathsToAdd) {
+    Path[] addedPaths = FileInputFormat.getInputPaths(job);
+    List<Path> toAddPathList = new ArrayList<Path>();
+    if(addedPaths != null) {
+      for(Path added: addedPaths) {
+        toAddPathList.add(added);
+      }
+    }
+    for(String toAdd: pathsToAdd) {
+      toAddPathList.add(new Path(toAdd));
+    }
+    FileInputFormat.setInputPaths(job, toAddPathList.toArray(new Path[0]));
   }
 
   @Override

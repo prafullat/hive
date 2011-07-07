@@ -31,8 +31,9 @@ import org.apache.hadoop.hive.service.HiveServerException;
  *
  */
 public class HiveStatement implements java.sql.Statement {
-  private JdbcSessionState session;
   private HiveInterface client;
+  private int fetchSize = 50;
+
   /**
    * We need to keep a reference to the result set to support the following:
    * <code>
@@ -60,8 +61,7 @@ public class HiveStatement implements java.sql.Statement {
   /**
    *
    */
-  public HiveStatement(JdbcSessionState session, HiveInterface client) {
-    this.session = session;
+  public HiveStatement(HiveInterface client) {
     this.client = client;
   }
 
@@ -191,6 +191,7 @@ public class HiveStatement implements java.sql.Statement {
       throw new SQLException(ex.toString(), "08S01");
     }
     resultSet = new HiveQueryResultSet(client, maxRows);
+    resultSet.setFetchSize(fetchSize);
     return resultSet;
   }
 
@@ -266,7 +267,7 @@ public class HiveStatement implements java.sql.Statement {
    */
 
   public int getFetchSize() throws SQLException {
-    throw new SQLException("Method not supported");
+    return fetchSize;
   }
 
   /*
@@ -446,7 +447,7 @@ public class HiveStatement implements java.sql.Statement {
    */
 
   public void setFetchSize(int rows) throws SQLException {
-    throw new SQLException("Method not supported");
+    fetchSize = rows;
   }
 
   /*

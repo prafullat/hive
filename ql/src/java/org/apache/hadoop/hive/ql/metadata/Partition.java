@@ -183,7 +183,7 @@ public class Partition implements Serializable {
     if (table.isView()) {
       return;
     }
-    
+
     String partName = "";
     if (table.isPartitioned()) {
       try {
@@ -195,6 +195,12 @@ public class Partition implements Serializable {
             Path partPath = new Path(
               table.getDataLocation().toString(), partName);
             tPartition.getSd().setLocation(partPath.toString());
+          }
+        }
+        // set default if columns are not set
+        if (tPartition.getSd().getCols() == null) {
+          if (table.getCols() != null) {
+            tPartition.getSd().setCols(table.getCols());
           }
         }
       } catch (MetaException e) {
@@ -252,8 +258,27 @@ public class Partition implements Serializable {
     return deserializer;
   }
 
+  final public Deserializer getDeserializer(Properties props) {
+    if (deserializer == null) {
+      try {
+        deserializer = MetaStoreUtils.getDeserializer(Hive.get().getConf(), props);
+      } catch (HiveException e) {
+        throw new RuntimeException(e);
+      } catch (MetaException e) {
+        throw new RuntimeException(e);
+      }
+    }
+    return deserializer;
+  }
+
   public Properties getSchema() {
     return MetaStoreUtils.getSchema(tPartition, table.getTTable());
+  }
+
+  public Properties getSchemaFromTableSchema(Properties tblSchema) {
+    return MetaStoreUtils.getPartSchemaFromTableSchema(tPartition.getSd(), table.getTTable().getSd(),
+        tPartition.getParameters(), table.getDbName(), table.getTableName(), table.getPartitionKeys(),
+        tblSchema);
   }
 
   /**

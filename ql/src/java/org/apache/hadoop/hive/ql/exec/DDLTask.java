@@ -33,6 +33,7 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -75,7 +76,6 @@ import org.apache.hadoop.hive.ql.DriverContext;
 import org.apache.hadoop.hive.ql.QueryPlan;
 import org.apache.hadoop.hive.ql.hooks.ReadEntity;
 import org.apache.hadoop.hive.ql.hooks.WriteEntity;
-import org.apache.hadoop.hive.ql.io.RCFileInputFormat;
 import org.apache.hadoop.hive.ql.io.rcfile.merge.BlockMergeTask;
 import org.apache.hadoop.hive.ql.io.rcfile.merge.MergeWork;
 import org.apache.hadoop.hive.ql.lockmgr.HiveLock;
@@ -142,7 +142,6 @@ import org.apache.hadoop.hive.serde2.dynamic_type.DynamicSerDe;
 import org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe;
 import org.apache.hadoop.hive.shims.HadoopShims;
 import org.apache.hadoop.hive.shims.ShimLoader;
-import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.util.ToolRunner;
 
 /**
@@ -162,6 +161,10 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
   private static String INTERMEDIATE_ARCHIVED_DIR_SUFFIX;
   private static String INTERMEDIATE_ORIGINAL_DIR_SUFFIX;
   private static String INTERMEDIATE_EXTRACTED_DIR_SUFFIX;
+
+  public boolean requireLock() {
+    return this.work != null && this.work.getNeedLock();
+  }
 
   public DDLTask() {
     super();
@@ -355,7 +358,7 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
       if (showIndexes != null) {
         return showIndexes(db, showIndexes);
       }
-      
+
       AlterTablePartMergeFilesDesc mergeFilesDesc = work.getMergeFilesDesc();
       if(mergeFilesDesc != null) {
         return mergeFiles(db, mergeFilesDesc);
@@ -383,10 +386,10 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
    * First, make sure the source table/partition is not
    * archived/indexes/non-rcfile. If either of these is true, throw an
    * exception.
-   * 
+   *
    * The way how it does the merge is to create a BlockMergeTask from the
    * mergeFilesDesc.
-   * 
+   *
    * @param db
    * @param mergeFilesDesc
    * @return
@@ -401,6 +404,7 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
     BlockMergeTask taskExec = new BlockMergeTask();
     taskExec.initialize(db.getConf(), null, driverCxt);
     taskExec.setWork(mergeWork);
+    taskExec.setQueryPlan(this.getQueryPlan());
     int ret = taskExec.execute(driverCxt);
 
     return ret;
@@ -875,15 +879,35 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
       return 0;
     }
 
+
+
     if (addPartitionDesc.getLocation() == null) {
-      db.createPartition(tbl, addPartitionDesc.getPartSpec());
+      db.createPartition(tbl, addPartitionDesc.getPartSpec(), null,
+          addPartitionDesc.getPartParams(),
+                    addPartitionDesc.getInputFormat(),
+                    addPartitionDesc.getOutputFormat(),
+                    addPartitionDesc.getNumBuckets(),
+                    addPartitionDesc.getCols(),
+                    addPartitionDesc.getSerializationLib(),
+                    addPartitionDesc.getSerdeParams(),
+                    addPartitionDesc.getBucketCols(),
+                    addPartitionDesc.getSortCols());
+
     } else {
       if (tbl.isView()) {
         throw new HiveException("LOCATION clause illegal for view partition");
       }
       // set partition path relative to table
       db.createPartition(tbl, addPartitionDesc.getPartSpec(), new Path(tbl
-          .getPath(), addPartitionDesc.getLocation()));
+                    .getPath(), addPartitionDesc.getLocation()), addPartitionDesc.getPartParams(),
+                    addPartitionDesc.getInputFormat(),
+                    addPartitionDesc.getOutputFormat(),
+                    addPartitionDesc.getNumBuckets(),
+                    addPartitionDesc.getCols(),
+                    addPartitionDesc.getSerializationLib(),
+                    addPartitionDesc.getSerdeParams(),
+                    addPartitionDesc.getBucketCols(),
+                    addPartitionDesc.getSortCols());
     }
 
     Partition part = db
@@ -1143,6 +1167,11 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
       HadoopShims shim = ShimLoader.getHadoopShims();
       int ret=0;
       try {
+        int maxJobNameLen = conf.getIntVar(HiveConf.ConfVars.HIVEJOBNAMELENGTH);
+        String jobname = String.format("Archiving %s@%s",
+          tbl.getTableName(), p.getName());
+        jobname = Utilities.abbreviate(jobname, maxJobNameLen - 6);
+        conf.setVar(HiveConf.ConfVars.HADOOPJOBNAME, jobname);
         ret = shim.createHadoopArchive(conf, originalDir, tmpDir, archiveName);
       } catch (Exception e) {
         throw new HiveException(e);
@@ -1415,7 +1444,7 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
 
     validateAlterTableType(tbl, alterType, false);
   }
-  
+
   private void validateAlterTableType(
     Table tbl, AlterTableDesc.AlterTableTypes alterType,
     boolean expectView) throws HiveException {
@@ -1927,7 +1956,7 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
                              "EXPLICIT");
 
     if (partSpec == null) {
-      HiveLock lck = lockMgr.lock(new HiveLockObject(tbl, lockData), mode, true, 0, 0);
+      HiveLock lck = lockMgr.lock(new HiveLockObject(tbl, lockData), mode, true);
       if (lck == null) {
         return 1;
       }
@@ -1938,7 +1967,7 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
     if (par == null) {
       throw new HiveException("Partition " + partSpec + " for table " + tabName + " does not exist");
     }
-    HiveLock lck = lockMgr.lock(new HiveLockObject(par, lockData), mode, true, 0, 0);
+    HiveLock lck = lockMgr.lock(new HiveLockObject(par, lockData), mode, true);
     if (lck == null) {
       return 1;
     }
@@ -2370,7 +2399,8 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
       PrivilegeGrantInfo grantInfo) throws IOException {
 
     String privilege = grantInfo.getPrivilege();
-    int createTime = grantInfo.getCreateTime();
+    long unixTimestamp = grantInfo.getCreateTime() * 1000L;
+    Date createTime = new Date(unixTimestamp);
     String grantor = grantInfo.getGrantor();
 
     if (dbName != null) {
@@ -2850,11 +2880,18 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
       if (tbl != null) {
         if (tbl.isView()) {
           if (!dropTbl.getExpectView()) {
+            if (dropTbl.getIfExists()) {
+              return 0;
+            }
             throw new HiveException("Cannot drop a view with DROP TABLE");
           }
         } else {
           if (dropTbl.getExpectView()) {
-            throw new HiveException("Cannot drop a base table with DROP VIEW");
+            if (dropTbl.getIfExists()) {
+              return 0;
+            }
+            throw new HiveException(
+              "Cannot drop a base table with DROP VIEW");
           }
         }
       }
@@ -2888,7 +2925,7 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
           tbl, AlterTableDesc.AlterTableTypes.DROPPARTITION,
           dropTbl.getExpectView());
       }
-      
+
       // get all partitions of the table
       List<String> partitionNames =
         db.getPartitionNames(dropTbl.getTableName(), (short) -1);
@@ -3006,7 +3043,7 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
    */
   private int dropDatabase(Hive db, DropDatabaseDesc dropDb)
       throws HiveException, NoSuchObjectException {
-    db.dropDatabase(dropDb.getDatabaseName(), true, dropDb.getIfExists());
+    db.dropDatabase(dropDb.getDatabaseName(), true, dropDb.getIfExists(), dropDb.isCasdade());
     return 0;
   }
 

@@ -19,38 +19,48 @@
 package org.apache.hadoop.hive.ql.index.compact;
 
 import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
-import java.util.Map.Entry;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.conf.HiveConf;
-import org.apache.hadoop.hive.metastore.MetaStoreUtils;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.Index;
 import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
 import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.hadoop.hive.ql.Driver;
 import org.apache.hadoop.hive.ql.exec.Task;
-import org.apache.hadoop.hive.ql.exec.Utilities;
 import org.apache.hadoop.hive.ql.hooks.ReadEntity;
 import org.apache.hadoop.hive.ql.hooks.WriteEntity;
-import org.apache.hadoop.hive.ql.index.AbstractIndexHandler;
-import org.apache.hadoop.hive.ql.metadata.Hive;
+import org.apache.hadoop.hive.ql.index.HiveIndexQueryContext;
+import org.apache.hadoop.hive.ql.index.IndexMetadataChangeTask;
+import org.apache.hadoop.hive.ql.index.IndexMetadataChangeWork;
+import org.apache.hadoop.hive.ql.index.IndexPredicateAnalyzer;
+import org.apache.hadoop.hive.ql.index.IndexSearchCondition;
+import org.apache.hadoop.hive.ql.index.TableBasedIndexHandler;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.metadata.HiveUtils;
 import org.apache.hadoop.hive.ql.metadata.Partition;
 import org.apache.hadoop.hive.ql.metadata.VirtualColumn;
-import org.apache.hadoop.hive.ql.parse.SemanticException;
+import org.apache.hadoop.hive.ql.metadata.HiveStoragePredicateHandler.DecomposedPredicate;
+import org.apache.hadoop.hive.ql.parse.ParseContext;
+import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
+import org.apache.hadoop.hive.ql.plan.MapredWork;
 import org.apache.hadoop.hive.ql.plan.PartitionDesc;
-import org.apache.hadoop.hive.ql.plan.TableDesc;
+import org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPEqual;
+import org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPEqualOrGreaterThan;
+import org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPEqualOrLessThan;
+import org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPGreaterThan;
+import org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPLessThan;
 
-public class CompactIndexHandler extends AbstractIndexHandler {
-  
+public class CompactIndexHandler extends TableBasedIndexHandler {
+
   private Configuration configuration;
+  private static final Log LOG = LogFactory.getLog(CompactIndexHandler.class.getName());
+
 
   @Override
   public void analyzeIndexDefinition(Table baseTable, Index index,
@@ -68,63 +78,11 @@ public class CompactIndexHandler extends AbstractIndexHandler {
   }
 
   @Override
-  public List<Task<?>> generateIndexBuildTaskList(
-      org.apache.hadoop.hive.ql.metadata.Table baseTbl,
-      org.apache.hadoop.hive.metastore.api.Index index,
-      List<Partition> indexTblPartitions, List<Partition> baseTblPartitions,
-      org.apache.hadoop.hive.ql.metadata.Table indexTbl,
-      Set<ReadEntity> inputs, Set<WriteEntity> outputs) throws HiveException {
-    try {
-
-      TableDesc desc = Utilities.getTableDesc(indexTbl);
-
-      List<Partition> newBaseTblPartitions = new ArrayList<Partition>();
-
-      List<Task<?>> indexBuilderTasks = new ArrayList<Task<?>>();
-
-      if (!baseTbl.isPartitioned()) {
-        // the table does not have any partition, then create index for the
-        // whole table
-        Task<?> indexBuilder = getIndexBuilderMapRedTask(inputs, outputs, index.getSd().getCols(), false,
-            new PartitionDesc(desc, null), indexTbl.getTableName(),
-            new PartitionDesc(Utilities.getTableDesc(baseTbl), null), 
-            baseTbl.getTableName(), indexTbl.getDbName());
-        indexBuilderTasks.add(indexBuilder);
-      } else {
-
-        // check whether the index table partitions are still exists in base
-        // table
-        for (int i = 0; i < indexTblPartitions.size(); i++) {
-          Partition indexPart = indexTblPartitions.get(i);
-          Partition basePart = null;
-          for (int j = 0; j < baseTblPartitions.size(); j++) {
-            if (baseTblPartitions.get(j).getName().equals(indexPart.getName())) {
-              basePart = baseTblPartitions.get(j);
-              newBaseTblPartitions.add(baseTblPartitions.get(j));
-              break;
-            }
-          }
-          if (basePart == null)
-            throw new RuntimeException(
-                "Partitions of base table and index table are inconsistent.");
-          // for each partition, spawn a map reduce task.
-          Task<?> indexBuilder = getIndexBuilderMapRedTask(inputs, outputs, index.getSd().getCols(), true,
-              new PartitionDesc(indexPart), indexTbl.getTableName(),
-              new PartitionDesc(basePart), baseTbl.getTableName(), indexTbl.getDbName());
-          indexBuilderTasks.add(indexBuilder);
-        }
-      }
-      return indexBuilderTasks;
-    } catch (Exception e) {
-      throw new SemanticException(e);
-    }
-  }
-
-  private Task<?> getIndexBuilderMapRedTask(Set<ReadEntity> inputs, Set<WriteEntity> outputs, 
+  protected Task<?> getIndexBuilderMapRedTask(Set<ReadEntity> inputs, Set<WriteEntity> outputs,
       List<FieldSchema> indexField, boolean partitioned,
       PartitionDesc indexTblPartDesc, String indexTableName,
       PartitionDesc baseTablePartDesc, String baseTableName, String dbName) {
-    
+
     String indexCols = HiveUtils.getUnparsedColumnNamesFromFieldSchema(indexField);
 
     //form a new insert overwrite query.
@@ -138,12 +96,13 @@ public class CompactIndexHandler extends AbstractIndexHandler {
       for (int i = 0; i < ret.size(); i++) {
         String partKV = ret.get(i);
         command.append(partKV);
-        if (i < ret.size() - 1)
+        if (i < ret.size() - 1) {
           command.append(",");
+        }
       }
       command.append(" ) ");
     }
-    
+
     command.append(" SELECT ");
     command.append(indexCols);
     command.append(",");
@@ -161,58 +120,148 @@ public class CompactIndexHandler extends AbstractIndexHandler {
       for (int i = 0; i < pkv.size(); i++) {
         String partKV = pkv.get(i);
         command.append(partKV);
-        if (i < pkv.size() - 1)
+        if (i < pkv.size() - 1) {
           command.append(" AND ");
+        }
       }
     }
     command.append(" GROUP BY ");
     command.append(indexCols + ", " + VirtualColumn.FILENAME.getName());
 
-    Driver driver = new Driver(new HiveConf(getConf(), CompactIndexHandler.class));
+    HiveConf builderConf = new HiveConf(getConf(), CompactIndexHandler.class);
+    // Don't try to index optimize the query to build the index
+    HiveConf.setBoolVar(builderConf, HiveConf.ConfVars.HIVEOPTINDEXFILTER, false);
+    Driver driver = new Driver(builderConf);
     driver.compile(command.toString());
 
     Task<?> rootTask = driver.getPlan().getRootTasks().get(0);
     inputs.addAll(driver.getPlan().getInputs());
     outputs.addAll(driver.getPlan().getOutputs());
-    
+
     IndexMetadataChangeWork indexMetaChange = new IndexMetadataChangeWork(partSpec, indexTableName, dbName);
-    IndexMetadataChangeTask indexMetaChangeTsk = new IndexMetadataChangeTask(); 
+    IndexMetadataChangeTask indexMetaChangeTsk = new IndexMetadataChangeTask();
     indexMetaChangeTsk.setWork(indexMetaChange);
     rootTask.addDependentTask(indexMetaChangeTsk);
 
     return rootTask;
   }
 
-  private List<String> getPartKVPairStringArray(
-      LinkedHashMap<String, String> partSpec) {
-    List<String> ret = new ArrayList<String>(partSpec.size());
-    Iterator<Entry<String, String>> iter = partSpec.entrySet().iterator();
-    while (iter.hasNext()) {
-      StringBuilder sb = new StringBuilder();
-      Entry<String, String> p = iter.next();
-      sb.append(HiveUtils.unparseIdentifier(p.getKey()));
-      sb.append(" = ");
-      sb.append("'");
-      sb.append(p.getValue());
-      sb.append("'");
-      ret.add(sb.toString());
+  @Override
+  public void generateIndexQuery(List<Index> indexes, ExprNodeDesc predicate,
+    ParseContext pctx, HiveIndexQueryContext queryContext) {
+
+    Index index = indexes.get(0);
+    DecomposedPredicate decomposedPredicate = decomposePredicate(predicate, index,
+                                                                  queryContext.getQueryPartitions());
+
+    if (decomposedPredicate == null) {
+      queryContext.setQueryTasks(null);
+      return; // abort if we couldn't pull out anything from the predicate
     }
-    return ret;
+
+    // pass residual predicate back out for further processing
+    queryContext.setResidualPredicate(decomposedPredicate.residualPredicate);
+
+    // Build reentrant QL for index query
+    StringBuilder qlCommand = new StringBuilder("INSERT OVERWRITE DIRECTORY ");
+
+    String tmpFile = pctx.getContext().getMRTmpFileURI();
+    qlCommand.append( "\"" + tmpFile + "\" ");            // QL includes " around file name
+    qlCommand.append("SELECT `_bucketname` ,  `_offsets` FROM ");
+    qlCommand.append(HiveUtils.unparseIdentifier(index.getIndexTableName()));
+    qlCommand.append(" WHERE ");
+
+    String predicateString = decomposedPredicate.pushedPredicate.getExprString();
+    qlCommand.append(predicateString);
+
+    // generate tasks from index query string
+    LOG.info("Generating tasks for re-entrant QL query: " + qlCommand.toString());
+    Driver driver = new Driver(pctx.getConf());
+    driver.compile(qlCommand.toString(), false);
+
+    // setup TableScanOperator to change input format for original query
+    queryContext.setIndexInputFormat(HiveCompactIndexInputFormat.class.getName());
+    queryContext.setIndexIntermediateFile(tmpFile);
+
+    queryContext.addAdditionalSemanticInputs(driver.getPlan().getInputs());
+    queryContext.setQueryTasks(driver.getPlan().getRootTasks());
+    return;
+  }
+
+  /**
+   * Split the predicate into the piece we can deal with (pushed), and the one we can't (residual)
+   * @param predicate
+   * @param index
+   * @return
+   */
+  private DecomposedPredicate decomposePredicate(ExprNodeDesc predicate, Index index,
+      Set<Partition> queryPartitions) {
+    IndexPredicateAnalyzer analyzer = getIndexPredicateAnalyzer(index, queryPartitions);
+    List<IndexSearchCondition> searchConditions = new ArrayList<IndexSearchCondition>();
+    // split predicate into pushed (what we can handle), and residual (what we can't handle)
+    ExprNodeDesc residualPredicate = analyzer.analyzePredicate(predicate, searchConditions);
+
+    if (searchConditions.size() == 0) {
+      return null;
+    }
+
+    DecomposedPredicate decomposedPredicate = new DecomposedPredicate();
+    decomposedPredicate.pushedPredicate = analyzer.translateSearchConditions(searchConditions);
+    decomposedPredicate.residualPredicate = residualPredicate;
+
+    return decomposedPredicate;
+  }
+
+  /**
+   * Instantiate a new predicate analyzer suitable for determining
+   * whether we can use an index, based on rules for indexes in
+   * WHERE clauses that we support
+   *
+   * @return preconfigured predicate analyzer for WHERE queries
+   */
+  private IndexPredicateAnalyzer getIndexPredicateAnalyzer(Index index, Set<Partition> queryPartitions)  {
+    IndexPredicateAnalyzer analyzer = new IndexPredicateAnalyzer();
+
+    analyzer.addComparisonOp(GenericUDFOPEqual.class.getName());
+    analyzer.addComparisonOp(GenericUDFOPLessThan.class.getName());
+    analyzer.addComparisonOp(GenericUDFOPEqualOrLessThan.class.getName());
+    analyzer.addComparisonOp(GenericUDFOPGreaterThan.class.getName());
+    analyzer.addComparisonOp(GenericUDFOPEqualOrGreaterThan.class.getName());
+
+    // only return results for columns in this index
+    List<FieldSchema> columnSchemas = index.getSd().getCols();
+    for (FieldSchema column : columnSchemas) {
+      analyzer.allowColumnName(column.getName());
+    }
+
+    // partitioned columns are treated as if they have indexes so that the partitions
+    // are used during the index query generation
+    for (Partition part : queryPartitions) {
+      if (part.getSpec().isEmpty()) {
+        continue; // empty partitions are from whole tables, so we don't want to add them in
+      }
+      for (String column : part.getSpec().keySet()) {
+        analyzer.allowColumnName(column);
+      }
+    }
+
+    return analyzer;
+  }
+
+
+  @Override
+  public boolean checkQuerySize(long querySize, HiveConf hiveConf) {
+    long minSize = hiveConf.getLongVar(HiveConf.ConfVars.HIVEOPTINDEXFILTER_COMPACT_MINSIZE);
+    long maxSize = hiveConf.getLongVar(HiveConf.ConfVars.HIVEOPTINDEXFILTER_COMPACT_MAXSIZE);
+    if (maxSize < 0) {
+      maxSize = Long.MAX_VALUE;
+    }
+    return (querySize > minSize & querySize < maxSize);
   }
 
   @Override
   public boolean usesIndexTable() {
     return true;
-  }
-
-  @Override
-  public Configuration getConf() {
-    return configuration;
-  }
-
-  @Override
-  public void setConf(Configuration conf) {
-    this.configuration = conf;
   }
 
 }

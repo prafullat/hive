@@ -284,11 +284,20 @@ public class SessionState {
   public static void initHiveLog4j() {
     // allow hive log4j to override any normal initialized one
     URL hive_l4j = SessionState.class.getClassLoader().getResource(HIVE_L4J);
-    if (hive_l4j == null) {
-      System.out.println(HIVE_L4J + " not found");
-    } else {
+    if (hive_l4j != null) {
       LogManager.resetConfiguration();
       PropertyConfigurator.configure(hive_l4j);
+    }
+  }
+
+  public void printInitInfo() {
+    URL hive_l4j = SessionState.class.getClassLoader().getResource(HIVE_L4J);
+    if (!isSilent) {
+      if (hive_l4j == null) {
+        System.err.println("Unable to initialize logging. " + HIVE_L4J + " not found on CLASSPATH!");
+      } else {
+        SessionState.getConsole().printInfo("Logging initialized using configuration in " + hive_l4j);
+      }
     }
   }
 
@@ -512,9 +521,9 @@ public class SessionState {
   private final HashMap<ResourceType, HashSet<String>> resource_map =
     new HashMap<ResourceType, HashSet<String>>();
 
-  public void add_resource(ResourceType t, String value) {
+  public String add_resource(ResourceType t, String value) {
     // By default don't convert to unix
-    add_resource(t, value, false);
+    return add_resource(t, value, false);
   }
 
   public String add_resource(ResourceType t, String value, boolean convertToUnix) {
