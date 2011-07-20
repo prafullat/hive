@@ -239,67 +239,20 @@ public class RewriteGBUsingIndex implements Transform {
   /**
    * Method to rewrite the input query if all optimization criteria is passed.
    * The method iterates over the tsOpToProcess {@link ArrayList} to apply the rewrites
-   *
    * @throws SemanticException
+   *
    */
-  private void rewriteOriginalQuery() {
-    HashMap<String, Operator<? extends Serializable>> topOpMap = parseContext.getTopOps();
+  private void rewriteOriginalQuery() throws SemanticException {
+    HashMap<String, Operator<? extends Serializable>> topOpMap = (HashMap<String, Operator<? extends Serializable>>) parseContext.getTopOps().clone();
     Iterator<String> tsOpItr = tsOpToProcess.keySet().iterator();
     while(tsOpItr.hasNext()){
       baseTableName = tsOpItr.next();
-      RewriteCanApplyCtx canApplyCtx = tsOpToProcess.get(baseTableName);
       TableScanOperator topOp = (TableScanOperator) topOpMap.get(baseTableName);
-
-      /* This part of the code checks if the 'REMOVE_GROUP_BY' value in RewriteVars enum is set to true.
-       * If yes, it sets the environment for the RewriteRemoveGroupbyCtx context and invokes
-       * method to apply rewrite by removing group by construct operators from the original operator tree.
-       * */
-      if(canApplyCtx.removeGroupBy){
-        try {
-          //Context for removing the group by construct operators from the operator tree
-          RewriteRemoveGroupbyCtx removeGbyCtx = RewriteRemoveGroupbyCtx.getInstance(parseContext, hiveDb, indexTableName);
-          removeGbyCtx.invokeRemoveGbyProc(topOp);
-          parseContext = removeGbyCtx.getParseContext();
-          parseContext.setOpParseCtx(removeGbyCtx.getOpc());
-          LOG.info("Finished Group by Remove");
-        } catch (SemanticException e) {
-          LOG.info("Exception in rewriting original query while using GB-to-IDX optimizer.");
-          //log base table and idx info and throw new
-        }
-        //Getting back new parseContext and new OpParseContext after GBY-RS-GBY is removed
-      }
-
-      /* This part of the code checks if the 'SHOULD_APPEND_SUBQUERY' value in RewriteVars enum is set to true.
-       * If yes, it sets the environment for the RewriteIndexSubqueryCtx context and invokes
-       * method to append a new subquery that scans over the index table rather than the original table.
-       * We first create the subquery context, then copy the RowSchema/RowResolver from subquery to original operator tree.
-       * */
-      if(canApplyCtx.shouldAppendSubquery){
-        try {
-          //Context for appending a subquery to scan over the index table
-          RewriteIndexSubqueryCtx subqueryCtx = RewriteIndexSubqueryCtx.getInstance(parseContext, indexTableName, baseTableName,
-              canApplyCtx.getSelectColumnsList());
-          subqueryCtx.createSubqueryContext();
-
-          HashMap<TableScanOperator, Table> subqTopOpMap = subqueryCtx.getSubqueryPctx().getTopToTable();
-          Iterator<TableScanOperator> subqTopOpItr = subqTopOpMap.keySet().iterator();
-          TableScanOperator subqTopOp = null;
-          if(subqTopOpItr.hasNext()){
-            subqTopOp = subqTopOpItr.next();
-          subqueryCtx.invokeSubquerySelectSchemaProc(subqTopOp);
-          LOG.info("Finished Fetching subquery select schema");
-          subqueryCtx.invokeFixAllOperatorSchemasProc(topOp);
-          parseContext = subqueryCtx.getParseContext();
-        }
-
-        LOG.info("Finished appending subquery");
-        } catch (SemanticException e) {
-          LOG.debug("Exception in rewriting original query while using GB-to-IDX optimizer.", e);
-        //log base table and idx info and throw new
-        }
-      }
+      RewriteQueryUsingAggregateIndexCtx rewriteQueryCtx = RewriteQueryUsingAggregateIndexCtx.getInstance(parseContext, hiveDb, indexTableName);
+      rewriteQueryCtx.invokeRewriteQueryProc(topOp);
+      parseContext = rewriteQueryCtx.getParseContext();
+      parseContext.setOpParseCtx(rewriteQueryCtx.getOpc());
     }
-
     LOG.info("Finished Rewriting query");
 
   }

@@ -33,11 +33,11 @@ import org.apache.hadoop.hive.ql.Driver;
 import org.apache.hadoop.hive.ql.exec.Task;
 import org.apache.hadoop.hive.ql.hooks.ReadEntity;
 import org.apache.hadoop.hive.ql.hooks.WriteEntity;
-import org.apache.hadoop.hive.ql.index.compact.IndexMetadataChangeTask;
-import org.apache.hadoop.hive.ql.index.compact.IndexMetadataChangeWork;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.metadata.HiveUtils;
 import org.apache.hadoop.hive.ql.metadata.VirtualColumn;
+import org.apache.hadoop.hive.ql.parse.ParseContext;
+import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
 import org.apache.hadoop.hive.ql.plan.PartitionDesc;
 
 
@@ -62,7 +62,6 @@ public class AggregateIndexHandler extends TableBasedIndexHandler {
         indexTable.setSd(indexTableSd);
       }
     }
-
 
     @Override
     protected Task<?> getIndexBuilderMapRedTask(Set<ReadEntity> inputs, Set<WriteEntity> outputs,
@@ -156,7 +155,6 @@ public class AggregateIndexHandler extends TableBasedIndexHandler {
       Task<?> rootTask = driver.getPlan().getRootTasks().get(0);
       inputs.addAll(driver.getPlan().getInputs());
       outputs.addAll(driver.getPlan().getOutputs());
-
       IndexMetadataChangeWork indexMetaChange = new IndexMetadataChangeWork(partSpec, indexTableName, dbName);
       IndexMetadataChangeTask indexMetaChangeTsk = new IndexMetadataChangeTask();
       indexMetaChangeTsk.setWork(indexMetaChange);
@@ -164,4 +162,12 @@ public class AggregateIndexHandler extends TableBasedIndexHandler {
 
       return rootTask;
     }
+
+    @Override
+    public void generateIndexQuery(List<Index> indexes, ExprNodeDesc predicate, ParseContext pctx,
+        HiveIndexQueryContext queryContext) {
+      // TODO Auto-generated method stub
+
+    }
+
   }

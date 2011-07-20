@@ -31,8 +31,8 @@ public class HiveIndex {
 
   public static enum IndexType {
     COMPACT_SUMMARY_TABLE("compact", "org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler"),
-    AGGREGATE_TABLE("aggregate", "org.apache.hadoop.hive.ql.AggregateIndexHandler");
-    BITMAP_TABLE("bitmap",
+    AGGREGATE_TABLE("aggregate", "org.apache.hadoop.hive.ql.AggregateIndexHandler"),
+    BITMAP_TABLE("bitmap", 
 "org.apache.hadoop.hive.ql.index.bitmap.BitmapIndexHandler");
 
     private IndexType(String indexType, String className) {
