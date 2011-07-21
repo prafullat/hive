@@ -232,6 +232,12 @@ public class RewriteGBUsingIndex implements Transform {
        }
      }
     }
+
+    if(tsOpToProcess.size() == 0){
+      canApply = false;
+    }else{
+      canApply = true;
+    }
     return canApply;
   }
 
@@ -248,7 +254,7 @@ public class RewriteGBUsingIndex implements Transform {
     while(tsOpItr.hasNext()){
       baseTableName = tsOpItr.next();
       TableScanOperator topOp = (TableScanOperator) topOpMap.get(baseTableName);
-      RewriteQueryUsingAggregateIndexCtx rewriteQueryCtx = RewriteQueryUsingAggregateIndexCtx.getInstance(parseContext, hiveDb, indexTableName);
+      RewriteQueryUsingAggregateIndexCtx rewriteQueryCtx = RewriteQueryUsingAggregateIndexCtx.getInstance(parseContext, hiveDb, indexTableName, baseTableName);
       rewriteQueryCtx.invokeRewriteQueryProc(topOp);
       parseContext = rewriteQueryCtx.getParseContext();
       parseContext.setOpParseCtx(rewriteQueryCtx.getOpc());

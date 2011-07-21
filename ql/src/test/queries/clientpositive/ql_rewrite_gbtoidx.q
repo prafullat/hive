@@ -24,19 +24,9 @@ ALTER INDEX lineitem_lshipdate_idx ON lineitem REBUILD;
 
 set hive.optimize.index.groupby=true;
 
-explain select l_shipdate, sum(`_aggregateValue`)
-from default__lineitem_lineitem_lshipdate_idx__
-group by l_shipdate;
-
 explain select l_shipdate, count(1)
 from lineitem
 group by l_shipdate;
-
-explain select year(l_shipdate) as year,
-        month(l_shipdate) as month,
-        sum(`_aggregateValue`) as monthly_shipments
-from default__lineitem_lineitem_lshipdate_idx__ 
-group by year(l_shipdate), month(l_shipdate);
 
 explain select year(l_shipdate) as year,
         month(l_shipdate) as month,
@@ -50,26 +40,6 @@ explain select lastyear.month,
 lastyear.monthly_shipments as monthly_shipments_delta
    from (select year(l_shipdate) as year,
                 month(l_shipdate) as month,
-                sum(`_aggregateValue`) as monthly_shipments
-           from default__lineitem_lineitem_lshipdate_idx__
-          where year(l_shipdate) = 1997
-          group by year(l_shipdate), month(l_shipdate)
-        )  lastyear join
-        (select year(l_shipdate) as year,
-                month(l_shipdate) as month,
-                sum(`_aggregateValue`) as monthly_shipments
-           from default__lineitem_lineitem_lshipdate_idx__
-          where year(l_shipdate) = 1998
-          group by year(l_shipdate), month(l_shipdate)
-        )  thisyear
-  on lastyear.month = thisyear.month;
-  
-explain select lastyear.month,
-        thisyear.month,
-        (thisyear.monthly_shipments - lastyear.monthly_shipments) /
-lastyear.monthly_shipments as monthly_shipments_delta
-   from (select year(l_shipdate) as year,
-                month(l_shipdate) as month,
                 count(1) as monthly_shipments
            from lineitem
           where year(l_shipdate) = 1997
@@ -83,5 +53,9 @@ lastyear.monthly_shipments as monthly_shipments_delta
           group by year(l_shipdate), month(l_shipdate)
         )  thisyear
   on lastyear.month = thisyear.month;
-  
-  
+
+explain  select l_shipdate, cnt
+from (select l_shipdate, count(1) as cnt from lineitem group by l_shipdate
+union all
+select l_shipdate, l_orderkey as cnt
+from lineitem) dummy;

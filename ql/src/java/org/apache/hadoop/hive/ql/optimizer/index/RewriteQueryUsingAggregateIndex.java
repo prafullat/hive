@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -94,15 +95,31 @@ public final class RewriteQueryUsingAggregateIndex {
         Object... nodeOutputs) throws SemanticException {
       TableScanOperator scanOperator = (TableScanOperator)nd;
       rewriteQueryCtx = (RewriteQueryUsingAggregateIndexCtx)ctx;
+      String baseTableName = rewriteQueryCtx.getBaseTableName();
+      String alias = null;
+      if(baseTableName.contains(":")){
+        alias = (baseTableName.split(":"))[0];
+      }
 
       HashMap<TableScanOperator, Table>  topToTable =
         rewriteQueryCtx.getParseContext().getTopToTable();
+      HashMap<String, Operator<? extends Serializable>>  topOps =
+        rewriteQueryCtx.getParseContext().getTopOps();
+      LinkedHashMap<Operator<? extends Serializable>, OpParseContext>  opParseContext =
+        rewriteQueryCtx.getParseContext().getOpParseCtx();
+
+      //need this to set rowResolver for new scanOperator
+      OpParseContext operatorContext = opParseContext.get(scanOperator);
+
+      //remove original TableScanOperator
+      topToTable.remove(scanOperator);
+      topOps.remove(baseTableName);
+      opParseContext.remove(scanOperator);
 
       //construct a new descriptor for the index table scan
       TableScanDesc indexTableScanDesc = new TableScanDesc();
       indexTableScanDesc.setGatherStats(false);
 
-      //String tableName = removeGbyCtx.getCanApplyCtx().findBaseTable(baseTableName);
       String tableName = rewriteQueryCtx.getIndexName();
 
       tableSpec ts = new tableSpec(rewriteQueryCtx.getHiveDb(),
@@ -113,20 +130,7 @@ public final class RewriteQueryUsingAggregateIndex {
       indexTableScanDesc.setStatsAggPrefix(k);
       scanOperator.setConf(indexTableScanDesc);
 
-      //remove original TableScanOperator
-      topToTable.clear();
-      rewriteQueryCtx.getParseContext().getTopOps().clear();
-
-      //Scan operator now points to other table
-      scanOperator.setAlias(tableName);
-      topToTable.put(scanOperator, ts.tableHandle);
-      rewriteQueryCtx.getParseContext().setTopToTable(topToTable);
-
-      OpParseContext operatorContext =
-        rewriteQueryCtx.getParseContext().getOpParseCtx().get(scanOperator);
       RowResolver rr = new RowResolver();
-      rewriteQueryCtx.getParseContext().getOpParseCtx().remove(scanOperator);
-
 
       //Construct the new RowResolver for the new TableScanOperator
       try {
@@ -145,10 +149,23 @@ public final class RewriteQueryUsingAggregateIndex {
       }
       //Set row resolver for new table
       operatorContext.setRowResolver(rr);
+      String tabNameWithAlias = null;
+      if(alias != null){
+        tabNameWithAlias = alias + ":" + tableName;
+       }else{
+         tabNameWithAlias = tableName;
+       }
 
-      //Put the new TableScanOperator in the OpParseContext and topOps maps of the original ParseContext
-      rewriteQueryCtx.getParseContext().getOpParseCtx().put(scanOperator, operatorContext);
-      rewriteQueryCtx.getParseContext().getTopOps().put(tableName, scanOperator);
+      //Scan operator now points to other table
+      topToTable.put(scanOperator, ts.tableHandle);
+      scanOperator.getConf().setAlias(tabNameWithAlias);
+      scanOperator.setAlias(tableName);
+      topOps.put(tabNameWithAlias, scanOperator);
+      opParseContext.put(scanOperator, operatorContext);
+      rewriteQueryCtx.getParseContext().setTopToTable(topToTable);
+      rewriteQueryCtx.getParseContext().setTopOps(topOps);
+      rewriteQueryCtx.getParseContext().setOpParseCtx(opParseContext);
+
       return null;
     }
   }

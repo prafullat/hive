@@ -75,8 +75,6 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
   public boolean countOnAllCols = false;
   public boolean queryHasGenericUdfOnGroupbyKey = false;
   public boolean queryHasMultipleTables = false;
-  public boolean shouldAppendSubquery = false;
-  public boolean removeGroupBy = false;
 
 
    //Data structures that are populated in the RewriteCanApplyProcFactory methods to check if the index key meets all criteria
@@ -104,8 +102,7 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
      countOnAllCols = false;
      queryHasGenericUdfOnGroupbyKey = false;
      queryHasMultipleTables = false;
-     shouldAppendSubquery = false;
-     removeGroupBy = false;
+
 
      aggFuncCnt = 0;
      selectColumnsList.clear();
@@ -236,7 +233,7 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
 
   boolean isIndexUsableForQueryBranchRewrite(Index index, Set<String> indexKeyNames){
     boolean optimizeCount = false;
-    removeGroupBy = true;
+
     //--------------------------------------------
     //Check if all columns in select list are part of index key columns
     if (!indexKeyNames.containsAll(selectColumnsList)) {
@@ -283,46 +280,17 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
         }
       }
 
-      if (!gbKeyNameList.containsAll(indexKeyNames))  {
-        // GB key and idx key are not same, don't remove GroupBy, but still do index scan
-        LOG.info("Index has some non-groupby columns, GroupBy will be"
-            + " preserved by rewrite optimization but original table scan"
-            + " will be replaced with index table scan." );
-        removeGroupBy = false;
-      }
-
-      // This check prevents to remove GroupBy for cases where the GROUP BY key cols are
-      // not simple expressions i.e. simple index key cols (in any order), but some
-      // expressions on the the key cols.
-      // e.g.
-      // 1. GROUP BY key, f(key)
-      //     FUTURE: If f(key) output is functionally dependent on key, then we should support
-      //            it. However we don't have mechanism/info about f() yet to decide that.
-      // 2. GROUP BY idxKey, 1
-      //     FUTURE: GB Key has literals along with idxKeyCols. Develop a rewrite to eliminate the
-      //            literals from GB key.
-      // 3. GROUP BY idxKey, idxKey
-      //     FUTURE: GB Key has dup idxKeyCols. Develop a rewrite to eliminate the dup key cols
-      //            from GB key.
-      if (queryHasGroupBy &&
-          indexKeyNames.size() < gbyKeyCnt) {
-        LOG.info("Group by key has some non-indexed columns, GroupBy will be"
-            + " preserved by rewrite optimization" );
-        removeGroupBy = false;
-      }
-
-
     //Now that we are good to do this optimization, set parameters in context
     //which would be used by transformation procedure as inputs.
 
-    //sub-query is needed only in case of optimizecount and complex gb keys?
-    if(queryHasGenericUdfOnGroupbyKey == false
-        && !(optimizeCount == true && removeGroupBy == false) ) {
+    if(queryHasGroupBy
+        && queryHasGenericUdfOnGroupbyKey == false
+        && !(optimizeCount == true) ) {
       addTable(baseTableName, index.getIndexTableName());
-    }else if(queryHasGenericUdfOnGroupbyKey == true &&
-        aggFuncCnt == 1 &&
-        aggFuncIsNotCount == false){
-      shouldAppendSubquery = true;
+    }else if(queryHasGroupBy
+        && queryHasGenericUdfOnGroupbyKey == true
+        && aggFuncCnt == 1
+        && aggFuncIsNotCount == false){
       addTable(baseTableName, index.getIndexTableName());
     }else{
       LOG.info("No valid criteria met to apply rewrite." );

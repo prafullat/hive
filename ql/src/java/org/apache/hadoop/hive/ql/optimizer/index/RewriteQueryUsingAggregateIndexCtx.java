@@ -26,17 +26,18 @@ import org.apache.hadoop.hive.ql.plan.ExprNodeColumnDesc;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFEvaluator;
 
 public class RewriteQueryUsingAggregateIndexCtx  implements NodeProcessorCtx {
-  private RewriteQueryUsingAggregateIndexCtx(ParseContext parseContext, Hive hiveDb, String indexTableName){
+  private RewriteQueryUsingAggregateIndexCtx(ParseContext parseContext, Hive hiveDb, String indexTableName, String baseTableName){
 
     //this prevents the class from getting instantiated
     this.parseContext = parseContext;
     this.hiveDb = hiveDb;
-    this.indexName = indexTableName;
+    this.indexTableName = indexTableName;
+    this.baseTableName = baseTableName;
     this.opc = parseContext.getOpParseCtx();
   }
 
-  public static RewriteQueryUsingAggregateIndexCtx getInstance(ParseContext parseContext, Hive hiveDb, String indexTableName){
-    return new RewriteQueryUsingAggregateIndexCtx(parseContext, hiveDb, indexTableName);
+  public static RewriteQueryUsingAggregateIndexCtx getInstance(ParseContext parseContext, Hive hiveDb, String indexTableName, String baseTableName){
+    return new RewriteQueryUsingAggregateIndexCtx(parseContext, hiveDb, indexTableName, baseTableName);
   }
 
   //We need to remove the operators from OpParseContext to remove them from the operator tree
@@ -45,7 +46,8 @@ public class RewriteQueryUsingAggregateIndexCtx  implements NodeProcessorCtx {
   private final ParseContext parseContext;
   //We need the GenericUDAFEvaluator for GenericUDAF function "sum" when we append subquery to original operator tree
   private GenericUDAFEvaluator eval = null;
-  private final String indexName;
+  private final String indexTableName;
+  private final String baseTableName;
   private ExprNodeColumnDesc aggrExprNode = null;
 
   public LinkedHashMap<Operator<? extends Serializable>, OpParseContext> getOpc() {
@@ -62,7 +64,7 @@ public class RewriteQueryUsingAggregateIndexCtx  implements NodeProcessorCtx {
   }
 
  public String getIndexName() {
-    return indexName;
+    return indexTableName;
   }
 
  public GenericUDAFEvaluator getEval() {
@@ -103,7 +105,7 @@ public class RewriteQueryUsingAggregateIndexCtx  implements NodeProcessorCtx {
    //opRules.put(new RuleRegExp("R3", "FIL%"), RewriteQueryUsingAggregateIndex.getNewQueryFilterSchemaProc());
    //Manipulates the ExprNodeDesc from GroupByOperator aggregation list, parameters list \
    //as per colList data structure from RewriteIndexSubqueryCtx
-   opRules.put(new RuleRegExp("R4", "GBY%"), RewriteQueryUsingAggregateIndex.getNewQueryGroupbySchemaProc());
+   opRules.put(new RuleRegExp("R3", "GBY%"), RewriteQueryUsingAggregateIndex.getNewQueryGroupbySchemaProc());
 
    // The dispatcher fires the processor corresponding to the closest matching
    // rule and passes the context along
@@ -130,5 +132,9 @@ public class RewriteQueryUsingAggregateIndexCtx  implements NodeProcessorCtx {
      }
    };
  }
+
+public String getBaseTableName() {
+  return baseTableName;
+}
 
 }
