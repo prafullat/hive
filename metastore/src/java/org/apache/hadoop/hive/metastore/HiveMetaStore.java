@@ -31,6 +31,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Timer;
 import java.util.regex.Pattern;
 
@@ -73,6 +74,8 @@ import org.apache.hadoop.hive.metastore.api.UnknownDBException;
 import org.apache.hadoop.hive.metastore.api.UnknownPartitionException;
 import org.apache.hadoop.hive.metastore.api.UnknownTableException;
 import org.apache.hadoop.hive.metastore.events.AddPartitionEvent;
+import org.apache.hadoop.hive.metastore.events.AlterPartitionEvent;
+import org.apache.hadoop.hive.metastore.events.AlterTableEvent;
 import org.apache.hadoop.hive.metastore.events.CreateDatabaseEvent;
 import org.apache.hadoop.hive.metastore.events.CreateTableEvent;
 import org.apache.hadoop.hive.metastore.events.DropDatabaseEvent;
@@ -461,7 +464,7 @@ public class HiveMetaStore extends ThriftHiveMetastore {
       } catch (NoSuchObjectException e) {
         ms.createDatabase(
             new Database(DEFAULT_DATABASE_NAME, DEFAULT_DATABASE_COMMENT,
-                wh.getDefaultDatabasePath(DEFAULT_DATABASE_NAME).toString(), null));
+                getDefaultDatabasePath(DEFAULT_DATABASE_NAME).toString(), null));
       }
       HMSHandler.createDefaultDB = true;
     }
@@ -568,30 +571,52 @@ public class HiveMetaStore extends ThriftHiveMetastore {
       logInfo("Metastore shutdown complete.");
     }
 
+    private static final String DATABASE_WAREHOUSE_SUFFIX = ".db";
+
+    private Path getDefaultDatabasePath(String dbName) throws MetaException {
+      if (dbName.equalsIgnoreCase(DEFAULT_DATABASE_NAME)) {
+        return wh.getWhRoot();
+      }
+      return new Path(wh.getWhRoot(), dbName.toLowerCase() + DATABASE_WAREHOUSE_SUFFIX);
+    }
+
     private void create_database_core(RawStore ms, final Database db)
         throws AlreadyExistsException, InvalidObjectException, MetaException,
         IOException {
       if (!validateName(db.getName())) {
         throw new InvalidObjectException(db.getName() + " is not a valid database name");
       }
+      if (null == db.getLocationUri()) {
+        db.setLocationUri(getDefaultDatabasePath(db.getName()).toString());
+      } else {
+        db.setLocationUri(wh.getDnsPath(new Path(db.getLocationUri())).toString());
+      }
+      Path dbPath = new Path(db.getLocationUri());
       boolean success = false;
+      boolean madeDir = false;
       try {
-        ms.openTransaction();
-        if (null == db.getLocationUri()) {
-          db.setLocationUri(wh.getDefaultDatabasePath(db.getName()).toString());
+        if (!wh.isDir(dbPath)) {
+          if (!wh.mkdirs(dbPath)) {
+            throw new MetaException("Unable to create database path " + dbPath +
+                ", failed to create database " + db.getName());
+          }
+          madeDir = true;
         }
+
+        ms.openTransaction();
         ms.createDatabase(db);
         success = ms.commitTransaction();
       } finally {
         if (!success) {
           ms.rollbackTransaction();
-        } else {
-          wh.mkdirs(new Path(db.getLocationUri()));
+          if (madeDir) {
+            wh.deleteDir(dbPath, true);
+          }
         }
         for (MetaStoreEventListener listener : listeners) {
           listener.onCreateDatabase(new CreateDatabaseEvent(db, success, this));
+        }
       }
-    }
     }
 
     public void create_database(final Database db)
@@ -708,8 +733,8 @@ public class HiveMetaStore extends ThriftHiveMetastore {
         }
         for (MetaStoreEventListener listener : listeners) {
           listener.onDropDatabase(new DropDatabaseEvent(db, success, this));
+        }
       }
-    }
     }
 
     public void drop_database(final String dbName, final boolean deleteData, final boolean cascade)
@@ -921,7 +946,7 @@ public class HiveMetaStore extends ThriftHiveMetastore {
     }
 
     private void create_table_core(final RawStore ms, final Table tbl)
-        throws AlreadyExistsException, MetaException, InvalidObjectException {
+        throws AlreadyExistsException, MetaException, InvalidObjectException, NoSuchObjectException {
 
       if (!MetaStoreUtils.validateName(tbl.getTableName())
           || !MetaStoreUtils.validateColNames(tbl.getSd().getCols())
@@ -945,8 +970,8 @@ public class HiveMetaStore extends ThriftHiveMetastore {
         if (!TableType.VIRTUAL_VIEW.toString().equals(tbl.getTableType())) {
           if (tbl.getSd().getLocation() == null
             || tbl.getSd().getLocation().isEmpty()) {
-            tblPath = wh.getDefaultTablePath(
-              tbl.getDbName(), tbl.getTableName());
+            tblPath = wh.getTablePath(
+                ms.getDatabase(tbl.getDbName()), tbl.getTableName());
           } else {
             if (!isExternal(tbl) && !MetaStoreUtils.isNonNativeTable(tbl)) {
               LOG.warn("Location: " + tbl.getSd().getLocation()
@@ -1320,16 +1345,24 @@ public class HiveMetaStore extends ThriftHiveMetastore {
       logInfo("add_partitions : db=" + db + " tbl=" + tbl);
 
       boolean success = false;
+      Map<Partition,Boolean> addedPartitions = new HashMap<Partition,Boolean>();
       try {
         ms.openTransaction();
         for (Partition part : parts) {
-          add_partition(part);
+          Entry<Partition, Boolean> e = add_partition_core_notxn(ms,part);
+          addedPartitions.put(e.getKey(),e.getValue());
         }
         success = true;
         ms.commitTransaction();
       } finally {
         if (!success) {
           ms.rollbackTransaction();
+          for (Entry<Partition,Boolean> e : addedPartitions.entrySet()){
+            if (e.getValue()){
+              wh.deleteDir(new Path(e.getKey().getSd().getLocation()), true);
+              // we just created this directory - it's not a case of pre-creation, so we nuke
+            }
+          }
         }
       }
       return parts.size();
@@ -1366,12 +1399,23 @@ public class HiveMetaStore extends ThriftHiveMetastore {
       return ret;
     }
 
-    private Partition add_partition_core(final RawStore ms, final Partition part)
-        throws InvalidObjectException, AlreadyExistsException, MetaException {
+    /**
+     * An implementation of add_partition_core that does not commit
+     * transaction or rollback transaction as part of its operation
+     * - it is assumed that will be tended to from outside this call
+     * @param ms
+     * @param part
+     * @return
+     * @throws InvalidObjectException
+     * @throws AlreadyExistsException
+     * @throws MetaException
+     */
+    private Entry<Partition,Boolean> add_partition_core_notxn(
+        final RawStore ms, final Partition part)
+    throws InvalidObjectException, AlreadyExistsException, MetaException {
       boolean success = false, madeDir = false;
       Path partLocation = null;
       try {
-        ms.openTransaction();
         Partition old_part = null;
         try {
           old_part = ms.getPartition(part.getDbName(), part
@@ -1432,20 +1476,39 @@ public class HiveMetaStore extends ThriftHiveMetastore {
             part.getParameters().get(Constants.DDL_TIME) == null) {
           part.putToParameters(Constants.DDL_TIME, Long.toString(time));
         }
-        success = ms.addPartition(part) && ms.commitTransaction();
+        success = ms.addPartition(part);
 
       } finally {
         if (!success) {
-          ms.rollbackTransaction();
           if (madeDir) {
             wh.deleteDir(partLocation, true);
           }
         }
         for(MetaStoreEventListener listener : listeners){
           listener.onAddPartition(new AddPartitionEvent(part, success, this));
+        }
       }
+      Map<Partition,Boolean> returnVal = new HashMap<Partition,Boolean>();
+      returnVal.put(part, madeDir);
+      return returnVal.entrySet().iterator().next();
+    }
+
+    private Partition add_partition_core(final RawStore ms, final Partition part)
+    throws InvalidObjectException, AlreadyExistsException, MetaException {
+      boolean success = false;
+      Partition retPtn = null;
+      try{
+        ms.openTransaction();
+        retPtn = add_partition_core_notxn(ms,part).getKey();
+        // we proceed only if we'd actually succeeded anyway, otherwise,
+        // we'd have thrown an exception
+        success = ms.commitTransaction();
+      }finally{
+        if (!success){
+          ms.rollbackTransaction();
+        }
       }
-      return part;
+      return retPtn;
     }
 
     public Partition add_partition(final Partition part)
@@ -1717,8 +1780,15 @@ public class HiveMetaStore extends ThriftHiveMetastore {
           new_part.putToParameters(Constants.DDL_TIME, Long.toString(System
               .currentTimeMillis() / 1000));
         }
+        Partition oldPart = ms.getPartition(db_name, tbl_name, new_part.getValues());
         ms.alterPartition(db_name, tbl_name, new_part);
+        for (MetaStoreEventListener listener : listeners) {
+          listener.onAlterPartition(new AlterPartitionEvent(oldPart, new_part, true, this));
+        }
       } catch (InvalidObjectException e) {
+        throw new InvalidOperationException("alter is not possible");
+      } catch (NoSuchObjectException e){
+        //old partition does not exist
         throw new InvalidOperationException("alter is not possible");
       }
     }
@@ -1804,20 +1874,25 @@ public class HiveMetaStore extends ThriftHiveMetastore {
         newTable.putToParameters(Constants.DDL_TIME, Long.toString(System
             .currentTimeMillis() / 1000));
       }
-
-
       try {
-        executeWithRetry(new Command<Boolean>() {
+        Table oldt = get_table(dbname, name);
+        boolean success = executeWithRetry(new Command<Boolean>() {
           @Override
           public Boolean run(RawStore ms) throws Exception {
             alterHandler.alterTable(ms, wh, dbname, name, newTable);
             return Boolean.TRUE;
           }
         });
+        for (MetaStoreEventListener listener : listeners) {
+          listener.onAlterTable(new AlterTableEvent(oldt, newTable, success, this));
+        }
       } catch (MetaException e) {
         throw e;
       } catch (InvalidOperationException e) {
         throw e;
+      } catch (NoSuchObjectException e) {
+        //thrown when the table to be altered does not exist
+        throw new InvalidOperationException(e.getMessage());
       } catch (Exception e) {
         assert(e instanceof RuntimeException);
         throw (RuntimeException)e;

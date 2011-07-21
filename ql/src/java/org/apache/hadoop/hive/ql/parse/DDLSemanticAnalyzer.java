@@ -260,8 +260,13 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
       // view from table; unwrap it now
       analyzeAlterTableDropParts((ASTNode) ast.getChild(0), true);
       break;
+    case HiveParser.TOK_ALTERVIEW_RENAME:
+      // for ALTER VIEW RENAME, we wrapped the RENAME to discriminate
+      // view from table; unwrap it now
+      analyzeAlterTableRename(((ASTNode) ast.getChild(0)), true);
+      break;
     case HiveParser.TOK_ALTERTABLE_RENAME:
-      analyzeAlterTableRename(ast);
+      analyzeAlterTableRename(ast, false);
       break;
     case HiveParser.TOK_ALTERTABLE_TOUCH:
       analyzeAlterTableTouch(ast);
@@ -623,6 +628,7 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
     String dbName = unescapeIdentifier(ast.getChild(0).getText());
     boolean ifNotExists = false;
     String dbComment = null;
+    String dbLocation = null;
     Map<String, String> dbProps = null;
 
     for (int i = 1; i < ast.getChildCount(); i++) {
@@ -637,16 +643,16 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
       case HiveParser.TOK_DATABASEPROPERTIES:
         dbProps = DDLSemanticAnalyzer.getProps((ASTNode) childNode.getChild(0));
         break;
+      case HiveParser.TOK_DATABASELOCATION:
+        dbLocation = unescapeSQLString(childNode.getChild(0).getText());
+        break;
       default:
         throw new SemanticException("Unrecognized token in CREATE DATABASE statement");
       }
     }
 
-    CreateDatabaseDesc createDatabaseDesc = new CreateDatabaseDesc();
-    createDatabaseDesc.setName(dbName);
-    createDatabaseDesc.setComment(dbComment);
-    createDatabaseDesc.setIfNotExists(ifNotExists);
-    createDatabaseDesc.setLocationUri(null);
+    CreateDatabaseDesc createDatabaseDesc =
+        new CreateDatabaseDesc(dbName, dbComment, dbLocation, ifNotExists);
     if (dbProps != null) {
       createDatabaseDesc.setDatabaseProperties(dbProps);
     }
@@ -1619,10 +1625,10 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
   }
 
 
-  private void analyzeAlterTableRename(ASTNode ast) throws SemanticException {
+  private void analyzeAlterTableRename(ASTNode ast, boolean expectView) throws SemanticException {
     String tblName = getUnescapedName((ASTNode)ast.getChild(0));
     AlterTableDesc alterTblDesc = new AlterTableDesc(tblName,
-        getUnescapedName((ASTNode)ast.getChild(1)));
+        getUnescapedName((ASTNode)ast.getChild(1)), expectView);
     try {
       Table tab = db.getTable(db.getCurrentDatabase(), tblName, false);
       if (tab != null) {

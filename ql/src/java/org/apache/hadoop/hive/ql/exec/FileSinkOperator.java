@@ -26,8 +26,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Stack;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.common.FileUtils;
@@ -50,10 +52,10 @@ import org.apache.hadoop.hive.serde2.SerDeStats;
 import org.apache.hadoop.hive.serde2.Serializer;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorUtils;
-import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorUtils.ObjectInspectorCopyOption;
 import org.apache.hadoop.hive.serde2.objectinspector.StructField;
 import org.apache.hadoop.hive.serde2.objectinspector.StructObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.SubStructObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorUtils.ObjectInspectorCopyOption;
 import org.apache.hadoop.hive.shims.ShimLoader;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -98,6 +100,7 @@ public class FileSinkOperator extends TerminalOperator<FileSinkDesc> implements
 
   public class FSPaths implements Cloneable {
     Path tmpPath;
+    Path taskOutputTempPath;
     Path[] outPaths;
     Path[] finalPaths;
     RecordWriter[] outWriters;
@@ -108,6 +111,7 @@ public class FileSinkOperator extends TerminalOperator<FileSinkDesc> implements
 
     public FSPaths(Path specPath) {
       tmpPath = Utilities.toTempPath(specPath);
+      taskOutputTempPath = Utilities.toTaskTempPath(specPath);
       outPaths = new Path[numFiles];
       finalPaths = new Path[numFiles];
       outWriters = new RecordWriter[numFiles];
@@ -123,6 +127,14 @@ public class FileSinkOperator extends TerminalOperator<FileSinkDesc> implements
     public void appendTmpPath(String dp) {
       tmpPath = new Path(tmpPath, dp);
     }
+
+    /**
+     * Update OutPath according to tmpPath.
+     */
+    public Path getTaskOutPath(String taskId) {
+      return getOutPath(taskId, this.taskOutputTempPath);
+    }
+
 
     /**
      * Update OutPath according to tmpPath.
@@ -180,14 +192,17 @@ public class FileSinkOperator extends TerminalOperator<FileSinkDesc> implements
     private void commit(FileSystem fs) throws HiveException {
       for (int idx = 0; idx < outPaths.length; ++idx) {
         try {
+          if (bDynParts && !fs.exists(finalPaths[idx].getParent())) {
+            fs.mkdirs(finalPaths[idx].getParent());
+          }
           if (!fs.rename(outPaths[idx], finalPaths[idx])) {
-            throw new HiveException("Unable to rename output to: "
-                + finalPaths[idx]);
+            throw new HiveException("Unable to rename output from: " +
+                outPaths[idx] + " to: " + finalPaths[idx]);
           }
           updateProgress();
         } catch (IOException e) {
-          throw new HiveException(e + "Unable to rename output to: "
-              + finalPaths[idx]);
+          throw new HiveException("Unable to rename output from: " +
+              outPaths[idx] + " to: " + finalPaths[idx], e);
         }
       }
     }
@@ -423,7 +438,7 @@ public class FileSinkOperator extends TerminalOperator<FileSinkDesc> implements
         if (isNativeTable) {
           fsp.finalPaths[filesIdx] = fsp.getFinalPath(taskId);
           LOG.info("Final Path: FS " + fsp.finalPaths[filesIdx]);
-          fsp.outPaths[filesIdx] = fsp.getOutPath(taskId);
+          fsp.outPaths[filesIdx] = fsp.getTaskOutPath(taskId);
           LOG.info("Writing to temp file: FS " + fsp.outPaths[filesIdx]);
         } else {
           fsp.finalPaths[filesIdx] = fsp.outPaths[filesIdx] = specPath;
@@ -614,6 +629,7 @@ public class FileSinkOperator extends TerminalOperator<FileSinkDesc> implements
         }
         fsp2 = new FSPaths(specPath);
         fsp2.tmpPath = new Path(fsp2.tmpPath, dpDir);
+        fsp2.taskOutputTempPath = new Path(fsp2.taskOutputTempPath, dpDir);
         createBucketFiles(fsp2);
         valToPaths.put(dpDir, fsp2);
       }
@@ -636,8 +652,58 @@ public class FileSinkOperator extends TerminalOperator<FileSinkDesc> implements
   protected void fatalErrorMessage(StringBuilder errMsg, long counterCode) {
     errMsg.append("Operator ").append(getOperatorId()).append(" (id=").append(id).append("): ");
     errMsg.append(counterCode > FATAL_ERR_MSG.length - 1 ?
-        "fatal error" :
+        "fatal error." :
           FATAL_ERR_MSG[(int) counterCode]);
+    // number of partitions exceeds limit, list all the partition names
+    if (counterCode > 0) {
+      errMsg.append(lsDir());
+    }
+  }
+
+  // sample the partitions that are generated so that users have a sense of what's causing the error
+  private String lsDir() {
+    String specPath = conf.getDirName();
+    // need to get a JobConf here because it's not passed through at client side
+    JobConf jobConf = new JobConf(ExecDriver.class);
+    Path tmpPath = Utilities.toTempPath(specPath);
+    StringBuilder sb = new StringBuilder("\n");
+    try {
+      DynamicPartitionCtx dpCtx = conf.getDynPartCtx();
+      int numDP = dpCtx.getNumDPCols();
+      FileSystem fs = tmpPath.getFileSystem(jobConf);
+      FileStatus[] status = Utilities.getFileStatusRecurse(tmpPath, numDP, fs);
+      sb.append("Sample of ")
+        .append(Math.min(status.length, 100))
+        .append(" partitions created under ")
+        .append(tmpPath.toString())
+        .append(":\n");
+      for (int i = 0; i < status.length; ++i) {
+        sb.append("\t.../");
+        sb.append(getPartitionSpec(status[i].getPath(), numDP))
+          .append("\n");
+      }
+      sb.append("...\n");
+    } catch (Exception e) {
+      // cannot get the subdirectories, just return the root directory
+      sb.append(tmpPath).append("...\n").append(e.getMessage());
+      e.printStackTrace();
+    } finally {
+      return sb.toString();
+    }
+  }
+
+  private String getPartitionSpec(Path path, int level) {
+    Stack<String> st = new Stack<String>();
+    Path p = path;
+    for (int i = 0; i < level; ++i) {
+      st.push(p.getName());
+      p = p.getParent();
+    }
+    StringBuilder sb = new StringBuilder();
+    while (!st.empty()) {
+      sb.append(st.pop());
+    }
+    return sb.toString();
   }
 
   @Override

@@ -32,6 +32,7 @@ import org.apache.hadoop.hive.metastore.api.InvalidOperationException;
 import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.Partition;
 import org.apache.hadoop.hive.metastore.api.Table;
+import org.apache.hadoop.hive.metastore.api.NoSuchObjectException;
 
 /**
  * Hive specific implementation of alter
@@ -103,18 +104,19 @@ public class HiveAlterHandler implements AlterHandler {
             "partition keys can not be changed.");
       }
 
-      // if this alter is a rename, and user didn't change the
-      // default location (or new location is empty), and table is
-      // not an external table, that means user is asking metastore
-      // to move data to new location corresponding to the new name
+      // if this alter is a rename, the table is not a virtual view, the user
+      // didn't change the default location (or new location is empty), and
+      // table is not an external table, that means useris asking metastore to
+      // move data to the new location corresponding to the new name
       if (rename
+          && !oldt.getTableType().equals(TableType.VIRTUAL_VIEW.toString())
           && (oldt.getSd().getLocation().compareTo(newt.getSd().getLocation()) == 0
             || StringUtils.isEmpty(newt.getSd().getLocation()))
           && !MetaStoreUtils.isExternalTable(oldt)) {
         // that means user is asking metastore to move data to new location
         // corresponding to the new name
         // get new location
-        newTblLoc = wh.getDefaultTablePath(newt.getDbName(), newt.getTableName()).toString();
+        newTblLoc = wh.getTablePath(msdb.getDatabase(newt.getDbName()), newt.getTableName()).toString();
         newt.getSd().setLocation(newTblLoc);
         oldTblLoc = oldt.getSd().getLocation();
         moveData = true;
@@ -175,9 +177,15 @@ public class HiveAlterHandler implements AlterHandler {
       throw new InvalidOperationException(
           "Unable to change partition or table."
               + " Check metastore logs for detailed stack." + e.getMessage());
+    } catch (NoSuchObjectException e) {
+      LOG.debug(e);
+      throw new InvalidOperationException(
+          "Unable to change partition or table. Database " + dbname + " does not exist"
+              + " Check metastore logs for detailed stack." + e.getMessage());
     } finally {
       if (!success) {
         msdb.rollbackTransaction();
+        throw new MetaException("Committing the alter table transaction was not successful.");
       }
       if (success && moveData) {
         // change the file name in hdfs
@@ -204,6 +212,5 @@ public class HiveAlterHandler implements AlterHandler {
         }
       }
     }
-
   }
 }

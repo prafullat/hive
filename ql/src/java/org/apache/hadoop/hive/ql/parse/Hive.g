@@ -38,6 +38,7 @@ TOK_DIR;
 TOK_LOCAL_DIR;
 TOK_TABREF;
 TOK_SUBQUERY;
+TOK_INSERT_INTO;
 TOK_DESTINATION;
 TOK_ALLCOLREF;
 TOK_TABLE_OR_COL;
@@ -186,6 +187,7 @@ TOK_DROPVIEW;
 TOK_ALTERVIEW_PROPERTIES;
 TOK_ALTERVIEW_ADDPARTS;
 TOK_ALTERVIEW_DROPPARTS;
+TOK_ALTERVIEW_RENAME;
 TOK_VIEWPARTCOLS;
 TOK_EXPLAIN;
 TOK_TABLESERIALIZER;
@@ -242,6 +244,7 @@ TOK_SHOWINDEXES;
 TOK_INDEXCOMMENT;
 TOK_DESCDATABASE;
 TOK_DATABASEPROPERTIES;
+TOK_DATABASELOCATION;
 TOK_DBPROPLIST;
 TOK_ALTERDATABASE_PROPERTIES;
 TOK_ALTERTABLE_ALTERPARTS_MERGEFILES;
@@ -374,9 +377,17 @@ createDatabaseStatement
     : KW_CREATE (KW_DATABASE|KW_SCHEMA)
         ifNotExists?
         name=Identifier
+        dbLocation?
         databaseComment?
         (KW_WITH KW_DBPROPERTIES dbprops=dbProperties)?
-    -> ^(TOK_CREATEDATABASE $name ifNotExists? databaseComment? $dbprops?)
+    -> ^(TOK_CREATEDATABASE $name ifNotExists? dbLocation? databaseComment? $dbprops?)
+    ;
+
+dbLocation
+@init { msgs.push("database location specification"); }
+@after { msgs.pop(); }
+    :
+      KW_LOCATION locn=StringLiteral -> ^(TOK_DATABASELOCATION $locn)
     ;
 
 dbProperties
@@ -561,6 +572,8 @@ alterViewStatementSuffix
 @init { msgs.push("alter view statement"); }
 @after { msgs.pop(); }
     : alterViewSuffixProperties
+    | alterStatementSuffixRename
+        -> ^(TOK_ALTERVIEW_RENAME alterStatementSuffixRename)
     | alterStatementSuffixAddPartitions
         -> ^(TOK_ALTERVIEW_ADDPARTS alterStatementSuffixAddPartitions)
     | alterStatementSuffixDropPartitions
@@ -588,7 +601,7 @@ alterDatabaseStatementSuffix
 @after { msgs.pop(); }
     : alterDatabaseSuffixProperties
     ;
-    
+
 alterDatabaseSuffixProperties
 @init { msgs.push("alter database properties statement"); }
 @after { msgs.pop(); }
@@ -1392,7 +1405,9 @@ insertClause
 @init { msgs.push("insert clause"); }
 @after { msgs.pop(); }
    :
-   KW_INSERT KW_OVERWRITE destination -> ^(TOK_DESTINATION destination)
+     KW_INSERT KW_OVERWRITE destination -> ^(TOK_DESTINATION destination)
+   | KW_INSERT KW_INTO KW_TABLE tableOrPartition 
+       -> ^(TOK_INSERT_INTO ^(tableOrPartition))
    ;
 
 destination

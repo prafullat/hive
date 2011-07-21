@@ -715,6 +715,11 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         qbp.setWhrExprForClause(ctx_1.dest, ast);
         break;
 
+      case HiveParser.TOK_INSERT_INTO:
+        String tab_name = getUnescapedName((ASTNode)ast.getChild(0).
+            getChild(0));
+        qbp.addInsertIntoTable(tab_name);
+
       case HiveParser.TOK_DESTINATION:
         // is there a insert in the subquery
         if (qbp.getIsSubQ()) {
@@ -880,6 +885,13 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         } catch (InvalidTableException ite) {
           throw new SemanticException(ErrorMsg.INVALID_TABLE.getMsg(qb
               .getParseInfo().getSrcForAlias(alias)));
+        }
+
+        // Disallow INSERT INTO on bucketized tables
+        if(qb.getParseInfo().isInsertIntoTable(tab_name) &&
+            tab.getNumBuckets() > 0) {
+          throw new SemanticException(ErrorMsg.INSERT_INTO_BUCKETIZED_TABLE.
+              getMsg("Table: " + tab_name));
         }
 
         // We check offline of the table, as if people only select from an
@@ -3726,6 +3738,9 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       if (!isNonNativeTable) {
         ltd = new LoadTableDesc(queryTmpdir, ctx.getExternalTmpFileURI(dest_path.toUri()),
             table_desc, dpCtx);
+        ltd.setReplace(!qb.getParseInfo().isInsertIntoTable(
+            dest_tab.getTableName()));
+
         if (holdDDLTime) {
           LOG.info("this query will not update transient_lastDdlTime!");
           ltd.setHoldDDLTime(true);
@@ -3793,6 +3808,9 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
 
       ltd = new LoadTableDesc(queryTmpdir, ctx.getExternalTmpFileURI(dest_path.toUri()),
           table_desc, dest_part.getSpec());
+      ltd.setReplace(!qb.getParseInfo().isInsertIntoTable(
+          dest_tab.getTableName()));
+
       if (holdDDLTime) {
         try {
           Partition part = db.getPartition(dest_tab, dest_part.getSpec(), false);
@@ -6822,7 +6840,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
             try {
               dumpTable = db.newTable(qb.getTableDesc().getTableName());
               Warehouse wh = new Warehouse(conf);
-              targetPath = wh.getDefaultTablePath(dumpTable.getDbName(), dumpTable
+              targetPath = wh.getTablePath(db.getDatabase(dumpTable.getDbName()), dumpTable
                   .getTableName());
             } catch (HiveException e) {
               throw new SemanticException(e);
@@ -7728,8 +7746,9 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       break;
 
     case CTLT: // create table like <tbl_name>
-      CreateTableLikeDesc crtTblLikeDesc = new CreateTableLikeDesc(tableName,
-          isExt, location, ifNotExists, likeTableName);
+      CreateTableLikeDesc crtTblLikeDesc = new CreateTableLikeDesc(tableName, isExt,
+          storageFormat.inputFormat, storageFormat.outputFormat, location,
+          shared.serde, shared.serdeProps, ifNotExists, likeTableName);
       SessionState.get().setCommandType(HiveOperation.CREATETABLE);
       rootTasks.add(TaskFactory.get(new DDLWork(getInputs(), getOutputs(),
           crtTblLikeDesc), conf));
