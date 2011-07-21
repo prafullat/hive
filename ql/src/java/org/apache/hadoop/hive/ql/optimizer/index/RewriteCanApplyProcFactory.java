@@ -50,7 +50,7 @@ import org.apache.hadoop.hive.ql.plan.GroupByDesc;
 import org.apache.hadoop.hive.ql.plan.ReduceSinkDesc;
 
 /**
- * Factory of methods used by {@link RewriteGBUsingIndex} (see checkEachDAGOperator(..) method)
+ * Factory of methods used by {@link RewriteGBUsingIndex}
  * to determine if the rewrite optimization can be applied to the input query
  *
  */
@@ -61,7 +61,6 @@ public final class RewriteCanApplyProcFactory {
   private RewriteCanApplyProcFactory(){
     //this prevents the class from getting instantiated
   }
-
 
   /**
    * Check for conditions in FilterOperator that do not meet rewrite criteria.
@@ -89,7 +88,6 @@ public final class RewriteCanApplyProcFactory {
       for (String col : colList) {
         canApplyCtx.getPredicateColumnsList().add(col);
       }
-
       return null;
     }
   }
@@ -97,8 +95,6 @@ public final class RewriteCanApplyProcFactory {
  public static CheckFilterProc canApplyOnFilterOperator() {
     return new CheckFilterProc();
   }
-
-
 
    /**
    * Check for conditions in GroupByOperator that do not meet rewrite criteria.
@@ -116,7 +112,6 @@ public final class RewriteCanApplyProcFactory {
        //Also, we do not rewrite for cases when same query branch has multiple group-by constructs
        if(canApplyCtx.getParseContext().getGroupOpToInputTables().containsKey(operator) &&
            canApplyCtx.queryHasGroupBy == false ){
-
          canApplyCtx.queryHasGroupBy = true;
          GroupByDesc conf = (GroupByDesc) operator.getConf();
          ArrayList<AggregationDesc> aggrList = conf.getAggregators();
@@ -168,9 +163,7 @@ public final class RewriteCanApplyProcFactory {
          for (ExprNodeDesc expr : keyList) {
            checkExpression(expr);
          }
-
        }
-
        return null;
      }
 
@@ -234,10 +227,8 @@ public final class RewriteCanApplyProcFactory {
              //Query has order-by only if number of reducers is 1
              canApplyCtx.queryHasOrderBy = true;
            }
-
          }
        }
-
        return null;
      }
    }

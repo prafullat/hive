@@ -77,7 +77,8 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
   public boolean queryHasMultipleTables = false;
 
 
-   //Data structures that are populated in the RewriteCanApplyProcFactory methods to check if the index key meets all criteria
+   //Data structures that are populated in the RewriteCanApplyProcFactory
+   //methods to check if the index key meets all criteria
    Set<String> selectColumnsList = new LinkedHashSet<String>();
    Set<String> predicateColumnsList = new LinkedHashSet<String>();
    Set<String> gbKeyNameList = new LinkedHashSet<String>();
@@ -175,8 +176,9 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
    * {@link RewriteVars} enum.
    *
    * @param topOp
+   * @throws SemanticException
    */
-  void populateRewriteVars(Operator<? extends Serializable> topOp){
+  void populateRewriteVars(Operator<? extends Serializable> topOp) throws SemanticException{
     Map<Rule, NodeProcessor> opRules = new LinkedHashMap<Rule, NodeProcessor>();
     opRules.put(new RuleRegExp("R1", "FIL%"), RewriteCanApplyProcFactory.canApplyOnFilterOperator());
     opRules.put(new RuleRegExp("R2", "GBY%"), RewriteCanApplyProcFactory.canApplyOnGroupByOperator());
@@ -195,8 +197,9 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
     try {
       ogw.startWalking(topNodes, null);
     } catch (SemanticException e) {
-      //let it go
-      LOG.warn("Exception in walking operator tree. Rewrite variables not populated", e);
+      LOG.error("Exception in walking operator tree. Rewrite variables not populated");
+      LOG.error(org.apache.hadoop.util.StringUtils.stringifyException(e));
+      throw new SemanticException(e.getMessage(), e);
     }
 
   }
@@ -282,7 +285,6 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
 
     //Now that we are good to do this optimization, set parameters in context
     //which would be used by transformation procedure as inputs.
-
     if(queryHasGroupBy
         && queryHasGenericUdfOnGroupbyKey == false
         && !(optimizeCount == true) ) {
@@ -296,9 +298,6 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
       LOG.info("No valid criteria met to apply rewrite." );
       return false;
     }
-
     return true;
   }
-
-
 }

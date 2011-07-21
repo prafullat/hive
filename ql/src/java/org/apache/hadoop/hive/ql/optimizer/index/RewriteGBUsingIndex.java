@@ -40,7 +40,6 @@ import org.apache.hadoop.hive.ql.exec.TableScanOperator;
 import org.apache.hadoop.hive.ql.metadata.Hive;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.metadata.Table;
-import org.apache.hadoop.hive.ql.optimizer.RewriteParseContextGenerator;
 import org.apache.hadoop.hive.ql.optimizer.Transform;
 import org.apache.hadoop.hive.ql.parse.ParseContext;
 import org.apache.hadoop.hive.ql.parse.QBParseInfo;
@@ -85,26 +84,27 @@ import org.apache.hadoop.hive.ql.parse.SemanticException;
  *
  *  @see RewriteCanApplyCtx
  *  @see RewriteCanApplyProcFactory
- *  @see RewriteRemoveGroupbyCtx
- *  @see RewriteRemoveGroupbyProcFactory
- *  @see RewriteIndexSubqueryCtx
- *  @see RewriteIndexSubqueryProcFactory
  *  @see RewriteParseContextGenerator
- *
+ *  @see RewriteQueryUsingAggregateIndexCtx
+ *  @see RewriteQueryUsingAggregateIndex
  */
+
 public class RewriteGBUsingIndex implements Transform {
   private ParseContext parseContext;
   private Hive hiveDb;
   private HiveConf hiveConf;
   protected final Log LOG = LogFactory.getLog(this.getClass().getName());
 
-  //Stores the list of top TableScanOperator names for which the rewrite can be applied and the action that needs to be performed for operator tree
-  //starting from this TableScanOperator
+  /*
+   * Stores the list of top TableScanOperator names for which the rewrite
+   * can be applied and the action that needs to be performed for operator tree
+   * starting from this TableScanOperator
+   */
   private final Map<String, RewriteCanApplyCtx> tsOpToProcess = new LinkedHashMap<String, RewriteCanApplyCtx>();
 
   //Name of the current table on which rewrite is being performed
   private String baseTableName = null;
-  private String indexTableName = null;
+  private String indexTableName = null; //index which is used for rewrite
 
   /***************************************Index Validation Variables***************************************/
    final String SUPPORTED_INDEX_TYPE =
@@ -121,15 +121,14 @@ public class RewriteGBUsingIndex implements Transform {
     try {
       hiveDb = Hive.get(hiveConf);
     } catch (HiveException e) {
-      //log and throw
-      LOG.debug("Exception in getting hive conf", e);
-      e.printStackTrace();
+      LOG.error(org.apache.hadoop.util.StringUtils.stringifyException(e));
+      throw new SemanticException(e.getMessage(), e);
     }
 
 
     /* Check if the input query is internal query that inserts in table (eg. ALTER INDEX...REBUILD etc.)
      * We do not apply optimization here.
-     * */
+     */
     if(isQueryInsertToTable()){
         return parseContext;
     }else{
@@ -142,7 +141,6 @@ public class RewriteGBUsingIndex implements Transform {
       }
       return parseContext;
     }
-
   }
 
   /**
@@ -173,64 +171,65 @@ public class RewriteGBUsingIndex implements Transform {
       //We do not apply this optimization for this case as of now.
       return false;
     }else{
-      /*
-       * This code iterates over each TableScanOperator from the topOps map from ParseContext.
-       * For each operator tree originating from this top TableScanOperator, we determine
-       * if the optimization can be applied. If yes, we add the name of the top table to
-       * the tsOpToProcess to apply rewrite later on.
-       * */
+    /*
+     * This code iterates over each TableScanOperator from the topOps map from ParseContext.
+     * For each operator tree originating from this top TableScanOperator, we determine
+     * if the optimization can be applied. If yes, we add the name of the top table to
+     * the tsOpToProcess to apply rewrite later on.
+     * */
       HashMap<TableScanOperator, Table> topToTable = parseContext.getTopToTable();
-      HashMap<String,Operator<? extends Serializable>> topOps = parseContext.getTopOps();
-      Iterator<TableScanOperator> topOpItr = topToTable.keySet().iterator();
-      while(topOpItr.hasNext()){
-        //Context for checking if this optimization can be applied to the input query
-        RewriteCanApplyCtx canApplyCtx = RewriteCanApplyCtx.getInstance(parseContext);
+        HashMap<String,Operator<? extends Serializable>> topOps = parseContext.getTopOps();
+        Iterator<TableScanOperator> topOpItr = topToTable.keySet().iterator();
+        while(topOpItr.hasNext()){
+          //Context for checking if this optimization can be applied to the input query
+          RewriteCanApplyCtx canApplyCtx = RewriteCanApplyCtx.getInstance(parseContext);
 
-        TableScanOperator topOp = topOpItr.next();
-        Table table = topToTable.get(topOp);
-        baseTableName = table.getTableName();
-        HashMap<Index, Set<String>> indexTableMap = getIndexTableInfoForRewrite(topOp);
+          TableScanOperator topOp = topOpItr.next();
+          Table table = topToTable.get(topOp);
+          baseTableName = table.getTableName();
+          HashMap<Index, Set<String>> indexTableMap = getIndexTableInfoForRewrite(topOp);
 
-        if(indexTableMap != null){
-          if(indexTableMap.size() == 0){
-            LOG.debug("No Valid Index Found to apply Rewrite, " +
-                "skipping " + getName() + " optimization" );
-            return false;
-          } else if(indexTableMap.size() > 1){
-            // a cost-based analysis can be done here to choose a single index table amongst all valid indexes to apply rewrite
-            // we leave this decision-making
-            LOG.debug("Table has multiple valid index tables to apply rewrite, skipping " + getName() + " optimization" );
-            return false;
-          }else{
-            canApplyCtx.setBaseTableName(baseTableName);
-            canApplyCtx.populateRewriteVars(topOp);
+          if(indexTableMap != null){
+            if(indexTableMap.size() == 0){
+              LOG.debug("No Valid Index Found to apply Rewrite, " +
+                  "skipping " + getName() + " optimization" );
+              return false;
+            } else if(indexTableMap.size() > 1){
+              // a cost-based analysis can be done here to choose a single index table amongst all valid indexes to apply rewrite
+              // we leave this decision-making
+              LOG.debug("Table has multiple valid index tables to apply rewrite, skipping " + getName() + " optimization" );
+              return false;
+            }else{
+              canApplyCtx.setBaseTableName(baseTableName);
+              canApplyCtx.populateRewriteVars(topOp);
 
-            Iterator<Index> indexMapItr = indexTableMap.keySet().iterator();
-            Index index = null;
-            while(indexMapItr.hasNext()){
-              //we rewrite the original query using the first valid index encountered
-              //this can be changed if we have a better mechanism to decide which index will produce a better rewrite
-              index = indexMapItr.next();
-              canApply = canApplyCtx.isIndexUsableForQueryBranchRewrite(index, indexTableMap.get(index));
-              if(canApply){
-                canApply = checkIfAllRewriteCriteriaIsMet(canApplyCtx);
-                break;
+              Iterator<Index> indexMapItr = indexTableMap.keySet().iterator();
+              Index index = null;
+              while(indexMapItr.hasNext()){
+                //we rewrite the original query using the first valid index encountered
+                //this can be changed if we have a better mechanism to decide which index will produce a better rewrite
+                index = indexMapItr.next();
+                canApply = canApplyCtx.isIndexUsableForQueryBranchRewrite(index, indexTableMap.get(index));
+                if(canApply){
+                  canApply = checkIfAllRewriteCriteriaIsMet(canApplyCtx);
+                  //break here if any valid index is found to apply rewrite
+                  break;
+                }
               }
-            }
-            indexTableName = index.getIndexTableName();
+              indexTableName = index.getIndexTableName();
 
-            if(canApply && topOps.containsValue(topOp)) {
-              Iterator<String> topOpNamesItr = topOps.keySet().iterator();
-              while(topOpNamesItr.hasNext()){
-                String topOpName = topOpNamesItr.next();
-                if(topOps.get(topOpName).equals(topOp)){
-                  tsOpToProcess.put(topOpName, canApplyCtx);
+              if(canApply && topOps.containsValue(topOp)) {
+                Iterator<String> topOpNamesItr = topOps.keySet().iterator();
+                while(topOpNamesItr.hasNext()){
+                  String topOpName = topOpNamesItr.next();
+                  if(topOps.get(topOpName).equals(topOp)){
+                    tsOpToProcess.put(topOpName, canApplyCtx);
+                  }
                 }
               }
             }
-          }
+         }
        }
-     }
     }
 
     if(tsOpToProcess.size() == 0){
@@ -248,9 +247,12 @@ public class RewriteGBUsingIndex implements Transform {
    * @throws SemanticException
    *
    */
+  @SuppressWarnings("unchecked")
   private void rewriteOriginalQuery() throws SemanticException {
-    HashMap<String, Operator<? extends Serializable>> topOpMap = (HashMap<String, Operator<? extends Serializable>>) parseContext.getTopOps().clone();
+    HashMap<String, Operator<? extends Serializable>> topOpMap =
+      (HashMap<String, Operator<? extends Serializable>>) parseContext.getTopOps().clone();
     Iterator<String> tsOpItr = tsOpToProcess.keySet().iterator();
+
     while(tsOpItr.hasNext()){
       baseTableName = tsOpItr.next();
       TableScanOperator topOp = (TableScanOperator) topOpMap.get(baseTableName);
@@ -260,7 +262,6 @@ public class RewriteGBUsingIndex implements Transform {
       parseContext.setOpParseCtx(rewriteQueryCtx.getOpc());
     }
     LOG.info("Finished Rewriting query");
-
   }
 
   private String getName() {
@@ -369,8 +370,8 @@ public class RewriteGBUsingIndex implements Transform {
      indexesOnTable = baseTableMetaData.getAllIndexes(maxNumOfIndexes);
 
    } catch (HiveException e) {
-     //stringify first
      LOG.error("Could not retrieve indexes on the base table. Check logs for error.");
+     LOG.error(org.apache.hadoop.util.StringUtils.stringifyException(e));
      throw new SemanticException(e.getMessage(), e);
    }
 
@@ -425,8 +426,9 @@ public class RewriteGBUsingIndex implements Transform {
   * up the first index that satisfies the rewrite criteria.
   * @param indexTables
   * @return
+  * @throws SemanticException
   */
- HashMap<Index, Set<String>> populateIndexToKeysMap(List<Index> indexTables){
+ HashMap<Index, Set<String>> populateIndexToKeysMap(List<Index> indexTables) throws SemanticException{
    Index index = null;
    Hive hiveInstance = hiveDb;
    HashMap<Index, Set<String>> indexToKeysMap = new LinkedHashMap<Index, Set<String>>();
@@ -456,26 +458,24 @@ public class RewriteGBUsingIndex implements Transform {
          idxTblColNames.add(idxTblCol.getName());
        }
      } catch (HiveException e) {
-     //log and throw new
-       LOG.debug("Got exception while locating index table, " +
+       LOG.error("Got exception while locating index table, " +
            "skipping " + getName() + " optimization" );
-       //return indexToKeysMap;
+       LOG.error(org.apache.hadoop.util.StringUtils.stringifyException(e));
+       throw new SemanticException(e.getMessage(), e);
      }
      assert(idxTblColNames.contains(IDX_BUCKET_COL));
      assert(idxTblColNames.contains(IDX_OFFSETS_ARRAY_COL));
      assert(idxTblColNames.contains(IDX_AGGREGATE_FUNC_COL));
      assert(idxTblColNames.size() == indexKeyNames.size() + 3);
 
-     //we add all index tables which can be used for rewrite and defer the decision of using a particular index for later
-     //this is to allow choosing a index if a better mechanism is designed later to chose a better rewrite
+     /*
+      * we add all index tables which can be used for rewrite and defer the decision of using a particular index for later
+      * this is to allow choosing a index if a better mechanism is designed later to chose a better rewrite
+      */
      indexToKeysMap.put(index, indexKeyNames);
    }
    return indexToKeysMap;
 
  }
-
-
-
-
 }
 

@@ -1,3 +1,21 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.hive.ql.optimizer.index;
 
 import java.io.Serializable;
@@ -24,7 +42,6 @@ import org.apache.hadoop.hive.ql.lib.Node;
 import org.apache.hadoop.hive.ql.lib.NodeProcessor;
 import org.apache.hadoop.hive.ql.lib.NodeProcessorCtx;
 import org.apache.hadoop.hive.ql.metadata.Table;
-import org.apache.hadoop.hive.ql.optimizer.RewriteParseContextGenerator;
 import org.apache.hadoop.hive.ql.parse.OpParseContext;
 import org.apache.hadoop.hive.ql.parse.ParseContext;
 import org.apache.hadoop.hive.ql.parse.RowResolver;
@@ -59,6 +76,9 @@ public final class RewriteQueryUsingAggregateIndex {
       List<Operator<? extends Serializable>> childOps = operator.getChildOperators();
       Operator<? extends Serializable> childOp = childOps.iterator().next();
 
+      //we need to set the colList, outputColumnNames, colExprMap, rowSchema for only that SelectOperator
+      //which precedes the GroupByOperator
+      // the count(literal) or count(indexed_key_column) needs to be replaced by sum(`_aggregateValue1)
       if (childOp instanceof GroupByOperator){
         ArrayList<ExprNodeDesc> selColList = operator.getConf().getColList();
         selColList.add(rewriteQueryCtx.getAggrExprNode());
@@ -68,13 +88,13 @@ public final class RewriteQueryUsingAggregateIndex {
 
         RowSchema selRS = operator.getSchema();
         ArrayList<ColumnInfo> selRSSignature = selRS.getSignature();
+        //Need to create a new type for Column[_aggregateValue] node
         PrimitiveTypeInfo pti = new PrimitiveTypeInfo();
         pti.setTypeName("int");
         ColumnInfo newCI = new ColumnInfo("_aggregateValue", pti, "", false);
         selRSSignature.add(newCI);
         selRS.setSignature(selRSSignature);
         operator.setSchema(selRS);
-
       }
       return null;
     }
@@ -101,6 +121,8 @@ public final class RewriteQueryUsingAggregateIndex {
         alias = (baseTableName.split(":"))[0];
       }
 
+      //Need to remove the original TableScanOperators from these data structures
+      // and add new ones
       HashMap<TableScanOperator, Table>  topToTable =
         rewriteQueryCtx.getParseContext().getTopToTable();
       HashMap<String, Operator<? extends Serializable>>  topOps =
@@ -130,9 +152,8 @@ public final class RewriteQueryUsingAggregateIndex {
       indexTableScanDesc.setStatsAggPrefix(k);
       scanOperator.setConf(indexTableScanDesc);
 
-      RowResolver rr = new RowResolver();
-
       //Construct the new RowResolver for the new TableScanOperator
+      RowResolver rr = new RowResolver();
       try {
         StructObjectInspector rowObjectInspector = (StructObjectInspector) ts.tableHandle.getDeserializer().getObjectInspector();
         List<? extends StructField> fields = rowObjectInspector
@@ -144,9 +165,11 @@ public final class RewriteQueryUsingAggregateIndex {
                   .getFieldObjectInspector()), tableName, false));
         }
       } catch (SerDeException e) {
-        //log error and throw
-        throw new SemanticException(e);
+        LOG.error("Error while creating the RowResolver for new TableScanOperator.");
+        LOG.error(org.apache.hadoop.util.StringUtils.stringifyException(e));
+        throw new SemanticException(e.getMessage(), e);
       }
+
       //Set row resolver for new table
       operatorContext.setRowResolver(rr);
       String tabNameWithAlias = null;
@@ -182,11 +205,8 @@ public final class RewriteQueryUsingAggregateIndex {
    * of the new GroupByOperator.
    *
    * The processor also corrects the RowSchema and group-by keys by replacing the existing internal names with the new internal names.
-   * This change is required as we add a new subquery to the original query which triggers this change.
-   *
    */
   private static class NewQueryGroupbySchemaProc implements NodeProcessor {
-    @SuppressWarnings("deprecation")
     public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx ctx,
         Object... nodeOutputs) throws SemanticException {
       GroupByOperator operator = (GroupByOperator)nd;
@@ -194,7 +214,6 @@ public final class RewriteQueryUsingAggregateIndex {
 
       //We need to replace the GroupByOperator which is in groupOpToInputTables map with the new GroupByOperator
       if(rewriteQueryCtx.getParseContext().getGroupOpToInputTables().containsKey(operator)){
-        //we need to get rid of the alias and construct a query only with the base table name
         ArrayList<ExprNodeDesc> gbyKeyList = operator.getConf().getKeys();
         String gbyKeys = null;
         Iterator<ExprNodeDesc> gbyKeyListItr = gbyKeyList.iterator();
@@ -222,6 +241,7 @@ public final class RewriteQueryUsingAggregateIndex {
         GroupByOperator newGbyOperator = newGbyOpMap.keySet().iterator().next();
         GroupByDesc oldConf = operator.getConf();
 
+        //we need this information to set the correct colList, outputColumnNames in SelectOperator
         ExprNodeColumnDesc aggrExprNode = null;
 
         //Construct the new AggregationDesc to get rid of the current internal names and replace them with new internal names
@@ -235,6 +255,9 @@ public final class RewriteQueryUsingAggregateIndex {
             rewriteQueryCtx.setAggrExprNode(aggrExprNode);
           }
         }
+
+        //Now the GroupByOperator has the new AggregationList; sum(`_aggregateValue`)
+        //instead of count(literal) or count(indexed_key)
         OpParseContext gbyOPC = rewriteQueryCtx.getOpc().get(operator);
         RowResolver gbyRR = newDAGContext.getOpParseCtx().get(newGbyOperator).getRowResolver();
         gbyOPC.setRowResolver(gbyRR);
@@ -253,11 +276,9 @@ public final class RewriteQueryUsingAggregateIndex {
           for (AggregationDesc aggregationDesc : childAggrList) {
             ArrayList<ExprNodeDesc> paraList = aggregationDesc.getParameters();
             List<TypeInfo> parametersTypeInfoList = new ArrayList<TypeInfo>();
-
             for (ExprNodeDesc expr : paraList) {
               parametersTypeInfoList.add(expr.getTypeInfo());
             }
-
             GenericUDAFEvaluator evaluator = FunctionRegistry.getGenericUDAFEvaluator("sum", parametersTypeInfoList, false, false);
             aggregationDesc.setGenericUDAFEvaluator(evaluator);
             aggregationDesc.setGenericUDAFName("sum");
@@ -273,7 +294,4 @@ public final class RewriteQueryUsingAggregateIndex {
   public static NewQueryGroupbySchemaProc getNewQueryGroupbySchemaProc(){
     return new NewQueryGroupbySchemaProc();
   }
-
-
-
 }

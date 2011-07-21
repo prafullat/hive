@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hive.ql.optimizer;
+package org.apache.hadoop.hive.ql.optimizer.index;
 
 import java.io.IOException;
 
@@ -24,7 +24,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.Context;
-import org.apache.hadoop.hive.ql.optimizer.index.RewriteGBUsingIndex;
 import org.apache.hadoop.hive.ql.parse.ASTNode;
 import org.apache.hadoop.hive.ql.parse.BaseSemanticAnalyzer;
 import org.apache.hadoop.hive.ql.parse.ParseContext;
@@ -42,8 +41,6 @@ import org.apache.hadoop.hive.ql.parse.SemanticException;
  * of {@link SemanticAnalyzer} but it creates only the ParseContext for the input query command.
  * It does not optimize or generate map-reduce tasks for the input query.
  * This can be used when you need to create operator tree for an internal query.
- * For example, {@link RewriteGBUsingIndex} uses the {@link RewriteIndexSubqueryProcFactory} methods to
- * generate subquery that scans over index table rather than original table.
  *
  */
 public final class RewriteParseContextGenerator {
@@ -54,8 +51,9 @@ public final class RewriteParseContextGenerator {
    * @param conf
    * @param command
    * @return
+   * @throws SemanticException
    */
-  public static ParseContext generateOperatorTree(HiveConf conf, String command){
+  public static ParseContext generateOperatorTree(HiveConf conf, String command) throws SemanticException{
     Context ctx;
     ParseContext subPCtx = null;
     try {
@@ -71,12 +69,17 @@ public final class RewriteParseContextGenerator {
       subPCtx = ((SemanticAnalyzer) sem).getParseContext();
       LOG.info("Sub-query Semantic Analysis Completed");
     } catch (IOException e) {
-      //same pinch
-      LOG.debug("IOException in generating the operator tree for input command - " + command + " " , e);
+      LOG.error("IOException in generating the operator tree for input command - " + command + " " , e);
+      LOG.error(org.apache.hadoop.util.StringUtils.stringifyException(e));
+      throw new SemanticException(e.getMessage(), e);
     } catch (ParseException e) {
-      LOG.debug("ParseException in generating the operator tree for input command - " + command + " " , e);
+      LOG.error("ParseException in generating the operator tree for input command - " + command + " " , e);
+      LOG.error(org.apache.hadoop.util.StringUtils.stringifyException(e));
+      throw new SemanticException(e.getMessage(), e);
     } catch (SemanticException e) {
-      LOG.debug("SemanticException in generating the operator tree for input command - " + command + " " , e);
+      LOG.error("SemanticException in generating the operator tree for input command - " + command + " " , e);
+      LOG.error(org.apache.hadoop.util.StringUtils.stringifyException(e));
+      throw new SemanticException(e.getMessage(), e);
     }
     return subPCtx;
 
