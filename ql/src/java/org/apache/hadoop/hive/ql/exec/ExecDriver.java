@@ -108,6 +108,7 @@ public class ExecDriver extends Task<MapredWork> implements Serializable, Hadoop
     this.jobExecHelper = new HadoopJobExecHelper(job, console, this, this);
   }
 
+  @Override
   public boolean requireLock() {
     return true;
   }
@@ -203,6 +204,44 @@ public class ExecDriver extends Task<MapredWork> implements Serializable, Hadoop
       }
     }
     return false;
+  }
+
+  protected void createTmpDirs() throws IOException {
+    // fix up outputs
+    Map<String, ArrayList<String>> pa = work.getPathToAliases();
+    if (pa != null) {
+      ArrayList<Operator<? extends Serializable>> opList = new ArrayList<Operator<? extends Serializable>>();
+
+      if (work.getReducer() != null) {
+        opList.add(work.getReducer());
+      }
+
+      for (List<String> ls : pa.values()) {
+        for (String a : ls) {
+          opList.add(work.getAliasToWork().get(a));
+
+          while (!opList.isEmpty()) {
+            Operator<? extends Serializable> op = opList.remove(0);
+
+            if (op instanceof FileSinkOperator) {
+              FileSinkDesc fdesc = ((FileSinkOperator) op).getConf();
+              String tempDir = fdesc.getDirName();
+
+              if (tempDir != null) {
+                Path tempPath = Utilities.toTempPath(new Path(tempDir));
+                LOG.info("Making Temp Directory: " + tempDir);
+                FileSystem fs = tempPath.getFileSystem(job);
+                fs.mkdirs(tempPath);
+              }
+            }
+
+            if (op.getChildOperators() != null) {
+              opList.addAll(op.getChildOperators());
+            }
+          }
+        }
+      }
+    }
   }
 
    /**
@@ -404,6 +443,8 @@ public class ExecDriver extends Task<MapredWork> implements Serializable, Hadoop
           statsPublisher.init(job); // creating stats table if not exists
         }
       }
+
+      this.createTmpDirs();
 
       // Finally SUBMIT the JOB!
       rj = jc.submitJob(job);
@@ -743,12 +784,15 @@ public class ExecDriver extends Task<MapredWork> implements Serializable, Hadoop
     // The input file does not exist, replace it by a empty file
     Class<? extends HiveOutputFormat> outFileFormat = null;
     boolean nonNative = true;
+    Properties props;
     if (isEmptyPath) {
       PartitionDesc partDesc = work.getPathToPartitionInfo().get(path);
+      props = partDesc.getProperties();
       outFileFormat = partDesc.getOutputFileFormatClass();
       nonNative = partDesc.getTableDesc().isNonNative();
     } else {
       TableDesc tableDesc = work.getAliasToPartnInfo().get(alias).getTableDesc();
+      props = tableDesc.getProperties();
       outFileFormat = tableDesc.getOutputFileFormatClass();
       nonNative = tableDesc.isNonNative();
     }
@@ -802,7 +846,7 @@ public class ExecDriver extends Task<MapredWork> implements Serializable, Hadoop
 
     String onefile = newPath.toString();
     RecordWriter recWriter = outFileFormat.newInstance().getHiveRecordWriter(job, newFilePath,
-        Text.class, false, new Properties(), null);
+        Text.class, false, props, null);
     recWriter.close(false);
     FileInputFormat.addInputPaths(job, onefile);
     return numEmptyPaths;
