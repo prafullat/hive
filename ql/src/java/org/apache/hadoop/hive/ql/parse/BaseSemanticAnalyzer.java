@@ -601,21 +601,15 @@ public abstract class BaseSemanticAnalyzer {
     public SpecType specType;
 
     public tableSpec(Hive db, HiveConf conf, String tableName) throws SemanticException {
-       this.tableName  = tableName;
-
-       try {
+      this.tableName  = tableName;
+      try {
         this.tableHandle = db.getTable(tableName);
       } catch (HiveException e) {
-        //XTODO: Throw semantic exception here
-        throw new SemanticException(ErrorMsg.GENERIC_ERROR.getMsg(tableName), e);
+          throw new SemanticException(ErrorMsg.GENERIC_ERROR.getMsg(tableName), e);
       }
-     this.specType = SpecType.TABLE_ONLY;
+      this.specType = SpecType.TABLE_ONLY;
+    }
 
-    }
-    private Table getTable(String tableName2) {
-      // TODO Auto-generated method stub
-      return null;
-    }
     public tableSpec(Hive db, HiveConf conf, ASTNode ast)
         throws SemanticException {
       this(db, conf, ast, true, false);
