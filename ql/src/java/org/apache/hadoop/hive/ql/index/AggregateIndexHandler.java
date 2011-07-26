@@ -57,8 +57,40 @@ public class AggregateIndexHandler extends TableBasedIndexHandler {
         indexTblCols.add(bucketFileName);
         FieldSchema offSets = new FieldSchema("_offsets", "array<bigint>", "");
         indexTblCols.add(offSets);
-        FieldSchema countkey = new FieldSchema("_aggregateValue", "int", "");
-        indexTblCols.add(countkey);
+        Map<String,String> paraList = index.getParameters();
+        if(paraList != null){
+          Iterator<String> paraKeys = paraList.keySet().iterator();
+          while(paraKeys.hasNext()){
+            String propName = paraKeys.next();
+            String propValue = paraList.get(propName);
+
+            if(propName.equals("AGGREGATES")){
+              if(propValue.contains(",")){
+                String[] aggFuncs = propValue.split(",");
+                for (int i = 0; i < aggFuncs.length; i++) {
+                  String[] aggFuncCol = aggFuncs[i].split("\\(");
+                  String funcName = aggFuncCol[0];
+                  String colName = aggFuncCol[1].substring(0, aggFuncCol[1].length() - 1);
+                  if(colName.contains("*")){
+                    colName = colName.replace("*", "ALL");
+                  }
+
+                  FieldSchema aggregationFunction = new FieldSchema("_" + funcName + "_Of_" + colName + "", "int", "");
+                  indexTblCols.add(aggregationFunction);
+                }
+              }else{
+                String[] aggFuncCol = propValue.split("\\(");
+                String funcName = aggFuncCol[0];
+                String colName = aggFuncCol[1].substring(0, aggFuncCol[1].length() - 1);
+                if(colName.contains("*")){
+                  colName = colName.replace("*", "ALL");
+                }
+                FieldSchema aggregationFunction = new FieldSchema("_" + funcName + "_Of_" + colName + "", "int", "");
+                indexTblCols.add(aggregationFunction);
+              }
+            }
+          }
+        }
         indexTable.setSd(indexTableSd);
       }
     }
@@ -102,35 +134,18 @@ public class AggregateIndexHandler extends TableBasedIndexHandler {
 
       assert indexField.size()==1;
 
-      Iterator<FieldSchema> fsItr = indexField.iterator();
-      String indexCol = null;
-      while(fsItr.hasNext()){
-        FieldSchema indexColFs = fsItr.next();
-        indexCol = indexColFs.getName();
-      }
-
-      String aggFunc = null;
-      String funcOn = null;
-      Map<String, String> propMap = index.getParameters();
-      Iterator<String> propMapItr = propMap.keySet().iterator();
-      while(propMapItr.hasNext()){
-        String propKey = propMapItr.next();
-        if(propKey.equals("aggFunc")){
-          aggFunc = propMap.get(propKey);
-        }
-        if(propKey.equals("aggFuncKey")){
-          funcOn = propMap.get(propKey);
-        }
-        if(aggFunc != null && funcOn != null){
-          break;
+      Map<String,String> paraList = index.getParameters();
+      if(paraList != null){
+        Iterator<String> paraKeys = paraList.keySet().iterator();
+        while(paraKeys.hasNext()){
+          String propName = paraKeys.next();
+          String propValue = paraList.get(propName);
+          if(propName.equals("AGGREGATES")){
+            command.append(propValue + " ");
+          }
         }
       }
 
-      if(indexCol.equals(funcOn)){
-        command.append(aggFunc + "(");
-        command.append(indexCols);
-        command.append(") ");
-      }
 
 
       command.append(" FROM " + HiveUtils.unparseIdentifier(baseTableName) );

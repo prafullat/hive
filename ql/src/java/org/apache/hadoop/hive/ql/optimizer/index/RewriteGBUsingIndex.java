@@ -111,7 +111,6 @@ public class RewriteGBUsingIndex implements Transform {
     "org.apache.hadoop.hive.ql.index.AggregateIndexHandler";
    final String IDX_BUCKET_COL = "_bucketname";
    final String IDX_OFFSETS_ARRAY_COL = "_offsets";
-   final String IDX_AGGREGATE_FUNC_COL = "_aggregateValue";
 
 
   @Override
@@ -213,6 +212,15 @@ public class RewriteGBUsingIndex implements Transform {
                 if(canApply){
                   canApply = checkIfAllRewriteCriteriaIsMet(canApplyCtx);
                   //break here if any valid index is found to apply rewrite
+                  if(canApply){
+                    //check if aggregation function is set. If not, set it using the only indexed column
+                    if(canApplyCtx.getAggFunction() == null){
+                      //strip of the start and end braces [...]
+                      String aggregationFunction = indexTableMap.get(index).toString();
+                      aggregationFunction = aggregationFunction.substring(1, aggregationFunction.length() - 1);
+                      canApplyCtx.setAggFunction("_count_Of_" + aggregationFunction + "");
+                    }
+                  }
                   break;
                 }
               }
@@ -255,8 +263,11 @@ public class RewriteGBUsingIndex implements Transform {
 
     while(tsOpItr.hasNext()){
       baseTableName = tsOpItr.next();
+      RewriteCanApplyCtx canApplyCtx = tsOpToProcess.get(baseTableName);
       TableScanOperator topOp = (TableScanOperator) topOpMap.get(baseTableName);
-      RewriteQueryUsingAggregateIndexCtx rewriteQueryCtx = RewriteQueryUsingAggregateIndexCtx.getInstance(parseContext, hiveDb, indexTableName, baseTableName);
+      RewriteQueryUsingAggregateIndexCtx rewriteQueryCtx =
+        RewriteQueryUsingAggregateIndexCtx.getInstance(parseContext, hiveDb,
+            indexTableName, baseTableName, canApplyCtx.getAggFunction());
       rewriteQueryCtx.invokeRewriteQueryProc(topOp);
       parseContext = rewriteQueryCtx.getParseContext();
       parseContext.setOpParseCtx(rewriteQueryCtx.getOpc());
@@ -444,6 +455,7 @@ public class RewriteGBUsingIndex implements Transform {
        indexKeyNames.add(fieldSchema.getName());
      }
 
+     assert indexKeyNames.size()==1;
 
      // Check that the index schema is as expected. This code block should
      // catch problems of this rewrite breaking when the AggregateIndexHandler
@@ -465,8 +477,6 @@ public class RewriteGBUsingIndex implements Transform {
      }
      assert(idxTblColNames.contains(IDX_BUCKET_COL));
      assert(idxTblColNames.contains(IDX_OFFSETS_ARRAY_COL));
-     assert(idxTblColNames.contains(IDX_AGGREGATE_FUNC_COL));
-     assert(idxTblColNames.size() == indexKeyNames.size() + 3);
 
      /*
       * we add all index tables which can be used for rewrite and defer the decision of using a particular index for later

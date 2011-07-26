@@ -78,7 +78,7 @@ public final class RewriteQueryUsingAggregateIndex {
 
       //we need to set the colList, outputColumnNames, colExprMap, rowSchema for only that SelectOperator
       //which precedes the GroupByOperator
-      // the count(literal) or count(indexed_key_column) needs to be replaced by sum(`_aggregateValue1)
+      // the count(literal) or count(indexed_key_column) needs to be replaced by sum(`_count_Of_indexed_key_column`)
       if (childOp instanceof GroupByOperator){
         ArrayList<ExprNodeDesc> selColList = operator.getConf().getColList();
         selColList.add(rewriteQueryCtx.getAggrExprNode());
@@ -88,10 +88,10 @@ public final class RewriteQueryUsingAggregateIndex {
 
         RowSchema selRS = operator.getSchema();
         ArrayList<ColumnInfo> selRSSignature = selRS.getSignature();
-        //Need to create a new type for Column[_aggregateValue] node
+        //Need to create a new type for Column[_count_Of_indexed_key_column] node
         PrimitiveTypeInfo pti = new PrimitiveTypeInfo();
         pti.setTypeName("int");
-        ColumnInfo newCI = new ColumnInfo("_aggregateValue", pti, "", false);
+        ColumnInfo newCI = new ColumnInfo(rewriteQueryCtx.getAggregateFunction(), pti, "", false);
         selRSSignature.add(newCI);
         selRS.setSignature(selRSSignature);
         operator.setSchema(selRS);
@@ -230,7 +230,7 @@ public final class RewriteQueryUsingAggregateIndex {
 
 
           //the query contains the sum aggregation GenericUDAF
-        String selReplacementCommand = "select sum(`_aggregateValue`) from " + rewriteQueryCtx.getIndexName()
+        String selReplacementCommand = "select sum(`" + rewriteQueryCtx.getAggregateFunction() + "`) from " + rewriteQueryCtx.getIndexName()
           + " group by " + gbyKeys + " ";
         //create a new ParseContext for the query to retrieve its operator tree, and the required GroupByOperator from it
         ParseContext newDAGContext = RewriteParseContextGenerator.generateOperatorTree(rewriteQueryCtx.getParseContext().getConf(),

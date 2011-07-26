@@ -86,7 +86,8 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
 
 
    private final ParseContext parseContext;
-   private String baseTableName = "";
+   private String baseTableName;
+   private String aggFunction;
 
    void resetCanApplyCtx(){
      aggFuncCnt = 0;
@@ -111,6 +112,7 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
      gbKeyNameList.clear();
      aggFuncColList.clear();
      baseTableName = "";
+     aggFunction = "";
    }
 
   public Set<String> getSelectColumnsList() {
@@ -299,5 +301,13 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
       return false;
     }
     return true;
+  }
+
+  public void setAggFunction(String aggFunction) {
+    this.aggFunction = aggFunction;
+  }
+
+  public String getAggFunction() {
+    return aggFunction;
   }
 }

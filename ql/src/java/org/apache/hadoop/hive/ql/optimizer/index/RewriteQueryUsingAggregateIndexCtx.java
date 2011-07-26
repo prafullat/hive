@@ -43,16 +43,19 @@ import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFEvaluator;
 
 public class RewriteQueryUsingAggregateIndexCtx  implements NodeProcessorCtx {
 
-  private RewriteQueryUsingAggregateIndexCtx(ParseContext parseContext, Hive hiveDb, String indexTableName, String baseTableName){
+  private RewriteQueryUsingAggregateIndexCtx(ParseContext parseContext, Hive hiveDb,
+      String indexTableName, String baseTableName, String aggregateFunction){
     this.parseContext = parseContext;
     this.hiveDb = hiveDb;
     this.indexTableName = indexTableName;
     this.baseTableName = baseTableName;
+    this.aggregateFunction = aggregateFunction;
     this.opc = parseContext.getOpParseCtx();
   }
 
-  public static RewriteQueryUsingAggregateIndexCtx getInstance(ParseContext parseContext, Hive hiveDb, String indexTableName, String baseTableName){
-    return new RewriteQueryUsingAggregateIndexCtx(parseContext, hiveDb, indexTableName, baseTableName);
+  public static RewriteQueryUsingAggregateIndexCtx getInstance(ParseContext parseContext,
+      Hive hiveDb, String indexTableName, String baseTableName, String aggregateFunction){
+    return new RewriteQueryUsingAggregateIndexCtx(parseContext, hiveDb, indexTableName, baseTableName, aggregateFunction);
   }
 
 
@@ -63,6 +66,7 @@ public class RewriteQueryUsingAggregateIndexCtx  implements NodeProcessorCtx {
   private GenericUDAFEvaluator eval = null;
   private final String indexTableName;
   private final String baseTableName;
+  private final String aggregateFunction;
   private ExprNodeColumnDesc aggrExprNode = null;
 
   public LinkedHashMap<Operator<? extends Serializable>, OpParseContext> getOpc() {
@@ -142,5 +146,9 @@ public class RewriteQueryUsingAggregateIndexCtx  implements NodeProcessorCtx {
 
   public String getBaseTableName() {
     return baseTableName;
+  }
+
+  public String getAggregateFunction() {
+    return aggregateFunction;
   }
 }

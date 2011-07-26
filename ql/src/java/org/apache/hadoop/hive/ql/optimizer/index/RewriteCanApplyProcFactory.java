@@ -133,7 +133,9 @@ public final class RewriteCanApplyProcFactory {
                  }else if(para.size() == 0){
                    //count(*) case
                    canApplyCtx.countOnAllCols = true;
+                   canApplyCtx.setAggFunction("_count_Of_ALL");
                  }else{
+                   assert para.size()==1;
                    for(int i=0; i< para.size(); i++){
                      ExprNodeDesc expr = para.get(i);
                      if(expr instanceof ExprNodeColumnDesc){
@@ -145,6 +147,7 @@ public final class RewriteCanApplyProcFactory {
                        //Add the columns to RewriteCanApplyCtx's aggFuncColList list to check later
                        //if columns contained in agg func are index key columns
                        canApplyCtx.getAggFuncColList().add(((ExprNodeColumnDesc) expr).getColumn());
+                       canApplyCtx.setAggFunction("_count_Of_" + ((ExprNodeColumnDesc) expr).getColumn() + "");
                      }
                    }
                  }
@@ -177,8 +180,7 @@ public final class RewriteCanApplyProcFactory {
          List<ExprNodeDesc> childExprs = funcExpr.getChildExprs();
          for (ExprNodeDesc childExpr : childExprs) {
            if(childExpr instanceof ExprNodeColumnDesc){
-             //Set QUERY_HAS_GENERICUDF_ON_GROUPBY_KEY to true which is used later to determine
-             //whether the rewrite is a 'append subquery' case
+             //Set QUERY_HAS_GENERICUDF_ON_GROUPBY_KEY to true
              //this is true in case the group-by key is a GenericUDF like year,month etc
              canApplyCtx.queryHasGenericUdfOnGroupbyKey = true;
              canApplyCtx.getGbKeyNameList().addAll(expr.getCols());
