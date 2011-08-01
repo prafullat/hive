@@ -26,8 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.ql.exec.ColumnInfo;
 import org.apache.hadoop.hive.ql.exec.ExtractOperator;
 import org.apache.hadoop.hive.ql.exec.FileSinkOperator;
@@ -43,6 +41,7 @@ import org.apache.hadoop.hive.ql.lib.NodeProcessorCtx;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
 import org.apache.hadoop.hive.ql.plan.AggregationDesc;
 import org.apache.hadoop.hive.ql.plan.ExprNodeColumnDesc;
+import org.apache.hadoop.hive.ql.plan.ExprNodeConstantDesc;
 import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
 import org.apache.hadoop.hive.ql.plan.ExprNodeGenericFuncDesc;
 import org.apache.hadoop.hive.ql.plan.FilterDesc;
@@ -51,11 +50,10 @@ import org.apache.hadoop.hive.ql.plan.ReduceSinkDesc;
 
 /**
  * Factory of methods used by {@link RewriteGBUsingIndex}
- * to determine if the rewrite optimization can be applied to the input query
+ * to determine if the rewrite optimization can be applied to the input query.
  *
  */
 public final class RewriteCanApplyProcFactory {
-  protected final static Log LOG = LogFactory.getLog(RewriteCanApplyProcFactory.class.getName());
   private static RewriteCanApplyCtx canApplyCtx = null;
 
   private RewriteCanApplyProcFactory(){
@@ -76,12 +74,12 @@ public final class RewriteCanApplyProcFactory {
       //This represents the comparison operator
       ExprNodeGenericFuncDesc oldengfd = (ExprNodeGenericFuncDesc) conf.getPredicate();
       if(oldengfd == null){
-        canApplyCtx.whrClauseColsFetchException = true;
+        canApplyCtx.setWhrClauseColsFetchException(true);
       }
       //The predicate should have valid left and right columns
       List<String> colList = oldengfd.getCols();
       if(colList == null || colList.size() == 0){
-        canApplyCtx.whrClauseColsFetchException = true;
+        canApplyCtx.setWhrClauseColsFetchException(true);
       }
       //Add the predicate columns to RewriteCanApplyCtx's predColRefs list to check later
       //if index keys contain all filter predicate columns and vice-a-versa
@@ -107,47 +105,55 @@ public final class RewriteCanApplyProcFactory {
          Object... nodeOutputs) throws SemanticException {
        GroupByOperator operator = (GroupByOperator)nd;
        canApplyCtx = (RewriteCanApplyCtx)ctx;
-       //for each group-by clause in query, only one GroupByOperator of the GBY-RS-GBY sequence is stored in  getGroupOpToInputTables
+       //for each group-by clause in query, only one GroupByOperator of t
+       //he GBY-RS-GBY sequence is stored in  getGroupOpToInputTables
        //we need to process only this operator
        //Also, we do not rewrite for cases when same query branch has multiple group-by constructs
        if(canApplyCtx.getParseContext().getGroupOpToInputTables().containsKey(operator) &&
-           canApplyCtx.queryHasGroupBy == false ){
-         canApplyCtx.queryHasGroupBy = true;
+           !canApplyCtx.isQueryHasGroupBy()){
+         canApplyCtx.setQueryHasGroupBy(true);
          GroupByDesc conf = (GroupByDesc) operator.getConf();
          ArrayList<AggregationDesc> aggrList = conf.getAggregators();
          if(aggrList != null && aggrList.size() > 0){
              for (AggregationDesc aggregationDesc : aggrList) {
-               canApplyCtx.aggFuncCnt++;
+               canApplyCtx.setAggFuncCnt(canApplyCtx.getAggFuncCnt() + 1);
                //In the current implementation, we do not support more than 1 agg funcs in group-by
-               if(canApplyCtx.aggFuncCnt > 1) {
+               if(canApplyCtx.getAggFuncCnt() > 1) {
                  return false;
                }
                String aggFunc = aggregationDesc.getGenericUDAFName();
-               if(!aggFunc.equals("count")){
-                 canApplyCtx.aggFuncIsNotCount = true;
+               if(!("count".equals(aggFunc))){
+                 canApplyCtx.setAggFuncIsNotCount(true);
                }else{
                 ArrayList<ExprNodeDesc> para = aggregationDesc.getParameters();
                 //for a valid aggregation, it needs to have non-null parameter list
                  if(para == null){
-                   canApplyCtx.aggFuncColsFetchException = true;
+                   canApplyCtx.setAggFuncColsFetchException(true);
                  }else if(para.size() == 0){
                    //count(*) case
-                   canApplyCtx.countOnAllCols = true;
+                   canApplyCtx.setCountOnAllCols(true);
                    canApplyCtx.setAggFunction("_count_Of_ALL");
                  }else{
                    assert para.size()==1;
                    for(int i=0; i< para.size(); i++){
                      ExprNodeDesc expr = para.get(i);
                      if(expr instanceof ExprNodeColumnDesc){
-                       //Add the columns to RewriteCanApplyCtx's selectColumnsList list to check later
-                       //if index keys contain all select clause columns and vice-a-versa
-                       //we get the select column 'actual' names only here if we have a agg func along with group-by
+                       //Add the columns to RewriteCanApplyCtx's selectColumnsList list
+                       //to check later if index keys contain all select clause columns
+                       //and vice-a-versa. We get the select column 'actual' names only here
+                       //if we have a agg func along with group-by
                        //SelectOperator has internal names in its colList data structure
-                       canApplyCtx.getSelectColumnsList().add(((ExprNodeColumnDesc) expr).getColumn());
+                       canApplyCtx.getSelectColumnsList().add(
+                           ((ExprNodeColumnDesc) expr).getColumn());
                        //Add the columns to RewriteCanApplyCtx's aggFuncColList list to check later
                        //if columns contained in agg func are index key columns
-                       canApplyCtx.getAggFuncColList().add(((ExprNodeColumnDesc) expr).getColumn());
-                       canApplyCtx.setAggFunction("_count_Of_" + ((ExprNodeColumnDesc) expr).getColumn() + "");
+                       canApplyCtx.getAggFuncColList().add(
+                           ((ExprNodeColumnDesc) expr).getColumn());
+                       canApplyCtx.setAggFunction("_count_Of_" +
+                           ((ExprNodeColumnDesc) expr).getColumn() + "");
+                     }else if(expr instanceof ExprNodeConstantDesc){
+                       canApplyCtx.setCountOfOne(true);
+                       return false;
                      }
                    }
                  }
@@ -158,11 +164,8 @@ public final class RewriteCanApplyProcFactory {
          //we need to have non-null group-by keys for a valid group-by operator
          ArrayList<ExprNodeDesc> keyList = conf.getKeys();
          if(keyList == null || keyList.size() == 0){
-           canApplyCtx.gbyKeysFetchException = true;
+           canApplyCtx.setGbyKeysFetchException(true);
          }
-         //sets the no. of keys in group by to be used later to determine if group-by has non-index cols
-         //group-by needs to be preserved in such cases (eg.group-by using a function on index key. This is the subquery append case)
-         canApplyCtx.gbyKeyCnt = keyList.size();
          for (ExprNodeDesc expr : keyList) {
            checkExpression(expr);
          }
@@ -180,9 +183,6 @@ public final class RewriteCanApplyProcFactory {
          List<ExprNodeDesc> childExprs = funcExpr.getChildExprs();
          for (ExprNodeDesc childExpr : childExprs) {
            if(childExpr instanceof ExprNodeColumnDesc){
-             //Set QUERY_HAS_GENERICUDF_ON_GROUPBY_KEY to true
-             //this is true in case the group-by key is a GenericUDF like year,month etc
-             canApplyCtx.queryHasGenericUdfOnGroupbyKey = true;
              canApplyCtx.getGbKeyNameList().addAll(expr.getCols());
              canApplyCtx.getSelectColumnsList().add(((ExprNodeColumnDesc) childExpr).getColumn());
            }else if(childExpr instanceof ExprNodeGenericFuncDesc){
@@ -220,14 +220,14 @@ public final class RewriteCanApplyProcFactory {
            if(nr == -1){
              if(partCols != null && partCols.size() > 0){
                //query has distribute-by is there are non-zero partition columns
-               canApplyCtx.queryHasDistributeBy = true;
+               canApplyCtx.setQueryHasDistributeBy(true);
              }else{
                //we do not need partition columns in case of sort-by
-               canApplyCtx.queryHasSortBy = true;
+               canApplyCtx.setQueryHasSortBy(true);
              }
            }else if(nr == 1){
              //Query has order-by only if number of reducers is 1
-             canApplyCtx.queryHasOrderBy = true;
+             canApplyCtx.setQueryHasOrderBy(true);
            }
          }
        }
@@ -261,7 +261,8 @@ public final class RewriteCanApplyProcFactory {
            internalToAlias.put(columnInfo.getInternalName(), columnInfo.getAlias());
          }
 
-         //if FilterOperator predicate has internal column names, we need to retrieve the 'actual' column names to
+         //if FilterOperator predicate has internal column names,
+         //we need to retrieve the 'actual' column names to
          //check if index keys contain all filter predicate columns and vice-a-versa
          Iterator<String> predItr = canApplyCtx.getPredicateColumnsList().iterator();
          while(predItr.hasNext()){

@@ -57,11 +57,11 @@ POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._bucketname SIMPLE
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._count_of_l_shipdate EXPRESSION [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
-PREHOOK: query: explain select l_shipdate, count(1)
+PREHOOK: query: explain select l_shipdate, count(l_shipdate)
 from lineitem
 group by l_shipdate
 PREHOOK: type: QUERY
-POSTHOOK: query: explain select l_shipdate, count(1)
+POSTHOOK: query: explain select l_shipdate, count(l_shipdate)
 from lineitem
 group by l_shipdate
 POSTHOOK: type: QUERY
@@ -70,7 +70,7 @@ POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._count_of_l_shipda
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME lineitem))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL l_shipdate)) (TOK_SELEXPR (TOK_FUNCTION count 1))) (TOK_GROUPBY (TOK_TABLE_OR_COL l_shipdate))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME lineitem))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL l_shipdate)) (TOK_SELEXPR (TOK_FUNCTION count (TOK_TABLE_OR_COL l_shipdate)))) (TOK_GROUPBY (TOK_TABLE_OR_COL l_shipdate))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -88,7 +88,7 @@ STAGE PLANS:
                     expr: l_shipdate
                     type: string
                     expr: _count_of_l_shipdate
-                    type: int
+                    type: bigint
               outputColumnNames: l_shipdate, _count_of_l_shipdate
               Group By Operator
                 aggregations:
@@ -142,13 +142,13 @@ STAGE PLANS:
 
 PREHOOK: query: explain select year(l_shipdate) as year,
         month(l_shipdate) as month,
-        count(1) as monthly_shipments
+        count(l_shipdate) as monthly_shipments
 from lineitem
 group by year(l_shipdate), month(l_shipdate)
 PREHOOK: type: QUERY
 POSTHOOK: query: explain select year(l_shipdate) as year,
         month(l_shipdate) as month,
-        count(1) as monthly_shipments
+        count(l_shipdate) as monthly_shipments
 from lineitem
 group by year(l_shipdate), month(l_shipdate)
 POSTHOOK: type: QUERY
@@ -157,7 +157,7 @@ POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._count_of_l_shipda
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME lineitem))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) year) (TOK_SELEXPR (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate)) month) (TOK_SELEXPR (TOK_FUNCTION count 1) monthly_shipments)) (TOK_GROUPBY (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate)))))
+  (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME lineitem))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) year) (TOK_SELEXPR (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate)) month) (TOK_SELEXPR (TOK_FUNCTION count (TOK_TABLE_OR_COL l_shipdate)) monthly_shipments)) (TOK_GROUPBY (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate)))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -175,7 +175,7 @@ STAGE PLANS:
                     expr: l_shipdate
                     type: string
                     expr: _count_of_l_shipdate
-                    type: int
+                    type: bigint
               outputColumnNames: l_shipdate, _count_of_l_shipdate
               Group By Operator
                 aggregations:
@@ -243,14 +243,14 @@ PREHOOK: query: explain select lastyear.month,
 lastyear.monthly_shipments as monthly_shipments_delta
    from (select year(l_shipdate) as year,
                 month(l_shipdate) as month,
-                count(1) as monthly_shipments
+                count(l_shipdate) as monthly_shipments
            from lineitem
           where year(l_shipdate) = 1997
           group by year(l_shipdate), month(l_shipdate)
         )  lastyear join
         (select year(l_shipdate) as year,
                 month(l_shipdate) as month,
-                count(1) as monthly_shipments
+                count(l_shipdate) as monthly_shipments
            from lineitem
           where year(l_shipdate) = 1998
           group by year(l_shipdate), month(l_shipdate)
@@ -263,14 +263,14 @@ POSTHOOK: query: explain select lastyear.month,
 lastyear.monthly_shipments as monthly_shipments_delta
    from (select year(l_shipdate) as year,
                 month(l_shipdate) as month,
-                count(1) as monthly_shipments
+                count(l_shipdate) as monthly_shipments
            from lineitem
           where year(l_shipdate) = 1997
           group by year(l_shipdate), month(l_shipdate)
         )  lastyear join
         (select year(l_shipdate) as year,
                 month(l_shipdate) as month,
-                count(1) as monthly_shipments
+                count(l_shipdate) as monthly_shipments
            from lineitem
           where year(l_shipdate) = 1998
           group by year(l_shipdate), month(l_shipdate)
@@ -282,7 +282,7 @@ POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._count_of_l_shipda
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_JOIN (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME lineitem))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) year) (TOK_SELEXPR (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate)) month) (TOK_SELEXPR (TOK_FUNCTION count 1) monthly_shipments)) (TOK_WHERE (= (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) 1997)) (TOK_GROUPBY (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate))))) lastyear) (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME lineitem))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) year) (TOK_SELEXPR (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate)) month) (TOK_SELEXPR (TOK_FUNCTION count 1) monthly_shipments)) (TOK_WHERE (= (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) 1998)) (TOK_GROUPBY (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate))))) thisyear) (= (. (TOK_TABLE_OR_COL lastyear) month) (. (TOK_TABLE_OR_COL thisyear) month)))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (. (TOK_TABLE_OR_COL lastyear) month)) (TOK_SELEXPR (. (TOK_TABLE_OR_COL thisyear) month)) (TOK_SELEXPR (/ (- (. (TOK_TABLE_OR_COL thisyear) monthly_shipments) (. (TOK_TABLE_OR_COL lastyear) monthly_shipments)) (. (TOK_TABLE_OR_COL lastyear) monthly_shipments)) monthly_shipments_delta))))
+  (TOK_QUERY (TOK_FROM (TOK_JOIN (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME lineitem))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) year) (TOK_SELEXPR (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate)) month) (TOK_SELEXPR (TOK_FUNCTION count (TOK_TABLE_OR_COL l_shipdate)) monthly_shipments)) (TOK_WHERE (= (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) 1997)) (TOK_GROUPBY (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate))))) lastyear) (TOK_SUBQUERY (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME lineitem))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) year) (TOK_SELEXPR (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate)) month) (TOK_SELEXPR (TOK_FUNCTION count (TOK_TABLE_OR_COL l_shipdate)) monthly_shipments)) (TOK_WHERE (= (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) 1998)) (TOK_GROUPBY (TOK_FUNCTION year (TOK_TABLE_OR_COL l_shipdate)) (TOK_FUNCTION month (TOK_TABLE_OR_COL l_shipdate))))) thisyear) (= (. (TOK_TABLE_OR_COL lastyear) month) (. (TOK_TABLE_OR_COL thisyear) month)))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (. (TOK_TABLE_OR_COL lastyear) month)) (TOK_SELEXPR (. (TOK_TABLE_OR_COL thisyear) month)) (TOK_SELEXPR (/ (- (. (TOK_TABLE_OR_COL thisyear) monthly_shipments) (. (TOK_TABLE_OR_COL lastyear) monthly_shipments)) (. (TOK_TABLE_OR_COL lastyear) monthly_shipments)) monthly_shipments_delta))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -306,7 +306,7 @@ STAGE PLANS:
                       expr: l_shipdate
                       type: string
                       expr: _count_of_l_shipdate
-                      type: int
+                      type: bigint
                 outputColumnNames: l_shipdate, _count_of_l_shipdate
                 Group By Operator
                   aggregations:
@@ -434,7 +434,7 @@ STAGE PLANS:
                       expr: l_shipdate
                       type: string
                       expr: _count_of_l_shipdate
-                      type: int
+                      type: bigint
                 outputColumnNames: l_shipdate, _count_of_l_shipdate
                 Group By Operator
                   aggregations:
@@ -495,13 +495,13 @@ STAGE PLANS:
 
 
 PREHOOK: query: explain  select l_shipdate, cnt
-from (select l_shipdate, count(1) as cnt from lineitem group by l_shipdate
+from (select l_shipdate, count(l_shipdate) as cnt from lineitem group by l_shipdate
 union all
 select l_shipdate, l_orderkey as cnt
 from lineitem) dummy
 PREHOOK: type: QUERY
 POSTHOOK: query: explain  select l_shipdate, cnt
-from (select l_shipdate, count(1) as cnt from lineitem group by l_shipdate
+from (select l_shipdate, count(l_shipdate) as cnt from lineitem group by l_shipdate
 union all
 select l_shipdate, l_orderkey as cnt
 from lineitem) dummy
@@ -511,7 +511,7 @@ POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._count_of_l_shipda
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__._offsets EXPRESSION [(lineitem)lineitem.FieldSchema(name:BLOCK__OFFSET__INSIDE__FILE, type:bigint, comment:), ]
 POSTHOOK: Lineage: default__lineitem_lineitem_lshipdate_idx__.l_shipdate SIMPLE [(lineitem)lineitem.FieldSchema(name:l_shipdate, type:string, comment:null), ]
 ABSTRACT SYNTAX TREE:
-  (TOK_QUERY (TOK_FROM (TOK_SUBQUERY (TOK_UNION (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME lineitem))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL l_shipdate)) (TOK_SELEXPR (TOK_FUNCTION count 1) cnt)) (TOK_GROUPBY (TOK_TABLE_OR_COL l_shipdate)))) (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME lineitem))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL l_shipdate)) (TOK_SELEXPR (TOK_TABLE_OR_COL l_orderkey) cnt))))) dummy)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL l_shipdate)) (TOK_SELEXPR (TOK_TABLE_OR_COL cnt)))))
+  (TOK_QUERY (TOK_FROM (TOK_SUBQUERY (TOK_UNION (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME lineitem))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL l_shipdate)) (TOK_SELEXPR (TOK_FUNCTION count (TOK_TABLE_OR_COL l_shipdate)) cnt)) (TOK_GROUPBY (TOK_TABLE_OR_COL l_shipdate)))) (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME lineitem))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL l_shipdate)) (TOK_SELEXPR (TOK_TABLE_OR_COL l_orderkey) cnt))))) dummy)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (TOK_TABLE_OR_COL l_shipdate)) (TOK_SELEXPR (TOK_TABLE_OR_COL cnt)))))
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -531,7 +531,7 @@ STAGE PLANS:
                     expr: l_shipdate
                     type: string
                     expr: _count_of_l_shipdate
-                    type: int
+                    type: bigint
               outputColumnNames: l_shipdate, _count_of_l_shipdate
               Group By Operator
                 aggregations:

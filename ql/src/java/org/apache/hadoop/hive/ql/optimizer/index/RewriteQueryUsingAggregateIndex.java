@@ -58,10 +58,16 @@ import org.apache.hadoop.hive.serde2.objectinspector.StructField;
 import org.apache.hadoop.hive.serde2.objectinspector.StructObjectInspector;
 import org.apache.hadoop.hive.serde2.typeinfo.PrimitiveTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfo;
+import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoFactory;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoUtils;
 
+/**
+ * This class defines a procedure factory used to rewrite the operator plan
+ * Each method replaces the necessary base table data structures with
+ * the index table data structures for each operator.
+ */
 public final class RewriteQueryUsingAggregateIndex {
-  protected final static Log LOG = LogFactory.getLog(RewriteQueryUsingAggregateIndex.class.getName());
+  private static final Log LOG = LogFactory.getLog(RewriteQueryUsingAggregateIndex.class.getName());
   private static RewriteQueryUsingAggregateIndexCtx rewriteQueryCtx = null;
 
   private RewriteQueryUsingAggregateIndex() {
@@ -76,21 +82,25 @@ public final class RewriteQueryUsingAggregateIndex {
       List<Operator<? extends Serializable>> childOps = operator.getChildOperators();
       Operator<? extends Serializable> childOp = childOps.iterator().next();
 
-      //we need to set the colList, outputColumnNames, colExprMap, rowSchema for only that SelectOperator
-      //which precedes the GroupByOperator
-      // the count(literal) or count(indexed_key_column) needs to be replaced by sum(`_count_Of_indexed_key_column`)
+      //we need to set the colList, outputColumnNames, colExprMap,
+      // rowSchema for only that SelectOperator which precedes the GroupByOperator
+      // the count(literal) or count(indexed_key_column) needs to be
+      //replaced by sum(`_count_Of_indexed_key_column`)
       if (childOp instanceof GroupByOperator){
-        ArrayList<ExprNodeDesc> selColList = operator.getConf().getColList();
+        ArrayList<ExprNodeDesc> selColList =
+          operator.getConf().getColList();
         selColList.add(rewriteQueryCtx.getAggrExprNode());
 
-        ArrayList<String> selOutputColNames = operator.getConf().getOutputColumnNames();
+        ArrayList<String> selOutputColNames =
+          operator.getConf().getOutputColumnNames();
         selOutputColNames.add(rewriteQueryCtx.getAggrExprNode().getColumn());
 
         RowSchema selRS = operator.getSchema();
-        ArrayList<ColumnInfo> selRSSignature = selRS.getSignature();
+        ArrayList<ColumnInfo> selRSSignature =
+          selRS.getSignature();
         //Need to create a new type for Column[_count_Of_indexed_key_column] node
-        PrimitiveTypeInfo pti = new PrimitiveTypeInfo();
-        pti.setTypeName("int");
+        PrimitiveTypeInfo pti = (PrimitiveTypeInfo) TypeInfoFactory.getPrimitiveTypeInfo("bigint");
+        pti.setTypeName("bigint");
         ColumnInfo newCI = new ColumnInfo(rewriteQueryCtx.getAggregateFunction(), pti, "", false);
         selRSSignature.add(newCI);
         selRS.setSignature(selRSSignature);
@@ -101,16 +111,17 @@ public final class RewriteQueryUsingAggregateIndex {
   }
 
     public static NewQuerySelectSchemaProc getNewQuerySelectSchemaProc(){
-    return new NewQuerySelectSchemaProc();
+      return new NewQuerySelectSchemaProc();
   }
 
 
   /**
-   * This processor replaces the original TableScanOperator with the new TableScanOperator and metadata that scans over the
+   * This processor replaces the original TableScanOperator with
+   * the new TableScanOperator and metadata that scans over the
    * index table rather than scanning over the orginal table.
    *
    */
-  private static class RepaceTableScanOpProc implements NodeProcessor {
+  private static class ReplaceTableScanOpProc implements NodeProcessor {
     public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx ctx,
         Object... nodeOutputs) throws SemanticException {
       TableScanOperator scanOperator = (TableScanOperator)nd;
@@ -155,7 +166,8 @@ public final class RewriteQueryUsingAggregateIndex {
       //Construct the new RowResolver for the new TableScanOperator
       RowResolver rr = new RowResolver();
       try {
-        StructObjectInspector rowObjectInspector = (StructObjectInspector) ts.tableHandle.getDeserializer().getObjectInspector();
+        StructObjectInspector rowObjectInspector =
+          (StructObjectInspector) ts.tableHandle.getDeserializer().getObjectInspector();
         List<? extends StructField> fields = rowObjectInspector
         .getAllStructFieldRefs();
         for (int i = 0; i < fields.size(); i++) {
@@ -193,18 +205,21 @@ public final class RewriteQueryUsingAggregateIndex {
     }
   }
 
-  public static RepaceTableScanOpProc getReplaceTableScanProc(){
-    return new RepaceTableScanOpProc();
+  public static ReplaceTableScanOpProc getReplaceTableScanProc(){
+    return new ReplaceTableScanOpProc();
   }
 
   /**
-   * We need to replace the count(literal) GenericUDAF aggregation function for group-by construct to "sum" GenericUDAF.
-   * This processor creates a new operator tree for a sample query that creates a GroupByOperator with sum aggregation function
-   * and uses that GroupByOperator information to replace the original GroupByOperator aggregation information.
-   * It replaces the AggregationDesc (aggregation descriptor) of the old GroupByOperator with the new Aggregation Desc
-   * of the new GroupByOperator.
-   *
-   * The processor also corrects the RowSchema and group-by keys by replacing the existing internal names with the new internal names.
+   * We need to replace the count(indexed_column_key) GenericUDAF aggregation function for
+   * group-by construct to "sum" GenericUDAF.
+   * This processor creates a new operator tree for a sample query that creates a GroupByOperator
+   * with sum aggregation function and uses that GroupByOperator information to replace
+   * the original GroupByOperator aggregation information.
+   * It replaces the AggregationDesc (aggregation descriptor) of the old GroupByOperator with the
+   * new Aggregation Desc of the new GroupByOperator.
+   * <p>
+   * The processor also corrects the RowSchema and group-by keys by
+   * replacing the existing internal names with the new internal names.
    */
   private static class NewQueryGroupbySchemaProc implements NodeProcessor {
     public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx ctx,
@@ -212,7 +227,8 @@ public final class RewriteQueryUsingAggregateIndex {
       GroupByOperator operator = (GroupByOperator)nd;
       rewriteQueryCtx = (RewriteQueryUsingAggregateIndexCtx)ctx;
 
-      //We need to replace the GroupByOperator which is in groupOpToInputTables map with the new GroupByOperator
+      //We need to replace the GroupByOperator which is in
+      //groupOpToInputTables map with the new GroupByOperator
       if(rewriteQueryCtx.getParseContext().getGroupOpToInputTables().containsKey(operator)){
         ArrayList<ExprNodeDesc> gbyKeyList = operator.getConf().getKeys();
         String gbyKeys = null;
@@ -230,10 +246,14 @@ public final class RewriteQueryUsingAggregateIndex {
 
 
           //the query contains the sum aggregation GenericUDAF
-        String selReplacementCommand = "select sum(`" + rewriteQueryCtx.getAggregateFunction() + "`) from " + rewriteQueryCtx.getIndexName()
+        String selReplacementCommand = "select sum(`"
+          + rewriteQueryCtx.getAggregateFunction() + "`)" +
+        		" from " + rewriteQueryCtx.getIndexName()
           + " group by " + gbyKeys + " ";
-        //create a new ParseContext for the query to retrieve its operator tree, and the required GroupByOperator from it
-        ParseContext newDAGContext = RewriteParseContextGenerator.generateOperatorTree(rewriteQueryCtx.getParseContext().getConf(),
+        //create a new ParseContext for the query to retrieve its operator tree,
+        //and the required GroupByOperator from it
+        ParseContext newDAGContext = RewriteParseContextGenerator.generateOperatorTree(
+            rewriteQueryCtx.getParseContext().getConf(),
             selReplacementCommand);
 
         //we get our new GroupByOperator here
@@ -244,7 +264,8 @@ public final class RewriteQueryUsingAggregateIndex {
         //we need this information to set the correct colList, outputColumnNames in SelectOperator
         ExprNodeColumnDesc aggrExprNode = null;
 
-        //Construct the new AggregationDesc to get rid of the current internal names and replace them with new internal names
+        //Construct the new AggregationDesc to get rid of the current
+        //internal names and replace them with new internal names
         //as required by the operator tree
         GroupByDesc newConf = newGbyOperator.getConf();
         ArrayList<AggregationDesc> newAggrList = newConf.getAggregators();
@@ -268,8 +289,8 @@ public final class RewriteQueryUsingAggregateIndex {
 
 
       }else{
-        //we just need to reset the GenericUDAFEvaluator and its name for this GroupByOperator whose parent is the
-        //ReduceSinkOperator
+        //we just need to reset the GenericUDAFEvaluator and its name for this
+        //GroupByOperator whose parent is the ReduceSinkOperator
         GroupByDesc childConf = (GroupByDesc) operator.getConf();
         ArrayList<AggregationDesc> childAggrList = childConf.getAggregators();
         if(childAggrList != null && childAggrList.size() > 0){
@@ -279,7 +300,8 @@ public final class RewriteQueryUsingAggregateIndex {
             for (ExprNodeDesc expr : paraList) {
               parametersTypeInfoList.add(expr.getTypeInfo());
             }
-            GenericUDAFEvaluator evaluator = FunctionRegistry.getGenericUDAFEvaluator("sum", parametersTypeInfoList, false, false);
+            GenericUDAFEvaluator evaluator = FunctionRegistry.getGenericUDAFEvaluator(
+                "sum", parametersTypeInfoList, false, false);
             aggregationDesc.setGenericUDAFEvaluator(evaluator);
             aggregationDesc.setGenericUDAFName("sum");
           }

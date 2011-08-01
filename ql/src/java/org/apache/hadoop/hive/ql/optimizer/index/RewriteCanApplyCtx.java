@@ -45,12 +45,13 @@ import org.apache.hadoop.hive.ql.parse.ParseContext;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
 
 /**
- * RewriteCanApplyCtx class stores the context for the {@link RewriteCanApplyProcFactory} to determine
- * if any index can be used and if the input query meets all the criteria for rewrite optimization.
+ * RewriteCanApplyCtx class stores the context for the {@link RewriteCanApplyProcFactory}
+ * to determine if any index can be used and if the input query
+ * meets all the criteria for rewrite optimization.
  */
 public final class RewriteCanApplyCtx implements NodeProcessorCtx {
 
-  protected final  Log LOG = LogFactory.getLog(RewriteCanApplyCtx.class.getName());
+  private static final Log LOG = LogFactory.getLog(RewriteCanApplyCtx.class.getName());
 
   private RewriteCanApplyCtx(ParseContext parseContext) {
     this.parseContext = parseContext;
@@ -61,59 +62,161 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
   }
 
   // Rewrite Variables
-  public int aggFuncCnt = 0;
-  public int gbyKeyCnt = 0;
-  public boolean queryHasSortBy = false;
-  public boolean queryHasOrderBy = false;
-  public boolean queryHasDistributeBy = false;
-  public boolean queryHasGroupBy = false;
-  public boolean aggFuncIsNotCount = false;
-  public boolean aggFuncColsFetchException = false;
-  public boolean whrClauseColsFetchException = false;
-  public boolean selClauseColsFetchException = false;
-  public boolean gbyKeysFetchException = false;
-  public boolean countOnAllCols = false;
-  public boolean queryHasGenericUdfOnGroupbyKey = false;
-  public boolean queryHasMultipleTables = false;
+  private int aggFuncCnt = 0;
+  private boolean queryHasSortBy = false;
+  private boolean queryHasOrderBy = false;
+  private boolean queryHasDistributeBy = false;
+  private boolean queryHasGroupBy = false;
+  private boolean aggFuncIsNotCount = false;
+  private boolean aggFuncColsFetchException = false;
+  private boolean whrClauseColsFetchException = false;
+  private boolean selClauseColsFetchException = false;
+  private boolean gbyKeysFetchException = false;
+  private boolean countOnAllCols = false;
+  private boolean countOfOne = false;
+  private boolean queryHasMultipleTables = false;
 
+  //Data structures that are populated in the RewriteCanApplyProcFactory
+  //methods to check if the index key meets all criteria
+  private Set<String> selectColumnsList = new LinkedHashSet<String>();
+  private Set<String> predicateColumnsList = new LinkedHashSet<String>();
+  private Set<String> gbKeyNameList = new LinkedHashSet<String>();
+  private Set<String> aggFuncColList = new LinkedHashSet<String>();
 
-   //Data structures that are populated in the RewriteCanApplyProcFactory
-   //methods to check if the index key meets all criteria
-   Set<String> selectColumnsList = new LinkedHashSet<String>();
-   Set<String> predicateColumnsList = new LinkedHashSet<String>();
-   Set<String> gbKeyNameList = new LinkedHashSet<String>();
-   Set<String> aggFuncColList = new LinkedHashSet<String>();
+  private final ParseContext parseContext;
+  private String baseTableName;
+  private String aggFunction;
 
+  void resetCanApplyCtx(){
+    aggFuncCnt = 0;
+    setQueryHasSortBy(false);
+    setQueryHasOrderBy(false);
+    setQueryHasDistributeBy(false);
+    queryHasGroupBy = false;
+    aggFuncIsNotCount = false;
+    setAggFuncColsFetchException(false);
+    setWhrClauseColsFetchException(false);
+    setSelClauseColsFetchException(false);
+    setGbyKeysFetchException(false);
+    setCountOnAllCols(false);
+    setCountOfOne(false);
+    setQueryHasMultipleTables(false);
+    aggFuncCnt = 0;
+    selectColumnsList.clear();
+    predicateColumnsList.clear();
+    gbKeyNameList.clear();
+    aggFuncColList.clear();
+    baseTableName = "";
+    aggFunction = "";
+  }
 
-   private final ParseContext parseContext;
-   private String baseTableName;
-   private String aggFunction;
+  public boolean isQueryHasGroupBy() {
+    return queryHasGroupBy;
+  }
 
-   void resetCanApplyCtx(){
-     aggFuncCnt = 0;
-     gbyKeyCnt = 0;
-     queryHasSortBy = false;
-     queryHasOrderBy = false;
-     queryHasDistributeBy = false;
-     queryHasGroupBy = false;
-     aggFuncIsNotCount = false;
-     aggFuncColsFetchException = false;
-     whrClauseColsFetchException = false;
-     selClauseColsFetchException = false;
-     gbyKeysFetchException = false;
-     countOnAllCols = false;
-     queryHasGenericUdfOnGroupbyKey = false;
-     queryHasMultipleTables = false;
+  public void setQueryHasGroupBy(boolean queryHasGroupBy) {
+    this.queryHasGroupBy = queryHasGroupBy;
+  }
 
+  public boolean isAggFuncIsNotCount() {
+    return aggFuncIsNotCount;
+  }
 
-     aggFuncCnt = 0;
-     selectColumnsList.clear();
-     predicateColumnsList.clear();
-     gbKeyNameList.clear();
-     aggFuncColList.clear();
-     baseTableName = "";
-     aggFunction = "";
-   }
+  public void setAggFuncIsNotCount(boolean aggFuncIsNotCount) {
+    this.aggFuncIsNotCount = aggFuncIsNotCount;
+  }
+
+  public HashMap<String, String> getBaseToIdxTableMap() {
+    return baseToIdxTableMap;
+  }
+
+  public void setAggFunction(String aggFunction) {
+    this.aggFunction = aggFunction;
+  }
+
+  public String getAggFunction() {
+    return aggFunction;
+  }
+
+  public void setQueryHasSortBy(boolean queryHasSortBy) {
+    this.queryHasSortBy = queryHasSortBy;
+  }
+
+  public boolean isQueryHasSortBy() {
+    return queryHasSortBy;
+  }
+
+  public void setQueryHasOrderBy(boolean queryHasOrderBy) {
+    this.queryHasOrderBy = queryHasOrderBy;
+  }
+
+  public boolean isQueryHasOrderBy() {
+    return queryHasOrderBy;
+  }
+
+  public void setQueryHasDistributeBy(boolean queryHasDistributeBy) {
+    this.queryHasDistributeBy = queryHasDistributeBy;
+  }
+
+  public boolean isQueryHasDistributeBy() {
+    return queryHasDistributeBy;
+  }
+
+  public void setAggFuncColsFetchException(boolean aggFuncColsFetchException) {
+    this.aggFuncColsFetchException = aggFuncColsFetchException;
+  }
+
+  public boolean isAggFuncColsFetchException() {
+    return aggFuncColsFetchException;
+  }
+
+  public void setWhrClauseColsFetchException(boolean whrClauseColsFetchException) {
+    this.whrClauseColsFetchException = whrClauseColsFetchException;
+  }
+
+  public boolean isWhrClauseColsFetchException() {
+    return whrClauseColsFetchException;
+  }
+
+  public void setSelClauseColsFetchException(boolean selClauseColsFetchException) {
+    this.selClauseColsFetchException = selClauseColsFetchException;
+  }
+
+  public boolean isSelClauseColsFetchException() {
+    return selClauseColsFetchException;
+  }
+
+  public void setGbyKeysFetchException(boolean gbyKeysFetchException) {
+    this.gbyKeysFetchException = gbyKeysFetchException;
+  }
+
+  public boolean isGbyKeysFetchException() {
+    return gbyKeysFetchException;
+  }
+
+  public void setCountOnAllCols(boolean countOnAllCols) {
+    this.countOnAllCols = countOnAllCols;
+  }
+
+  public boolean isCountOnAllCols() {
+    return countOnAllCols;
+  }
+
+  public void setCountOfOne(boolean countOfOne) {
+    this.countOfOne = countOfOne;
+  }
+
+  public boolean isCountOfOne() {
+    return countOfOne;
+  }
+
+  public void setQueryHasMultipleTables(boolean queryHasMultipleTables) {
+    this.queryHasMultipleTables = queryHasMultipleTables;
+  }
+
+  public boolean isQueryHasMultipleTables() {
+    return queryHasMultipleTables;
+  }
 
   public Set<String> getSelectColumnsList() {
     return selectColumnsList;
@@ -182,10 +285,14 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
    */
   void populateRewriteVars(Operator<? extends Serializable> topOp) throws SemanticException{
     Map<Rule, NodeProcessor> opRules = new LinkedHashMap<Rule, NodeProcessor>();
-    opRules.put(new RuleRegExp("R1", "FIL%"), RewriteCanApplyProcFactory.canApplyOnFilterOperator());
-    opRules.put(new RuleRegExp("R2", "GBY%"), RewriteCanApplyProcFactory.canApplyOnGroupByOperator());
-    opRules.put(new RuleRegExp("R3", "RS%OP%"), RewriteCanApplyProcFactory.canApplyOnExtractOperator());
-    opRules.put(new RuleRegExp("R4", "SEL%"), RewriteCanApplyProcFactory.canApplyOnSelectOperator());
+    opRules.put(new RuleRegExp("R1", "FIL%"),
+        RewriteCanApplyProcFactory.canApplyOnFilterOperator());
+    opRules.put(new RuleRegExp("R2", "GBY%"),
+        RewriteCanApplyProcFactory.canApplyOnGroupByOperator());
+    opRules.put(new RuleRegExp("R3", "RS%OP%"),
+        RewriteCanApplyProcFactory.canApplyOnExtractOperator());
+    opRules.put(new RuleRegExp("R4", "SEL%"),
+        RewriteCanApplyProcFactory.canApplyOnSelectOperator());
 
     // The dispatcher fires the processor corresponding to the closest matching
     // rule and passes the context along
@@ -203,12 +310,11 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
       LOG.error(org.apache.hadoop.util.StringUtils.stringifyException(e));
       throw new SemanticException(e.getMessage(), e);
     }
-
   }
 
 
   /**
-   * Default procedure for {@link DefaultRuleDispatcher}
+   * Default procedure for {@link DefaultRuleDispatcher}.
    * @return
    */
   private NodeProcessor getDefaultProc() {
@@ -224,7 +330,8 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
 
   //Map for base table to index table mapping
   //TableScan operator for base table will be modified to read from index table
-  private final HashMap<String, String> baseToIdxTableMap = new HashMap<String, String>();;
+  private final HashMap<String, String> baseToIdxTableMap =
+    new HashMap<String, String>();;
 
 
   public void addTable(String baseTableName, String indexTableName) {
@@ -237,7 +344,6 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
 
 
   boolean isIndexUsableForQueryBranchRewrite(Index index, Set<String> indexKeyNames){
-    boolean optimizeCount = false;
 
     //--------------------------------------------
     //Check if all columns in select list are part of index key columns
@@ -249,8 +355,6 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
 
     //--------------------------------------------
     // Check if all columns in where predicate are part of index key columns
-    // TODO: Currently we allow all predicates , would it be more efficient
-    // (or at least not worse) to read from index_table and not from baseTable?
     if (!indexKeyNames.containsAll(predicateColumnsList)) {
       LOG.info("Predicate column ref list has non index key column : " +
           " Cannot use index  " + index.getIndexName());
@@ -270,44 +374,27 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
         return false;
       }
 
-       // FUTURE: See if this can be relaxed.
       // If we have agg function (currently only COUNT is supported), check if its input are
       // from index. we currently support only that.
       if (aggFuncColList.size() > 0)  {
-        if (indexKeyNames.containsAll(aggFuncColList) == false) {
+        if (!indexKeyNames.containsAll(aggFuncColList)){
           LOG.info("Agg Func input is not present in index key columns. Currently " +
-              "only agg func on index columns are supported by rewrite optimization" );
+              "only agg func on index columns are supported by rewrite optimization");
           return false;
-        }
-        // If we have count on some key, check if key is same as index key,
-        if (aggFuncColList.containsAll(indexKeyNames))  {
-          optimizeCount = true;
         }
       }
 
     //Now that we are good to do this optimization, set parameters in context
     //which would be used by transformation procedure as inputs.
     if(queryHasGroupBy
-        && queryHasGenericUdfOnGroupbyKey == false
-        && !(optimizeCount == true) ) {
-      addTable(baseTableName, index.getIndexTableName());
-    }else if(queryHasGroupBy
-        && queryHasGenericUdfOnGroupbyKey == true
         && aggFuncCnt == 1
-        && aggFuncIsNotCount == false){
+        && !aggFuncIsNotCount){
       addTable(baseTableName, index.getIndexTableName());
     }else{
-      LOG.info("No valid criteria met to apply rewrite." );
+      LOG.info("No valid criteria met to apply rewrite.");
       return false;
     }
     return true;
   }
 
-  public void setAggFunction(String aggFunction) {
-    this.aggFunction = aggFunction;
-  }
-
-  public String getAggFunction() {
-    return aggFunction;
-  }
 }

@@ -41,14 +41,18 @@ import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
 import org.apache.hadoop.hive.ql.plan.PartitionDesc;
 
 
+/**
+ * Index handler for indexes that have aggregate functions on indexed columns.
+ *
+ */
 public class AggregateIndexHandler extends TableBasedIndexHandler {
 
   private static Index index = null;
 
     @Override
-    public void analyzeIndexDefinition(Table baseTable, Index index,
+    public void analyzeIndexDefinition(Table baseTable, Index idx,
         Table indexTable) throws HiveException {
-      this.index = index;
+      index = idx;
       StorageDescriptor storageDesc = index.getSd();
       if (this.usesIndexTable() && indexTable != null) {
         StorageDescriptor indexTableSd = storageDesc.deepCopy();
@@ -57,14 +61,14 @@ public class AggregateIndexHandler extends TableBasedIndexHandler {
         indexTblCols.add(bucketFileName);
         FieldSchema offSets = new FieldSchema("_offsets", "array<bigint>", "");
         indexTblCols.add(offSets);
-        Map<String,String> paraList = index.getParameters();
+        Map<String, String> paraList = index.getParameters();
         if(paraList != null){
           Iterator<String> paraKeys = paraList.keySet().iterator();
           while(paraKeys.hasNext()){
             String propName = paraKeys.next();
             String propValue = paraList.get(propName);
 
-            if(propName.equals("AGGREGATES")){
+            if(("AGGREGATES").equals(propName)){
               if(propValue.contains(",")){
                 String[] aggFuncs = propValue.split(",");
                 for (int i = 0; i < aggFuncs.length; i++) {
@@ -75,7 +79,8 @@ public class AggregateIndexHandler extends TableBasedIndexHandler {
                     colName = colName.replace("*", "ALL");
                   }
 
-                  FieldSchema aggregationFunction = new FieldSchema("_" + funcName + "_Of_" + colName + "", "int", "");
+                  FieldSchema aggregationFunction =
+                    new FieldSchema("_" + funcName + "_Of_" + colName + "", "bigint", "");
                   indexTblCols.add(aggregationFunction);
                 }
               }else{
@@ -85,7 +90,8 @@ public class AggregateIndexHandler extends TableBasedIndexHandler {
                 if(colName.contains("*")){
                   colName = colName.replace("*", "ALL");
                 }
-                FieldSchema aggregationFunction = new FieldSchema("_" + funcName + "_Of_" + colName + "", "int", "");
+                FieldSchema aggregationFunction =
+                  new FieldSchema("_" + funcName + "_Of_" + colName + "", "bigint", "");
                 indexTblCols.add(aggregationFunction);
               }
             }
@@ -96,7 +102,8 @@ public class AggregateIndexHandler extends TableBasedIndexHandler {
     }
 
     @Override
-    protected Task<?> getIndexBuilderMapRedTask(Set<ReadEntity> inputs, Set<WriteEntity> outputs,
+    protected Task<?> getIndexBuilderMapRedTask(Set<ReadEntity> inputs,
+        Set<WriteEntity> outputs,
         List<FieldSchema> indexField, boolean partitioned,
         PartitionDesc indexTblPartDesc, String indexTableName,
         PartitionDesc baseTablePartDesc, String baseTableName, String dbName) {
@@ -107,7 +114,7 @@ public class AggregateIndexHandler extends TableBasedIndexHandler {
       StringBuilder command= new StringBuilder();
       LinkedHashMap<String, String> partSpec = indexTblPartDesc.getPartSpec();
 
-      command.append("INSERT OVERWRITE TABLE " + HiveUtils.unparseIdentifier(indexTableName ));
+      command.append("INSERT OVERWRITE TABLE " + HiveUtils.unparseIdentifier(indexTableName));
       if (partitioned && indexTblPartDesc != null) {
         command.append(" PARTITION ( ");
         List<String> ret = getPartKVPairStringArray(partSpec);
@@ -134,13 +141,13 @@ public class AggregateIndexHandler extends TableBasedIndexHandler {
 
       assert indexField.size()==1;
 
-      Map<String,String> paraList = index.getParameters();
+      Map<String, String> paraList = index.getParameters();
       if(paraList != null){
         Iterator<String> paraKeys = paraList.keySet().iterator();
         while(paraKeys.hasNext()){
           String propName = paraKeys.next();
           String propValue = paraList.get(propName);
-          if(propName.equals("AGGREGATES")){
+          if(("AGGREGATES").equals(propName)){
             command.append(propValue + " ");
           }
         }
@@ -148,7 +155,7 @@ public class AggregateIndexHandler extends TableBasedIndexHandler {
 
 
 
-      command.append(" FROM " + HiveUtils.unparseIdentifier(baseTableName) );
+      command.append(" FROM " + HiveUtils.unparseIdentifier(baseTableName));
       LinkedHashMap<String, String> basePartSpec = baseTablePartDesc.getPartSpec();
       if(basePartSpec != null) {
         command.append(" WHERE ");
@@ -170,7 +177,8 @@ public class AggregateIndexHandler extends TableBasedIndexHandler {
       Task<?> rootTask = driver.getPlan().getRootTasks().get(0);
       inputs.addAll(driver.getPlan().getInputs());
       outputs.addAll(driver.getPlan().getOutputs());
-      IndexMetadataChangeWork indexMetaChange = new IndexMetadataChangeWork(partSpec, indexTableName, dbName);
+      IndexMetadataChangeWork indexMetaChange =
+        new IndexMetadataChangeWork(partSpec, indexTableName, dbName);
       IndexMetadataChangeTask indexMetaChangeTsk = new IndexMetadataChangeTask();
       indexMetaChangeTsk.setWork(indexMetaChange);
       rootTask.addDependentTask(indexMetaChangeTsk);

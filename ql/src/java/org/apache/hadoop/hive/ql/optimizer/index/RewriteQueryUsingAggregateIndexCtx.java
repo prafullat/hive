@@ -41,7 +41,13 @@ import org.apache.hadoop.hive.ql.parse.SemanticException;
 import org.apache.hadoop.hive.ql.plan.ExprNodeColumnDesc;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFEvaluator;
 
-public class RewriteQueryUsingAggregateIndexCtx  implements NodeProcessorCtx {
+/**
+ * RewriteQueryUsingAggregateIndexCtx class stores the
+ * context for the {@link RewriteQueryUsingAggregateIndex}
+ * used to rewrite operator plan with index table instead of base table.
+ */
+
+public final class RewriteQueryUsingAggregateIndexCtx  implements NodeProcessorCtx {
 
   private RewriteQueryUsingAggregateIndexCtx(ParseContext parseContext, Hive hiveDb,
       String indexTableName, String baseTableName, String aggregateFunction){
@@ -55,11 +61,13 @@ public class RewriteQueryUsingAggregateIndexCtx  implements NodeProcessorCtx {
 
   public static RewriteQueryUsingAggregateIndexCtx getInstance(ParseContext parseContext,
       Hive hiveDb, String indexTableName, String baseTableName, String aggregateFunction){
-    return new RewriteQueryUsingAggregateIndexCtx(parseContext, hiveDb, indexTableName, baseTableName, aggregateFunction);
+    return new RewriteQueryUsingAggregateIndexCtx(
+        parseContext, hiveDb, indexTableName, baseTableName, aggregateFunction);
   }
 
 
-  private LinkedHashMap<Operator<? extends Serializable>, OpParseContext> opc = new LinkedHashMap<Operator<? extends Serializable>, OpParseContext>();
+  private LinkedHashMap<Operator<? extends Serializable>, OpParseContext> opc =
+    new LinkedHashMap<Operator<? extends Serializable>, OpParseContext>();
   private final Hive hiveDb;
   private final ParseContext parseContext;
   //We need the GenericUDAFEvaluator for GenericUDAF function "sum"
@@ -109,15 +117,20 @@ public class RewriteQueryUsingAggregateIndexCtx  implements NodeProcessorCtx {
   * @param topOp
   * @throws SemanticException
   */
-  public void invokeRewriteQueryProc(Operator<? extends Serializable> topOp) throws SemanticException{
+  public void invokeRewriteQueryProc(
+      Operator<? extends Serializable> topOp) throws SemanticException{
     Map<Rule, NodeProcessor> opRules = new LinkedHashMap<Rule, NodeProcessor>();
 
     // replace scan operator containing original table with index table
-    opRules.put(new RuleRegExp("R1", "TS%"), RewriteQueryUsingAggregateIndex.getReplaceTableScanProc());
-    //rule that replaces index key selection with sum(`_aggregateValue`) function in original query
-    opRules.put(new RuleRegExp("R2", "SEL%"), RewriteQueryUsingAggregateIndex.getNewQuerySelectSchemaProc());
+    opRules.put(new RuleRegExp("R1", "TS%"),
+        RewriteQueryUsingAggregateIndex.getReplaceTableScanProc());
+    //rule that replaces index key selection with
+    //sum(`_count_of_indexed_column`) function in original query
+    opRules.put(new RuleRegExp("R2", "SEL%"),
+        RewriteQueryUsingAggregateIndex.getNewQuerySelectSchemaProc());
     //Manipulates the ExprNodeDesc from GroupByOperator aggregation list
-    opRules.put(new RuleRegExp("R3", "GBY%"), RewriteQueryUsingAggregateIndex.getNewQueryGroupbySchemaProc());
+    opRules.put(new RuleRegExp("R3", "GBY%"),
+        RewriteQueryUsingAggregateIndex.getNewQueryGroupbySchemaProc());
 
     // The dispatcher fires the processor corresponding to the closest matching
     // rule and passes the context along
@@ -131,7 +144,7 @@ public class RewriteQueryUsingAggregateIndexCtx  implements NodeProcessorCtx {
   }
 
  /**
-  * Default procedure for {@link DefaultRuleDispatcher}
+  * Default procedure for {@link DefaultRuleDispatcher}.
   * @return
   */
   private NodeProcessor getDefaultProc() {

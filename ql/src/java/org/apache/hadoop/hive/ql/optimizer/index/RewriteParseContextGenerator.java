@@ -44,16 +44,20 @@ import org.apache.hadoop.hive.ql.parse.SemanticException;
  *
  */
 public final class RewriteParseContextGenerator {
-  protected static Log LOG = LogFactory.getLog(RewriteParseContextGenerator.class.getName());
+  private static final Log LOG = LogFactory.getLog(RewriteParseContextGenerator.class.getName());
+
+  private RewriteParseContextGenerator(){
+  }
 
   /**
-   * Parse the input {@link String} command and generate a ASTNode tree
+   * Parse the input {@link String} command and generate a ASTNode tree.
    * @param conf
    * @param command
    * @return
    * @throws SemanticException
    */
-  public static ParseContext generateOperatorTree(HiveConf conf, String command) throws SemanticException{
+  public static ParseContext generateOperatorTree(HiveConf conf,
+      String command) throws SemanticException{
     Context ctx;
     ParseContext subPCtx = null;
     try {
@@ -69,15 +73,18 @@ public final class RewriteParseContextGenerator {
       subPCtx = ((SemanticAnalyzer) sem).getParseContext();
       LOG.info("Sub-query Semantic Analysis Completed");
     } catch (IOException e) {
-      LOG.error("IOException in generating the operator tree for input command - " + command + " " , e);
+      LOG.error("IOException in generating the operator " +
+        "tree for input command - " + command + " " , e);
       LOG.error(org.apache.hadoop.util.StringUtils.stringifyException(e));
       throw new SemanticException(e.getMessage(), e);
     } catch (ParseException e) {
-      LOG.error("ParseException in generating the operator tree for input command - " + command + " " , e);
+      LOG.error("ParseException in generating the operator " +
+        "tree for input command - " + command + " " , e);
       LOG.error(org.apache.hadoop.util.StringUtils.stringifyException(e));
       throw new SemanticException(e.getMessage(), e);
     } catch (SemanticException e) {
-      LOG.error("SemanticException in generating the operator tree for input command - " + command + " " , e);
+      LOG.error("SemanticException in generating the operator " +
+        "tree for input command - " + command + " " , e);
       LOG.error(org.apache.hadoop.util.StringUtils.stringifyException(e));
       throw new SemanticException(e.getMessage(), e);
     }
@@ -87,7 +94,7 @@ public final class RewriteParseContextGenerator {
 
   /**
    * For the input ASTNode tree, perform a semantic analysis and check metadata
-   * Generate a operator tree and return the {@link ParseContext} instance for the operator tree
+   * Generate a operator tree and return the {@link ParseContext} instance for the operator tree.
    *
    * @param ctx
    * @param sem
@@ -95,7 +102,8 @@ public final class RewriteParseContextGenerator {
    * @return
    * @throws SemanticException
    */
-  private static void doSemanticAnalysis(SemanticAnalyzer sem, ASTNode ast, Context ctx) throws SemanticException {
+  private static void doSemanticAnalysis(SemanticAnalyzer sem,
+      ASTNode ast, Context ctx) throws SemanticException {
     QB qb = new QB(null, null, false);
     ASTNode child = ast;
     ParseContext subPCtx = ((SemanticAnalyzer) sem).getParseContext();

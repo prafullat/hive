@@ -696,16 +696,6 @@ public class Hive {
       throw new HiveException(e);
     }
   }
-  public List<Index> getIndexesOnTable(String db_name, String tbl_name,
-				       short max) throws HiveException {
-    try {
-      return getMSC().listIndexes(db_name, tbl_name, max);
-    } catch (NoSuchObjectException e) {
-      throw new HiveException("Partition or table doesn't exist.", e);
-    } catch (Exception e) {
-      throw new HiveException("Unknown error. Please check logs.", e);
-    }
-  }
 
   public boolean dropIndex(String db_name, String tbl_name, String index_name, boolean deleteData) throws HiveException {
     try {
