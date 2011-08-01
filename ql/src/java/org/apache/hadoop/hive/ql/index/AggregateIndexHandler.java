@@ -33,11 +33,10 @@ import org.apache.hadoop.hive.ql.Driver;
 import org.apache.hadoop.hive.ql.exec.Task;
 import org.apache.hadoop.hive.ql.hooks.ReadEntity;
 import org.apache.hadoop.hive.ql.hooks.WriteEntity;
+import org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.metadata.HiveUtils;
 import org.apache.hadoop.hive.ql.metadata.VirtualColumn;
-import org.apache.hadoop.hive.ql.parse.ParseContext;
-import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
 import org.apache.hadoop.hive.ql.plan.PartitionDesc;
 
 
@@ -45,7 +44,7 @@ import org.apache.hadoop.hive.ql.plan.PartitionDesc;
  * Index handler for indexes that have aggregate functions on indexed columns.
  *
  */
-public class AggregateIndexHandler extends TableBasedIndexHandler {
+public class AggregateIndexHandler extends CompactIndexHandler {
 
   private static Index index = null;
 
@@ -185,12 +184,4 @@ public class AggregateIndexHandler extends TableBasedIndexHandler {
 
       return rootTask;
     }
-
-    @Override
-    public void generateIndexQuery(List<Index> indexes, ExprNodeDesc predicate, ParseContext pctx,
-        HiveIndexQueryContext queryContext) {
-      // TODO Auto-generated method stub
-
-    }
-
   }
