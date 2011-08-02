@@ -600,16 +600,6 @@ public abstract class BaseSemanticAnalyzer {
     public static enum SpecType {TABLE_ONLY, STATIC_PARTITION, DYNAMIC_PARTITION};
     public SpecType specType;
 
-    public tableSpec(Hive db, HiveConf conf, String tableName) throws SemanticException {
-      this.tableName  = tableName;
-      try {
-        this.tableHandle = db.getTable(tableName);
-      } catch (HiveException e) {
-          throw new SemanticException(ErrorMsg.GENERIC_ERROR.getMsg(tableName), e);
-      }
-      this.specType = SpecType.TABLE_ONLY;
-    }
-
     public tableSpec(Hive db, HiveConf conf, ASTNode ast)
         throws SemanticException {
       this(db, conf, ast, true, false);

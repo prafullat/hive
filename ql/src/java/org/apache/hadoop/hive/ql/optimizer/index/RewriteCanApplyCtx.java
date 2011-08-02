@@ -88,12 +88,12 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
   private String aggFunction;
 
   void resetCanApplyCtx(){
-    aggFuncCnt = 0;
+    setAggFuncCnt(0);
     setQueryHasSortBy(false);
     setQueryHasOrderBy(false);
     setQueryHasDistributeBy(false);
-    queryHasGroupBy = false;
-    aggFuncIsNotCount = false;
+    setQueryHasGroupBy(false);
+    setAggFuncIsNotCount(false);
     setAggFuncColsFetchException(false);
     setWhrClauseColsFetchException(false);
     setSelClauseColsFetchException(false);
@@ -101,13 +101,12 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
     setCountOnAllCols(false);
     setCountOfOne(false);
     setQueryHasMultipleTables(false);
-    aggFuncCnt = 0;
     selectColumnsList.clear();
     predicateColumnsList.clear();
     gbKeyNameList.clear();
     aggFuncColList.clear();
-    baseTableName = "";
-    aggFunction = "";
+    setBaseTableName("");
+    setAggFunction("");
   }
 
   public boolean isQueryHasGroupBy() {

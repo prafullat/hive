@@ -41,12 +41,12 @@ import org.apache.hadoop.hive.ql.exec.TableScanOperator;
 import org.apache.hadoop.hive.ql.lib.Node;
 import org.apache.hadoop.hive.ql.lib.NodeProcessor;
 import org.apache.hadoop.hive.ql.lib.NodeProcessorCtx;
+import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.metadata.Table;
 import org.apache.hadoop.hive.ql.parse.OpParseContext;
 import org.apache.hadoop.hive.ql.parse.ParseContext;
 import org.apache.hadoop.hive.ql.parse.RowResolver;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
-import org.apache.hadoop.hive.ql.parse.BaseSemanticAnalyzer.tableSpec;
 import org.apache.hadoop.hive.ql.plan.AggregationDesc;
 import org.apache.hadoop.hive.ql.plan.ExprNodeColumnDesc;
 import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
@@ -153,13 +153,17 @@ public final class RewriteQueryUsingAggregateIndex {
       TableScanDesc indexTableScanDesc = new TableScanDesc();
       indexTableScanDesc.setGatherStats(false);
 
-      String tableName = rewriteQueryCtx.getIndexName();
+      String indexTableName = rewriteQueryCtx.getIndexName();
+      Table indexTableHandle = null;
+      try {
+        indexTableHandle = rewriteQueryCtx.getHiveDb().getTable(indexTableName);
+      } catch (HiveException e) {
+        LOG.error("Error while getting the table handle for index table.");
+        LOG.error(org.apache.hadoop.util.StringUtils.stringifyException(e));
+        throw new SemanticException(e.getMessage(), e);
+      }
 
-      tableSpec ts = new tableSpec(rewriteQueryCtx.getHiveDb(),
-          rewriteQueryCtx.getParseContext().getConf(),
-          tableName
-      );
-      String k = tableName + Path.SEPARATOR;
+      String k = indexTableName + Path.SEPARATOR;
       indexTableScanDesc.setStatsAggPrefix(k);
       scanOperator.setConf(indexTableScanDesc);
 
@@ -167,14 +171,14 @@ public final class RewriteQueryUsingAggregateIndex {
       RowResolver rr = new RowResolver();
       try {
         StructObjectInspector rowObjectInspector =
-          (StructObjectInspector) ts.tableHandle.getDeserializer().getObjectInspector();
+          (StructObjectInspector) indexTableHandle.getDeserializer().getObjectInspector();
         List<? extends StructField> fields = rowObjectInspector
         .getAllStructFieldRefs();
         for (int i = 0; i < fields.size(); i++) {
-          rr.put(tableName, fields.get(i).getFieldName(), new ColumnInfo(fields
+          rr.put(indexTableName, fields.get(i).getFieldName(), new ColumnInfo(fields
               .get(i).getFieldName(), TypeInfoUtils
               .getTypeInfoFromObjectInspector(fields.get(i)
-                  .getFieldObjectInspector()), tableName, false));
+                  .getFieldObjectInspector()), indexTableName, false));
         }
       } catch (SerDeException e) {
         LOG.error("Error while creating the RowResolver for new TableScanOperator.");
@@ -186,15 +190,15 @@ public final class RewriteQueryUsingAggregateIndex {
       operatorContext.setRowResolver(rr);
       String tabNameWithAlias = null;
       if(alias != null){
-        tabNameWithAlias = alias + ":" + tableName;
+        tabNameWithAlias = alias + ":" + indexTableName;
        }else{
-         tabNameWithAlias = tableName;
+         tabNameWithAlias = indexTableName;
        }
 
       //Scan operator now points to other table
-      topToTable.put(scanOperator, ts.tableHandle);
+      topToTable.put(scanOperator, indexTableHandle);
       scanOperator.getConf().setAlias(tabNameWithAlias);
-      scanOperator.setAlias(tableName);
+      scanOperator.setAlias(indexTableName);
       topOps.put(tabNameWithAlias, scanOperator);
       opParseContext.put(scanOperator, operatorContext);
       rewriteQueryCtx.getParseContext().setTopToTable(topToTable);

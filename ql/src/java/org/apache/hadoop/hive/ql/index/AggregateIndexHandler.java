@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hive.ql.index;
 
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -111,12 +112,12 @@ public class AggregateIndexHandler extends CompactIndexHandler {
 
       //form a new insert overwrite query.
       StringBuilder command= new StringBuilder();
-      LinkedHashMap<String, String> partSpec = indexTblPartDesc.getPartSpec();
+      Map<String, String> partSpec = indexTblPartDesc.getPartSpec();
 
       command.append("INSERT OVERWRITE TABLE " + HiveUtils.unparseIdentifier(indexTableName));
       if (partitioned && indexTblPartDesc != null) {
         command.append(" PARTITION ( ");
-        List<String> ret = getPartKVPairStringArray(partSpec);
+        List<String> ret = getPartKVPairStringArray((LinkedHashMap<String, String>) partSpec);
         for (int i = 0; i < ret.size(); i++) {
           String partKV = ret.get(i);
           command.append(partKV);
@@ -155,10 +156,10 @@ public class AggregateIndexHandler extends CompactIndexHandler {
 
 
       command.append(" FROM " + HiveUtils.unparseIdentifier(baseTableName));
-      LinkedHashMap<String, String> basePartSpec = baseTablePartDesc.getPartSpec();
+      Map<String, String> basePartSpec = baseTablePartDesc.getPartSpec();
       if(basePartSpec != null) {
         command.append(" WHERE ");
-        List<String> pkv = getPartKVPairStringArray(basePartSpec);
+        List<String> pkv = getPartKVPairStringArray((LinkedHashMap<String, String>) basePartSpec);
         for (int i = 0; i < pkv.size(); i++) {
           String partKV = pkv.get(i);
           command.append(partKV);
@@ -177,7 +178,7 @@ public class AggregateIndexHandler extends CompactIndexHandler {
       inputs.addAll(driver.getPlan().getInputs());
       outputs.addAll(driver.getPlan().getOutputs());
       IndexMetadataChangeWork indexMetaChange =
-        new IndexMetadataChangeWork(partSpec, indexTableName, dbName);
+        new IndexMetadataChangeWork((HashMap<String, String>) partSpec, indexTableName, dbName);
       IndexMetadataChangeTask indexMetaChangeTsk = new IndexMetadataChangeTask();
       indexMetaChangeTsk.setWork(indexMetaChange);
       rootTask.addDependentTask(indexMetaChangeTsk);
