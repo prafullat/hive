@@ -200,6 +200,7 @@ TOK_LIMIT;
 TOK_TABLEPROPERTY;
 TOK_IFEXISTS;
 TOK_IFNOTEXISTS;
+TOK_ORREPLACE;
 TOK_HINTLIST;
 TOK_HINT;
 TOK_MAPJOIN;
@@ -370,6 +371,13 @@ ifNotExists
     -> ^(TOK_IFNOTEXISTS)
     ;
 
+orReplace
+@init { msgs.push("or replace clause"); }
+@after { msgs.pop(); }
+    : KW_OR KW_REPLACE
+    -> ^(TOK_ORREPLACE)
+    ;
+
 
 createDatabaseStatement
 @init { msgs.push("create database statement"); }
@@ -377,8 +385,8 @@ createDatabaseStatement
     : KW_CREATE (KW_DATABASE|KW_SCHEMA)
         ifNotExists?
         name=Identifier
-        dbLocation?
         databaseComment?
+        dbLocation?
         (KW_WITH KW_DBPROPERTIES dbprops=dbProperties)?
     -> ^(TOK_CREATEDATABASE $name ifNotExists? dbLocation? databaseComment? $dbprops?)
     ;
@@ -997,12 +1005,13 @@ createViewStatement
     msgs.push("create view statement");
 }
 @after { msgs.pop(); }
-    : KW_CREATE KW_VIEW ifNotExists? name=tableName
+    : KW_CREATE (orReplace)? KW_VIEW (ifNotExists)? name=tableName
         (LPAREN columnNameCommentList RPAREN)? tableComment? viewPartition?
         tablePropertiesPrefixed?
         KW_AS
         selectStatement
-    -> ^(TOK_CREATEVIEW $name ifNotExists?
+    -> ^(TOK_CREATEVIEW $name orReplace?
+         ifNotExists?
          columnNameCommentList?
          tableComment?
          viewPartition?
