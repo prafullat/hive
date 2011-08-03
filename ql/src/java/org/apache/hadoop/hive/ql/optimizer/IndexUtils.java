@@ -1,7 +1,24 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.hive.ql.optimizer;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -19,30 +36,37 @@ import org.apache.hadoop.hive.ql.parse.ParseContext;
 import org.apache.hadoop.hive.ql.parse.PrunedPartitionList;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
 
+/**
+ * Utility class for index support.
+ * Currently used for BITMAP and AGGREGATE index
+ *
+ */
 public final class IndexUtils {
 
   private static final Log LOG = LogFactory.getLog(IndexWhereProcessor.class.getName());
 
   private IndexUtils(){
-
   }
   /**
    * Check the partitions used by the table scan to make sure they also exist in the
-   * index table
+   * index table.
    * @param pctx
    * @param operator
    * @return partitions used by query.  null if they do not exist in index table
    */
-  public static Set<Partition> checkPartitionsCoveredByIndex(TableScanOperator tableScan, ParseContext pctx,
+  public static Set<Partition> checkPartitionsCoveredByIndex(TableScanOperator tableScan,
+      ParseContext pctx,
       Map<Table, List<Index>> indexes)
     throws HiveException {
     Hive hive = Hive.get(pctx.getConf());
     Set<Partition> queryPartitions = null;
     // make sure each partition exists on the index table
     PrunedPartitionList queryPartitionList = pctx.getOpToPartList().get(tableScan);
-    if(queryPartitionList.getConfirmedPartns() != null && !queryPartitionList.getConfirmedPartns().isEmpty()){
+    if(queryPartitionList.getConfirmedPartns() != null
+        && !queryPartitionList.getConfirmedPartns().isEmpty()){
       queryPartitions = queryPartitionList.getConfirmedPartns();
-    }else if(queryPartitionList.getUnknownPartns() != null && !queryPartitionList.getUnknownPartns().isEmpty()){
+    }else if(queryPartitionList.getUnknownPartns() != null
+        && !queryPartitionList.getUnknownPartns().isEmpty()){
       queryPartitions = queryPartitionList.getUnknownPartns();
     }
 
@@ -57,9 +81,10 @@ public final class IndexUtils {
   }
 
   /**
-   * return index tables associated with the base table of the partition
+   * return index tables associated with the base table of the partition.
    */
-  private static List<Table> getIndexTables(Hive hive, Partition part, Map<Table, List<Index>> indexes) throws HiveException {
+  private static List<Table> getIndexTables(Hive hive, Partition part,
+      Map<Table, List<Index>> indexes) throws HiveException {
     List<Table> indexTables = new ArrayList<Table>();
     Table partitionedTable = part.getTable();
     for (Index index : indexes.get(partitionedTable)) {
@@ -69,11 +94,11 @@ public final class IndexUtils {
   }
 
   /**
-   * check that every index table contains the given partition
+   * check that every index table contains the given partition.
    */
   private static boolean containsPartition(Hive hive, List<Table> indexTables, Partition part)
     throws HiveException {
-    HashMap<String, String> partSpec = part.getSpec();
+    Map<String, String> partSpec = part.getSpec();
 
     if (partSpec.isEmpty()) {
       return true; // empty specs come from non-partitioned tables
@@ -83,7 +108,8 @@ public final class IndexUtils {
       // get partitions that match the spec
       List<Partition> matchingPartitions = hive.getPartitions(indexTable, partSpec);
       if (matchingPartitions == null || matchingPartitions.size() == 0) {
-        LOG.info("Index table " + indexTable + "did not contain built partition that matched " + partSpec);
+        LOG.info("Index table " + indexTable +
+            "did not contain built partition that matched " + partSpec);
         return false;
       }
     }

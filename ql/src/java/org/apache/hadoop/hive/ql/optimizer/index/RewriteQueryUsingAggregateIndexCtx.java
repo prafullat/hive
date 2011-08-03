@@ -21,6 +21,7 @@ package org.apache.hadoop.hive.ql.optimizer.index;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 
@@ -66,7 +67,7 @@ public final class RewriteQueryUsingAggregateIndexCtx  implements NodeProcessorC
   }
 
 
-  private LinkedHashMap<Operator<? extends Serializable>, OpParseContext> opc =
+  private Map<Operator<? extends Serializable>, OpParseContext> opc =
     new LinkedHashMap<Operator<? extends Serializable>, OpParseContext>();
   private final Hive hiveDb;
   private final ParseContext parseContext;
@@ -77,7 +78,7 @@ public final class RewriteQueryUsingAggregateIndexCtx  implements NodeProcessorC
   private final String aggregateFunction;
   private ExprNodeColumnDesc aggrExprNode = null;
 
-  public LinkedHashMap<Operator<? extends Serializable>, OpParseContext> getOpc() {
+  public Map<Operator<? extends Serializable>, OpParseContext> getOpc() {
     return opc;
   }
 
@@ -138,7 +139,7 @@ public final class RewriteQueryUsingAggregateIndexCtx  implements NodeProcessorC
     GraphWalker ogw = new DefaultGraphWalker(disp);
 
     // Create a list of topop nodes
-    ArrayList<Node> topNodes = new ArrayList<Node>();
+    List<Node> topNodes = new ArrayList<Node>();
     topNodes.add(topOp);
     ogw.startWalking(topNodes, null);
   }

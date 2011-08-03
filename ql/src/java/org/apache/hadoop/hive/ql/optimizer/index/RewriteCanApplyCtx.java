@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
@@ -31,7 +32,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.metastore.api.Index;
 import org.apache.hadoop.hive.ql.exec.Operator;
-import org.apache.hadoop.hive.ql.lib.DefaultGraphWalker;
 import org.apache.hadoop.hive.ql.lib.DefaultRuleDispatcher;
 import org.apache.hadoop.hive.ql.lib.Dispatcher;
 import org.apache.hadoop.hive.ql.lib.GraphWalker;
@@ -125,7 +125,7 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
     this.aggFuncIsNotCount = aggFuncIsNotCount;
   }
 
-  public HashMap<String, String> getBaseToIdxTableMap() {
+  public Map<String, String> getBaseToIdxTableMap() {
     return baseToIdxTableMap;
   }
 
@@ -273,7 +273,7 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
   /**
    * This method walks all the nodes starting from topOp TableScanOperator node
    * and invokes methods from {@link RewriteCanApplyProcFactory} for each of the rules
-   * added to the opRules map. We use the {@link DefaultGraphWalker} for a post-order
+   * added to the opRules map. We use the {@link PreOrderWalker} for a pre-order
    * traversal of the operator tree.
    *
    * The methods from {@link RewriteCanApplyProcFactory} set appropriate values in
@@ -299,7 +299,7 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
     GraphWalker ogw = new PreOrderWalker(disp);
 
     // Create a list of topop nodes
-    ArrayList<Node> topNodes = new ArrayList<Node>();
+    List<Node> topNodes = new ArrayList<Node>();
     topNodes.add(topOp);
 
     try {
@@ -329,7 +329,7 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
 
   //Map for base table to index table mapping
   //TableScan operator for base table will be modified to read from index table
-  private final HashMap<String, String> baseToIdxTableMap =
+  private final Map<String, String> baseToIdxTableMap =
     new HashMap<String, String>();;
 
 
@@ -364,16 +364,13 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
       // For group by, we need to check if all keys are from index columns
       // itself. Here GB key order can be different than index columns but that does
       // not really matter for final result.
-      // E.g. select c1, c2 from src group by c2, c1;
-      // we can rewrite this one to:
-      // select c1, c2 from src_cmpt_idx;
       if (!indexKeyNames.containsAll(gbKeyNameList)) {
         LOG.info("Group by key has some non-indexed columns, " +
             " Cannot use index  " + index.getIndexName());
         return false;
       }
 
-      // If we have agg function (currently only COUNT is supported), check if its input are
+      // If we have agg function (currently only COUNT is supported), check if its inputs are
       // from index. we currently support only that.
       if (aggFuncColList.size() > 0)  {
         if (!indexKeyNames.containsAll(aggFuncColList)){

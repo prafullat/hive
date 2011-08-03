@@ -153,8 +153,6 @@ public class AggregateIndexHandler extends CompactIndexHandler {
         }
       }
 
-
-
       command.append(" FROM " + HiveUtils.unparseIdentifier(baseTableName));
       Map<String, String> basePartSpec = baseTablePartDesc.getPartSpec();
       if(basePartSpec != null) {

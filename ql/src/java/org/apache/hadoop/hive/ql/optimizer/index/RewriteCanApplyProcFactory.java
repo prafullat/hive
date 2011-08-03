@@ -19,7 +19,6 @@
 package org.apache.hadoop.hive.ql.optimizer.index;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -62,7 +61,6 @@ public final class RewriteCanApplyProcFactory {
 
   /**
    * Check for conditions in FilterOperator that do not meet rewrite criteria.
-   * Set the appropriate variables in {@link RewriteVars} enum.
    */
   private static class CheckFilterProc implements NodeProcessor {
     public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx ctx,
@@ -96,7 +94,6 @@ public final class RewriteCanApplyProcFactory {
 
    /**
    * Check for conditions in GroupByOperator that do not meet rewrite criteria.
-   * Set the appropriate variables in {@link RewriteVars} enum.
    *
    */
   private static class CheckGroupByProc implements NodeProcessor {
@@ -105,15 +102,16 @@ public final class RewriteCanApplyProcFactory {
          Object... nodeOutputs) throws SemanticException {
        GroupByOperator operator = (GroupByOperator)nd;
        canApplyCtx = (RewriteCanApplyCtx)ctx;
-       //for each group-by clause in query, only one GroupByOperator of t
-       //he GBY-RS-GBY sequence is stored in  getGroupOpToInputTables
+       //for each group-by clause in query, only one GroupByOperator of the
+       //GBY-RS-GBY sequence is stored in  getGroupOpToInputTables
        //we need to process only this operator
        //Also, we do not rewrite for cases when same query branch has multiple group-by constructs
        if(canApplyCtx.getParseContext().getGroupOpToInputTables().containsKey(operator) &&
            !canApplyCtx.isQueryHasGroupBy()){
+
          canApplyCtx.setQueryHasGroupBy(true);
          GroupByDesc conf = (GroupByDesc) operator.getConf();
-         ArrayList<AggregationDesc> aggrList = conf.getAggregators();
+         List<AggregationDesc> aggrList = conf.getAggregators();
          if(aggrList != null && aggrList.size() > 0){
              for (AggregationDesc aggregationDesc : aggrList) {
                canApplyCtx.setAggFuncCnt(canApplyCtx.getAggFuncCnt() + 1);
@@ -125,7 +123,7 @@ public final class RewriteCanApplyProcFactory {
                if(!("count".equals(aggFunc))){
                  canApplyCtx.setAggFuncIsNotCount(true);
                }else{
-                ArrayList<ExprNodeDesc> para = aggregationDesc.getParameters();
+                List<ExprNodeDesc> para = aggregationDesc.getParameters();
                 //for a valid aggregation, it needs to have non-null parameter list
                  if(para == null){
                    canApplyCtx.setAggFuncColsFetchException(true);
@@ -152,6 +150,7 @@ public final class RewriteCanApplyProcFactory {
                        canApplyCtx.setAggFunction("_count_Of_" +
                            ((ExprNodeColumnDesc) expr).getColumn() + "");
                      }else if(expr instanceof ExprNodeConstantDesc){
+                       //count(1) case - we do not apply optimization
                        canApplyCtx.setCountOfOne(true);
                        return false;
                      }
@@ -162,7 +161,7 @@ public final class RewriteCanApplyProcFactory {
          }
 
          //we need to have non-null group-by keys for a valid group-by operator
-         ArrayList<ExprNodeDesc> keyList = conf.getKeys();
+         List<ExprNodeDesc> keyList = conf.getKeys();
          if(keyList == null || keyList.size() == 0){
            canApplyCtx.setGbyKeysFetchException(true);
          }
@@ -201,8 +200,6 @@ public final class RewriteCanApplyProcFactory {
 
  /**
    * Check for conditions in ExtractOperator that do not meet rewrite criteria.
-   * Set the appropriate variables in {@link RewriteVars} enum.
-   *
    */
   private static class CheckExtractProc implements NodeProcessor {
      public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx ctx,
@@ -215,7 +212,7 @@ public final class RewriteCanApplyProcFactory {
          Operator<? extends Serializable> interim = operator.getParentOperators().get(0);
          if(interim instanceof ReduceSinkOperator){
            ReduceSinkDesc conf = (ReduceSinkDesc) interim.getConf();
-           ArrayList<ExprNodeDesc> partCols = conf.getPartitionCols();
+           List<ExprNodeDesc> partCols = conf.getPartitionCols();
            int nr = conf.getNumReducers();
            if(nr == -1){
              if(partCols != null && partCols.size() > 0){
@@ -239,10 +236,8 @@ public final class RewriteCanApplyProcFactory {
      return new CheckExtractProc();
    }
 
-   /**
+ /**
    * Check for conditions in SelectOperator that do not meet rewrite criteria.
-   * Set the appropriate variables in {@link RewriteVars} enum.
-   *
    */
   private static class CheckSelectProc implements NodeProcessor {
      public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx ctx,
@@ -256,7 +251,7 @@ public final class RewriteCanApplyProcFactory {
          Map<String, String> internalToAlias = new LinkedHashMap<String, String>();
          RowSchema rs = operator.getSchema();
          //to get the internal to alias mapping
-         ArrayList<ColumnInfo> sign = rs.getSignature();
+         List<ColumnInfo> sign = rs.getSignature();
          for (ColumnInfo columnInfo : sign) {
            internalToAlias.put(columnInfo.getInternalName(), columnInfo.getAlias());
          }
