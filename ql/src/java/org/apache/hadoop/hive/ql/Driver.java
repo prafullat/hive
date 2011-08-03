@@ -127,7 +127,7 @@ public class Driver implements CommandProcessor {
 
   // A limit on the number of threads that can be launched
   private int maxthreads;
-  private final int sleeptime = 2000;
+  private static final int SLEEP_TIME = 2000;
   protected int tryCount = Integer.MAX_VALUE;
 
   private boolean checkLockManager() {
@@ -1036,6 +1036,8 @@ public class Driver implements CommandProcessor {
 
       DriverContext driverCxt = new DriverContext(runnable, ctx);
 
+      SessionState.get().setLastMapRedStatsList(new ArrayList<MapRedStats>());
+
       // Add root Tasks to runnable
 
       for (Task<? extends Serializable> tsk : plan.getRootTasks()) {
@@ -1180,6 +1182,17 @@ public class Driver implements CommandProcessor {
         conf.setVar(HiveConf.ConfVars.HADOOPJOBNAME, "");
       }
       Utilities.PerfLogEnd(LOG, "Driver.execute");
+
+      if (SessionState.get().getLastMapRedStatsList() != null
+          && SessionState.get().getLastMapRedStatsList().size() > 0) {
+        long totalCpu = 0;
+        console.printInfo("MapReduce Jobs Launched: ");
+        for (int i = 0; i < SessionState.get().getLastMapRedStatsList().size(); i++) {
+          console.printInfo("Job " + i + ": " + SessionState.get().getLastMapRedStatsList().get(i));
+          totalCpu += SessionState.get().getLastMapRedStatsList().get(i).getCpuMSec();
+        }
+        console.printInfo("Total MapReduce CPU Time Spent: " + Utilities.formatMsecToStr(totalCpu));
+      }
     }
     plan.setDone();
 
@@ -1274,7 +1287,7 @@ public class Driver implements CommandProcessor {
       // In this loop, nothing was found
       // Sleep 10 seconds and restart
       try {
-        Thread.sleep(sleeptime);
+        Thread.sleep(SLEEP_TIME);
       } catch (InterruptedException ie) {
         // Do Nothing
         ;

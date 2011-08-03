@@ -1109,9 +1109,10 @@ public final class Utilities {
   /**
    * The first group will contain the task id. The second group is the optional extension. The file
    * name looks like: "0_0" or "0_0.gz". There may be a leading prefix (tmp_). Since getTaskId() can
-   * return an integer only - this should match a pure integer as well
+   * return an integer only - this should match a pure integer as well. {1,3} is used to limit
+   * matching for attempts #'s 0-999.
    */
-  private static Pattern fileNameTaskIdRegex = Pattern.compile("^.*?([0-9]+)(_[0-9])?(\\..*)?$");
+  private static Pattern fileNameTaskIdRegex = Pattern.compile("^.*?([0-9]+)(_[0-9]{1,3})?(\\..*)?$");
 
   /**
    * Get the task id from the filename. It is assumed that the filename is derived from the output
@@ -2255,6 +2256,46 @@ public final class Utilities {
         break;
       }
     }
+    return sb.toString();
+  }
+
+  /**
+   * Format number of milliseconds to strings
+   *
+   * @param msec milliseconds
+   * @return a formatted string like "x days y hours z minutes a seconds b msec"
+   */
+  public static String formatMsecToStr(long msec) {
+    long day = -1, hour = -1, minute = -1, second = -1;
+    long ms = msec % 1000;
+    long timeLeft = msec / 1000;
+    if (timeLeft > 0) {
+      second = timeLeft % 60;
+      timeLeft /= 60;
+      if (timeLeft > 0) {
+        minute = timeLeft % 60;
+        timeLeft /= 60;
+        if (timeLeft > 0) {
+          hour = timeLeft % 24;
+          day = timeLeft / 24;
+        }
+      }
+    }
+    StringBuilder sb = new StringBuilder();
+    if (day != -1) {
+      sb.append(day + " days ");
+    }
+    if (hour != -1) {
+      sb.append(hour + " hours ");
+    }
+    if (minute != -1) {
+      sb.append(minute + " minutes ");
+    }
+    if (second != -1) {
+      sb.append(second + " seconds ");
+    }
+    sb.append(ms + " msec");
+
     return sb.toString();
   }
 }

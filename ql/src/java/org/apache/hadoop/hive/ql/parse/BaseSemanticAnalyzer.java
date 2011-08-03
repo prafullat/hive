@@ -173,7 +173,9 @@ public abstract class BaseSemanticAnalyzer {
       case HiveParser.TOK_TBLRCFILE:
         inputFormat = RCFILE_INPUT;
         outputFormat = RCFILE_OUTPUT;
-        shared.serde = COLUMNAR_SERDE;
+        if (shared.serde == null) {
+          shared.serde = COLUMNAR_SERDE;
+        }
         storageFormat = true;
         break;
       case HiveParser.TOK_TABLEFILEFORMAT:
@@ -295,7 +297,7 @@ public abstract class BaseSemanticAnalyzer {
           if (val > 127) {
             val = val - 256;
           }
-          bArray[j++] = new Integer(val).byteValue();
+          bArray[j++] = (byte)val;
         }
 
         String res = new String(bArray, charSetName);
@@ -555,17 +557,18 @@ public abstract class BaseSemanticAnalyzer {
     if (children <= 0) {
       throw new SemanticException("empty struct not allowed.");
     }
+    StringBuilder buffer = new StringBuilder(typeStr);
     for (int i = 0; i < children; i++) {
       ASTNode child = (ASTNode) typeNode.getChild(i);
-      typeStr += unescapeIdentifier(child.getChild(0).getText()) + ":";
-      typeStr += getTypeStringFromAST((ASTNode) child.getChild(1));
+      buffer.append(unescapeIdentifier(child.getChild(0).getText())).append(":");
+      buffer.append(getTypeStringFromAST((ASTNode) child.getChild(1)));
       if (i < children - 1) {
-        typeStr += ",";
+        buffer.append(",");
       }
     }
 
-    typeStr += ">";
-    return typeStr;
+    buffer.append(">");
+    return buffer.toString();
   }
 
   private static String getUnionTypeStringFromAST(ASTNode typeNode)
@@ -576,13 +579,15 @@ public abstract class BaseSemanticAnalyzer {
     if (children <= 0) {
       throw new SemanticException("empty union not allowed.");
     }
+    StringBuilder buffer = new StringBuilder(typeStr);
     for (int i = 0; i < children; i++) {
-      typeStr += getTypeStringFromAST((ASTNode) typeNode.getChild(i));
+      buffer.append(getTypeStringFromAST((ASTNode) typeNode.getChild(i)));
       if (i < children - 1) {
-        typeStr += ",";
+        buffer.append(",");
       }
     }
-    typeStr += ">";
+    buffer.append(">");
+    typeStr = buffer.toString();
     return typeStr;
   }
 
