@@ -33,15 +33,17 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
-import java.util.Map.Entry;
 
 import org.antlr.runtime.tree.CommonTree;
 import org.antlr.runtime.tree.Tree;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
 import org.apache.hadoop.hive.metastore.Warehouse;
@@ -58,8 +60,8 @@ import org.apache.hadoop.hive.ql.exec.Utilities;
 import org.apache.hadoop.hive.ql.hooks.ReadEntity;
 import org.apache.hadoop.hive.ql.hooks.WriteEntity;
 import org.apache.hadoop.hive.ql.index.HiveIndex;
-import org.apache.hadoop.hive.ql.index.HiveIndexHandler;
 import org.apache.hadoop.hive.ql.index.HiveIndex.IndexType;
+import org.apache.hadoop.hive.ql.index.HiveIndexHandler;
 import org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat;
 import org.apache.hadoop.hive.ql.io.RCFileInputFormat;
 import org.apache.hadoop.hive.ql.metadata.Hive;
@@ -70,7 +72,9 @@ import org.apache.hadoop.hive.ql.metadata.Table;
 import org.apache.hadoop.hive.ql.plan.AddPartitionDesc;
 import org.apache.hadoop.hive.ql.plan.AlterDatabaseDesc;
 import org.apache.hadoop.hive.ql.plan.AlterIndexDesc;
+import org.apache.hadoop.hive.ql.plan.AlterIndexDesc.AlterIndexTypes;
 import org.apache.hadoop.hive.ql.plan.AlterTableDesc;
+import org.apache.hadoop.hive.ql.plan.AlterTableDesc.AlterTableTypes;
 import org.apache.hadoop.hive.ql.plan.AlterTableSimpleDesc;
 import org.apache.hadoop.hive.ql.plan.CreateDatabaseDesc;
 import org.apache.hadoop.hive.ql.plan.CreateIndexDesc;
@@ -105,8 +109,6 @@ import org.apache.hadoop.hive.ql.plan.StatsWork;
 import org.apache.hadoop.hive.ql.plan.SwitchDatabaseDesc;
 import org.apache.hadoop.hive.ql.plan.TableDesc;
 import org.apache.hadoop.hive.ql.plan.UnlockTableDesc;
-import org.apache.hadoop.hive.ql.plan.AlterIndexDesc.AlterIndexTypes;
-import org.apache.hadoop.hive.ql.plan.AlterTableDesc.AlterTableTypes;
 import org.apache.hadoop.hive.ql.security.authorization.Privilege;
 import org.apache.hadoop.hive.ql.security.authorization.PrivilegeRegistry;
 import org.apache.hadoop.hive.ql.session.SessionState;
@@ -139,9 +141,8 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
   }
 
   public static String getTypeName(int token) throws SemanticException {
-    // date, datetime, and timestamp types aren't currently supported
-    if (token == HiveParser.TOK_DATE || token == HiveParser.TOK_DATETIME ||
-        token == HiveParser.TOK_TIMESTAMP) {
+    // date and datetime types aren't currently supported
+    if (token == HiveParser.TOK_DATE || token == HiveParser.TOK_DATETIME) {
       throw new SemanticException(ErrorMsg.UNSUPPORTED_TYPE.getMsg());
     }
     return TokenToTypeName.get(token);
@@ -779,6 +780,7 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
 
     storageFormat.fillDefaultStorageFormat(shared);
 
+
     CreateIndexDesc crtIndexDesc = new CreateIndexDesc(tableName, indexName,
         indexedCols, indexTableName, deferredRebuild, storageFormat.inputFormat, storageFormat.outputFormat,
         storageFormat.storageHandler, typeName, location, idxProps, tblProps,
@@ -814,12 +816,52 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
     String baseTableName = unescapeIdentifier(ast.getChild(0).getText());
     String indexName = unescapeIdentifier(ast.getChild(1).getText());
     HashMap<String, String> partSpec = null;
+    Map<Map<String, String>, Long> basePartTs = new HashMap<Map<String, String>, Long>();
+    Map<String, String> props = new HashMap<String, String>();
     Tree part = ast.getChild(2);
     if (part != null) {
       partSpec = extractPartitionSpecs(part);
     }
+    AlterIndexDesc alterIdxDesc = new AlterIndexDesc(AlterIndexTypes.ADDPROPS);
+    try {
+      long timestamp;
+      Table baseTbl = db.getTable(db.getCurrentDatabase(), baseTableName);
+      if (baseTbl.isPartitioned()) {
+        List<Partition> baseParts;
+        if (part != null) {
+          baseParts = db.getPartitions(baseTbl, partSpec);
+        } else {
+          baseParts = db.getPartitions(baseTbl);
+        }
+        if (baseParts != null) {
+          for (Partition p : baseParts) {
+            FileSystem fs = p.getPartitionPath().getFileSystem(db.getConf());
+            FileStatus fss = fs.getFileStatus(p.getPartitionPath());
+            basePartTs.put(p.getSpec(), fss.getModificationTime());
+          }
+        }
+      } else {
+        FileSystem fs = baseTbl.getPath().getFileSystem(db.getConf());
+        FileStatus fss = fs.getFileStatus(baseTbl.getPath());
+        basePartTs.put(null, fss.getModificationTime());
+      }
+      for (Map<String, String> spec : basePartTs.keySet()) {
+        if (spec != null) {
+          props.put(spec.toString(), basePartTs.get(spec).toString());
+        } else {
+          props.put("base_timestamp", basePartTs.get(null).toString());
+        }
+      }
+      alterIdxDesc.setProps(props);
+    } catch (Exception e) {
+    }
+    alterIdxDesc.setIndexName(indexName);
+    alterIdxDesc.setBaseTableName(baseTableName);
+    alterIdxDesc.setDbName(db.getCurrentDatabase());
+        
     List<Task<?>> indexBuilder = getIndexBuilderMapRed(baseTableName, indexName, partSpec);
     rootTasks.addAll(indexBuilder);
+    rootTasks.add(TaskFactory.get(new DDLWork(alterIdxDesc), conf));
   }
 
   private void analyzeAlterIndexProps(ASTNode ast)
