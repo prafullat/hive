@@ -122,6 +122,7 @@ public class HiveConf extends Configuration {
     MAXREDUCERS("hive.exec.reducers.max", 999),
     PREEXECHOOKS("hive.exec.pre.hooks", ""),
     POSTEXECHOOKS("hive.exec.post.hooks", ""),
+    ONFAILUREHOOKS("hive.exec.failure.hooks", ""),
     EXECPARALLEL("hive.exec.parallel", false), // parallel query launching
     EXECPARALLETHREADNUMBER("hive.exec.parallel.thread.number", 8),
     HIVESPECULATIVEEXECREDUCERS("hive.mapred.reduce.tasks.speculative.execution", true),
@@ -136,6 +137,8 @@ public class HiveConf extends Configuration {
     DEFAULT_ZOOKEEPER_PARTITION_NAME("hive.lockmgr.zookeeper.default.partition.name", "__HIVE_DEFAULT_ZOOKEEPER_PARTITION__"),
     // Whether to show a link to the most failed task + debugging tips
     SHOW_JOB_FAIL_DEBUG_INFO("hive.exec.show.job.failure.debug.info", true),
+    JOB_DEBUG_TIMEOUT("hive.exec.job.debug.timeout", 30000),
+    TASKLOG_DEBUG_TIMEOUT("hive.exec.tasklog.debug.timeout", 20000),
 
     // should hive determine whether to run in local mode automatically ?
     LOCALMODEAUTO("hive.exec.mode.local.auto", false),
@@ -263,8 +266,8 @@ public class HiveConf extends Configuration {
     HIVESCRIPTIDENVVAR("hive.script.operator.id.env.var", "HIVE_SCRIPT_OPERATOR_ID"),
     HIVEMAPREDMODE("hive.mapred.mode", "nonstrict"),
     HIVEALIAS("hive.alias", ""),
-    HIVEMAPSIDEAGGREGATE("hive.map.aggr", "true"),
-    HIVEGROUPBYSKEW("hive.groupby.skewindata", "false"),
+    HIVEMAPSIDEAGGREGATE("hive.map.aggr", true),
+    HIVEGROUPBYSKEW("hive.groupby.skewindata", false),
     HIVEJOINEMITINTERVAL("hive.join.emit.interval", 1000),
     HIVEJOINCACHESIZE("hive.join.cache.size", 25000),
     HIVEMAPJOINBUCKETCACHESIZE("hive.mapjoin.bucket.cache.size", 100),
@@ -461,6 +464,15 @@ public class HiveConf extends Configuration {
     HIVE_MAPPER_CANNOT_SPAN_MULTIPLE_PARTITIONS("hive.mapper.cannot.span.multiple.partitions", false),
     HIVE_REWORK_MAPREDWORK("hive.rework.mapredwork", false),
     HIVE_CONCATENATE_CHECK_INDEX ("hive.exec.concatenate.check.index", true),
+
+    //prefix used to auto generated column aliases
+    HIVE_AUTOGEN_COLUMNALIAS_PREFIX_LABEL("hive.autogen.columnalias.prefix.label", "_c"),
+    HIVE_AUTOGEN_COLUMNALIAS_PREFIX_INCLUDEFUNCNAME(
+                               "hive.autogen.columnalias.prefix.includefuncname", false),
+
+    // The class responsible for logging client side performance metrics
+    // Must be a subclass of org.apache.hadoop.hive.ql.log.PerfLogger
+    HIVE_PERF_LOGGER("hive.exec.perf.logger", "org.apache.hadoop.hive.ql.log.PerfLogger"),
     ;
 
     public final String varname;

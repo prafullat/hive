@@ -39,6 +39,7 @@ import org.apache.hadoop.hive.serde2.objectinspector.primitive.IntObjectInspecto
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.LongObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.ShortObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.StringObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.primitive.TimestampObjectInspector;
 
 /**
  * SerDeUtils.
@@ -94,6 +95,7 @@ public final class SerDeUtils {
     nativeSerDeNames.add("org.apache.hadoop.hive.serde.thrift.columnsetSerDe");
     nativeSerDeNames
         .add(org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe.class.getName());
+    nativeSerDeNames.add(org.apache.hadoop.hive.serde2.columnar.ColumnarSerDe.class.getName());
   }
 
   public static boolean shouldGetColsFromSerDe(String serde) {
@@ -251,6 +253,13 @@ public final class SerDeUtils {
           sb.append('"');
           sb.append(escapeString(((StringObjectInspector) poi)
               .getPrimitiveJavaObject(o)));
+          sb.append('"');
+          break;
+        }
+        case TIMESTAMP: {
+          sb.append('"');
+          sb.append(((TimestampObjectInspector) poi)
+              .getPrimitiveWritableObject(o));
           sb.append('"');
           break;
         }
