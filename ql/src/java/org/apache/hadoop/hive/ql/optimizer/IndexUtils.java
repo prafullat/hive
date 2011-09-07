@@ -19,14 +19,22 @@
 package org.apache.hadoop.hive.ql.optimizer;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.api.Index;
+import org.apache.hadoop.hive.ql.Driver;
 import org.apache.hadoop.hive.ql.exec.TableScanOperator;
+import org.apache.hadoop.hive.ql.exec.Task;
+import org.apache.hadoop.hive.ql.hooks.ReadEntity;
+import org.apache.hadoop.hive.ql.hooks.WriteEntity;
+import org.apache.hadoop.hive.ql.index.IndexMetadataChangeTask;
+import org.apache.hadoop.hive.ql.index.IndexMetadataChangeWork;
 import org.apache.hadoop.hive.ql.metadata.Hive;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.metadata.Partition;
@@ -47,12 +55,14 @@ public final class IndexUtils {
 
   private IndexUtils(){
   }
+
   /**
    * Check the partitions used by the table scan to make sure they also exist in the
    * index table.
    * @param pctx
-   * @param operator
+   * @param indexes
    * @return partitions used by query.  null if they do not exist in index table
+   * @throws HiveException
    */
   public static Set<Partition> checkPartitionsCoveredByIndex(TableScanOperator tableScan,
       ParseContext pctx,
@@ -137,6 +147,28 @@ public final class IndexUtils {
       }
     }
     return matchingIndexes;
+  }
+
+  public static Task<?> createRootTask(HiveConf builderConf, Set<ReadEntity> inputs,
+      Set<WriteEntity> outputs, StringBuilder command,
+      LinkedHashMap<String, String> partSpec,
+      String indexTableName, String dbName){
+    // Don't try to index optimize the query to build the index
+    HiveConf.setBoolVar(builderConf, HiveConf.ConfVars.HIVEOPTINDEXFILTER, false);
+    Driver driver = new Driver(builderConf);
+    driver.compile(command.toString());
+
+    Task<?> rootTask = driver.getPlan().getRootTasks().get(0);
+    inputs.addAll(driver.getPlan().getInputs());
+    outputs.addAll(driver.getPlan().getOutputs());
+
+    IndexMetadataChangeWork indexMetaChange = new IndexMetadataChangeWork(partSpec,
+        indexTableName, dbName);
+    IndexMetadataChangeTask indexMetaChangeTsk = new IndexMetadataChangeTask();
+    indexMetaChangeTsk.setWork(indexMetaChange);
+    rootTask.addDependentTask(indexMetaChangeTsk);
+
+    return rootTask;
   }
 
 

@@ -150,9 +150,9 @@ public final class RewriteCanApplyProcFactory {
                        canApplyCtx.setAggFunction("_count_Of_" +
                            ((ExprNodeColumnDesc) expr).getColumn() + "");
                      }else if(expr instanceof ExprNodeConstantDesc){
-                       //count(1) case - we do not apply optimization
+                       //count(1) case
                        canApplyCtx.setCountOfOne(true);
-                       return false;
+                       canApplyCtx.setAggFunction("_count_Of_1");
                      }
                    }
                  }
@@ -222,10 +222,10 @@ public final class RewriteCanApplyProcFactory {
                //we do not need partition columns in case of sort-by
                canApplyCtx.setQueryHasSortBy(true);
              }
-           }else if(nr == 1){
+           }/*else if(nr == 1){
              //Query has order-by only if number of reducers is 1
              canApplyCtx.setQueryHasOrderBy(true);
-           }
+           }*/
          }
        }
        return null;

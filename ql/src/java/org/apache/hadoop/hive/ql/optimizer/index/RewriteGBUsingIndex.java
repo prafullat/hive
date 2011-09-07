@@ -47,7 +47,6 @@ import org.apache.hadoop.hive.ql.optimizer.IndexUtils;
 import org.apache.hadoop.hive.ql.optimizer.Transform;
 import org.apache.hadoop.hive.ql.parse.OpParseContext;
 import org.apache.hadoop.hive.ql.parse.ParseContext;
-import org.apache.hadoop.hive.ql.parse.QBParseInfo;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
 
 
@@ -128,33 +127,17 @@ public class RewriteGBUsingIndex implements Transform {
       throw new SemanticException(e.getMessage(), e);
     }
 
-    /* Check if the input query is internal query that
-     * inserts in table (eg. ALTER INDEX...REBUILD etc.)
-     * We do not apply optimization here.
-     */
-    if(isQueryInsertToTable()){
-      return parseContext;
-    }else{
-      /* Check if the input query passes all the tests to be eligible for a rewrite
-       * If yes, rewrite original query; else, return the current parseContext
-       */
-      if(shouldApplyOptimization()){
-        LOG.info("Rewriting Original Query using " + getName() + " optimization.");
-        rewriteOriginalQuery();
-      }
-      return parseContext;
-    }
-  }
+    // Don't try to index optimize the query to build the index
+    HiveConf.setBoolVar(hiveConf, HiveConf.ConfVars.HIVEOPTINDEXFILTER, false);
 
-  /**
-   * Use Query block's parse {@link QBParseInfo} information to check if the input query
-   * is an internal SQL.
-   * If it is true, we do not apply this optimization.
-   * @return
-   */
-  private boolean isQueryInsertToTable(){
-    QBParseInfo qbParseInfo =  parseContext.getQB().getParseInfo();
-    return qbParseInfo.isInsertToTable();
+    /* Check if the input query passes all the tests to be eligible for a rewrite
+     * If yes, rewrite original query; else, return the current parseContext
+     */
+    if(shouldApplyOptimization()){
+      LOG.info("Rewriting Original Query using " + getName() + " optimization.");
+      rewriteOriginalQuery();
+    }
+    return parseContext;
   }
 
   private String getName() {

@@ -19,8 +19,18 @@ CREATE TABLE lineitem (L_ORDERKEY      INT,
 ROW FORMAT DELIMITED
 FIELDS TERMINATED BY '|';
 
+LOAD DATA LOCAL INPATH '/home/pkalmegh/Projects/indexed_hive/lineitem.txt' OVERWRITE INTO TABLE lineitem;
+
 CREATE INDEX lineitem_lshipdate_idx ON TABLE lineitem(l_shipdate) AS 'org.apache.hadoop.hive.ql.index.AggregateIndexHandler' WITH DEFERRED REBUILD IDXPROPERTIES("AGGREGATES"="count(l_shipdate)");
 ALTER INDEX lineitem_lshipdate_idx ON lineitem REBUILD;
+
+explain select l_shipdate, count(l_shipdate)
+from lineitem
+group by l_shipdate;
+
+select l_shipdate, count(l_shipdate)
+from lineitem
+group by l_shipdate;
 
 set hive.optimize.index.groupby=true;
 
@@ -28,7 +38,34 @@ explain select l_shipdate, count(l_shipdate)
 from lineitem
 group by l_shipdate;
 
+select l_shipdate, count(l_shipdate)
+from lineitem
+group by l_shipdate;
+
+set hive.optimize.index.groupby=false;
+
+
 explain select year(l_shipdate) as year,
+        month(l_shipdate) as month,
+        count(l_shipdate) as monthly_shipments
+from lineitem
+group by year(l_shipdate), month(l_shipdate);
+
+select year(l_shipdate) as year,
+        month(l_shipdate) as month,
+        count(l_shipdate) as monthly_shipments
+from lineitem
+group by year(l_shipdate), month(l_shipdate);
+
+set hive.optimize.index.groupby=true;
+
+explain select year(l_shipdate) as year,
+        month(l_shipdate) as month,
+        count(l_shipdate) as monthly_shipments
+from lineitem
+group by year(l_shipdate), month(l_shipdate);
+
+select year(l_shipdate) as year,
         month(l_shipdate) as month,
         count(l_shipdate) as monthly_shipments
 from lineitem
@@ -63,8 +100,6 @@ from lineitem) dummy;
 CREATE TABLE tbl(key int, value int);
 CREATE INDEX tbl_key_idx ON TABLE tbl(key) AS 'org.apache.hadoop.hive.ql.index.AggregateIndexHandler' WITH DEFERRED REBUILD IDXPROPERTIES("AGGREGATES"="count(key)");
 ALTER INDEX tbl_key_idx ON tbl REBUILD;
-
-set hive.optimize.index.groupby=true;
 
 EXPLAIN select key, count(key) from tbl where key = 1 group by key;
 EXPLAIN select key, count(key) from tbl group by key;
@@ -101,8 +136,6 @@ INSERT OVERWRITE TABLE tblpart PARTITION (ds='2008-04-08', hr=12) SELECT key, va
 INSERT OVERWRITE TABLE tblpart PARTITION (ds='2008-04-09', hr=11) SELECT key, value FROM srcpart WHERE ds = '2008-04-09' AND hr = 11;
 INSERT OVERWRITE TABLE tblpart PARTITION (ds='2008-04-09', hr=12) SELECT key, value FROM srcpart WHERE ds = '2008-04-09' AND hr = 12;
 
-set hive.optimize.index.groupby=true;
-
 CREATE INDEX tbl_part_index ON TABLE tblpart(key) AS 'org.apache.hadoop.hive.ql.index.AggregateIndexHandler' WITH DEFERRED REBUILD IDXPROPERTIES("AGGREGATES"="count(key)");
 
 ALTER INDEX tbl_part_index ON tblpart PARTITION (ds='2008-04-08', hr=11) REBUILD;
@@ -115,3 +148,17 @@ EXPLAIN SELECT key, count(key) FROM tblpart WHERE ds='2008-04-09' AND hr=12 AND 
 
 DROP INDEX tbl_part_index on tblpart;
 DROP TABLE tblpart;
+
+CREATE TABLE tbl(key int, value int) ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'; 
+LOAD DATA LOCAL INPATH '/home/pkalmegh/Projects/indexed_hive/tbl.txt' OVERWRITE INTO TABLE tbl;
+
+CREATE INDEX tbl_key_idx ON TABLE tbl(key) AS 'org.apache.hadoop.hive.ql.index.AggregateIndexHandler' WITH DEFERRED REBUILD IDXPROPERTIES("AGGREGATES"="count(key)");
+ALTER INDEX tbl_key_idx ON tbl REBUILD;
+
+set hive.optimize.index.groupby=false;
+explain select key, count(key) from tbl group by key order by key;
+select key, count(key) from tbl group by key order by key;
+set hive.optimize.index.groupby=true;
+explain select key, count(key) from tbl group by key order by key;
+select key, count(key) from tbl group by key order by key;
+DROP TABLE tbl;

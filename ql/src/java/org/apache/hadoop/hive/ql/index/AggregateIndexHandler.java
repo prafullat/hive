@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.hive.ql.index;
 
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,7 +28,6 @@ import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.Index;
 import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
 import org.apache.hadoop.hive.metastore.api.Table;
-import org.apache.hadoop.hive.ql.Driver;
 import org.apache.hadoop.hive.ql.exec.Task;
 import org.apache.hadoop.hive.ql.hooks.ReadEntity;
 import org.apache.hadoop.hive.ql.hooks.WriteEntity;
@@ -38,6 +35,7 @@ import org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.metadata.HiveUtils;
 import org.apache.hadoop.hive.ql.metadata.VirtualColumn;
+import org.apache.hadoop.hive.ql.optimizer.IndexUtils;
 import org.apache.hadoop.hive.ql.plan.PartitionDesc;
 
 
@@ -62,43 +60,32 @@ public class AggregateIndexHandler extends CompactIndexHandler {
         FieldSchema offSets = new FieldSchema("_offsets", "array<bigint>", "");
         indexTblCols.add(offSets);
         Map<String, String> paraList = index.getParameters();
-        if(paraList != null){
-          Iterator<String> paraKeys = paraList.keySet().iterator();
-          while(paraKeys.hasNext()){
-            String propName = paraKeys.next();
-            String propValue = paraList.get(propName);
 
-            if(("AGGREGATES").equals(propName)){
-              if(propValue.contains(",")){
-                String[] aggFuncs = propValue.split(",");
-                for (int i = 0; i < aggFuncs.length; i++) {
-                  String[] aggFuncCol = aggFuncs[i].split("\\(");
-                  String funcName = aggFuncCol[0];
-                  String colName = aggFuncCol[1].substring(0, aggFuncCol[1].length() - 1);
-                  if(colName.contains("*")){
-                    colName = colName.replace("*", "ALL");
-                  }
-
-                  FieldSchema aggregationFunction =
-                    new FieldSchema("_" + funcName + "_Of_" + colName + "", "bigint", "");
-                  indexTblCols.add(aggregationFunction);
-                }
-              }else{
-                String[] aggFuncCol = propValue.split("\\(");
-                String funcName = aggFuncCol[0];
-                String colName = aggFuncCol[1].substring(0, aggFuncCol[1].length() - 1);
-                if(colName.contains("*")){
-                  colName = colName.replace("*", "ALL");
-                }
-                FieldSchema aggregationFunction =
-                  new FieldSchema("_" + funcName + "_Of_" + colName + "", "bigint", "");
-                indexTblCols.add(aggregationFunction);
-              }
+        if(paraList != null && paraList.containsKey("AGGREGATES")){
+          String propValue = paraList.get("AGGREGATES");
+          if(propValue.contains(",")){
+            String[] aggFuncs = propValue.split(",");
+            for (int i = 0; i < aggFuncs.length; i++) {
+              createAggregationFunction(indexTblCols, aggFuncs[i]);
             }
-          }
+          }else{
+            createAggregationFunction(indexTblCols, propValue);
+         }
         }
         indexTable.setSd(indexTableSd);
       }
+    }
+
+    private void createAggregationFunction(List<FieldSchema> indexTblCols, String property){
+      String[] aggFuncCol = property.split("\\(");
+      String funcName = aggFuncCol[0];
+      String colName = aggFuncCol[1].substring(0, aggFuncCol[1].length() - 1);
+      if(colName.contains("*")){
+        colName = colName.replace("*", "ALL");
+      }
+      FieldSchema aggregationFunction =
+        new FieldSchema("_" + funcName + "_Of_" + colName + "", "bigint", "");
+      indexTblCols.add(aggregationFunction);
     }
 
     @Override
@@ -142,15 +129,8 @@ public class AggregateIndexHandler extends CompactIndexHandler {
       assert indexField.size()==1;
 
       Map<String, String> paraList = index.getParameters();
-      if(paraList != null){
-        Iterator<String> paraKeys = paraList.keySet().iterator();
-        while(paraKeys.hasNext()){
-          String propName = paraKeys.next();
-          String propValue = paraList.get(propName);
-          if(("AGGREGATES").equals(propName)){
-            command.append(propValue + " ");
-          }
-        }
+      if(paraList != null && paraList.containsKey("AGGREGATES")){
+          command.append(paraList.get("AGGREGATES") + " ");
       }
 
       command.append(" FROM " + HiveUtils.unparseIdentifier(baseTableName));
@@ -169,17 +149,9 @@ public class AggregateIndexHandler extends CompactIndexHandler {
       command.append(" GROUP BY ");
       command.append(indexCols + ", " + VirtualColumn.FILENAME.getName());
 
-      Driver driver = new Driver(new HiveConf(getConf(), AggregateIndexHandler.class));
-      driver.compile(command.toString());
-
-      Task<?> rootTask = driver.getPlan().getRootTasks().get(0);
-      inputs.addAll(driver.getPlan().getInputs());
-      outputs.addAll(driver.getPlan().getOutputs());
-      IndexMetadataChangeWork indexMetaChange =
-        new IndexMetadataChangeWork((HashMap<String, String>) partSpec, indexTableName, dbName);
-      IndexMetadataChangeTask indexMetaChangeTsk = new IndexMetadataChangeTask();
-      indexMetaChangeTsk.setWork(indexMetaChange);
-      rootTask.addDependentTask(indexMetaChangeTsk);
+      HiveConf builderConf = new HiveConf(getConf(), AggregateIndexHandler.class);
+      Task<?> rootTask = IndexUtils.createRootTask(builderConf, inputs, outputs,
+          command, (LinkedHashMap<String, String>) partSpec, indexTableName, dbName);
 
       return rootTask;
     }
