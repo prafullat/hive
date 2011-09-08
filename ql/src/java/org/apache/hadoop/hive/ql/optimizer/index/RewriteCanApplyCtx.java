@@ -63,9 +63,6 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
 
   // Rewrite Variables
   private int aggFuncCnt = 0;
-  private boolean queryHasSortBy = false;
-  private boolean queryHasOrderBy = false;
-  private boolean queryHasDistributeBy = false;
   private boolean queryHasGroupBy = false;
   private boolean aggFuncIsNotCount = false;
   private boolean aggFuncColsFetchException = false;
@@ -89,9 +86,6 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
 
   void resetCanApplyCtx(){
     setAggFuncCnt(0);
-    setQueryHasSortBy(false);
-    setQueryHasOrderBy(false);
-    setQueryHasDistributeBy(false);
     setQueryHasGroupBy(false);
     setAggFuncIsNotCount(false);
     setAggFuncColsFetchException(false);
@@ -135,30 +129,6 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
 
   public String getAggFunction() {
     return aggFunction;
-  }
-
-  public void setQueryHasSortBy(boolean queryHasSortBy) {
-    this.queryHasSortBy = queryHasSortBy;
-  }
-
-  public boolean isQueryHasSortBy() {
-    return queryHasSortBy;
-  }
-
-  public void setQueryHasOrderBy(boolean queryHasOrderBy) {
-    this.queryHasOrderBy = queryHasOrderBy;
-  }
-
-  public boolean isQueryHasOrderBy() {
-    return queryHasOrderBy;
-  }
-
-  public void setQueryHasDistributeBy(boolean queryHasDistributeBy) {
-    this.queryHasDistributeBy = queryHasDistributeBy;
-  }
-
-  public boolean isQueryHasDistributeBy() {
-    return queryHasDistributeBy;
   }
 
   public void setAggFuncColsFetchException(boolean aggFuncColsFetchException) {
@@ -288,9 +258,7 @@ public final class RewriteCanApplyCtx implements NodeProcessorCtx {
         RewriteCanApplyProcFactory.canApplyOnFilterOperator());
     opRules.put(new RuleRegExp("R2", "GBY%"),
         RewriteCanApplyProcFactory.canApplyOnGroupByOperator());
-    opRules.put(new RuleRegExp("R3", "RS%OP%"),
-        RewriteCanApplyProcFactory.canApplyOnExtractOperator());
-    opRules.put(new RuleRegExp("R4", "SEL%"),
+    opRules.put(new RuleRegExp("R3", "SEL%"),
         RewriteCanApplyProcFactory.canApplyOnSelectOperator());
 
     // The dispatcher fires the processor corresponding to the closest matching

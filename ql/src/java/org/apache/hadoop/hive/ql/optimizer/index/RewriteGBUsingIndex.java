@@ -428,21 +428,6 @@ public class RewriteGBUsingIndex implements Transform {
    * @return
    */
   boolean checkIfAllRewriteCriteriaIsMet(RewriteCanApplyCtx canApplyCtx){
-    if (canApplyCtx.isQueryHasDistributeBy()){
-      LOG.debug("Query has distributeby clause, " +
-          "that is not supported with " + getName() + " optimization.");
-      return false;
-    }
-    if (canApplyCtx.isQueryHasSortBy()){
-      LOG.debug("Query has sortby clause, " +
-          "that is not supported with " + getName() + " optimization.");
-      return false;
-    }
-    if (canApplyCtx.isQueryHasOrderBy()){
-      LOG.debug("Query has orderby clause, " +
-          "that is not supported with " + getName() + " optimization.");
-      return false;
-    }
     if (canApplyCtx.getAggFuncCnt() > 1){
       LOG.debug("More than 1 agg funcs: " +
           "Not supported by " + getName() + " optimization.");

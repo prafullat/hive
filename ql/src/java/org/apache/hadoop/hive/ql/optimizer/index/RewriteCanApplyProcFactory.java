@@ -26,12 +26,10 @@ import java.util.Map;
 import java.util.Stack;
 
 import org.apache.hadoop.hive.ql.exec.ColumnInfo;
-import org.apache.hadoop.hive.ql.exec.ExtractOperator;
 import org.apache.hadoop.hive.ql.exec.FileSinkOperator;
 import org.apache.hadoop.hive.ql.exec.FilterOperator;
 import org.apache.hadoop.hive.ql.exec.GroupByOperator;
 import org.apache.hadoop.hive.ql.exec.Operator;
-import org.apache.hadoop.hive.ql.exec.ReduceSinkOperator;
 import org.apache.hadoop.hive.ql.exec.RowSchema;
 import org.apache.hadoop.hive.ql.exec.SelectOperator;
 import org.apache.hadoop.hive.ql.lib.Node;
@@ -45,7 +43,6 @@ import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
 import org.apache.hadoop.hive.ql.plan.ExprNodeGenericFuncDesc;
 import org.apache.hadoop.hive.ql.plan.FilterDesc;
 import org.apache.hadoop.hive.ql.plan.GroupByDesc;
-import org.apache.hadoop.hive.ql.plan.ReduceSinkDesc;
 
 /**
  * Factory of methods used by {@link RewriteGBUsingIndex}
@@ -197,44 +194,6 @@ public final class RewriteCanApplyProcFactory {
      return new CheckGroupByProc();
    }
 
-
- /**
-   * Check for conditions in ExtractOperator that do not meet rewrite criteria.
-   */
-  private static class CheckExtractProc implements NodeProcessor {
-     public Object process(Node nd, Stack<Node> stack, NodeProcessorCtx ctx,
-         Object... nodeOutputs) throws SemanticException {
-       ExtractOperator operator = (ExtractOperator)nd;
-       canApplyCtx = (RewriteCanApplyCtx)ctx;
-       //We get the information whether query has SORT BY, ORDER BY, DISTRIBUTE BY from
-       //the parent ReduceSinkOperator of the current ExtractOperator
-       if(operator.getParentOperators() != null && operator.getParentOperators().size() >0){
-         Operator<? extends Serializable> interim = operator.getParentOperators().get(0);
-         if(interim instanceof ReduceSinkOperator){
-           ReduceSinkDesc conf = (ReduceSinkDesc) interim.getConf();
-           List<ExprNodeDesc> partCols = conf.getPartitionCols();
-           int nr = conf.getNumReducers();
-           if(nr == -1){
-             if(partCols != null && partCols.size() > 0){
-               //query has distribute-by is there are non-zero partition columns
-               canApplyCtx.setQueryHasDistributeBy(true);
-             }else{
-               //we do not need partition columns in case of sort-by
-               canApplyCtx.setQueryHasSortBy(true);
-             }
-           }/*else if(nr == 1){
-             //Query has order-by only if number of reducers is 1
-             canApplyCtx.setQueryHasOrderBy(true);
-           }*/
-         }
-       }
-       return null;
-     }
-   }
-
-   public static CheckExtractProc canApplyOnExtractOperator() {
-     return new CheckExtractProc();
-   }
 
  /**
    * Check for conditions in SelectOperator that do not meet rewrite criteria.
