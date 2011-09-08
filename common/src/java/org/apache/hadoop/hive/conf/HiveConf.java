@@ -228,6 +228,7 @@ public class HiveConf extends Configuration {
 
     // CLI
     CLIIGNOREERRORS("hive.cli.errors.ignore", false),
+    CLIPRINTCURRENTDB("hive.cli.print.current.db", false),
 
     HIVE_METASTORE_FS_HANDLER_CLS("hive.metastore.fs.handler.class", "org.apache.hadoop.hive.metastore.HiveMetaStoreFsImpl"),
 
@@ -375,7 +376,9 @@ public class HiveConf extends Configuration {
     // Optimizer
     HIVEOPTCP("hive.optimize.cp", true), // column pruner
     HIVEOPTINDEXFILTER("hive.optimize.index.filter", false), // automatically use indexes
+    HIVEINDEXAUTOUPDATE("hive.optimize.index.autoupdate", false), //automatically update stale indexes
     HIVEOPTPPD("hive.optimize.ppd", true), // predicate pushdown
+    HIVEPPDRECOGNIZETRANSITIVITY("hive.ppd.recognizetransivity", true), // predicate pushdown
     HIVEPPDREMOVEDUPLICATEFILTERS("hive.ppd.remove.duplicatefilters", true),
     // push predicates down to storage handlers
     HIVEOPTPPD_STORAGE("hive.optimize.ppd.storage", true),
