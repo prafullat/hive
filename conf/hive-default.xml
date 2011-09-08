@@ -58,6 +58,12 @@
 </property>
 
 <property>
+  <name>hive.cli.print.current.db</name>
+  <value>false</value>
+  <description>Whether to include the current database in the hive prompt.</description>
+</property>
+
+<property>
   <name>hive.exec.scratchdir</name>
   <value>/tmp/hive-${user.name}</value>
   <description>Scratch space for Hive jobs</description>
@@ -358,6 +364,12 @@
   <name>hive.optimize.ppd.storage</name>
   <value>true</value>
   <description>Whether to push predicates down into storage handlers.  Ignored when hive.optimize.ppd is false.</description>
+</property>
+
+<property>
+  <name>hive.ppd.recognizetransivity</name>
+  <value>true</value>
+  <description>Whether to transitively replicate predicate filters over equijoin conditions.</description>
 </property>
 
 <property>

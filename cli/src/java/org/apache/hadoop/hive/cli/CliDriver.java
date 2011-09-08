@@ -621,6 +621,7 @@ public class CliDriver {
     }
 
     CliDriver cli = new CliDriver();
+    cli.setHiveVariables(oproc.getHiveVariables());
 
     // Execute -i init files (always in silent mode)
     cli.processInitFiles(ss);
@@ -650,7 +651,10 @@ public class CliDriver {
     int ret = 0;
 
     String prefix = "";
-    String curPrompt = prompt;
+    String curDB = getFormattedDb(conf, ss);
+    String curPrompt = prompt + curDB;
+    String dbSpaces = spacesForString(curDB);
+
     while ((line = reader.readLine(curPrompt + "> ")) != null) {
       if (!prefix.equals("")) {
         prefix += '\n';
@@ -659,10 +663,12 @@ public class CliDriver {
         line = prefix + line;
         ret = cli.processLine(line, true);
         prefix = "";
-        curPrompt = prompt;
+        curDB = getFormattedDb(conf, ss);
+        curPrompt = prompt + curDB;
+        dbSpaces = dbSpaces.length() == curDB.length() ? dbSpaces : spacesForString(curDB);
       } else {
         prefix = prefix + line;
-        curPrompt = prompt2;
+        curPrompt = prompt2 + dbSpaces;
         continue;
       }
     }
@@ -670,6 +676,43 @@ public class CliDriver {
     ss.close();
 
     System.exit(ret);
+  }
+
+  /**
+   * Retrieve the current database name string to display, based on the
+   * configuration value.
+   * @param conf storing whether or not to show current db
+   * @param ss CliSessionState to query for db name
+   * @return String to show user for current db value
+   */
+  private static String getFormattedDb(HiveConf conf, CliSessionState ss) {
+    if (!HiveConf.getBoolVar(conf, HiveConf.ConfVars.CLIPRINTCURRENTDB)) {
+      return "";
+    }
+    String currDb = ss.getCurrentDbName();
+
+    if (currDb == null) {
+      return "";
+    }
+
+    return " (" + currDb + ")";
+  }
+
+  /**
+   * Generate a string of whitespace the same length as the parameter
+   *
+   * @param s String for which to generate equivalent whitespace
+   * @return  Whitespace
+   */
+  private static String spacesForString(String s) {
+    if (s == null || s.length() == 0) {
+      return "";
+    }
+    return String.format("%1$-" + s.length() +"s", "");
+  }
+
+  public void setHiveVariables(Map<String, String> hiveVariables) {
+    SessionState.get().setHiveVariables(hiveVariables);
   }
 
 }
