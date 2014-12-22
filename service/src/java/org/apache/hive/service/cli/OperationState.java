@@ -26,6 +26,7 @@ import org.apache.hive.service.cli.thrift.TOperationState;
  */
 public enum OperationState {
   INITIALIZED(TOperationState.INITIALIZED_STATE, false),
+  PREPARED(TOperationState.PREPARED_STATE, false),
   RUNNING(TOperationState.RUNNING_STATE, false),
   FINISHED(TOperationState.FINISHED_STATE, true),
   CANCELED(TOperationState.CANCELED_STATE, true),
@@ -54,6 +55,7 @@ public enum OperationState {
     case INITIALIZED:
       switch (newState) {
       case PENDING:
+      case PREPARED:
       case RUNNING:
       case CANCELED:
       case CLOSED:
@@ -62,6 +64,7 @@ public enum OperationState {
       break;
     case PENDING:
       switch (newState) {
+      case PREPARED:
       case RUNNING:
       case FINISHED:
       case CANCELED:
@@ -70,6 +73,14 @@ public enum OperationState {
         return;
       }
       break;
+    case PREPARED:
+       switch(newState) {
+      case RUNNING:
+      case CANCELED:
+      case ERROR:
+      case CLOSED:
+         return;
+       }
     case RUNNING:
       switch (newState) {
       case FINISHED:

@@ -165,7 +165,7 @@ public class HiveSessionImpl implements HiveSession {
       int rc = 0;
       String cmd_trimed = cmd.trim();
       try {
-        executeStatementInternal(cmd_trimed, null, false);
+        executeStatementInternal(cmd_trimed, null, false, false, null);
       } catch (HiveSQLException e) {
         rc = -1;
         LOG.warn("Failed to execute HQL command in global .hiverc file.", e);
@@ -364,28 +364,37 @@ public class HiveSessionImpl implements HiveSession {
   }
 
   @Override
-  public OperationHandle executeStatement(String statement, Map<String, String> confOverlay)
+  public OperationHandle executeStatement(String statement, Map<String, String> confOverlay, Boolean prepareOnly, OperationHandle existingOpHandle)
       throws HiveSQLException {
-    return executeStatementInternal(statement, confOverlay, false);
+    return executeStatementInternal(statement, confOverlay, false, prepareOnly, existingOpHandle);
   }
 
   @Override
-  public OperationHandle executeStatementAsync(String statement, Map<String, String> confOverlay)
+  public OperationHandle executeStatementAsync(String statement, Map<String, String> confOverlay, Boolean prepareOnly, OperationHandle existingOpHandle)
       throws HiveSQLException {
-    return executeStatementInternal(statement, confOverlay, true);
+    return executeStatementInternal(statement, confOverlay, true, prepareOnly, existingOpHandle);
   }
 
   private OperationHandle executeStatementInternal(String statement, Map<String, String> confOverlay,
-      boolean runAsync)
+      Boolean runAsync, Boolean prepareOnly, OperationHandle existingOpHandle)
           throws HiveSQLException {
     acquire(true);
 
     OperationManager operationManager = getOperationManager();
-    ExecuteStatementOperation operation = operationManager
-        .newExecuteStatementOperation(getSession(), statement, confOverlay, runAsync);
+
+    ExecuteStatementOperation operation = null;
+    if(exisingOpHandle == null)
+       operation = operationManager
+           .newExecuteStatementOperation(getSession(), statement, confOverlay,
+                                         runAsync);
+    else
+       operation = operationManager.getOperation(existingOpHandle);
     OperationHandle opHandle = operation.getHandle();
     try {
-      operation.run();
+       if(prepareOnly)
+          operation.prepare();
+       else
+          operation.run();
       opHandleSet.add(opHandle);
       return opHandle;
     } catch (HiveSQLException e) {

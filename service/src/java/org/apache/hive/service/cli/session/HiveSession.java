@@ -43,21 +43,27 @@ public interface HiveSession extends HiveSessionBase {
    * execute operation handler
    * @param statement
    * @param confOverlay
+   * @param prepareOnly
+   * @param existingOpHandle
    * @return
    * @throws HiveSQLException
    */
   OperationHandle executeStatement(String statement,
-      Map<String, String> confOverlay) throws HiveSQLException;
+     Map<String, String> confOverlay, Boolean prepareOnly,
+     OperationHandle existingOpHandle) throws HiveSQLException;
 
   /**
    * execute operation handler
    * @param statement
    * @param confOverlay
+   * @param prepareOnly
+   * @param existingOpHandle
    * @return
    * @throws HiveSQLException
    */
   OperationHandle executeStatementAsync(String statement,
-      Map<String, String> confOverlay) throws HiveSQLException;
+     Map<String, String> confOverlay, Boolean prepareOnly,
+     OperationHandle existingOpHandle) throws HiveSQLException;
 
   /**
    * getTypeInfo operation handler

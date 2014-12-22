@@ -94,6 +94,10 @@ public class HiveCommandOperation extends ExecuteStatementOperation {
     IOUtils.cleanup(LOG, parentSession.getSessionState().err);
   }
 
+  public void prepare() throws HiveSQLException {
+     // Nothing to prepare.
+  }
+
   @Override
   public void runInternal() throws HiveSQLException {
     setState(OperationState.RUNNING);

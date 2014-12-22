@@ -47,13 +47,14 @@ public abstract class ExecuteStatementOperation extends Operation {
           throws HiveSQLException {
     String[] tokens = statement.trim().split("\\s+");
     CommandProcessor processor = null;
+    boolean prepareOnly = false;
     try {
       processor = CommandProcessorFactory.getForHiveCommand(tokens, parentSession.getHiveConf());
     } catch (SQLException e) {
       throw new HiveSQLException(e.getMessage(), e.getSQLState(), e);
     }
     if (processor == null) {
-      return new SQLOperation(parentSession, statement, confOverlay, runAsync);
+      return new SQLOperation(parentSession, statement, confOverlay, runAsync, prepareOnly);
     }
     return new HiveCommandOperation(parentSession, statement, processor, confOverlay);
   }
