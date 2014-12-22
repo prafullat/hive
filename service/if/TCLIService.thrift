@@ -668,8 +668,6 @@ struct TGetInfoResp {
   2: required TGetInfoValue infoValue
 }
 
-struct TExecuteStatementReq {
-
 // ExecuteStatement()
 //
 // Execute a statement.
@@ -697,9 +695,9 @@ struct TExecuteStatementReq {
   // server to return schema without executing query.
   5: optional bool prepareOnly = false
 
-  // Used when existing execute operation exists on server. Typically when this
-  // statement has been prepared earlier.
-  6: optional TOperationHandle exisingOpHandle
+  // Used when existing execute operation exists on server. Typically
+  // when this statement has been prepared earlier.
+  6: optional TOperationHandle existingOpHandle
 }
 
 struct TExecuteStatementResp {

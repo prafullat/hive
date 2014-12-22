@@ -55,15 +55,16 @@ end
 
 module TOperationState
   INITIALIZED_STATE = 0
-  RUNNING_STATE = 1
-  FINISHED_STATE = 2
-  CANCELED_STATE = 3
-  CLOSED_STATE = 4
-  ERROR_STATE = 5
-  UKNOWN_STATE = 6
-  PENDING_STATE = 7
-  VALUE_MAP = {0 => "INITIALIZED_STATE", 1 => "RUNNING_STATE", 2 => "FINISHED_STATE", 3 => "CANCELED_STATE", 4 => "CLOSED_STATE", 5 => "ERROR_STATE", 6 => "UKNOWN_STATE", 7 => "PENDING_STATE"}
-  VALID_VALUES = Set.new([INITIALIZED_STATE, RUNNING_STATE, FINISHED_STATE, CANCELED_STATE, CLOSED_STATE, ERROR_STATE, UKNOWN_STATE, PENDING_STATE]).freeze
+  PREPARED_STATE = 1
+  RUNNING_STATE = 2
+  FINISHED_STATE = 3
+  CANCELED_STATE = 4
+  CLOSED_STATE = 5
+  ERROR_STATE = 6
+  UKNOWN_STATE = 7
+  PENDING_STATE = 8
+  VALUE_MAP = {0 => "INITIALIZED_STATE", 1 => "PREPARED_STATE", 2 => "RUNNING_STATE", 3 => "FINISHED_STATE", 4 => "CANCELED_STATE", 5 => "CLOSED_STATE", 6 => "ERROR_STATE", 7 => "UKNOWN_STATE", 8 => "PENDING_STATE"}
+  VALID_VALUES = Set.new([INITIALIZED_STATE, PREPARED_STATE, RUNNING_STATE, FINISHED_STATE, CANCELED_STATE, CLOSED_STATE, ERROR_STATE, UKNOWN_STATE, PENDING_STATE]).freeze
 end
 
 module TOperationType
@@ -1128,12 +1129,16 @@ class TExecuteStatementReq
   STATEMENT = 2
   CONFOVERLAY = 3
   RUNASYNC = 4
+  PREPAREONLY = 5
+  EXISTINGOPHANDLE = 6
 
   FIELDS = {
     SESSIONHANDLE => {:type => ::Thrift::Types::STRUCT, :name => 'sessionHandle', :class => ::TSessionHandle},
     STATEMENT => {:type => ::Thrift::Types::STRING, :name => 'statement'},
     CONFOVERLAY => {:type => ::Thrift::Types::MAP, :name => 'confOverlay', :key => {:type => ::Thrift::Types::STRING}, :value => {:type => ::Thrift::Types::STRING}, :optional => true},
-    RUNASYNC => {:type => ::Thrift::Types::BOOL, :name => 'runAsync', :default => false, :optional => true}
+    RUNASYNC => {:type => ::Thrift::Types::BOOL, :name => 'runAsync', :default => false, :optional => true},
+    PREPAREONLY => {:type => ::Thrift::Types::BOOL, :name => 'prepareOnly', :default => false, :optional => true},
+    EXISTINGOPHANDLE => {:type => ::Thrift::Types::STRUCT, :name => 'existingOpHandle', :class => ::TOperationHandle, :optional => true}
   }
 
   def struct_fields; FIELDS; end

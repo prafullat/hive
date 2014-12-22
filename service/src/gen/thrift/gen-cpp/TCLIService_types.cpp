@@ -94,6 +94,7 @@ const std::map<int, const char*> _TStatusCode_VALUES_TO_NAMES(::apache::thrift::
 
 int _kTOperationStateValues[] = {
   TOperationState::INITIALIZED_STATE,
+  TOperationState::PREPARED_STATE,
   TOperationState::RUNNING_STATE,
   TOperationState::FINISHED_STATE,
   TOperationState::CANCELED_STATE,
@@ -104,6 +105,7 @@ int _kTOperationStateValues[] = {
 };
 const char* _kTOperationStateNames[] = {
   "INITIALIZED_STATE",
+  "PREPARED_STATE",
   "RUNNING_STATE",
   "FINISHED_STATE",
   "CANCELED_STATE",
@@ -112,7 +114,7 @@ const char* _kTOperationStateNames[] = {
   "UKNOWN_STATE",
   "PENDING_STATE"
 };
-const std::map<int, const char*> _TOperationState_VALUES_TO_NAMES(::apache::thrift::TEnumIterator(8, _kTOperationStateValues, _kTOperationStateNames), ::apache::thrift::TEnumIterator(-1, NULL, NULL));
+const std::map<int, const char*> _TOperationState_VALUES_TO_NAMES(::apache::thrift::TEnumIterator(9, _kTOperationStateValues, _kTOperationStateNames), ::apache::thrift::TEnumIterator(-1, NULL, NULL));
 
 int _kTOperationTypeValues[] = {
   TOperationType::EXECUTE_STATEMENT,
@@ -4130,8 +4132,8 @@ void swap(TGetInfoResp &a, TGetInfoResp &b) {
   swap(a.infoValue, b.infoValue);
 }
 
-const char* TExecuteStatementReq::ascii_fingerprint = "FED75DB77E66D76EC1939A51FB0D96FA";
-const uint8_t TExecuteStatementReq::binary_fingerprint[16] = {0xFE,0xD7,0x5D,0xB7,0x7E,0x66,0xD7,0x6E,0xC1,0x93,0x9A,0x51,0xFB,0x0D,0x96,0xFA};
+const char* TExecuteStatementReq::ascii_fingerprint = "97C415D75EFC0C25757B95A3AF59B5F6";
+const uint8_t TExecuteStatementReq::binary_fingerprint[16] = {0x97,0xC4,0x15,0xD7,0x5E,0xFC,0x0C,0x25,0x75,0x7B,0x95,0xA3,0xAF,0x59,0xB5,0xF6};
 
 uint32_t TExecuteStatementReq::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -4202,6 +4204,22 @@ uint32_t TExecuteStatementReq::read(::apache::thrift::protocol::TProtocol* iprot
           xfer += iprot->skip(ftype);
         }
         break;
+      case 5:
+        if (ftype == ::apache::thrift::protocol::T_BOOL) {
+          xfer += iprot->readBool(this->prepareOnly);
+          this->__isset.prepareOnly = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 6:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->existingOpHandle.read(iprot);
+          this->__isset.existingOpHandle = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
       default:
         xfer += iprot->skip(ftype);
         break;
@@ -4249,6 +4267,16 @@ uint32_t TExecuteStatementReq::write(::apache::thrift::protocol::TProtocol* opro
     xfer += oprot->writeBool(this->runAsync);
     xfer += oprot->writeFieldEnd();
   }
+  if (this->__isset.prepareOnly) {
+    xfer += oprot->writeFieldBegin("prepareOnly", ::apache::thrift::protocol::T_BOOL, 5);
+    xfer += oprot->writeBool(this->prepareOnly);
+    xfer += oprot->writeFieldEnd();
+  }
+  if (this->__isset.existingOpHandle) {
+    xfer += oprot->writeFieldBegin("existingOpHandle", ::apache::thrift::protocol::T_STRUCT, 6);
+    xfer += this->existingOpHandle.write(oprot);
+    xfer += oprot->writeFieldEnd();
+  }
   xfer += oprot->writeFieldStop();
   xfer += oprot->writeStructEnd();
   return xfer;
@@ -4260,6 +4288,8 @@ void swap(TExecuteStatementReq &a, TExecuteStatementReq &b) {
   swap(a.statement, b.statement);
   swap(a.confOverlay, b.confOverlay);
   swap(a.runAsync, b.runAsync);
+  swap(a.prepareOnly, b.prepareOnly);
+  swap(a.existingOpHandle, b.existingOpHandle);
   swap(a.__isset, b.__isset);
 }
 
