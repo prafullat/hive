@@ -382,8 +382,8 @@ public class HiveSessionImpl implements HiveSession {
 
     OperationManager operationManager = getOperationManager();
 
-    ExecuteStatementOperation operation = null;
-    if(exisingOpHandle == null)
+    Operation operation = null;
+    if(existingOpHandle == null)
        operation = operationManager
            .newExecuteStatementOperation(getSession(), statement, confOverlay,
                                          runAsync);

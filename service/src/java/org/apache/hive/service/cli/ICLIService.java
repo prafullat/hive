@@ -41,12 +41,15 @@ public interface ICLIService {
   GetInfoValue getInfo(SessionHandle sessionHandle, GetInfoType infoType)
       throws HiveSQLException;
 
-  OperationHandle executeStatement(SessionHandle sessionHandle, String statement,
-      Map<String, String> confOverlay)
+  OperationHandle executeStatement(SessionHandle sessionHandle,
+     String statement,
+     Map<String, String> confOverlay, Boolean prepareOnly,
+     OperationHandle existingOpHandle)
           throws HiveSQLException;
 
   OperationHandle executeStatementAsync(SessionHandle sessionHandle,
-      String statement, Map<String, String> confOverlay)
+     String statement, Map<String, String> confOverlay,
+     Boolean prepareOnly, OperationHandle existingOpHandle)
           throws HiveSQLException;
 
   OperationHandle getTypeInfo(SessionHandle sessionHandle)

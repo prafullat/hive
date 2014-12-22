@@ -415,7 +415,7 @@ public abstract class ThriftCLIService extends AbstractService implements TCLISe
       Boolean prepareOnly = req.isPrepareOnly();
       OperationHandle existingOpHandle = null;
       if(req.isSetExistingOpHandle())
-         existingOpHandle = req.getExistingOpHandle();
+        existingOpHandle = new OperationHandle(req.getExistingOpHandle());
       OperationHandle operationHandle = runAsync ?
          cliService.executeStatementAsync(sessionHandle, statement, confOverlay,
            prepareOnly, existingOpHandle)
