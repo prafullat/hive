@@ -166,20 +166,20 @@ public abstract class ThriftCLIServiceTest {
     // Change lock manager to embedded mode
     String queryString = "SET hive.lock.manager=" +
         "org.apache.hadoop.hive.ql.lockmgr.EmbeddedLockManager";
-    client.executeStatement(sessHandle, queryString, opConf);
+    client.executeStatement(sessHandle, queryString, opConf, false, null);
 
     // Drop the table if it exists
     queryString = "DROP TABLE IF EXISTS TEST_EXEC_THRIFT";
-    client.executeStatement(sessHandle, queryString, opConf);
+    client.executeStatement(sessHandle, queryString, opConf, false, null);
 
     // Create a test table
     queryString = "CREATE TABLE TEST_EXEC_THRIFT(ID STRING)";
-    client.executeStatement(sessHandle, queryString, opConf);
+    client.executeStatement(sessHandle, queryString, opConf, false, null);
 
     // Execute another query
     queryString = "SELECT ID+1 FROM TEST_EXEC_THRIFT";
     OperationHandle opHandle = client.executeStatement(sessHandle,
-        queryString, opConf);
+        queryString, opConf, false, null);
     assertNotNull(opHandle);
 
     OperationStatus opStatus = client.getOperationStatus(opHandle);
@@ -191,7 +191,7 @@ public abstract class ThriftCLIServiceTest {
 
     // Cleanup
     queryString = "DROP TABLE TEST_EXEC_THRIFT";
-    client.executeStatement(sessHandle, queryString, opConf);
+    client.executeStatement(sessHandle, queryString, opConf, false, null);
 
     client.closeSession(sessHandle);
   }
@@ -216,21 +216,24 @@ public abstract class ThriftCLIServiceTest {
     // Change lock manager to embedded mode
     String queryString = "SET hive.lock.manager=" +
         "org.apache.hadoop.hive.ql.lockmgr.EmbeddedLockManager";
-    client.executeStatement(sessHandle, queryString, opConf);
+    client.executeStatement(sessHandle, queryString, opConf,
+        false, null);
 
     // Drop the table if it exists
     queryString = "DROP TABLE IF EXISTS TEST_EXEC_ASYNC_THRIFT";
-    client.executeStatement(sessHandle, queryString, opConf);
+    client.executeStatement(sessHandle, queryString, opConf,
+        false, null);
 
     // Create a test table
     queryString = "CREATE TABLE TEST_EXEC_ASYNC_THRIFT(ID STRING)";
-    client.executeStatement(sessHandle, queryString, opConf);
+    client.executeStatement(sessHandle, queryString, opConf,
+       false, null);
 
     // Execute another query
     queryString = "SELECT ID+1 FROM TEST_EXEC_ASYNC_THRIFT";
     System.out.println("Will attempt to execute: " + queryString);
     opHandle = client.executeStatementAsync(sessHandle,
-        queryString, opConf);
+        queryString, opConf, false, null);
     assertNotNull(opHandle);
 
     // Poll on the operation status till the query is completed
@@ -264,7 +267,8 @@ public abstract class ThriftCLIServiceTest {
     // This query will give a runtime error
     queryString = "CREATE TABLE NON_EXISTING_TAB (ID STRING) location 'hdfs://localhost:10000/a/b/c'";
     System.out.println("Will attempt to execute: " + queryString);
-    opHandle = client.executeStatementAsync(sessHandle, queryString, opConf);
+    opHandle = client.executeStatementAsync(sessHandle, queryString, opConf,
+       false, null);
     assertNotNull(opHandle);
     opStatus = client.getOperationStatus(opHandle);
     assertNotNull(opStatus);
@@ -296,7 +300,8 @@ public abstract class ThriftCLIServiceTest {
 
     // Cleanup
     queryString = "DROP TABLE TEST_EXEC_ASYNC_THRIFT";
-    client.executeStatement(sessHandle, queryString, opConf);
+    client.executeStatement(sessHandle, queryString, opConf,
+        false, null);
 
     client.closeSession(sessHandle);
   }
