@@ -137,21 +137,25 @@ public abstract class CLIServiceTest {
 
     String queryString = "SET " + HiveConf.ConfVars.HIVE_SUPPORT_CONCURRENCY.varname
         + " = false";
-    opHandle = client.executeStatement(sessionHandle, queryString, confOverlay);
+    opHandle = client.executeStatement(sessionHandle, queryString, confOverlay,
+        false, null);
     client.closeOperation(opHandle);
 
     queryString = "DROP TABLE IF EXISTS TEST_EXEC";
-    opHandle = client.executeStatement(sessionHandle, queryString, confOverlay);
+    opHandle = client.executeStatement(sessionHandle, queryString, confOverlay,
+        false, null);
     client.closeOperation(opHandle);
 
     // Create a test table
     queryString = "CREATE TABLE TEST_EXEC(ID STRING)";
-    opHandle = client.executeStatement(sessionHandle, queryString, confOverlay);
+    opHandle = client.executeStatement(sessionHandle, queryString, confOverlay,
+        false, null);
     client.closeOperation(opHandle);
 
     // Blocking execute
     queryString = "SELECT ID+1 FROM TEST_EXEC";
-    opHandle = client.executeStatement(sessionHandle, queryString, confOverlay);
+    opHandle = client.executeStatement(sessionHandle, queryString, confOverlay,
+        false, null);
     // Expect query to be completed now
     assertEquals("Query should be finished",
         OperationState.FINISHED, client.getOperationStatus(opHandle).getState());
@@ -159,7 +163,8 @@ public abstract class CLIServiceTest {
 
     // Cleanup
     queryString = "DROP TABLE IF EXISTS TEST_EXEC";
-    opHandle = client.executeStatement(sessionHandle, queryString, confOverlay);
+    opHandle = client.executeStatement(sessionHandle, queryString, confOverlay,
+        false, null);
     client.closeOperation(opHandle);
     client.closeSession(sessionHandle);
   }
@@ -191,7 +196,8 @@ public abstract class CLIServiceTest {
     // Change lock manager, otherwise unit-test doesn't go through
     queryString = "SET " + HiveConf.ConfVars.HIVE_SUPPORT_CONCURRENCY.varname
         + " = false";
-    opHandle = client.executeStatement(sessionHandle, queryString, confOverlay);
+    opHandle = client.executeStatement(sessionHandle, queryString, confOverlay,
+        false, null);
     client.closeOperation(opHandle);
 
     // Set longPollingTimeout to a custom value for different test cases
@@ -246,7 +252,8 @@ public abstract class CLIServiceTest {
      * Cancellation test
      */
     queryString = "SELECT ID+1 FROM " + tableName;
-    opHandle = client.executeStatementAsync(sessionHandle, queryString, confOverlay);
+    opHandle = client.executeStatementAsync(sessionHandle, queryString, confOverlay,
+        false, null);
     System.out.println("Cancelling " + opHandle);
     client.cancelOperation(opHandle);
     state = client.getOperationStatus(opHandle).getState();
@@ -255,7 +262,8 @@ public abstract class CLIServiceTest {
 
     // Cleanup
     queryString = "DROP TABLE " + tableName;
-    client.executeStatement(sessionHandle, queryString, confOverlay);
+    client.executeStatement(sessionHandle, queryString, confOverlay,
+        false, null);
     client.closeSession(sessionHandle);
   }
 
@@ -273,15 +281,18 @@ public abstract class CLIServiceTest {
 
     String queryString = "SET " + HiveConf.ConfVars.HIVE_SUPPORT_CONCURRENCY.varname
         + " = false";
-    client.executeStatement(sessionHandle, queryString, confOverlay);
+    client.executeStatement(sessionHandle, queryString, confOverlay,
+        false, null);
 
     // Drop the table if it exists
     queryString = "DROP TABLE IF EXISTS " + tableName;
-    client.executeStatement(sessionHandle, queryString, confOverlay);
+    client.executeStatement(sessionHandle, queryString, confOverlay,
+        false, null);
 
     // Create a test table
     queryString = "CREATE TABLE " + tableName + columnDefinitions;
-    client.executeStatement(sessionHandle, queryString, confOverlay);
+    client.executeStatement(sessionHandle, queryString, confOverlay,
+        false, null);
 
     return sessionHandle;
   }
@@ -297,7 +308,7 @@ public abstract class CLIServiceTest {
     OperationStatus opStatus = null;
     OperationState state = null;
     confOverlay.put(HiveConf.ConfVars.HIVE_SERVER2_LONG_POLLING_TIMEOUT.varname, longPollingTimeout + "ms");
-    OperationHandle opHandle = client.executeStatementAsync(sessionHandle, queryString, confOverlay);
+    OperationHandle opHandle = client.executeStatementAsync(sessionHandle, queryString, confOverlay, false, null);
     int count = 0;
     while (true) {
       // Break if iteration times out
@@ -348,11 +359,13 @@ public abstract class CLIServiceTest {
 
     String setLockMgr = "SET " + HiveConf.ConfVars.HIVE_SUPPORT_CONCURRENCY.varname
         + " = false";
-    OperationHandle opHandle = client.executeStatement(sessionHandle, setLockMgr, null);
+    OperationHandle opHandle = client.executeStatement(sessionHandle, setLockMgr, null,
+        false, null);
     client.closeOperation(opHandle);
 
     String dropTable = "DROP TABLE IF EXISTS " + tabName;
-    opHandle = client.executeStatement(sessionHandle, dropTable, null);
+    opHandle = client.executeStatement(sessionHandle, dropTable, null,
+        false, null);
     client.closeOperation(opHandle);
 
     // set a pass a property to operation and check if its set the query config
@@ -361,7 +374,8 @@ public abstract class CLIServiceTest {
 
     // execute statement with the conf overlay
     String createTab = "CREATE TABLE ${hiveconf:" + tabNameVar + "} (id int)";
-    opHandle = client.executeStatement(sessionHandle, createTab, confOverlay);
+    opHandle = client.executeStatement(sessionHandle, createTab, confOverlay,
+        false, null);
     assertNotNull(opHandle);
     // query should pass and create the table
     assertEquals("Query should be finished",
@@ -370,7 +384,8 @@ public abstract class CLIServiceTest {
 
     // select from  the new table should pass
     String selectTab = "SELECT * FROM " + tabName;
-    opHandle = client.executeStatement(sessionHandle, selectTab, null);
+    opHandle = client.executeStatement(sessionHandle, selectTab, null,
+        false, null);
     assertNotNull(opHandle);
     // query should pass and create the table
     assertEquals("Query should be finished",
@@ -381,7 +396,8 @@ public abstract class CLIServiceTest {
     // another query referring that property with the conf overlay should fail
     selectTab = "SELECT * FROM ${hiveconf:" + tabNameVar + "}";
     try {
-      opHandle = client.executeStatement(sessionHandle, selectTab, null);
+      opHandle = client.executeStatement(sessionHandle, selectTab, null,
+          false, null);
       fail("Query should fail");
     } catch (HiveSQLException e) {
       // Expected exception
@@ -389,7 +405,8 @@ public abstract class CLIServiceTest {
 
     // cleanup
     dropTable = "DROP TABLE IF EXISTS " + tabName;
-    opHandle = client.executeStatement(sessionHandle, dropTable, null);
+    opHandle = client.executeStatement(sessionHandle, dropTable, null,
+        false, null);
     client.closeOperation(opHandle);
     client.closeSession(sessionHandle);
   }
