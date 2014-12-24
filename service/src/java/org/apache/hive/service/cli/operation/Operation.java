@@ -162,6 +162,10 @@ public abstract class Operation {
     this.lastAccessTime = System.currentTimeMillis();
   }
 
+  public boolean isPrepared() {
+    return OperationState.PREPARED.equals(state);
+  }
+
   public boolean isRunning() {
     return OperationState.RUNNING.equals(state);
   }

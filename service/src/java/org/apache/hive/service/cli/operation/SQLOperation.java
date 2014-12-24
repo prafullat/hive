@@ -324,11 +324,15 @@ public class SQLOperation extends ExecuteStatementOperation {
 
   @Override
   public TableSchema getResultSetSchema() throws HiveSQLException {
-    assertState(OperationState.FINISHED);
-    if (resultSchema == null) {
-      resultSchema = new TableSchema(driver.getSchema());
-    }
-    return resultSchema;
+     if(isPrepared() == true ||
+        isFinished() == true) {
+        if (resultSchema == null) {
+            resultSchema = new TableSchema(driver.getSchema());
+        }
+        return resultSchema;
+     }
+     assertState(OperationState.FINISHED);
+     return null;
   }
 
   private transient final List<Object> convey = new ArrayList<Object>();
