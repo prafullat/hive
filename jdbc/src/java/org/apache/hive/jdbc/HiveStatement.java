@@ -239,7 +239,7 @@ public class HiveStatement implements java.sql.Statement {
     checkConnection("execute");
     if (stmtHandle != null) {
        TOperationState state = getOperationState(stmtHandle);
-       if(state != PREPARED_STATE)
+       if(state != TOperationState.PREPARED_STATE)
           closeClientOperation();
     }
     initFlags();
@@ -887,17 +887,16 @@ public class HiveStatement implements java.sql.Statement {
    private ResultSetMetaData getHiveResultSetMetaData(TOperationHandle curHandle,
        TOperationState currentState)
        throws SQLException {
-      if (currentState.getValue() != PREPARED_STATE ||
-          currentState.getValue() != FINISHED_STATE)
+      if (currentState != TOperationState.PREPARED_STATE ||
+          currentState != TOperationState.FINISHED_STATE)
          throw new SQLException("Invalid server state for fetching result set metadata",
                                  "08S01");
 
-      TableSchema tableSchema;
       List<String> columnNames = new ArrayList<String>();
       List<String> columnTypes = new ArrayList<String>();
       List<JdbcColumnAttributes> columnAttributes = new ArrayList<JdbcColumnAttributes>();
 
-      HiveQueryResultSet.retriveSchema(curHandle, client, transportLock, tableSchema,
+      HiveQueryResultSet.retriveSchema(curHandle, client, transportLock,
           columnNames, columnTypes, columnAttributes);
       return new HiveResultSetMetaData(columnNames, columnTypes, columnAttributes);
    }
@@ -906,7 +905,7 @@ public class HiveStatement implements java.sql.Statement {
       checkConnection("getMetaData");
       if (stmtHandle != null) {
          TOperationState state = getOperationState(stmtHandle);
-         if(state != PREPARED_STATE)
+         if(state != TOperationState.PREPARED_STATE)
             closeClientOperation();
          else {
             return getHiveResultSetMetaData(stmtHandle, state);
@@ -931,10 +930,9 @@ public class HiveStatement implements java.sql.Statement {
          transportLock.unlock();
       }
       TOperationState state = getOperationState(stmtHandle);
-    if(state == PREPARED_STATE)
+    if(state == TOperationState.PREPARED_STATE)
        return getHiveResultSetMetaData(stmtHandle, state);
     throw new SQLException("Error while fetching metadata");
-    return null;
    }
 
 
