@@ -285,15 +285,14 @@ public class HiveQueryResultSet extends HiveBaseResultSet {
         String columnTypeName = TYPE_NAMES.get(primitiveTypeEntry.getType());
         columnTypes.add(columnTypeName);
         columnAttributes.add(getColumnAttributes(primitiveTypeEntry));
-        return tableSchema;
       }
+      return tableSchema;
     } catch (SQLException eS) {
       throw eS; // rethrow the SQLException as is
     } catch (Exception ex) {
       ex.printStackTrace();
       throw new SQLException("Could not create ResultSet: " + ex.getMessage(), ex);
     }
-    return null;
   }
 
   /**

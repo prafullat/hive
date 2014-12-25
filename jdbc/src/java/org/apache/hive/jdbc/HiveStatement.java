@@ -887,7 +887,7 @@ public class HiveStatement implements java.sql.Statement {
   private ResultSetMetaData getHiveResultSetMetaData(TOperationHandle curHandle,
       TOperationState currentState)
       throws SQLException {
-    if (currentState != TOperationState.PREPARED_STATE ||
+    if (currentState != TOperationState.PREPARED_STATE &&
         currentState != TOperationState.FINISHED_STATE)
       throw new SQLException("Invalid server state for fetching result set metadata",
                              "08S01");
@@ -916,6 +916,7 @@ public class HiveStatement implements java.sql.Statement {
     TExecuteStatementReq execReq = new TExecuteStatementReq(sessHandle, sql);
     execReq.setConfOverlay(sessConf);
     execReq.setPrepareOnly(true);
+    transportLock.lock();
     try {
       TExecuteStatementResp execResp = client.ExecuteStatement(execReq);
       Utils.verifySuccessWithInfo(execResp.getStatus());
