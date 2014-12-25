@@ -187,7 +187,7 @@ public class HivePreparedStatement extends HiveStatement implements PreparedStat
    */
 
   public ResultSetMetaData getMetaData() throws SQLException {
-     return super.getMetaData(sql);
+    return super.getMetaData(sql);
   }
 
   /*

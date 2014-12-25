@@ -148,8 +148,8 @@ public class SQLOperation extends ExecuteStatementOperation {
   }
 
   private void runQuery(HiveConf sqlOperationConf) throws HiveSQLException {
-     setState(OperationState.RUNNING);
-     try {
+    try {
+      setState(OperationState.RUNNING);
       // In Hive server mode, we are not able to retry in the FetchTask
       // case, when calling fetch queries since execute() has returned.
       // For now, we disable the test attempts.
@@ -324,15 +324,15 @@ public class SQLOperation extends ExecuteStatementOperation {
 
   @Override
   public TableSchema getResultSetSchema() throws HiveSQLException {
-     if(isPrepared() == true ||
-        isFinished() == true) {
-        if (resultSchema == null) {
-            resultSchema = new TableSchema(driver.getSchema());
-        }
-        return resultSchema;
-     }
-     assertState(OperationState.FINISHED);
-     return null;
+    if(isPrepared() == true ||
+       isFinished() == true) {
+      if (resultSchema == null) {
+        resultSchema = new TableSchema(driver.getSchema());
+      }
+      return resultSchema;
+    }
+    assertState(OperationState.FINISHED);
+    return null;
   }
 
   private transient final List<Object> convey = new ArrayList<Object>();

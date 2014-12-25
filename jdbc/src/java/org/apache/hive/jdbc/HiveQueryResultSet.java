@@ -300,12 +300,13 @@ public class HiveQueryResultSet extends HiveBaseResultSet {
    * Retrieve schema from the server
    */
   private void retrieveSchema() throws SQLException {
-     TableSchema tableSchema = null;
-     tableSchema = retriveSchema(stmtHandle, client,  transportLock,
-         columnNames, columnTypes, columnAttributes);
-     setSchema(tableSchema); // Set schema in base class
-     for(String columnName : columnNames)
-        normalizedColumnNames.add(columnName.toLowerCase());
+    TableSchema tableSchema = null;
+    tableSchema = retriveSchema(stmtHandle, client,  transportLock,
+        columnNames, columnTypes, columnAttributes);
+    setSchema(tableSchema); // Set schema in base class
+    for(String columnName : columnNames)
+      normalizedColumnNames.add(columnName.toLowerCase());
+    return;
   }
 
   /**

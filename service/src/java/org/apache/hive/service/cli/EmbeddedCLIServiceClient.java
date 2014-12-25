@@ -76,7 +76,7 @@ public class EmbeddedCLIServiceClient extends CLIServiceClient {
       Map<String, String> confOverlay, Boolean prepareOnly,
       OperationHandle existingOpHandle) throws HiveSQLException {
     return cliService.executeStatement(sessionHandle, statement, confOverlay,
-               prepareOnly, existingOpHandle);
+        prepareOnly, existingOpHandle);
   }
 
   /* (non-Javadoc)

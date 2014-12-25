@@ -48,8 +48,8 @@ public interface ICLIService {
           throws HiveSQLException;
 
   OperationHandle executeStatementAsync(SessionHandle sessionHandle,
-     String statement, Map<String, String> confOverlay,
-     Boolean prepareOnly, OperationHandle existingOpHandle)
+      String statement, Map<String, String> confOverlay,
+      Boolean prepareOnly, OperationHandle existingOpHandle)
           throws HiveSQLException;
 
   OperationHandle getTypeInfo(SessionHandle sessionHandle)
