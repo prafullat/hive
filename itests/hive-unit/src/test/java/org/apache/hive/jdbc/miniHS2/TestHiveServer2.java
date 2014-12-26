@@ -71,12 +71,12 @@ public class TestHiveServer2 {
     String tableName = "TestHiveServer2TestConnection";
     CLIServiceClient serviceClient = miniHS2.getServiceClient();
     SessionHandle sessHandle = serviceClient.openSession("foo", "bar");
-    serviceClient.executeStatement(sessHandle, "DROP TABLE IF EXISTS " + tableName, confOverlay);
-    serviceClient.executeStatement(sessHandle, "CREATE TABLE " + tableName + " (id INT)", confOverlay);
-    OperationHandle opHandle = serviceClient.executeStatement(sessHandle, "SHOW TABLES", confOverlay);
+    serviceClient.executeStatement(sessHandle, "DROP TABLE IF EXISTS " + tableName, confOverlay, false, null);
+    serviceClient.executeStatement(sessHandle, "CREATE TABLE " + tableName + " (id INT)", confOverlay, false, null);
+    OperationHandle opHandle = serviceClient.executeStatement(sessHandle, "SHOW TABLES", confOverlay, false, null);
     RowSet rowSet = serviceClient.fetchResults(opHandle);
     assertFalse(rowSet.numRows() == 0);
-    serviceClient.executeStatement(sessHandle, "DROP TABLE IF EXISTS " + tableName, confOverlay);
+    serviceClient.executeStatement(sessHandle, "DROP TABLE IF EXISTS " + tableName, confOverlay, false, null);
     serviceClient.closeSession(sessHandle);
   }
 
@@ -89,7 +89,7 @@ public class TestHiveServer2 {
   public void testGetVariableValue() throws Exception {
     CLIServiceClient serviceClient = miniHS2.getServiceClient();
     SessionHandle sessHandle = serviceClient.openSession("foo", "bar");
-    OperationHandle opHandle = serviceClient.executeStatement(sessHandle, "set system:os.name", confOverlay);
+    OperationHandle opHandle = serviceClient.executeStatement(sessHandle, "set system:os.name", confOverlay, false, null);
     RowSet rowSet = serviceClient.fetchResults(opHandle);
     assertEquals(1, rowSet.numRows());
     serviceClient.closeSession(sessHandle);
