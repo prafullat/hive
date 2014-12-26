@@ -38,6 +38,8 @@ public class TExecuteStatementReq implements org.apache.thrift.TBase<TExecuteSta
   private static final org.apache.thrift.protocol.TField STATEMENT_FIELD_DESC = new org.apache.thrift.protocol.TField("statement", org.apache.thrift.protocol.TType.STRING, (short)2);
   private static final org.apache.thrift.protocol.TField CONF_OVERLAY_FIELD_DESC = new org.apache.thrift.protocol.TField("confOverlay", org.apache.thrift.protocol.TType.MAP, (short)3);
   private static final org.apache.thrift.protocol.TField RUN_ASYNC_FIELD_DESC = new org.apache.thrift.protocol.TField("runAsync", org.apache.thrift.protocol.TType.BOOL, (short)4);
+  private static final org.apache.thrift.protocol.TField PREPARE_ONLY_FIELD_DESC = new org.apache.thrift.protocol.TField("prepareOnly", org.apache.thrift.protocol.TType.BOOL, (short)5);
+  private static final org.apache.thrift.protocol.TField EXISTING_OP_HANDLE_FIELD_DESC = new org.apache.thrift.protocol.TField("existingOpHandle", org.apache.thrift.protocol.TType.STRUCT, (short)6);
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
@@ -49,13 +51,17 @@ public class TExecuteStatementReq implements org.apache.thrift.TBase<TExecuteSta
   private String statement; // required
   private Map<String,String> confOverlay; // optional
   private boolean runAsync; // optional
+  private boolean prepareOnly; // optional
+  private TOperationHandle existingOpHandle; // optional
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
     SESSION_HANDLE((short)1, "sessionHandle"),
     STATEMENT((short)2, "statement"),
     CONF_OVERLAY((short)3, "confOverlay"),
-    RUN_ASYNC((short)4, "runAsync");
+    RUN_ASYNC((short)4, "runAsync"),
+    PREPARE_ONLY((short)5, "prepareOnly"),
+    EXISTING_OP_HANDLE((short)6, "existingOpHandle");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -78,6 +84,10 @@ public class TExecuteStatementReq implements org.apache.thrift.TBase<TExecuteSta
           return CONF_OVERLAY;
         case 4: // RUN_ASYNC
           return RUN_ASYNC;
+        case 5: // PREPARE_ONLY
+          return PREPARE_ONLY;
+        case 6: // EXISTING_OP_HANDLE
+          return EXISTING_OP_HANDLE;
         default:
           return null;
       }
@@ -119,8 +129,9 @@ public class TExecuteStatementReq implements org.apache.thrift.TBase<TExecuteSta
 
   // isset id assignments
   private static final int __RUNASYNC_ISSET_ID = 0;
+  private static final int __PREPAREONLY_ISSET_ID = 1;
   private byte __isset_bitfield = 0;
-  private _Fields optionals[] = {_Fields.CONF_OVERLAY,_Fields.RUN_ASYNC};
+  private _Fields optionals[] = {_Fields.CONF_OVERLAY,_Fields.RUN_ASYNC,_Fields.PREPARE_ONLY,_Fields.EXISTING_OP_HANDLE};
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
@@ -134,12 +145,18 @@ public class TExecuteStatementReq implements org.apache.thrift.TBase<TExecuteSta
             new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING))));
     tmpMap.put(_Fields.RUN_ASYNC, new org.apache.thrift.meta_data.FieldMetaData("runAsync", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.BOOL)));
+    tmpMap.put(_Fields.PREPARE_ONLY, new org.apache.thrift.meta_data.FieldMetaData("prepareOnly", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
+        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.BOOL)));
+    tmpMap.put(_Fields.EXISTING_OP_HANDLE, new org.apache.thrift.meta_data.FieldMetaData("existingOpHandle", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
+        new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, TOperationHandle.class)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(TExecuteStatementReq.class, metaDataMap);
   }
 
   public TExecuteStatementReq() {
     this.runAsync = false;
+
+    this.prepareOnly = false;
 
   }
 
@@ -179,6 +196,10 @@ public class TExecuteStatementReq implements org.apache.thrift.TBase<TExecuteSta
       this.confOverlay = __this__confOverlay;
     }
     this.runAsync = other.runAsync;
+    this.prepareOnly = other.prepareOnly;
+    if (other.isSetExistingOpHandle()) {
+      this.existingOpHandle = new TOperationHandle(other.existingOpHandle);
+    }
   }
 
   public TExecuteStatementReq deepCopy() {
@@ -192,6 +213,9 @@ public class TExecuteStatementReq implements org.apache.thrift.TBase<TExecuteSta
     this.confOverlay = null;
     this.runAsync = false;
 
+    this.prepareOnly = false;
+
+    this.existingOpHandle = null;
   }
 
   public TSessionHandle getSessionHandle() {
@@ -296,6 +320,51 @@ public class TExecuteStatementReq implements org.apache.thrift.TBase<TExecuteSta
     __isset_bitfield = EncodingUtils.setBit(__isset_bitfield, __RUNASYNC_ISSET_ID, value);
   }
 
+  public boolean isPrepareOnly() {
+    return this.prepareOnly;
+  }
+
+  public void setPrepareOnly(boolean prepareOnly) {
+    this.prepareOnly = prepareOnly;
+    setPrepareOnlyIsSet(true);
+  }
+
+  public void unsetPrepareOnly() {
+    __isset_bitfield = EncodingUtils.clearBit(__isset_bitfield, __PREPAREONLY_ISSET_ID);
+  }
+
+  /** Returns true if field prepareOnly is set (has been assigned a value) and false otherwise */
+  public boolean isSetPrepareOnly() {
+    return EncodingUtils.testBit(__isset_bitfield, __PREPAREONLY_ISSET_ID);
+  }
+
+  public void setPrepareOnlyIsSet(boolean value) {
+    __isset_bitfield = EncodingUtils.setBit(__isset_bitfield, __PREPAREONLY_ISSET_ID, value);
+  }
+
+  public TOperationHandle getExistingOpHandle() {
+    return this.existingOpHandle;
+  }
+
+  public void setExistingOpHandle(TOperationHandle existingOpHandle) {
+    this.existingOpHandle = existingOpHandle;
+  }
+
+  public void unsetExistingOpHandle() {
+    this.existingOpHandle = null;
+  }
+
+  /** Returns true if field existingOpHandle is set (has been assigned a value) and false otherwise */
+  public boolean isSetExistingOpHandle() {
+    return this.existingOpHandle != null;
+  }
+
+  public void setExistingOpHandleIsSet(boolean value) {
+    if (!value) {
+      this.existingOpHandle = null;
+    }
+  }
+
   public void setFieldValue(_Fields field, Object value) {
     switch (field) {
     case SESSION_HANDLE:
@@ -330,6 +399,22 @@ public class TExecuteStatementReq implements org.apache.thrift.TBase<TExecuteSta
       }
       break;
 
+    case PREPARE_ONLY:
+      if (value == null) {
+        unsetPrepareOnly();
+      } else {
+        setPrepareOnly((Boolean)value);
+      }
+      break;
+
+    case EXISTING_OP_HANDLE:
+      if (value == null) {
+        unsetExistingOpHandle();
+      } else {
+        setExistingOpHandle((TOperationHandle)value);
+      }
+      break;
+
     }
   }
 
@@ -346,6 +431,12 @@ public class TExecuteStatementReq implements org.apache.thrift.TBase<TExecuteSta
 
     case RUN_ASYNC:
       return Boolean.valueOf(isRunAsync());
+
+    case PREPARE_ONLY:
+      return Boolean.valueOf(isPrepareOnly());
+
+    case EXISTING_OP_HANDLE:
+      return getExistingOpHandle();
 
     }
     throw new IllegalStateException();
@@ -366,6 +457,10 @@ public class TExecuteStatementReq implements org.apache.thrift.TBase<TExecuteSta
       return isSetConfOverlay();
     case RUN_ASYNC:
       return isSetRunAsync();
+    case PREPARE_ONLY:
+      return isSetPrepareOnly();
+    case EXISTING_OP_HANDLE:
+      return isSetExistingOpHandle();
     }
     throw new IllegalStateException();
   }
@@ -419,6 +514,24 @@ public class TExecuteStatementReq implements org.apache.thrift.TBase<TExecuteSta
         return false;
     }
 
+    boolean this_present_prepareOnly = true && this.isSetPrepareOnly();
+    boolean that_present_prepareOnly = true && that.isSetPrepareOnly();
+    if (this_present_prepareOnly || that_present_prepareOnly) {
+      if (!(this_present_prepareOnly && that_present_prepareOnly))
+        return false;
+      if (this.prepareOnly != that.prepareOnly)
+        return false;
+    }
+
+    boolean this_present_existingOpHandle = true && this.isSetExistingOpHandle();
+    boolean that_present_existingOpHandle = true && that.isSetExistingOpHandle();
+    if (this_present_existingOpHandle || that_present_existingOpHandle) {
+      if (!(this_present_existingOpHandle && that_present_existingOpHandle))
+        return false;
+      if (!this.existingOpHandle.equals(that.existingOpHandle))
+        return false;
+    }
+
     return true;
   }
 
@@ -445,6 +558,16 @@ public class TExecuteStatementReq implements org.apache.thrift.TBase<TExecuteSta
     builder.append(present_runAsync);
     if (present_runAsync)
       builder.append(runAsync);
+
+    boolean present_prepareOnly = true && (isSetPrepareOnly());
+    builder.append(present_prepareOnly);
+    if (present_prepareOnly)
+      builder.append(prepareOnly);
+
+    boolean present_existingOpHandle = true && (isSetExistingOpHandle());
+    builder.append(present_existingOpHandle);
+    if (present_existingOpHandle)
+      builder.append(existingOpHandle);
 
     return builder.toHashCode();
   }
@@ -493,6 +616,26 @@ public class TExecuteStatementReq implements org.apache.thrift.TBase<TExecuteSta
     }
     if (isSetRunAsync()) {
       lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.runAsync, typedOther.runAsync);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetPrepareOnly()).compareTo(typedOther.isSetPrepareOnly());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetPrepareOnly()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.prepareOnly, typedOther.prepareOnly);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetExistingOpHandle()).compareTo(typedOther.isSetExistingOpHandle());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetExistingOpHandle()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.existingOpHandle, typedOther.existingOpHandle);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -548,6 +691,22 @@ public class TExecuteStatementReq implements org.apache.thrift.TBase<TExecuteSta
       sb.append(this.runAsync);
       first = false;
     }
+    if (isSetPrepareOnly()) {
+      if (!first) sb.append(", ");
+      sb.append("prepareOnly:");
+      sb.append(this.prepareOnly);
+      first = false;
+    }
+    if (isSetExistingOpHandle()) {
+      if (!first) sb.append(", ");
+      sb.append("existingOpHandle:");
+      if (this.existingOpHandle == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.existingOpHandle);
+      }
+      first = false;
+    }
     sb.append(")");
     return sb.toString();
   }
@@ -565,6 +724,9 @@ public class TExecuteStatementReq implements org.apache.thrift.TBase<TExecuteSta
     // check for sub-struct validity
     if (sessionHandle != null) {
       sessionHandle.validate();
+    }
+    if (existingOpHandle != null) {
+      existingOpHandle.validate();
     }
   }
 
@@ -649,6 +811,23 @@ public class TExecuteStatementReq implements org.apache.thrift.TBase<TExecuteSta
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
+          case 5: // PREPARE_ONLY
+            if (schemeField.type == org.apache.thrift.protocol.TType.BOOL) {
+              struct.prepareOnly = iprot.readBool();
+              struct.setPrepareOnlyIsSet(true);
+            } else { 
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+            }
+            break;
+          case 6: // EXISTING_OP_HANDLE
+            if (schemeField.type == org.apache.thrift.protocol.TType.STRUCT) {
+              struct.existingOpHandle = new TOperationHandle();
+              struct.existingOpHandle.read(iprot);
+              struct.setExistingOpHandleIsSet(true);
+            } else { 
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+            }
+            break;
           default:
             org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
         }
@@ -692,6 +871,18 @@ public class TExecuteStatementReq implements org.apache.thrift.TBase<TExecuteSta
         oprot.writeBool(struct.runAsync);
         oprot.writeFieldEnd();
       }
+      if (struct.isSetPrepareOnly()) {
+        oprot.writeFieldBegin(PREPARE_ONLY_FIELD_DESC);
+        oprot.writeBool(struct.prepareOnly);
+        oprot.writeFieldEnd();
+      }
+      if (struct.existingOpHandle != null) {
+        if (struct.isSetExistingOpHandle()) {
+          oprot.writeFieldBegin(EXISTING_OP_HANDLE_FIELD_DESC);
+          struct.existingOpHandle.write(oprot);
+          oprot.writeFieldEnd();
+        }
+      }
       oprot.writeFieldStop();
       oprot.writeStructEnd();
     }
@@ -718,7 +909,13 @@ public class TExecuteStatementReq implements org.apache.thrift.TBase<TExecuteSta
       if (struct.isSetRunAsync()) {
         optionals.set(1);
       }
-      oprot.writeBitSet(optionals, 2);
+      if (struct.isSetPrepareOnly()) {
+        optionals.set(2);
+      }
+      if (struct.isSetExistingOpHandle()) {
+        optionals.set(3);
+      }
+      oprot.writeBitSet(optionals, 4);
       if (struct.isSetConfOverlay()) {
         {
           oprot.writeI32(struct.confOverlay.size());
@@ -732,6 +929,12 @@ public class TExecuteStatementReq implements org.apache.thrift.TBase<TExecuteSta
       if (struct.isSetRunAsync()) {
         oprot.writeBool(struct.runAsync);
       }
+      if (struct.isSetPrepareOnly()) {
+        oprot.writeBool(struct.prepareOnly);
+      }
+      if (struct.isSetExistingOpHandle()) {
+        struct.existingOpHandle.write(oprot);
+      }
     }
 
     @Override
@@ -742,7 +945,7 @@ public class TExecuteStatementReq implements org.apache.thrift.TBase<TExecuteSta
       struct.setSessionHandleIsSet(true);
       struct.statement = iprot.readString();
       struct.setStatementIsSet(true);
-      BitSet incoming = iprot.readBitSet(2);
+      BitSet incoming = iprot.readBitSet(4);
       if (incoming.get(0)) {
         {
           org.apache.thrift.protocol.TMap _map168 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
@@ -761,6 +964,15 @@ public class TExecuteStatementReq implements org.apache.thrift.TBase<TExecuteSta
       if (incoming.get(1)) {
         struct.runAsync = iprot.readBool();
         struct.setRunAsyncIsSet(true);
+      }
+      if (incoming.get(2)) {
+        struct.prepareOnly = iprot.readBool();
+        struct.setPrepareOnlyIsSet(true);
+      }
+      if (incoming.get(3)) {
+        struct.existingOpHandle = new TOperationHandle();
+        struct.existingOpHandle.read(iprot);
+        struct.setExistingOpHandleIsSet(true);
       }
     }
   }

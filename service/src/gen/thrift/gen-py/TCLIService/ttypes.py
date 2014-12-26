@@ -138,34 +138,37 @@ class TStatusCode:
 
 class TOperationState:
   INITIALIZED_STATE = 0
-  RUNNING_STATE = 1
-  FINISHED_STATE = 2
-  CANCELED_STATE = 3
-  CLOSED_STATE = 4
-  ERROR_STATE = 5
-  UKNOWN_STATE = 6
-  PENDING_STATE = 7
+  PREPARED_STATE = 1
+  RUNNING_STATE = 2
+  FINISHED_STATE = 3
+  CANCELED_STATE = 4
+  CLOSED_STATE = 5
+  ERROR_STATE = 6
+  UKNOWN_STATE = 7
+  PENDING_STATE = 8
 
   _VALUES_TO_NAMES = {
     0: "INITIALIZED_STATE",
-    1: "RUNNING_STATE",
-    2: "FINISHED_STATE",
-    3: "CANCELED_STATE",
-    4: "CLOSED_STATE",
-    5: "ERROR_STATE",
-    6: "UKNOWN_STATE",
-    7: "PENDING_STATE",
+    1: "PREPARED_STATE",
+    2: "RUNNING_STATE",
+    3: "FINISHED_STATE",
+    4: "CANCELED_STATE",
+    5: "CLOSED_STATE",
+    6: "ERROR_STATE",
+    7: "UKNOWN_STATE",
+    8: "PENDING_STATE",
   }
 
   _NAMES_TO_VALUES = {
     "INITIALIZED_STATE": 0,
-    "RUNNING_STATE": 1,
-    "FINISHED_STATE": 2,
-    "CANCELED_STATE": 3,
-    "CLOSED_STATE": 4,
-    "ERROR_STATE": 5,
-    "UKNOWN_STATE": 6,
-    "PENDING_STATE": 7,
+    "PREPARED_STATE": 1,
+    "RUNNING_STATE": 2,
+    "FINISHED_STATE": 3,
+    "CANCELED_STATE": 4,
+    "CLOSED_STATE": 5,
+    "ERROR_STATE": 6,
+    "UKNOWN_STATE": 7,
+    "PENDING_STATE": 8,
   }
 
 class TOperationType:
@@ -3862,6 +3865,8 @@ class TExecuteStatementReq:
    - statement
    - confOverlay
    - runAsync
+   - prepareOnly
+   - existingOpHandle
   """
 
   thrift_spec = (
@@ -3870,13 +3875,17 @@ class TExecuteStatementReq:
     (2, TType.STRING, 'statement', None, None, ), # 2
     (3, TType.MAP, 'confOverlay', (TType.STRING,None,TType.STRING,None), None, ), # 3
     (4, TType.BOOL, 'runAsync', None, False, ), # 4
+    (5, TType.BOOL, 'prepareOnly', None, False, ), # 5
+    (6, TType.STRUCT, 'existingOpHandle', (TOperationHandle, TOperationHandle.thrift_spec), None, ), # 6
   )
 
-  def __init__(self, sessionHandle=None, statement=None, confOverlay=None, runAsync=thrift_spec[4][4],):
+  def __init__(self, sessionHandle=None, statement=None, confOverlay=None, runAsync=thrift_spec[4][4], prepareOnly=thrift_spec[5][4], existingOpHandle=None,):
     self.sessionHandle = sessionHandle
     self.statement = statement
     self.confOverlay = confOverlay
     self.runAsync = runAsync
+    self.prepareOnly = prepareOnly
+    self.existingOpHandle = existingOpHandle
 
   def read(self, iprot):
     if iprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None and fastbinary is not None:
@@ -3914,6 +3923,17 @@ class TExecuteStatementReq:
           self.runAsync = iprot.readBool();
         else:
           iprot.skip(ftype)
+      elif fid == 5:
+        if ftype == TType.BOOL:
+          self.prepareOnly = iprot.readBool();
+        else:
+          iprot.skip(ftype)
+      elif fid == 6:
+        if ftype == TType.STRUCT:
+          self.existingOpHandle = TOperationHandle()
+          self.existingOpHandle.read(iprot)
+        else:
+          iprot.skip(ftype)
       else:
         iprot.skip(ftype)
       iprot.readFieldEnd()
@@ -3943,6 +3963,14 @@ class TExecuteStatementReq:
     if self.runAsync is not None:
       oprot.writeFieldBegin('runAsync', TType.BOOL, 4)
       oprot.writeBool(self.runAsync)
+      oprot.writeFieldEnd()
+    if self.prepareOnly is not None:
+      oprot.writeFieldBegin('prepareOnly', TType.BOOL, 5)
+      oprot.writeBool(self.prepareOnly)
+      oprot.writeFieldEnd()
+    if self.existingOpHandle is not None:
+      oprot.writeFieldBegin('existingOpHandle', TType.STRUCT, 6)
+      self.existingOpHandle.write(oprot)
       oprot.writeFieldEnd()
     oprot.writeFieldStop()
     oprot.writeStructEnd()

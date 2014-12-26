@@ -412,11 +412,17 @@ public abstract class ThriftCLIService extends AbstractService implements TCLISe
       String statement = req.getStatement();
       Map<String, String> confOverlay = req.getConfOverlay();
       Boolean runAsync = req.isRunAsync();
+      Boolean prepareOnly = req.isPrepareOnly();
+      OperationHandle existingOpHandle = null;
+      if(req.isSetExistingOpHandle())
+        existingOpHandle = new OperationHandle(req.getExistingOpHandle());
       OperationHandle operationHandle = runAsync ?
-          cliService.executeStatementAsync(sessionHandle, statement, confOverlay)
-          : cliService.executeStatement(sessionHandle, statement, confOverlay);
-          resp.setOperationHandle(operationHandle.toTOperationHandle());
-          resp.setStatus(OK_STATUS);
+         cliService.executeStatementAsync(sessionHandle, statement, confOverlay,
+           prepareOnly, existingOpHandle)
+         : cliService.executeStatement(sessionHandle, statement, confOverlay,
+              prepareOnly, existingOpHandle);
+      resp.setOperationHandle(operationHandle.toTOperationHandle());
+      resp.setStatus(OK_STATUS);
     } catch (Exception e) {
       LOG.warn("Error executing statement: ", e);
       resp.setStatus(HiveSQLException.toTStatus(e));

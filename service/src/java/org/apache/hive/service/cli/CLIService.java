@@ -241,10 +241,11 @@ public class CLIService extends CompositeService implements ICLIService {
    */
   @Override
   public OperationHandle executeStatement(SessionHandle sessionHandle, String statement,
-      Map<String, String> confOverlay)
+      Map<String, String> confOverlay, Boolean prepareOnly,
+      OperationHandle existingOpHandle)
           throws HiveSQLException {
     OperationHandle opHandle = sessionManager.getSession(sessionHandle)
-        .executeStatement(statement, confOverlay);
+        .executeStatement(statement, confOverlay, prepareOnly, existingOpHandle);
     LOG.debug(sessionHandle + ": executeStatement()");
     return opHandle;
   }
@@ -255,9 +256,10 @@ public class CLIService extends CompositeService implements ICLIService {
    */
   @Override
   public OperationHandle executeStatementAsync(SessionHandle sessionHandle, String statement,
-      Map<String, String> confOverlay) throws HiveSQLException {
+      Map<String, String> confOverlay, Boolean prepareOnly,
+      OperationHandle existingOpHandle) throws HiveSQLException {
     OperationHandle opHandle = sessionManager.getSession(sessionHandle)
-        .executeStatementAsync(statement, confOverlay);
+        .executeStatementAsync(statement, confOverlay, prepareOnly, existingOpHandle);
     LOG.debug(sessionHandle + ": executeStatementAsync()");
     return opHandle;
   }

@@ -79,7 +79,7 @@ public class TestOperationLoggingAPI {
   public void tearDown() throws Exception {
     // Cleanup
     String queryString = "DROP TABLE " + tableName;
-    client.executeStatement(sessionHandle, queryString, null);
+    client.executeStatement(sessionHandle, queryString, null, false, null);
 
     client.closeSession(sessionHandle);
   }
@@ -87,7 +87,8 @@ public class TestOperationLoggingAPI {
   @Test
   public void testFetchResultsOfLog() throws Exception {
     // verify whether the sql operation log is generated and fetch correctly.
-    OperationHandle operationHandle = client.executeStatement(sessionHandle, sql, null);
+    OperationHandle operationHandle = client.executeStatement(sessionHandle, sql, null,
+        false, null);
     RowSet rowSetLog = client.fetchResults(operationHandle, FetchOrientation.FETCH_FIRST, 1000,
         FetchType.LOG);
     verifyFetchedLog(rowSetLog);
@@ -96,7 +97,8 @@ public class TestOperationLoggingAPI {
   @Test
   public void testFetchResultsOfLogAsync() throws Exception {
     // verify whether the sql operation log is generated and fetch correctly in async mode.
-    OperationHandle operationHandle = client.executeStatementAsync(sessionHandle, sql, null);
+    OperationHandle operationHandle = client.executeStatementAsync(sessionHandle, sql, null,
+        false, null);
 
     // Poll on the operation status till the query is completed
     boolean isQueryRunning = true;
@@ -144,7 +146,8 @@ public class TestOperationLoggingAPI {
   @Test
   public void testFetchResultsOfLogWithOrientation() throws Exception {
     // (FETCH_FIRST) execute a sql, and fetch its sql operation log as expected value
-    OperationHandle operationHandle = client.executeStatement(sessionHandle, sql, null);
+    OperationHandle operationHandle = client.executeStatement(sessionHandle, sql, null,
+        false, null);
     RowSet rowSetLog = client.fetchResults(operationHandle, FetchOrientation.FETCH_FIRST, 1000,
         FetchType.LOG);
     int expectedLogLength = rowSetLog.numRows();
@@ -152,7 +155,7 @@ public class TestOperationLoggingAPI {
     // (FETCH_NEXT) execute the same sql again,
     // and fetch the sql operation log with FETCH_NEXT orientation
     OperationHandle operationHandleWithOrientation = client.executeStatement(sessionHandle, sql,
-        null);
+        null,  false, null);
     RowSet rowSetLogWithOrientation;
     int logLength = 0;
     int maxRows = calculateProperMaxRows(expectedLogLength);
@@ -176,7 +179,8 @@ public class TestOperationLoggingAPI {
     SessionHandle sessionHandleCleanup = setupSession();
 
     // prepare
-    OperationHandle operationHandle = client.executeStatement(sessionHandleCleanup, sql, null);
+    OperationHandle operationHandle = client.executeStatement(sessionHandleCleanup, sql, null,
+        false, null);
     RowSet rowSetLog = client.fetchResults(operationHandle, FetchOrientation.FETCH_FIRST, 1000,
         FetchType.LOG);
     verifyFetchedLog(rowSetLog);
@@ -214,22 +218,23 @@ public class TestOperationLoggingAPI {
     // Change lock manager to embedded mode
     String queryString = "SET hive.lock.manager=" +
         "org.apache.hadoop.hive.ql.lockmgr.EmbeddedLockManager";
-    client.executeStatement(sessionHandle, queryString, null);
+    client.executeStatement(sessionHandle, queryString, null, false, null);
 
     // Drop the table if it exists
     queryString = "DROP TABLE IF EXISTS " + tableName;
-    client.executeStatement(sessionHandle, queryString, null);
+    client.executeStatement(sessionHandle, queryString, null, false, null);
 
     // Create a test table
     queryString = "create table " + tableName + " (key int, value string)";
-    client.executeStatement(sessionHandle, queryString, null);
+    client.executeStatement(sessionHandle, queryString, null, false, null);
 
     // Load data
     queryString = "load data local inpath '" + dataFile + "' into table " + tableName;
-    client.executeStatement(sessionHandle, queryString, null);
+    client.executeStatement(sessionHandle, queryString, null, false, null);
 
     // Precondition check: verify whether the table is created and data is fetched correctly.
-    OperationHandle operationHandle = client.executeStatement(sessionHandle, sql, null);
+    OperationHandle operationHandle =
+        client.executeStatement(sessionHandle, sql, null, false, null);
     RowSet rowSetResult = client.fetchResults(operationHandle);
     Assert.assertEquals(500, rowSetResult.numRows());
     Assert.assertEquals(238, rowSetResult.iterator().next()[0]);

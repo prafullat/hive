@@ -97,4 +97,8 @@ public abstract class MetadataOperation extends Operation {
         .replaceAll("([^\\\\])_", "$1.").replaceAll("\\\\_", "_").replaceAll("^_", ".");
   }
 
+  public void prepare() throws HiveSQLException {
+     // Nothing to prepare
+  }
+
 }

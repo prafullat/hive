@@ -113,9 +113,11 @@ public class ThriftCLIServiceClient extends CLIServiceClient {
    */
   @Override
   public OperationHandle executeStatement(SessionHandle sessionHandle, String statement,
-      Map<String, String> confOverlay)
+      Map<String, String> confOverlay, Boolean prepareOnly,
+      OperationHandle existingOpHandle)
           throws HiveSQLException {
-    return executeStatementInternal(sessionHandle, statement, confOverlay, false);
+    return executeStatementInternal(sessionHandle, statement, confOverlay, false,
+        prepareOnly, existingOpHandle);
   }
 
   /* (non-Javadoc)
@@ -123,19 +125,24 @@ public class ThriftCLIServiceClient extends CLIServiceClient {
    */
   @Override
   public OperationHandle executeStatementAsync(SessionHandle sessionHandle, String statement,
-      Map<String, String> confOverlay)
+      Map<String, String> confOverlay, Boolean prepareOnly,
+      OperationHandle existingOpHandle)
           throws HiveSQLException {
-    return executeStatementInternal(sessionHandle, statement, confOverlay, true);
+    return executeStatementInternal(sessionHandle, statement, confOverlay, true,
+        prepareOnly, existingOpHandle);
   }
 
   private OperationHandle executeStatementInternal(SessionHandle sessionHandle, String statement,
-      Map<String, String> confOverlay, boolean isAsync)
+      Map<String, String> confOverlay, boolean isAsync, Boolean prepareOnly,
+      OperationHandle existingOpHandle)
           throws HiveSQLException {
     try {
       TExecuteStatementReq req =
           new TExecuteStatementReq(sessionHandle.toTSessionHandle(), statement);
       req.setConfOverlay(confOverlay);
       req.setRunAsync(isAsync);
+      req.setPrepareOnly(prepareOnly);
+      req.setExistingOpHandle(existingOpHandle.toTOperationHandle());
       TExecuteStatementResp resp = cliService.ExecuteStatement(req);
       checkStatus(resp.getStatus());
       TProtocolVersion protocol = sessionHandle.getProtocolVersion();

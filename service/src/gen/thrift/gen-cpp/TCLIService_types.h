@@ -72,13 +72,14 @@ extern const std::map<int, const char*> _TStatusCode_VALUES_TO_NAMES;
 struct TOperationState {
   enum type {
     INITIALIZED_STATE = 0,
-    RUNNING_STATE = 1,
-    FINISHED_STATE = 2,
-    CANCELED_STATE = 3,
-    CLOSED_STATE = 4,
-    ERROR_STATE = 5,
-    UKNOWN_STATE = 6,
-    PENDING_STATE = 7
+    PREPARED_STATE = 1,
+    RUNNING_STATE = 2,
+    FINISHED_STATE = 3,
+    CANCELED_STATE = 4,
+    CLOSED_STATE = 5,
+    ERROR_STATE = 6,
+    UKNOWN_STATE = 7,
+    PENDING_STATE = 8
   };
 };
 
@@ -2329,18 +2330,20 @@ class TGetInfoResp {
 void swap(TGetInfoResp &a, TGetInfoResp &b);
 
 typedef struct _TExecuteStatementReq__isset {
-  _TExecuteStatementReq__isset() : confOverlay(false), runAsync(true) {}
+  _TExecuteStatementReq__isset() : confOverlay(false), runAsync(true), prepareOnly(true), existingOpHandle(false) {}
   bool confOverlay;
   bool runAsync;
+  bool prepareOnly;
+  bool existingOpHandle;
 } _TExecuteStatementReq__isset;
 
 class TExecuteStatementReq {
  public:
 
-  static const char* ascii_fingerprint; // = "FED75DB77E66D76EC1939A51FB0D96FA";
-  static const uint8_t binary_fingerprint[16]; // = {0xFE,0xD7,0x5D,0xB7,0x7E,0x66,0xD7,0x6E,0xC1,0x93,0x9A,0x51,0xFB,0x0D,0x96,0xFA};
+  static const char* ascii_fingerprint; // = "97C415D75EFC0C25757B95A3AF59B5F6";
+  static const uint8_t binary_fingerprint[16]; // = {0x97,0xC4,0x15,0xD7,0x5E,0xFC,0x0C,0x25,0x75,0x7B,0x95,0xA3,0xAF,0x59,0xB5,0xF6};
 
-  TExecuteStatementReq() : statement(), runAsync(false) {
+  TExecuteStatementReq() : statement(), runAsync(false), prepareOnly(false) {
   }
 
   virtual ~TExecuteStatementReq() throw() {}
@@ -2349,6 +2352,8 @@ class TExecuteStatementReq {
   std::string statement;
   std::map<std::string, std::string>  confOverlay;
   bool runAsync;
+  bool prepareOnly;
+  TOperationHandle existingOpHandle;
 
   _TExecuteStatementReq__isset __isset;
 
@@ -2370,6 +2375,16 @@ class TExecuteStatementReq {
     __isset.runAsync = true;
   }
 
+  void __set_prepareOnly(const bool val) {
+    prepareOnly = val;
+    __isset.prepareOnly = true;
+  }
+
+  void __set_existingOpHandle(const TOperationHandle& val) {
+    existingOpHandle = val;
+    __isset.existingOpHandle = true;
+  }
+
   bool operator == (const TExecuteStatementReq & rhs) const
   {
     if (!(sessionHandle == rhs.sessionHandle))
@@ -2383,6 +2398,14 @@ class TExecuteStatementReq {
     if (__isset.runAsync != rhs.__isset.runAsync)
       return false;
     else if (__isset.runAsync && !(runAsync == rhs.runAsync))
+      return false;
+    if (__isset.prepareOnly != rhs.__isset.prepareOnly)
+      return false;
+    else if (__isset.prepareOnly && !(prepareOnly == rhs.prepareOnly))
+      return false;
+    if (__isset.existingOpHandle != rhs.__isset.existingOpHandle)
+      return false;
+    else if (__isset.existingOpHandle && !(existingOpHandle == rhs.existingOpHandle))
       return false;
     return true;
   }

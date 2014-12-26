@@ -73,8 +73,10 @@ public class EmbeddedCLIServiceClient extends CLIServiceClient {
    */
   @Override
   public OperationHandle executeStatement(SessionHandle sessionHandle, String statement,
-      Map<String, String> confOverlay) throws HiveSQLException {
-    return cliService.executeStatement(sessionHandle, statement, confOverlay);
+      Map<String, String> confOverlay, Boolean prepareOnly,
+      OperationHandle existingOpHandle) throws HiveSQLException {
+    return cliService.executeStatement(sessionHandle, statement, confOverlay,
+        prepareOnly, existingOpHandle);
   }
 
   /* (non-Javadoc)
@@ -83,8 +85,10 @@ public class EmbeddedCLIServiceClient extends CLIServiceClient {
    */
   @Override
   public OperationHandle executeStatementAsync(SessionHandle sessionHandle, String statement,
-      Map<String, String> confOverlay) throws HiveSQLException {
-    return cliService.executeStatementAsync(sessionHandle, statement, confOverlay);
+      Map<String, String> confOverlay, Boolean prepareOnly,
+      OperationHandle existingOpHandle) throws HiveSQLException {
+    return cliService.executeStatementAsync(sessionHandle, statement, confOverlay,
+              prepareOnly, existingOpHandle);
   }
 
 

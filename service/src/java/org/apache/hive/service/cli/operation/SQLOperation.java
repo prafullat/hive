@@ -75,20 +75,31 @@ public class SQLOperation extends ExecuteStatementOperation {
   private Schema mResultSchema = null;
   private SerDe serde = null;
   private boolean fetchStarted = false;
+  private boolean prepareOnly = false;
 
   public SQLOperation(HiveSession parentSession, String statement, Map<String,
-      String> confOverlay, boolean runInBackground) {
+      String> confOverlay, boolean runInBackground, boolean prepareOnly) {
     // TODO: call setRemoteUser in ExecuteStatementOperation or higher.
     super(parentSession, statement, confOverlay, runInBackground);
+    this.prepareOnly = prepareOnly;
   }
 
-  /***
+  @Override
+  public void prepare() throws HiveSQLException {
+    final HiveConf opConfig = getConfigForOperation();
+    prepareInternal(opConfig);
+  }
+
+   /***
    * Compile the query and extract metadata
    * @param sqlOperationConf
    * @throws HiveSQLException
    */
-  public void prepare(HiveConf sqlOperationConf) throws HiveSQLException {
-    setState(OperationState.RUNNING);
+  private void prepareInternal(HiveConf sqlOperationConf) throws HiveSQLException {
+    // Return early if this statement is already prepared.
+    if (getStatus().getState() == OperationState.PREPARED)
+      return;
+    setState(OperationState.PREPARED);
 
     try {
       driver = new Driver(sqlOperationConf, getParentSession().getUserName());
@@ -138,6 +149,7 @@ public class SQLOperation extends ExecuteStatementOperation {
 
   private void runQuery(HiveConf sqlOperationConf) throws HiveSQLException {
     try {
+      setState(OperationState.RUNNING);
       // In Hive server mode, we are not able to retry in the FetchTask
       // case, when calling fetch queries since execute() has returned.
       // For now, we disable the test attempts.
@@ -167,9 +179,11 @@ public class SQLOperation extends ExecuteStatementOperation {
 
   @Override
   public void runInternal() throws HiveSQLException {
-    setState(OperationState.PENDING);
     final HiveConf opConfig = getConfigForOperation();
-    prepare(opConfig);
+    if (getStatus().getState() != OperationState.PREPARED) {
+      setState(OperationState.PENDING);
+      prepareInternal(opConfig);
+    }
     if (!shouldRunAsync()) {
       runQuery(opConfig);
     } else {
@@ -310,11 +324,15 @@ public class SQLOperation extends ExecuteStatementOperation {
 
   @Override
   public TableSchema getResultSetSchema() throws HiveSQLException {
-    assertState(OperationState.FINISHED);
-    if (resultSchema == null) {
-      resultSchema = new TableSchema(driver.getSchema());
+    if(isPrepared() == true ||
+       isFinished() == true) {
+      if (resultSchema == null) {
+        resultSchema = new TableSchema(driver.getSchema());
+      }
+      return resultSchema;
     }
-    return resultSchema;
+    assertState(OperationState.FINISHED);
+    return null;
   }
 
   private transient final List<Object> convey = new ArrayList<Object>();

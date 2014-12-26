@@ -187,8 +187,7 @@ public class HivePreparedStatement extends HiveStatement implements PreparedStat
    */
 
   public ResultSetMetaData getMetaData() throws SQLException {
-    // TODO Auto-generated method stub
-    throw new SQLException("Method not supported");
+    return super.getMetaData(sql);
   }
 
   /*

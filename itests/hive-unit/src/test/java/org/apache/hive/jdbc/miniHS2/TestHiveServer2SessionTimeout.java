@@ -64,7 +64,7 @@ public class TestHiveServer2SessionTimeout {
   public void testConnection() throws Exception {
     CLIServiceClient serviceClient = miniHS2.getServiceClient();
     SessionHandle sessHandle = serviceClient.openSession("foo", "bar");
-    OperationHandle handle = serviceClient.executeStatement(sessHandle, "SELECT 1", confOverlay);
+    OperationHandle handle = serviceClient.executeStatement(sessHandle, "SELECT 1", confOverlay, false, null);
     Thread.sleep(7000);
     try {
       serviceClient.closeOperation(handle);

@@ -242,10 +242,10 @@ public class HiveQueryResultSet extends HiveBaseResultSet {
     return ret;
   }
 
-  /**
-   * Retrieve schema from the server
-   */
-  private void retrieveSchema() throws SQLException {
+  public static TableSchema retriveSchema(TOperationHandle stmtHandle,
+      TCLIService.Iface client, ReentrantLock transportLock,
+      List<String> columnNames, List<String> columnTypes,
+      List<JdbcColumnAttributes> columnAttributes) throws SQLException {
     try {
       TGetResultSetMetadataReq metadataReq = new TGetResultSetMetadataReq(stmtHandle);
       // TODO need session handle
@@ -268,9 +268,9 @@ public class HiveQueryResultSet extends HiveBaseResultSet {
       TTableSchema schema = metadataResp.getSchema();
       if (schema == null || !schema.isSetColumns()) {
         // TODO: should probably throw an exception here.
-        return;
+        return null;
       }
-      setSchema(new TableSchema(schema));
+      TableSchema tableSchema = new TableSchema(schema);
 
       List<TColumnDesc> columns = schema.getColumns();
       for (int pos = 0; pos < schema.getColumnsSize(); pos++) {
@@ -280,19 +280,32 @@ public class HiveQueryResultSet extends HiveBaseResultSet {
         }
         String columnName = columns.get(pos).getColumnName();
         columnNames.add(columnName);
-        normalizedColumnNames.add(columnName.toLowerCase());
         TPrimitiveTypeEntry primitiveTypeEntry =
             columns.get(pos).getTypeDesc().getTypes().get(0).getPrimitiveEntry();
         String columnTypeName = TYPE_NAMES.get(primitiveTypeEntry.getType());
         columnTypes.add(columnTypeName);
         columnAttributes.add(getColumnAttributes(primitiveTypeEntry));
       }
+      return tableSchema;
     } catch (SQLException eS) {
       throw eS; // rethrow the SQLException as is
     } catch (Exception ex) {
       ex.printStackTrace();
       throw new SQLException("Could not create ResultSet: " + ex.getMessage(), ex);
     }
+  }
+
+  /**
+   * Retrieve schema from the server
+   */
+  private void retrieveSchema() throws SQLException {
+    TableSchema tableSchema = null;
+    tableSchema = retriveSchema(stmtHandle, client,  transportLock,
+        columnNames, columnTypes, columnAttributes);
+    setSchema(tableSchema); // Set schema in base class
+    for(String columnName : columnNames)
+      normalizedColumnNames.add(columnName.toLowerCase());
+    return;
   }
 
   /**

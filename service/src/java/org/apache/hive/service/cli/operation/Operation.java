@@ -162,6 +162,10 @@ public abstract class Operation {
     this.lastAccessTime = System.currentTimeMillis();
   }
 
+  public boolean isPrepared() {
+    return OperationState.PREPARED.equals(state);
+  }
+
   public boolean isRunning() {
     return OperationState.RUNNING.equals(state);
   }
@@ -250,9 +254,16 @@ public abstract class Operation {
    */
   protected abstract void runInternal() throws HiveSQLException;
 
+  /**
+  * Implemented by subclass of Operation to prepare specific operation before
+  * running
+  */
+  public abstract void prepare() throws HiveSQLException;
+
   public void run() throws HiveSQLException {
     beforeRun();
     try {
+      prepare();
       runInternal();
     } finally {
       afterRun();

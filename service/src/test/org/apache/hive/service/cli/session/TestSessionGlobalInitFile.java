@@ -170,7 +170,7 @@ public class TestSessionGlobalInitFile extends TestCase {
   private void verifyInitProperty(String key, String value,
       SessionHandle sessionHandle) throws Exception {
     OperationHandle operationHandle =
-        client.executeStatement(sessionHandle, "set " + key, null);
+        client.executeStatement(sessionHandle, "set " + key, null, false, null);
     RowSet rowSet = client.fetchResults(operationHandle);
     Assert.assertEquals(1, rowSet.numRows());
     // we know rowSet has only one element

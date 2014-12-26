@@ -20,6 +20,7 @@ package org.apache.hive.jdbc;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLWarning;
@@ -31,6 +32,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.hive.service.cli.RowSet;
 import org.apache.hive.service.cli.RowSetFactory;
+import org.apache.hive.service.cli.TableSchema;
 import org.apache.hive.service.cli.thrift.TCLIService;
 import org.apache.hive.service.cli.thrift.TCancelOperationReq;
 import org.apache.hive.service.cli.thrift.TCancelOperationResp;
@@ -41,6 +43,7 @@ import org.apache.hive.service.cli.thrift.TExecuteStatementResp;
 import org.apache.hive.service.cli.thrift.TGetOperationStatusReq;
 import org.apache.hive.service.cli.thrift.TGetOperationStatusResp;
 import org.apache.hive.service.cli.thrift.TOperationHandle;
+import org.apache.hive.service.cli.thrift.TOperationState;
 import org.apache.hive.service.cli.thrift.TSessionHandle;
 import org.apache.hive.service.cli.thrift.TFetchResultsReq;
 import org.apache.hive.service.cli.thrift.TFetchResultsResp;
@@ -234,8 +237,11 @@ public class HiveStatement implements java.sql.Statement {
   @Override
   public boolean execute(String sql) throws SQLException {
     checkConnection("execute");
-
-    closeClientOperation();
+    if (stmtHandle != null) {
+      TOperationState state = getOperationState(stmtHandle);
+      if(state != TOperationState.PREPARED_STATE)
+        closeClientOperation();
+    }
     initFlags();
 
     TExecuteStatementReq execReq = new TExecuteStatementReq(sessHandle, sql);
@@ -247,6 +253,8 @@ public class HiveStatement implements java.sql.Statement {
      */
     execReq.setRunAsync(true);
     execReq.setConfOverlay(sessConf);
+    if (stmtHandle != null)
+      execReq.setExistingOpHandle(stmtHandle);
 
     transportLock.lock();
     try {
@@ -849,5 +857,82 @@ public class HiveStatement implements java.sql.Statement {
     } else {
       return TFetchOrientation.FETCH_FIRST;
     }
+  }
+
+  protected TOperationState getOperationState(TOperationHandle curHandle)
+      throws SQLException {
+    TGetOperationStatusReq statusReq = new TGetOperationStatusReq(stmtHandle);
+    TGetOperationStatusResp statusResp;
+    try {
+      transportLock.lock();
+      try {
+        statusResp = client.GetOperationStatus(statusReq);
+      } finally {
+        transportLock.unlock();
+      }
+      Utils.verifySuccessWithInfo(statusResp.getStatus());
+      if (statusResp.isSetOperationState()) {
+        return statusResp.getOperationState();
+      }
+    } catch (SQLException e) {
+      isLogBeingGenerated = false;
+      throw e;
+    } catch (Exception e) {
+      isLogBeingGenerated = false;
+      throw new SQLException(e.toString(), "08S01", e);
+    }
+    return null;
+  }
+
+  private ResultSetMetaData getHiveResultSetMetaData(TOperationHandle curHandle,
+      TOperationState currentState)
+      throws SQLException {
+    if (currentState != TOperationState.PREPARED_STATE &&
+        currentState != TOperationState.FINISHED_STATE)
+      throw new SQLException("Invalid server state for fetching result set metadata",
+                             "08S01");
+
+    List<String> columnNames = new ArrayList<String>();
+    List<String> columnTypes = new ArrayList<String>();
+    List<JdbcColumnAttributes> columnAttributes = new ArrayList<JdbcColumnAttributes>();
+
+    HiveQueryResultSet.retriveSchema(curHandle, client, transportLock,
+        columnNames, columnTypes, columnAttributes);
+    return new HiveResultSetMetaData(columnNames, columnTypes, columnAttributes);
+  }
+
+  protected ResultSetMetaData getMetaData(String sql) throws SQLException {
+    checkConnection("getMetaData");
+    if (stmtHandle != null) {
+      TOperationState state = getOperationState(stmtHandle);
+      if(state != TOperationState.PREPARED_STATE)
+        closeClientOperation();
+      else {
+        return getHiveResultSetMetaData(stmtHandle, state);
+      }
+    }
+    initFlags();
+
+    TExecuteStatementReq execReq = new TExecuteStatementReq(sessHandle, sql);
+    execReq.setConfOverlay(sessConf);
+    execReq.setPrepareOnly(true);
+    transportLock.lock();
+    try {
+      TExecuteStatementResp execResp = client.ExecuteStatement(execReq);
+      Utils.verifySuccessWithInfo(execResp.getStatus());
+      stmtHandle = execResp.getOperationHandle();
+    } catch (SQLException eS) {
+      isExecuteStatementFailed = true;
+      throw eS;
+    } catch (Exception ex) {
+      isExecuteStatementFailed = true;
+      throw new SQLException(ex.toString(), "08S01", ex);
+    } finally {
+      transportLock.unlock();
+    }
+    TOperationState state = getOperationState(stmtHandle);
+    if(state == TOperationState.PREPARED_STATE)
+      return getHiveResultSetMetaData(stmtHandle, state);
+    throw new SQLException("Error while fetching metadata");
   }
 }
