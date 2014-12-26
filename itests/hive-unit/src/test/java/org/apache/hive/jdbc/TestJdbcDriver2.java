@@ -433,6 +433,22 @@ public class TestJdbcDriver2 {
       assertPreparedStatementResultAsExpected(res);
       ps.close();
 
+      // Test PreparedStatement.getMetadata()
+      String sqlDataTypeTable = "select * from "+dataTypeTableName;
+      ps = con.prepareStatement(sqlDataTypeTable);
+      ResultSetMetaData md = ps.getMetaData();
+      assertEquals(md.getColumnCount(), 24);
+      assertEquals(md.getColumnName(7), "testdatatypetable.c7");
+      assertEquals(md.getColumnName(6), "testdatatypetable.c6");
+      assertEquals(md.getColumnName(20), "testdatatypetable.c20");
+
+      assertEquals(md.getColumnTypeName(17), "timestamp");
+      assertEquals(md.getColumnTypeName(3), "double");
+      assertEquals(md.getColumnTypeName(14), "map");
+      assertEquals(md.getColumnTypeName(15), "struct");
+      assertEquals(md.getColumnTypeName(16), "array");
+      ps.close();
+
     } catch (Exception e) {
       e.printStackTrace();
       fail(e.toString());
