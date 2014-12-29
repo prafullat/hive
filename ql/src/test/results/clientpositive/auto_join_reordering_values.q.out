@@ -221,7 +221,7 @@ STAGE PLANS:
               COLUMN_STATS_ACCURATE true
               bucket_count -1
               columns dealid,date,time,cityid,userid
-              columns.comments     
+              columns.comments 
               columns.types int:string:string:int:int
 #### A masked pattern was here ####
               name default.orderpayment_small
@@ -241,7 +241,7 @@ STAGE PLANS:
                 COLUMN_STATS_ACCURATE true
                 bucket_count -1
                 columns dealid,date,time,cityid,userid
-                columns.comments     
+                columns.comments 
                 columns.types int:string:string:int:int
 #### A masked pattern was here ####
                 name default.orderpayment_small
@@ -319,7 +319,7 @@ STAGE PLANS:
       Path -> Partition:
 #### A masked pattern was here ####
           Partition
-            base file name: -mr-10002
+            base file name: -mr-10003
             input format: org.apache.hadoop.mapred.SequenceFileInputFormat
             output format: org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat
             properties:
@@ -346,7 +346,7 @@ STAGE PLANS:
               COLUMN_STATS_ACCURATE true
               bucket_count -1
               columns dealid,date,time,cityid,userid
-              columns.comments     
+              columns.comments 
               columns.types int:string:string:int:int
 #### A masked pattern was here ####
               name default.orderpayment_small
@@ -366,7 +366,7 @@ STAGE PLANS:
                 COLUMN_STATS_ACCURATE true
                 bucket_count -1
                 columns dealid,date,time,cityid,userid
-                columns.comments     
+                columns.comments 
                 columns.types int:string:string:int:int
 #### A masked pattern was here ####
                 name default.orderpayment_small
@@ -445,7 +445,7 @@ STAGE PLANS:
       Path -> Partition:
 #### A masked pattern was here ####
           Partition
-            base file name: -mr-10003
+            base file name: -mr-10004
             input format: org.apache.hadoop.mapred.SequenceFileInputFormat
             output format: org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat
             properties:
@@ -472,7 +472,7 @@ STAGE PLANS:
               COLUMN_STATS_ACCURATE true
               bucket_count -1
               columns dealid,date,time,cityid,userid
-              columns.comments     
+              columns.comments 
               columns.types int:string:string:int:int
 #### A masked pattern was here ####
               name default.orderpayment_small
@@ -492,7 +492,7 @@ STAGE PLANS:
                 COLUMN_STATS_ACCURATE true
                 bucket_count -1
                 columns dealid,date,time,cityid,userid
-                columns.comments     
+                columns.comments 
                 columns.types int:string:string:int:int
 #### A masked pattern was here ####
                 name default.orderpayment_small
@@ -571,7 +571,7 @@ STAGE PLANS:
       Path -> Partition:
 #### A masked pattern was here ####
           Partition
-            base file name: -mr-10004
+            base file name: -mr-10005
             input format: org.apache.hadoop.mapred.SequenceFileInputFormat
             output format: org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat
             properties:

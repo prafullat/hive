@@ -3176,6 +3176,13 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         new RowSchema(out_rwsch.getColumnInfos()), input), out_rwsch);
     output.setColumnExprMap(new HashMap<String, ExprNodeDesc>());  // disable backtracking
 
+    // Add URI entity for transform script. script assumed t be local unless downloadable
+    if (conf.getBoolVar(ConfVars.HIVE_CAPTURE_TRANSFORM_ENTITY)) {
+      String scriptCmd = getScriptProgName(stripQuotes(trfm.getChild(execPos).getText()));
+      getInputs().add(new ReadEntity(new Path(scriptCmd),
+          !SessionState.canDownloadResource(scriptCmd)));
+    }
+
     return output;
   }
 
@@ -10950,7 +10957,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       case HiveParser.TOK_TABLELOCATION:
         location = unescapeSQLString(child.getChild(0).getText());
         location = EximUtil.relativeToAbsolutePath(conf, location);
-        inputs.add(new ReadEntity(new Path(location), FileUtils.isLocalFile(conf, location)));
+        inputs.add(toReadEntity(location));
         break;
       case HiveParser.TOK_TABLEPROPERTIES:
         tblProps = DDLSemanticAnalyzer.getProps((ASTNode) child.getChild(0));
