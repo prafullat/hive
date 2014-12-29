@@ -142,7 +142,8 @@ public class ThriftCLIServiceClient extends CLIServiceClient {
       req.setConfOverlay(confOverlay);
       req.setRunAsync(isAsync);
       req.setPrepareOnly(prepareOnly);
-      req.setExistingOpHandle(existingOpHandle.toTOperationHandle());
+      if(existingOpHandle != null)
+        req.setExistingOpHandle(existingOpHandle.toTOperationHandle());
       TExecuteStatementResp resp = cliService.ExecuteStatement(req);
       checkStatus(resp.getStatus());
       TProtocolVersion protocol = sessionHandle.getProtocolVersion();
